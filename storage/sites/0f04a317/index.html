@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>霓虹琴键 - 别踩白块</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-pink: #ff007f;
+            --neon-purple: #9d00ff;
+            --bg-dark: #060511;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            font-family: 'Inter', system-ui, sans-serif;
+            color: #fff;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        /* 游戏整体布局包围盒 */
+        #game-frame {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            height: 100vh;
+            max-height: 800px;
+            background: linear-gradient(180deg, #09071c 0%, #030207 100%);
+            border: 2px solid rgba(157, 0, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(157, 0, 255, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 覆盖物与弹窗 */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(6, 5, 17, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 闪烁发光的霓虹标题 */
+        .neon-title {
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+            margin-bottom: 5px;
+        }
+
+        .btn-glow {
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .btn-glow:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.7);
+        }
+
+        /* 顶部悬浮仪表盘 */
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .shake {
+            animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-frame">
+        <!-- 游戏数值面板 -->
+        <div class="hud text-xs tracking-widest font-semibold uppercase">
+            <div class="px-3 py-1.5 bg-[#0d0a21]/80 rounded-lg border border-[#9d00ff]/30 backdrop-blur">
+                Score: <span id="hud-score" class="text-cyan-400 font-bold text-sm">0</span>
+            </div>
+            <div id="hud-combo-wrap" class="px-3 py-1.5 bg-[#0d0a21]/80 rounded-lg border border-[#ff007f]/30 backdrop-blur opacity-0 transition-opacity duration-200">
+                Combo: <span id="hud-combo" class="text-pink-500 font-bold text-sm">0</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 主菜单 / 准备就绪弹窗 -->
+        <div id="start-modal" class="modal">
+            <h1 class="neon-title">NEON PIANO</h1>
+            <p class="text-xs tracking-widest text-[#9d00ff] font-semibold mb-6">赛博琴键 · 连击共鸣</p>
+            <div class="p-5 bg-[#120e2e]/50 border border-white/5 rounded-xl text-left text-xs leading-relaxed text-gray-400 max-w-xs mb-8">
+                🎹 <strong>赛博朋克演奏指南：</strong><br>
+                1. 霓虹音符块会从上方不断滑落。<br>
+                2. <b>在音符触底前点击它们</b>以演奏《卡农》钢琴旋律。<br>
+                3. <b>千万不要</b>踩到空白琴轨（白块）！<br>
+                4. 连续完美击打会激活<b>Combo翻倍能量</b>，并获得更高分数。
+            </div>
+            <button class="btn-glow" onclick="initGameSystem()">同步脑机接口</button>
+        </div>
+
+        <!-- 游戏结束结算面板 -->
+        <div id="over-modal" class="modal" style="display: none;">
+            <h1 class="text-3xl font-extrabold text-[#ff007f] tracking-wider mb-2">NEURAL OVERLOAD</h1>
+            <p class="text-xs text-gray-400 mb-6">神经载荷溢出，音轨链路中断</p>
+            <div class="mb-8">
+                <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">Final Score</div>
+                <div id="final-score" class="text-4xl font-black text-cyan-400 tracking-wider">0</div>
+                <div class="text-xs text-gray-500 uppercase tracking-widest mt-4 mb-1">Max Combo</div>
+                <div id="final-combo" class="text-lg font-bold text-pink-500">0</div>
+            </div>
+            <button class="btn-glow" onclick="initGameSystem()">重启音轨链路</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameFrame = document.getElementById('game-frame');
+        const startModal = document.getElementById('start-modal');
+        const overModal = document.getElementById('over-modal');
+        const hudScore = document.getElementById('hud-score');
+        const hudCombo = document.getElementById('hud-combo');
+        const hudComboWrap = document.getElementById('hud-combo-wrap');
+        const finalScore = document.getElementById('final-score');
+        const finalCombo = document.getElementById('final-combo');
+
+        // 音符设计 - 经典《卡农 (Canon in D)》乐章 MIDI 相对调式代码
+        const melody = [
+            74, 78, 81, 86, 83, 79, 83, 86, 81, 78, 81, 83, 79, 74, 79, 81,
+            78, 74, 78, 79, 76, 73, 76, 78, 74, 71, 74, 76, 73, 69, 73, 74,
+            86, 81, 83, 78, 79, 74, 79, 81, 78, 74, 76, 73, 74, 78, 81, 86,
+            83, 79, 83, 86, 81, 78, 81, 83, 79, 74, 79, 81, 78, 74, 78, 79
+        ];
+        let noteIndex = 0;
+
+        // 物理机制配置
+        let gameActive = false;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let speed = 4; // 基础下降速度 (px/frame)
+        let rows = []; // 霓虹音符行队列
+        let particles = []; // 点击碎裂爆炸粒子
+        let screenShakeAmount = 0;
+
+        // 琴键轨道尺寸数据 (4列)
+        const cols = 4;
+        let colWidth = 0;
+        let rowHeight = 0;
+
+        // ----------------- 温暖电钢琴合成器 (Web Audio API) -----------------
+        let audioCtx = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+
+        // 使用物理算法当场演奏高保真琴音 (物理 pluck + lowpass 复合包络)
+        function playNote(midiNum) {
+            initAudio();
+            if (!audioCtx || audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const freq = 440 * Math.pow(2, (midiNum - 69) / 12);
+            const now = audioCtx.currentTime;
+
+            // 1. 创建波形振荡器 (三角波，接近纯净琴音)
+            const osc = audioCtx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now);
+
+            // 2. 泛音叠加 (副振荡器，丰富和弦空气感)
+            const subOsc = audioCtx.createOscillator();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(freq * 2, now); // 高八度谐音
+
+            // 3. 电磁低通滤波器 (模仿经典罗兹 Rhodes 电钢琴音色包络)
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1200, now);
+            filter.frequency.exponentialRampToValueAtTime(100, now + 0.8);
+            filter.Q.setValueAtTime(1.5, now);
+
+            // 4. ADSR 增益器
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0.0, now);
+            // 极快琴槌打击瞬间 (Attack)
+            gainNode.gain.linearRampToValueAtTime(0.35, now + 0.005);
+            // 缓慢释音扩散衰减 (Decay / Release)
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+            // 连接拓扑结构
+            osc.connect(filter);
+            subOsc.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start(now);
+            subOsc.start(now);
+            osc.stop(now + 1.0);
+            subOsc.stop(now + 1.0);
+        }
+
+        // 演奏发生失误时的低频电子过载杂音
+        function playOverloadNoise() {
+            initAudio();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.linearRampToValueAtTime(40, now + 0.3);
+
+            gainNode.gain.setValueAtTime(0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+
+        function resizeGameCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            colWidth = rect.width / cols;
+            rowHeight = rect.height / 4.2; // 屏幕垂向展示4.2排，留出合理的视线距离
+        }
+        window.addEventListener('resize', resizeGameCanvas);
+
+        // 产生碎裂喷射粒子
+        function createExplosion(x, y, color) {
+            const count = 15;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 3 + 1,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.015
+                });
+            }
+        }
+
+        function initGameSystem() {
+            initAudio();
+            gameActive = true;
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            speed = 4.2;
+            noteIndex = 0;
+            rows = [];
+            particles = [];
+            screenShakeAmount = 0;
+
+            hudScore.innerText = score;
+            hudComboWrap.style.opacity = '0';
+
+            startModal.style.display = 'none';
+            overModal.style.opacity = '0';
+            setTimeout(() => {
+                overModal.style.display = 'none';
+            }, 300);
+
+            resizeGameCanvas();
+
+            // 预先生成初始音符行，改为从顶部滑落布局
+            for (let i = 0; i < 5; i++) {
+                // 将起始位置设在屏幕上方，随着 i 增大，位置越靠上
+                const targetY = -(i + 1) * rowHeight;
+                rows.push({
+                    y: targetY,
+                    blackCol: Math.floor(Math.random() * cols),
+                    clicked: false,
+                    isFirst: i === 0, 
+                    errorClickedCol: -1 
+                });
+            }
+
+            animate();
+        }
+
+        function handleInteraction(clientX, clientY) {
+            if (!gameActive) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = clientX - rect.left;
+            const clickY = clientY - rect.top;
+
+            const clickCol = Math.floor(clickX / colWidth);
+
+            // 找出最底下尚未被点击的音符行
+            let targetRowIndex = -1;
+            for (let i = 0; i < rows.length; i++) {
+                if (!rows[i].clicked) {
+                    targetRowIndex = i;
+                    break;
+                }
+            }
+
+            if (targetRowIndex !== -1) {
+                const row = rows[targetRowIndex];
+
+                // 如果点击发生在当前最底音符行所在的Y轴活跃带内
+                // （为了让点击体验更流畅宽容，增加触控容差范围）
+                if (clickY > row.y && clickY < row.y + rowHeight + 35) {
+                    if (clickCol === row.blackCol) {
+                        // 1. 击中正确音符
+                        row.clicked = true;
+                        
+                        // 演奏对应的旋律 note 音高
+                        const midiNote = melody[noteIndex % melody.length];
+                        playNote(midiNote);
+                        noteIndex++;
+
+                        // 粒子炸裂
+                        createExplosion(clickX, clickY, '#00f0ff');
+
+                        // 计分机制
+                        combo++;
+                        if (combo > maxCombo) maxCombo = combo;
+                        score += 10 + Math.floor(combo / 5) * 2;
+
+                        hudScore.innerText = score;
+                        hudCombo.innerText = combo;
+
+                        if (combo >= 3) {
+                            hudComboWrap.style.opacity = '1';
+                        }
+
+                        // 逐渐物理提速，提升后期极限挑战感
+                        if (score % 100 === 0 && speed < 14) {
+                            speed += 0.35;
+                        }
+                    } else {
+                        // 2. 踩到了对应行的“白块”（空白轨道），引发脑机故障
+                        row.errorClickedCol = clickCol;
+                        triggerSystemFailure();
+                    }
+                }
+            }
+        }
+
+        // 输入绑定
+        canvas.addEventListener('mousedown', (e) => {
+            handleInteraction(e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        // 引发故障关机
+        function triggerSystemFailure() {
+            gameActive = false;
+            screenShakeAmount = 20; // 剧烈震动画面
+            playOverloadNoise();
+
+            // 产生大量的火红爆炸粒子
+            const logicalWidth = canvas.width / window.devicePixelRatio;
+            const logicalHeight = canvas.height / window.devicePixelRatio;
+            createExplosion(logicalWidth / 2, logicalHeight / 2, '#ff007f');
+
+            setTimeout(() => {
+                overModal.style.display = 'flex';
+                setTimeout(() => {
+                    overModal.style.opacity = '1';
+                }, 50);
+
+                finalScore.innerText = score;
+                finalCombo.innerText = maxCombo;
+            }, 800);
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            const logicalHeight = canvas.height / window.devicePixelRatio;
+
+            // 1. 所有行匀速下滑
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].y += speed;
+            }
+
+            // 2. 漏音检测：如果最底部的音符越过了警戒线且没有被点击，自动漏球死亡
+            if (rows.length > 0) {
+                const oldestRow = rows[0];
+                if (oldestRow.y > logicalHeight && !oldestRow.clicked) {
+                    triggerSystemFailure();
+                    return;
+                }
+            }
+
+            // 3. 移除越界且已点击的旧行，并在顶端补充生成新行
+            if (rows.length > 0 && rows[0].y > logicalHeight) {
+                rows.shift();
+
+                // 取当前队列最上面一行，在它的上方精确拼接新音符行
+                const topY = rows[rows.length - 1].y;
+                rows.push({
+                    y: topY - rowHeight,
+                    blackCol: Math.floor(Math.random() * cols),
+                    clicked: false,
+                    errorClickedCol: -1
+                });
+            }
+
+            // 4. 更新爆裂粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // 5. 衰减屏幕震动值
+            if (screenShakeAmount > 0) {
+                screenShakeAmount *= 0.88;
+                if (screenShakeAmount < 0.5) screenShakeAmount = 0;
+            }
+        }
+
+        function draw() {
+            ctx.save();
+
+            // 如果有震动，应用 Canvas 位移变换
+            if (screenShakeAmount > 0) {
+                const shakeX = (Math.random() - 0.5) * screenShakeAmount;
+                const shakeY = (Math.random() - 0.5) * screenShakeAmount;
+                ctx.translate(shakeX, shakeY);
+                gameFrame.classList.add('shake');
+            } else {
+                gameFrame.classList.remove('shake');
+            }
+
+            // 清理上一帧（使用微弱半透明覆盖，保留赛博荧光残影）
+            ctx.fillStyle = 'rgba(6, 5, 17, 0.35)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const logicalWidth = canvas.width / window.devicePixelRatio;
+            const logicalHeight = canvas.height / window.devicePixelRatio;
+
+            // 1. 绘制纵向发光轨道分隔线
+            ctx.lineWidth = 1;
+            for (let i = 1; i < cols; i++) {
+                const lineX = i * colWidth;
+                const gradient = ctx.createLinearGradient(lineX, 0, lineX, logicalHeight);
+                gradient.addColorStop(0, 'rgba(157, 0, 255, 0.01)');
+                gradient.addColorStop(0.5, 'rgba(157, 0, 255, 0.12)');
+                gradient.addColorStop(1, 'rgba(157, 0, 255, 0.02)');
+                ctx.strokeStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(lineX, 0);
+                ctx.lineTo(lineX, logicalHeight);
+                ctx.stroke();
+            }
+
+            // 2. 绘制音符行中的黑白霓虹琴键
+            rows.forEach(row => {
+                const drawY = row.y;
+
+                // 如果未被点击，绘制深邃暗紫色的目标按键
+                if (!row.clicked) {
+                    const blockX = row.blackCol * colWidth;
+
+                    // 绘制外包霓虹发光倒角矩形
+                    ctx.save();
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = 'var(--neon-purple)';
+
+                    // 渐变填充霓虹音符主体
+                    const grad = ctx.createLinearGradient(blockX, drawY, blockX, drawY + rowHeight);
+                    grad.addColorStop(0, 'rgba(157, 0, 255, 0.85)');
+                    grad.addColorStop(1, 'rgba(69, 0, 157, 0.9)');
+                    ctx.fillStyle = grad;
+
+                    // 绘制柔和的琴键圆角矩形
+                    ctx.beginPath();
+                    drawRoundRect(ctx, blockX + 4, drawY + 4, colWidth - 8, rowHeight - 8, 8);
+                    ctx.fill();
+                    ctx.restore();
+
+                    // 加固绘制内部透光发光内槽，增强实体玻璃感
+                    ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                } else {
+                    // 如果已经被正确完美敲击，在对应位置留下一道发光的量子闪电波纹
+                    const blockX = row.blackCol * colWidth;
+                    ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
+                    ctx.fillRect(blockX + 2, drawY + 2, colWidth - 4, rowHeight - 4);
+                }
+
+                // 3. 错误踩白块（红闪）警报反馈
+                if (row.errorClickedCol !== -1) {
+                    const errX = row.errorClickedCol * colWidth;
+                    ctx.save();
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = 'var(--neon-pink)';
+                    ctx.fillStyle = 'rgba(255, 0, 127, 0.85)';
+                    ctx.beginPath();
+                    drawRoundRect(ctx, errX + 4, drawY + 4, colWidth - 8, rowHeight - 8, 8);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+
+            // 4. 绘制炫丽击碎粒子
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        // 绘制圆角矩形的辅助几何函数
+        function drawRoundRect(cContext, x, y, width, height, radius) {
+            cContext.moveTo(x + radius, y);
+            cContext.lineTo(x + width - radius, y);
+            cContext.quadraticCurveTo(x + width, y, x + width, y + radius);
+            cContext.lineTo(x + width, y + height - radius);
+            cContext.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            cContext.lineTo(x + radius, y + height - radius);
+            cContext.quadraticCurveTo(x, y + height, x, y + height - radius);
+            cContext.lineTo(x, y + radius);
+            cContext.quadraticCurveTo(x, y, x + radius, y);
+        }
+
+        // 动画帧主回路
+        function animate() {
+            if (!gameActive) return;
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // 启动预检自适应
+        resizeGameCanvas();
+    </script>
+</body>
+</html>
