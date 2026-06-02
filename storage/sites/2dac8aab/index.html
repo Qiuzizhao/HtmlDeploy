@@ -50,6 +50,7 @@
             overflow: hidden;
             border: 2px solid rgba(0, 240, 255, 0.2);
             background: radial-gradient(circle at center, #14192f 0%, #05070f 100%);
+            contain: strict;
         }
 
         canvas {
@@ -70,7 +71,6 @@
             justify-content: center;
             align-items: center;
             background: rgba(5, 7, 15, 0.85);
-            backdrop-filter: blur(8px);
             z-index: 20;
             transition: opacity 0.4s ease, visibility 0.4s;
             opacity: 1;
@@ -160,7 +160,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             padding: 8px 16px;
-            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -245,7 +244,6 @@
             align-items: center;
             color: white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(4px);
         }
 
         .touch-btn:active {
@@ -348,7 +346,7 @@
     <div id="menu-screen" class="overlay">
         <h1>NEON LEAP</h1>
         <p>A S T R O   D A S H</p>
-        
+
         <div class="guides">
             <div class="guide-item">
                 <span class="kbd">空格 Space</span> 或 <span class="kbd">W</span> 跃迁跳跃（支持二段跳跃 ⚡）
@@ -394,6 +392,7 @@
     // --- 极简 Web Audio API 智能音效合成器 ---
     const SoundFX = {
         ctx: null,
+        noiseBuffer: null,
         init() {
             try {
                 if (!this.ctx) {
@@ -406,6 +405,18 @@
                 console.warn("Web Audio API not supported/blocked on this browser.");
             }
         },
+        getNoiseBuffer() {
+            if (!this.ctx) return null;
+            if (!this.noiseBuffer) {
+                const bufferSize = Math.floor(this.ctx.sampleRate * 0.2);
+                this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = this.noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+            }
+            return this.noiseBuffer;
+        },
         playJump() {
             this.init();
             if (!this.ctx) return;
@@ -413,14 +424,14 @@
             const gain = this.ctx.createGain();
             osc.connect(gain);
             gain.connect(this.ctx.destination);
-            
+
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(150, this.ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.15);
-            
+
             gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-            
+
             osc.start();
             osc.stop(this.ctx.currentTime + 0.15);
         },
@@ -431,14 +442,14 @@
             const gain = this.ctx.createGain();
             osc.connect(gain);
             gain.connect(this.ctx.destination);
-            
+
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); 
-            osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08);  
-            
+            osc.frequency.setValueAtTime(587.33, this.ctx.currentTime);
+            osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08);
+
             gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
-            
+
             osc.start();
             osc.stop(this.ctx.currentTime + 0.25);
         },
@@ -449,14 +460,14 @@
             const gain = this.ctx.createGain();
             osc.connect(gain);
             gain.connect(this.ctx.destination);
-            
+
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(200, this.ctx.currentTime);
             osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.2);
-            
+
             gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-            
+
             osc.start();
             osc.stop(this.ctx.currentTime + 0.2);
         },
@@ -464,16 +475,9 @@
             this.init();
             if (!this.ctx) return;
             try {
-                const bufferSize = this.ctx.sampleRate * 0.2;
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-                
                 const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-                
+                noise.buffer = this.getNoiseBuffer();
+
                 const filter = this.ctx.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.setValueAtTime(400, this.ctx.currentTime);
@@ -482,11 +486,11 @@
                 const gain = this.ctx.createGain();
                 gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-                
+
                 noise.connect(filter);
                 filter.connect(gain);
                 gain.connect(this.ctx.destination);
-                
+
                 noise.start();
                 noise.stop(this.ctx.currentTime + 0.2);
             } catch (err) {
@@ -504,14 +508,14 @@
             const gain = this.ctx.createGain();
             osc.connect(gain);
             gain.connect(this.ctx.destination);
-            
+
             osc.type = 'square';
             osc.frequency.setValueAtTime(220, this.ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.3);
-            
+
             gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
-            
+
             osc.start();
             osc.stop(this.ctx.currentTime + 0.35);
         }
@@ -521,14 +525,41 @@
     class NeonLeapGame {
         constructor() {
             this.canvas = document.getElementById('gameCanvas');
-            this.ctx = this.canvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d', { alpha: false, desynchronized: true }) || this.canvas.getContext('2d');
             this.bestScore = parseInt(localStorage.getItem('neonleap_best') || '0');
-            
+            this.ui = {
+                score: document.getElementById('hud-score'),
+                highscore: document.getElementById('hud-highscore'),
+                shields: document.getElementById('hud-shields'),
+                menu: document.getElementById('menu-screen'),
+                gameover: document.getElementById('gameover-screen'),
+                finalScore: document.getElementById('final-score'),
+                finalBest: document.getElementById('final-best'),
+                buffs: document.getElementById('buffs-container'),
+                damageFlash: document.getElementById('damage-flash'),
+                touchControls: document.getElementById('touch-controls'),
+                jumpControl: document.getElementById('ctrl-jump'),
+                dashControl: document.getElementById('ctrl-dash')
+            };
+            this.maxParticles = 72;
+            this.lastScoreText = '';
+            this.lastBestScoreText = '';
+            this.lastShieldsText = '';
+            this.lastBuffSignature = '';
+            this.damageFlashTimer = 0;
+            this.gameOverTimer = 0;
+            this.isGameOver = false;
+            this.renderTime = 0;
+            this.fixedStepMs = 1000 / 60;
+            this.accumulatorMs = 0;
+            this.lastFrameTime = 0;
+
             // 物理渲染尺寸锁定 (16:9 比例)
             this.renderWidth = 1024;
             this.renderHeight = 576;
             this.canvas.width = this.renderWidth;
             this.canvas.height = this.renderHeight;
+            this.ctx.imageSmoothingEnabled = false;
 
             // Canvas 绘制圆角兼容补丁
             if (typeof this.ctx.roundRect !== 'function') {
@@ -568,18 +599,18 @@
             // 特效系统容器
             this.player = null;
             this.platforms = [];
-            this.entities = []; 
+            this.entities = [];
             this.particles = [];
             this.backgroundStars = [];
 
             // 关卡生成器状态
-            this.platformYTrend = 400; 
-            
+            this.platformYTrend = 400;
+
             // Buff 激活状态（存帧数）
             this.activeBuffs = {
-                magnet: 0,       
-                double: 0,       
-                invincible: 0    
+                magnet: 0,
+                double: 0,
+                invincible: 0
             };
 
             // 监听键盘按键
@@ -611,15 +642,18 @@
             };
 
             if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                document.getElementById('touch-controls').style.display = 'flex';
-                document.getElementById('ctrl-jump').addEventListener('touchstart', handleTouchJump, { passive: false });
-                document.getElementById('ctrl-jump').addEventListener('mousedown', handleTouchJump);
-                document.getElementById('ctrl-dash').addEventListener('touchstart', handleTouchDash, { passive: false });
-                document.getElementById('ctrl-dash').addEventListener('mousedown', handleTouchDash);
+                this.ui.touchControls.style.display = 'flex';
+                if (window.PointerEvent) {
+                    this.ui.jumpControl.addEventListener('pointerdown', handleTouchJump, { passive: false });
+                    this.ui.dashControl.addEventListener('pointerdown', handleTouchDash, { passive: false });
+                } else {
+                    this.ui.jumpControl.addEventListener('touchstart', handleTouchJump, { passive: false });
+                    this.ui.dashControl.addEventListener('touchstart', handleTouchDash, { passive: false });
+                }
             }
 
             // 初始化背景静态粒子
-            for (let i = 0; i < 80; i++) {
+            for (let i = 0; i < 36; i++) {
                 this.backgroundStars.push({
                     x: Math.random() * this.renderWidth,
                     y: Math.random() * this.renderHeight,
@@ -630,7 +664,64 @@
 
             // 初始化 UI
             safeCreateIcons();
-            document.getElementById('hud-highscore').innerText = this.bestScore;
+            this.setBestScore(this.bestScore);
+        }
+
+        setScore(value) {
+            const text = String(value);
+            if (text !== this.lastScoreText) {
+                this.ui.score.textContent = text;
+                this.lastScoreText = text;
+            }
+        }
+
+        setBestScore(value) {
+            const text = String(value);
+            if (text !== this.lastBestScoreText) {
+                this.ui.highscore.textContent = text;
+                this.lastBestScoreText = text;
+            }
+        }
+
+        removeEntityAt(index) {
+            const lastIndex = this.entities.length - 1;
+            if (index < 0 || index > lastIndex) return;
+            this.entities[index] = this.entities[lastIndex];
+            this.entities.pop();
+        }
+
+        compactParticles() {
+            let writeIndex = 0;
+            for (let i = 0; i < this.particles.length; i++) {
+                const p = this.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha > 0) {
+                    this.particles[writeIndex++] = p;
+                }
+            }
+            this.particles.length = writeIndex;
+        }
+
+        compactWorldArrays() {
+            let platformWrite = 0;
+            for (let i = 0; i < this.platforms.length; i++) {
+                const p = this.platforms[i];
+                if (p.x + p.width > -100) {
+                    this.platforms[platformWrite++] = p;
+                }
+            }
+            this.platforms.length = platformWrite;
+
+            let entityWrite = 0;
+            for (let i = 0; i < this.entities.length; i++) {
+                const ent = this.entities[i];
+                if (ent.x > -100) {
+                    this.entities[entityWrite++] = ent;
+                }
+            }
+            this.entities.length = entityWrite;
         }
 
         // 启动游戏
@@ -640,7 +731,7 @@
                 document.activeElement.blur();
             }
             SoundFX.init();
-            document.getElementById('menu-screen').classList.add('hidden');
+            this.ui.menu.classList.add('hidden');
             this.resetGame();
             this.isPlaying = true;
         }
@@ -660,10 +751,16 @@
             this.particles = [];
             this.platformYTrend = 380;
             this.activeBuffs = { magnet: 0, double: 0, invincible: 0 };
-            
-            document.getElementById('hud-score').innerText = '0';
+            this.isGameOver = false;
+            clearTimeout(this.gameOverTimer);
+            clearTimeout(this.damageFlashTimer);
+            this.ui.damageFlash.style.opacity = '0';
+            this.lastBuffSignature = '';
+
+            this.setScore(0);
             this.updateShieldsHUD();
-            document.getElementById('gameover-screen').classList.add('hidden');
+            this.updateBuffIndicators();
+            this.ui.gameover.classList.add('hidden');
 
             // 实例化玩家
             this.player = {
@@ -678,9 +775,9 @@
                 isDashing: false,
                 dashCooldown: 0,
                 dashTimer: 0,
-                coyoteTimer: 0, 
+                coyoteTimer: 0,
                 jumpCount: 0,   // 跳跃计数器，用于支持二段跳
-                hue: 190,       
+                hue: 190,
                 colorPulse: 0
             };
 
@@ -694,12 +791,15 @@
         }
 
         updateShieldsHUD() {
-            const shieldEl = document.getElementById('hud-shields');
-            shieldEl.innerText = "⚡".repeat(Math.max(0, this.shields)) || "CRITICAL";
+            const shieldText = "⚡".repeat(Math.max(0, this.shields)) || "CRITICAL";
+            if (shieldText !== this.lastShieldsText) {
+                this.ui.shields.textContent = shieldText;
+                this.lastShieldsText = shieldText;
+            }
             if (this.shields <= 1) {
-                shieldEl.style.color = '#ff007f';
+                this.ui.shields.style.color = '#ff007f';
             } else {
-                shieldEl.style.color = '#00f0ff';
+                this.ui.shields.style.color = '#00f0ff';
             }
         }
 
@@ -716,6 +816,7 @@
 
         // 触发跳跃
         executeJump() {
+            if (!this.isPlaying || !this.player) return;
             // 一段跳 (在地面或土狼时间内)
             if (this.player.isGrounded || this.player.coyoteTimer > 0) {
                 this.player.vy = this.player.jumpForce;
@@ -724,7 +825,7 @@
                 this.player.jumpCount = 1; // 记录已跳跃一次
                 SoundFX.playJump();
                 this.createDustBurst(this.player.x + 15, this.player.y + 40, '#00f0ff');
-            } 
+            }
             // 二段跳
             else if (this.player.jumpCount < 2) {
                 this.player.vy = this.player.jumpForce * 0.9; // 稍微轻盈的二次起跳
@@ -737,11 +838,12 @@
 
         // 触发前冲
         executeDash() {
+            if (!this.isPlaying || !this.player) return;
             if (this.player.dashCooldown <= 0 && !this.player.isDashing) {
                 this.player.isDashing = true;
-                this.player.dashTimer = 18; 
-                this.player.dashCooldown = 60; 
-                this.player.vy = 0; 
+                this.player.dashTimer = 18;
+                this.player.dashCooldown = 60;
+                this.player.vy = 0;
                 SoundFX.playDash();
                 this.createDustBurst(this.player.x, this.player.y + 20, '#ff007f', 15);
             }
@@ -759,7 +861,7 @@
             }
 
             // 限制斜度波折程度，平滑高度跃变
-            const yOffset = (Math.random() - 0.5) * 80; 
+            const yOffset = (Math.random() - 0.5) * 80;
             const nextY = Math.max(240, Math.min(480, this.platformYTrend + yOffset));
             const heightDiff = nextY - this.platformYTrend; // 负值代表向上爬，正值代表向下掉
 
@@ -772,9 +874,9 @@
             // 计算最终间距：基于当前的速度进行小幅度的平滑伸缩
             const speedFactor = Math.min(this.gameSpeed * 4.0, 80);
             const gap = Math.random() * maxRandGap + 50 + speedFactor;
-            
+
             this.platformYTrend = nextY;
-            
+
             const platWidth = Math.random() * 140 + 120;
             const platX = referenceX + gap;
             const platY = this.platformYTrend;
@@ -841,11 +943,12 @@
 
         // 粒子发生器
         createDustBurst(x, y, color, count = 8) {
+            count = Math.min(count, 8);
             for (let i = 0; i < count; i++) {
                 this.particles.push({
                     x: x,
                     y: y,
-                    vx: (Math.random() - 0.5) * 6 - 2, 
+                    vx: (Math.random() - 0.5) * 6 - 2,
                     vy: (Math.random() - 0.5) * 6,
                     radius: Math.random() * 4 + 1.5,
                     color: color,
@@ -853,6 +956,9 @@
                     decay: Math.random() * 0.03 + 0.02,
                     blend: true
                 });
+            }
+            if (this.particles.length > this.maxParticles) {
+                this.particles.splice(0, this.particles.length - this.maxParticles);
             }
         }
 
@@ -883,7 +989,7 @@
             this.player.dashCooldown = Math.max(0, this.player.dashCooldown - 1);
             if (this.player.isDashing) {
                 this.player.dashTimer--;
-                this.player.vy = 0; 
+                this.player.vy = 0;
                 // 跑酷冲刺残影
                 if (this.player.dashTimer % 2 === 0) {
                     this.particles.push({
@@ -897,6 +1003,9 @@
                         decay: 0.05,
                         blend: true
                     });
+                    if (this.particles.length > this.maxParticles) {
+                        this.particles.shift();
+                    }
                 }
                 if (this.player.dashTimer <= 0) {
                     this.player.isDashing = false;
@@ -910,16 +1019,20 @@
 
             // 3. 土狼时间处理
             if (this.player.isGrounded) {
-                this.player.coyoteTimer = 8; 
+                this.player.coyoteTimer = 8;
             } else {
                 this.player.coyoteTimer = Math.max(0, this.player.coyoteTimer - 1);
             }
 
             // 4. 世界平滑向左滚动
-            this.platforms.forEach(p => p.x -= this.gameSpeed);
-            this.entities.forEach(e => e.x -= this.gameSpeed);
+            for (let i = 0; i < this.platforms.length; i++) {
+                this.platforms[i].x -= this.gameSpeed;
+            }
+            for (let i = 0; i < this.entities.length; i++) {
+                this.entities[i].x -= this.gameSpeed;
+            }
 
-            this.platforms = this.platforms.filter(p => p.x + p.width > -100);
+            this.compactWorldArrays();
 
             // 5. 补充生成新平台
             while (this.platforms.length < 8) {
@@ -930,13 +1043,15 @@
             let previouslyGrounded = this.player.isGrounded;
             this.player.isGrounded = false;
 
-            for (let p of this.platforms) {
+            for (let i = 0; i < this.platforms.length; i++) {
+                const p = this.platforms[i];
                 if (this.player.x + this.player.width > p.x &&
                     this.player.x < p.x + p.width) {
-                    
+
                     if (this.player.y + this.player.height >= p.y &&
+                        this.player.vy >= 0 &&
                         this.player.y + this.player.height - this.player.vy <= p.y + 8) {
-                        
+
                         this.player.y = p.y - this.player.height;
                         this.player.vy = 0;
                         this.player.isGrounded = true;
@@ -962,10 +1077,11 @@
                 if (this.activeBuffs.magnet > 0 && (ent.type === 'coin' || ent.type === 'powerup')) {
                     const dx = this.player.x + 15 - ent.x;
                     const dy = this.player.y + 22 - ent.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < 200) {
-                        ent.x += (dx / dist) * 11;
-                        ent.y += (dy / dist) * 11;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq > 0.01 && distSq < 40000) {
+                        const pull = 11 / Math.sqrt(distSq);
+                        ent.x += dx * pull;
+                        ent.y += dy * pull;
                     }
                 }
 
@@ -979,59 +1095,54 @@
                     this.player.x < entX + entWidth &&
                     this.player.y + this.player.height > entY &&
                     this.player.y < entY + entHeight) {
-                    
+
                     if (ent.type === 'coin') {
                         let gain = this.activeBuffs.double > 0 ? 20 : 10;
                         this.score += gain;
-                        document.getElementById('hud-score').innerText = this.score;
+                        this.setScore(this.score);
                         SoundFX.playCoin();
                         this.createDustBurst(ent.x, ent.y, '#ffd166', 5);
-                        this.entities.splice(i, 1);
+                        this.removeEntityAt(i);
                     }
                     else if (ent.type === 'powerup') {
                         SoundFX.playPowerup();
                         this.triggerPowerup(ent.subtype);
-                        this.entities.splice(i, 1);
+                        this.removeEntityAt(i);
                     }
                     else if (ent.type === 'obstacle' || ent.type === 'plasma_projectile') {
                         this.triggerDamageHit(ent, i);
+                        if (!this.isPlaying) return;
                     }
                 }
             }
 
             // 清理无用越界道具
-            this.entities = this.entities.filter(e => e.x > -100);
+            this.compactWorldArrays();
 
             // 8. 深渊坠毁
             if (this.player.y > this.renderHeight) {
                 this.triggerFatalFall();
+                return;
             }
 
-            // 9. 更新粒子 (同样使用倒序防删除Bug)
-            for (let i = this.particles.length - 1; i >= 0; i--) {
-                const p = this.particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= p.decay;
-                if (p.alpha <= 0) {
-                    this.particles.splice(i, 1);
-                }
-            }
+            // 9. 更新粒子，原地压缩避免频繁 splice 触发数组搬移
+            this.compactParticles();
 
             // 背景星流动
-            this.backgroundStars.forEach(star => {
+            for (let i = 0; i < this.backgroundStars.length; i++) {
+                const star = this.backgroundStars[i];
                 star.x -= star.speed * (this.gameSpeed * 0.2);
                 if (star.x < 0) {
                     star.x = this.renderWidth;
                     star.y = Math.random() * this.renderHeight;
                 }
-            });
+            }
         }
 
         // 触发道具效果
         triggerPowerup(type) {
             if (type === 'magnet') {
-                this.activeBuffs.magnet = 360; 
+                this.activeBuffs.magnet = 360;
             } else if (type === 'double') {
                 this.activeBuffs.double = 360;
             } else if (type === 'shield_box') {
@@ -1046,33 +1157,40 @@
         }
 
         updateBuffIndicators() {
-            const container = document.getElementById('buffs-container');
-            container.innerHTML = '';
-            
+            const magnetSeconds = Math.ceil(this.activeBuffs.magnet / 60);
+            const doubleSeconds = Math.ceil(this.activeBuffs.double / 60);
+            const invincibleSeconds = Math.ceil(this.activeBuffs.invincible / 60);
+            const signature = `${magnetSeconds}|${doubleSeconds}|${invincibleSeconds}`;
+            if (signature === this.lastBuffSignature) return;
+            this.lastBuffSignature = signature;
+
+            let html = '';
+
             if (this.activeBuffs.magnet > 0) {
-                container.innerHTML += `
+                html += `
                     <div class="buff-icon" style="border-color: var(--secondary)">
                         <i data-lucide="magnet" style="color: var(--secondary); width: 14px;"></i>
-                        <span>高磁重力场: ${Math.ceil(this.activeBuffs.magnet / 60)}s</span>
+                        <span>高磁重力场: ${magnetSeconds}s</span>
                     </div>
                 `;
             }
             if (this.activeBuffs.double > 0) {
-                container.innerHTML += `
+                html += `
                     <div class="buff-icon" style="border-color: var(--warning)">
                         <i data-lucide="sparkles" style="color: var(--warning); width: 14px;"></i>
-                        <span>双倍超载: ${Math.ceil(this.activeBuffs.double / 60)}s</span>
+                        <span>双倍超载: ${doubleSeconds}s</span>
                     </div>
                 `;
             }
             if (this.activeBuffs.invincible > 0) {
-                container.innerHTML += `
+                html += `
                     <div class="buff-icon" style="border-color: var(--success)">
                         <i data-lucide="shield" style="color: var(--success); width: 14px;"></i>
-                        <span>量子屏障: ${Math.ceil(this.activeBuffs.invincible / 60)}s</span>
+                        <span>量子屏障: ${invincibleSeconds}s</span>
                     </div>
                 `;
             }
+            this.ui.buffs.innerHTML = html;
             safeCreateIcons();
         }
 
@@ -1080,21 +1198,23 @@
         triggerDamageHit(ent, entIndex) {
             if (this.player.isDashing || this.activeBuffs.invincible > 0) {
                 this.createDustBurst(ent.x, ent.y, ent.color || '#ff007f', 15);
-                this.entities.splice(entIndex, 1);
+                this.removeEntityAt(entIndex);
                 SoundFX.playHit();
-                this.score += 30; 
-                document.getElementById('hud-score').innerText = this.score;
+                this.score += 30;
+                this.setScore(this.score);
                 return;
             }
 
             this.shields--;
             this.updateShieldsHUD();
-            this.entities.splice(entIndex, 1);
+            this.removeEntityAt(entIndex);
             SoundFX.playHit();
 
-            const flash = document.getElementById('damage-flash');
-            flash.style.opacity = '1';
-            setTimeout(() => flash.style.opacity = '0', 150);
+            clearTimeout(this.damageFlashTimer);
+            this.ui.damageFlash.style.opacity = '1';
+            this.damageFlashTimer = setTimeout(() => {
+                this.ui.damageFlash.style.opacity = '0';
+            }, 150);
 
             this.createDustBurst(this.player.x + 15, this.player.y + 22, '#ff007f', 20);
 
@@ -1113,20 +1233,25 @@
         }
 
         endGame() {
+            if (this.isGameOver) return;
+            this.isGameOver = true;
             this.isPlaying = false;
             SoundFX.playHit();
-            
+
             if (this.score > this.bestScore) {
                 this.bestScore = this.score;
                 localStorage.setItem('neonleap_best', this.bestScore);
-                document.getElementById('hud-highscore').innerText = this.bestScore;
+                this.setBestScore(this.bestScore);
             }
 
-            document.getElementById('final-score').innerText = this.score;
-            document.getElementById('final-best').innerText = this.bestScore;
-            
-            setTimeout(() => {
-                document.getElementById('gameover-screen').classList.remove('hidden');
+            this.ui.finalScore.textContent = this.score;
+            this.ui.finalBest.textContent = this.bestScore;
+
+            clearTimeout(this.gameOverTimer);
+            this.gameOverTimer = setTimeout(() => {
+                if (this.isGameOver) {
+                    this.ui.gameover.classList.remove('hidden');
+                }
             }, 600);
         }
 
@@ -1137,38 +1262,45 @@
 
             // 静态/动态深空星辰层
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            this.backgroundStars.forEach(star => {
+            for (let i = 0; i < this.backgroundStars.length; i++) {
+                const star = this.backgroundStars[i];
                 this.ctx.fillRect(star.x, star.y, star.size, star.size);
-            });
+            }
 
             this.ctx.save();
-            this.ctx.globalCompositeOperation = 'lighter';
 
             // 1. 渲染平台（霓虹发光）
-            this.platforms.forEach(p => {
-                this.ctx.shadowBlur = 10;
+            this.ctx.shadowBlur = 5;
+            this.ctx.shadowColor = 'rgba(0, 240, 255, 0.3)';
+            for (let i = 0; i < this.platforms.length; i++) {
+                const p = this.platforms[i];
+                if (p.x > this.renderWidth || p.x + p.width < 0) continue;
+                this.ctx.shadowBlur = 5;
                 this.ctx.shadowColor = 'rgba(0, 240, 255, 0.3)';
-                
+
                 this.ctx.strokeStyle = '#00f0ff';
                 this.ctx.lineWidth = 2.5;
                 this.ctx.strokeRect(p.x, p.y, p.width, p.height);
 
                 this.ctx.fillStyle = 'rgba(10, 18, 40, 0.9)';
                 this.ctx.fillRect(p.x, p.y, p.width, p.height);
-                
+
                 this.ctx.fillStyle = 'rgba(0, 240, 255, 0.05)';
                 this.ctx.fillRect(p.x, p.y + p.height, p.width, 20);
-            });
+            }
 
             // 2. 渲染各种实体
-            this.entities.forEach(ent => {
-                this.ctx.shadowBlur = 15;
+            for (let i = 0; i < this.entities.length; i++) {
+                const ent = this.entities[i];
+                const cullSize = ent.width || ent.size * 3 || 32;
+                if (ent.x + cullSize < 0 || ent.x - cullSize > this.renderWidth) continue;
+                this.ctx.shadowBlur = 7;
 
                 if (ent.type === 'coin') {
                     ent.pulse += 0.07;
                     const animatedSize = ent.size + Math.sin(ent.pulse) * 1.5;
                     this.ctx.shadowColor = '#ffd166';
-                    
+
                     this.ctx.beginPath();
                     this.ctx.arc(ent.x, ent.y, animatedSize, 0, Math.PI * 2);
                     this.ctx.fillStyle = 'rgba(255, 209, 102, 0.25)';
@@ -1181,7 +1313,7 @@
                     this.ctx.arc(ent.x, ent.y, animatedSize * 0.4, 0, Math.PI * 2);
                     this.ctx.fillStyle = '#ffffff';
                     this.ctx.fill();
-                } 
+                }
                 else if (ent.type === 'powerup') {
                     ent.pulse += 0.05;
                     const offset = Math.sin(ent.pulse) * 4;
@@ -1205,7 +1337,7 @@
                     if (ent.subtype === 'double') label = '2X';
                     if (ent.subtype === 'shield_box') label = '🛡️';
                     this.ctx.fillText(label, ent.x, ent.y + offset);
-                } 
+                }
                 else if (ent.type === 'obstacle') {
                     this.ctx.shadowColor = '#ff007f';
                     this.ctx.beginPath();
@@ -1213,7 +1345,7 @@
                     this.ctx.lineTo(ent.x + ent.width / 2, ent.y);
                     this.ctx.lineTo(ent.x + ent.width, ent.y + ent.height);
                     this.ctx.closePath();
-                    
+
                     this.ctx.fillStyle = 'rgba(255, 0, 127, 0.25)';
                     this.ctx.fill();
                     this.ctx.strokeStyle = '#ff007f';
@@ -1222,38 +1354,40 @@
                 }
                 else if (ent.type === 'plasma_projectile') {
                     this.ctx.shadowColor = '#9b59b6';
-                    let grad = this.ctx.createRadialGradient(ent.x, ent.y, 2, ent.x, ent.y, ent.size);
-                    grad.addColorStop(0, '#ffffff');
-                    grad.addColorStop(0.3, '#d6a2e8');
-                    grad.addColorStop(1, 'rgba(155, 89, 182, 0)');
                     this.ctx.beginPath();
-                    this.ctx.arc(ent.x, ent.y, ent.size, 0, Math.PI * 2);
-                    this.ctx.fillStyle = grad;
+                    this.ctx.arc(ent.x, ent.y, ent.size * 1.25, 0, Math.PI * 2);
+                    this.ctx.fillStyle = 'rgba(155, 89, 182, 0.28)';
+                    this.ctx.fill();
+                    this.ctx.beginPath();
+                    this.ctx.arc(ent.x, ent.y, ent.size * 0.58, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#d6a2e8';
                     this.ctx.fill();
                 }
-            });
+            }
 
             // 3. 渲染拖尾粒子系统
-            this.particles.forEach(p => {
-                this.ctx.shadowBlur = p.blend ? 8 : 0;
+            for (let i = 0; i < this.particles.length; i++) {
+                const p = this.particles[i];
+                if (p.x + p.radius < 0 || p.x - p.radius > this.renderWidth) continue;
+                this.ctx.shadowBlur = p.blend ? 3 : 0;
                 this.ctx.shadowColor = p.color;
                 this.ctx.fillStyle = p.color;
                 this.ctx.globalAlpha = p.alpha;
                 this.ctx.beginPath();
                 this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 this.ctx.fill();
-            });
+            }
             this.ctx.globalAlpha = 1.0;
 
             // 4. 绘制玩家战甲
             if (this.player) {
                 this.player.colorPulse += 0.1;
-                let playerHue = this.activeBuffs.invincible > 0 ? (Date.now() / 3) % 360 : this.player.hue;
+                let playerHue = this.activeBuffs.invincible > 0 ? (this.renderTime / 3) % 360 : this.player.hue;
                 let activeColor = `hsla(${playerHue}, 100%, 65%, 1)`;
 
-                this.ctx.shadowBlur = 18;
+                this.ctx.shadowBlur = 8;
                 this.ctx.shadowColor = activeColor;
-                
+
                 this.ctx.fillStyle = activeColor;
                 this.ctx.beginPath();
                 this.ctx.roundRect(this.player.x, this.player.y, this.player.width, this.player.height, 6);
@@ -1292,38 +1426,57 @@
                 }
             }
 
-            this.ctx.restore(); 
+            this.ctx.restore();
         }
 
         // 运行主循环
-        run() {
-            if (this.isPlaying) {
-                this.updatePhysics();
-            } else {
-                // 即使不开始游戏，背景星空和粒子也自动漂移（增加沉浸美感）
-                this.backgroundStars.forEach(star => {
-                    star.x -= star.speed * 1.2;
-                    if (star.x < 0) {
-                        star.x = this.renderWidth;
-                        star.y = Math.random() * this.renderHeight;
-                    }
-                });
-                for (let i = this.particles.length - 1; i >= 0; i--) {
-                    const p = this.particles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.alpha -= p.decay;
-                    if (p.alpha <= 0) this.particles.splice(i, 1);
+        updateIdleScene() {
+            // 即使不开始游戏，背景星空和粒子也自动漂移（增加沉浸美感）
+            for (let i = 0; i < this.backgroundStars.length; i++) {
+                const star = this.backgroundStars[i];
+                star.x -= star.speed * 1.2;
+                if (star.x < 0) {
+                    star.x = this.renderWidth;
+                    star.y = Math.random() * this.renderHeight;
                 }
             }
+            this.compactParticles();
+        }
+
+        run(timestamp = 0) {
+            if (!this.lastFrameTime) {
+                this.lastFrameTime = timestamp;
+            }
+
+            const deltaMs = Math.min(timestamp - this.lastFrameTime, 100);
+            this.lastFrameTime = timestamp;
+            this.renderTime = timestamp;
+            this.accumulatorMs += deltaMs;
+
+            let steps = 0;
+            while (this.accumulatorMs >= this.fixedStepMs && steps < 5) {
+                if (this.isPlaying) {
+                    this.updatePhysics();
+                } else {
+                    this.updateIdleScene();
+                }
+                this.accumulatorMs -= this.fixedStepMs;
+                steps += 1;
+            }
+
+            if (steps === 5) {
+                this.accumulatorMs = 0;
+            }
+
             this.draw();
-            requestAnimationFrame(() => this.run());
+            requestAnimationFrame((nextTimestamp) => this.run(nextTimestamp));
         }
     }
 
     // 实例和全局绑定
     const app = new NeonLeapGame();
-    app.run();
+    window.neonLeapApp = app;
+    requestAnimationFrame((timestamp) => app.run(timestamp));
 </script>
 </body>
 </html>

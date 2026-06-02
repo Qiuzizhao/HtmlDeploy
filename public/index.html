@@ -65,7 +65,6 @@
       background: rgba(255, 255, 255, 0.9);
       border-bottom: 1px solid var(--line);
       box-shadow: 0 12px 32px rgba(23, 32, 51, 0.06);
-      backdrop-filter: blur(18px);
     }
 
     .brand {
@@ -187,7 +186,6 @@
       border: 1px solid rgba(255, 255, 255, 0.5);
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.6);
-      backdrop-filter: blur(12px);
       box-shadow: var(--soft-shadow);
     }
 
@@ -239,7 +237,6 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.8);
-      backdrop-filter: blur(10px);
       border-left: 5px solid #38bdf8;
       box-shadow: var(--soft-shadow);
       text-align: left;
@@ -369,7 +366,6 @@
       border: 1px solid #bae6fd;
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
       box-shadow: 0 20px 40px rgba(14, 165, 233, 0.1);
     }
 
@@ -404,16 +400,53 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: #0f172a; /* 使用纯色实心背景，彻底杜绝半透明混合带来的渲染降级 */
+      background: rgba(15, 23, 42, 0.56);
     }
 
     .overlay.is-open {
       display: flex;
     }
 
-    body.is-previewing .topbar,
-    body.is-previewing main {
-      visibility: hidden; /* 隐藏主页面以减少重绘负担 */
+    .preview-overlay.is-open {
+      display: flex;
+    }
+
+    body.is-previewing {
+      overflow: hidden;
+    }
+
+    body.is-previewing > .topbar,
+    body.is-previewing > main {
+      display: none;
+    }
+
+    .preview-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      display: none;
+      overflow: hidden;
+      pointer-events: none;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    }
+
+    .preview-backdrop.is-open {
+      display: block;
+    }
+
+    .preview-backdrop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.56);
+    }
+
+    .preview-backdrop-content {
+      transform: translateY(calc(-1 * var(--preview-scroll-offset, 0px)));
+    }
+
+    .preview-overlay {
+      background: transparent;
     }
 
     .modal {
@@ -515,15 +548,24 @@
     }
 
     .preview {
-      width: min(1180px, calc(100vw - 32px));
-      height: min(780px, calc(100vh - 32px));
-      display: flex;
-      flex-direction: column;
-      background: var(--panel);
-      border: 1px solid rgba(255, 255, 255, 0.85);
-      /* 彻底移除 box-shadow, border-radius 和 overflow: hidden，强制硬件渲染 */
-      transform: translateZ(0);
-      will-change: transform;
+      position: relative;
+      width: min(1280px, calc(100vw - 48px));
+      height: min(840px, calc(100vh - 48px));
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      border-radius: 16px;
+      box-shadow: 0 24px 52px rgba(15, 23, 42, 0.24);
+    }
+
+    .preview-head {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1;
+      min-height: 64px;
+      box-sizing: border-box;
+      border-radius: 15px 15px 0 0;
     }
 
     .preview-meta {
@@ -544,17 +586,17 @@
       flex-shrink: 0;
     }
 
-    iframe {
+    #previewFrame {
       display: block;
-      flex: 1;
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      top: 65px;
+      right: 1px;
+      bottom: 1px;
+      left: 1px;
+      width: calc(100% - 2px);
+      height: calc(100% - 66px);
       border: 0;
       background: #000;
-      /* 强制独立合成层，解决卡顿 */
-      contain: strict;
-      transform: translateZ(0);
-      will-change: transform;
     }
 
     @media (max-width: 700px) {
@@ -632,17 +674,26 @@
       }
 
       .preview {
+        width: calc(100vw - 24px);
         height: calc(100vh - 24px);
+        border-radius: 12px;
       }
 
       .preview-head {
+        min-height: 92px;
         align-items: flex-start;
         flex-direction: column;
+        border-radius: 11px 11px 0 0;
       }
 
       .preview-actions {
         width: 100%;
         justify-content: space-between;
+      }
+
+      #previewFrame {
+        top: 93px;
+        height: calc(100% - 94px);
       }
     }
   </style>
@@ -701,7 +752,9 @@
     </form>
   </div>
 
-  <div class="overlay" id="previewOverlay" aria-hidden="true">
+  <div class="preview-backdrop" id="previewBackdrop" aria-hidden="true"></div>
+
+  <div class="overlay preview-overlay" id="previewOverlay" aria-hidden="true">
     <section class="preview">
       <div class="preview-head">
         <div class="preview-meta">
@@ -714,7 +767,7 @@
           <button class="icon-button" id="closePreview" type="button" aria-label="关闭预览窗口">×</button>
         </div>
       </div>
-      <iframe id="previewFrame" title="项目预览" allow="fullscreen; accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"></iframe>
+      <iframe id="previewFrame" title="项目预览" tabindex="0" allow="fullscreen; accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"></iframe>
     </section>
   </div>
 
@@ -723,6 +776,7 @@
     const siteGrid = document.getElementById('siteGrid');
     const emptyState = document.getElementById('emptyState');
     const uploadOverlay = document.getElementById('uploadOverlay');
+    const previewBackdrop = document.getElementById('previewBackdrop');
     const previewOverlay = document.getElementById('previewOverlay');
     const uploadForm = document.getElementById('uploadForm');
     const titleInput = document.getElementById('titleInput');
@@ -779,21 +833,85 @@
       closeOverlay(uploadOverlay);
     }
 
+    function focusPreviewFrame() {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          previewFrame.focus();
+          try {
+            previewFrame.contentWindow?.focus();
+          } catch {
+            // Same-origin previews can be focused; ignore browser focus denials.
+          }
+        });
+      });
+    }
+
+    function stripCloneIds(element) {
+      element.removeAttribute('id');
+      element.querySelectorAll('[id]').forEach((item) => item.removeAttribute('id'));
+    }
+
+    function renderPreviewBackdrop() {
+      previewBackdrop.innerHTML = '';
+      previewBackdrop.style.setProperty('--preview-scroll-offset', `${window.scrollY}px`);
+
+      const content = document.createElement('div');
+      content.className = 'preview-backdrop-content';
+
+      [document.querySelector('.topbar'), document.querySelector('main')].forEach((source) => {
+        if (!source) {
+          return;
+        }
+
+        const clone = source.cloneNode(true);
+        stripCloneIds(clone);
+        content.append(clone);
+      });
+
+      previewBackdrop.append(content);
+      previewBackdrop.classList.add('is-open');
+    }
+
+    function clearPreviewBackdrop() {
+      previewBackdrop.classList.remove('is-open');
+      previewBackdrop.innerHTML = '';
+    }
+
+    function openProjectWindow(site) {
+      const availableWidth = window.screen?.availWidth || window.innerWidth;
+      const availableHeight = window.screen?.availHeight || window.innerHeight;
+      const width = Math.min(1280, Math.max(960, Math.round(availableWidth * 0.82)));
+      const height = Math.min(840, Math.max(640, Math.round(availableHeight * 0.82)));
+      const left = Math.max(0, Math.round((availableWidth - width) / 2));
+      const top = Math.max(0, Math.round((availableHeight - height) / 2));
+      const features = [
+        'popup=yes',
+        `width=${width}`,
+        `height=${height}`,
+        `left=${left}`,
+        `top=${top}`
+      ].join(',');
+      const targetName = `htmlDeployPreview_${String(site.id || 'site').replace(/[^a-z0-9_-]/gi, '_')}`;
+
+      const opened = window.open(site.url, targetName, features);
+      if (opened) {
+        opened.opener = null;
+        opened.focus();
+        return;
+      }
+
+      openPreview(site);
+    }
+
     function openPreview(site) {
+      renderPreviewBackdrop();
       currentPreviewUrl = site.url;
       previewTitle.textContent = site.title;
       previewUrl.textContent = site.url;
       previewFrame.src = site.url;
       openOverlay(previewOverlay);
       document.body.classList.add('is-previewing');
-      
-      // 强制聚焦 iframe，防止浏览器对未聚焦的 iframe 进行 requestAnimationFrame 降帧节流
-      setTimeout(() => {
-        previewFrame.focus();
-        if (previewFrame.contentWindow) {
-          previewFrame.contentWindow.focus();
-        }
-      }, 100);
+      focusPreviewFrame();
     }
 
     function closePreview() {
@@ -801,6 +919,7 @@
       currentPreviewUrl = '';
       closeOverlay(previewOverlay);
       document.body.classList.remove('is-previewing');
+      clearPreviewBackdrop();
     }
 
     async function unlockClass(classId, password, messageElement) {
@@ -948,7 +1067,7 @@
         previewButton.className = 'primary-button';
         previewButton.type = 'button';
         previewButton.textContent = '预览项目';
-        previewButton.addEventListener('click', () => openPreview(site));
+        previewButton.addEventListener('click', () => openProjectWindow(site));
 
         actions.append(previewButton);
         card.append(cardMain, actions);
@@ -1075,6 +1194,7 @@
     refreshPreview.addEventListener('click', () => {
       if (currentPreviewUrl) {
         previewFrame.src = currentPreviewUrl;
+        focusPreviewFrame();
       }
     });
 
