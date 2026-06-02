@@ -538,7 +538,8 @@
 
       .toolbar-left,
       .toolbar-right,
-      .toolbar-left input {
+      .toolbar-left input,
+      .toolbar-left select {
         width: 100%;
       }
     }
@@ -588,6 +589,7 @@
           <div class="toolbar">
             <div class="toolbar-left">
               <input id="searchInput" type="search" placeholder="搜索项目名称、ID 或序号">
+              <select id="filterClassId" class="class-select" aria-label="按班级筛选"></select>
             </div>
             <div class="toolbar-right">
               <button class="button" id="reloadButton" type="button">刷新列表</button>
@@ -693,6 +695,7 @@
     const siteRows = document.getElementById('siteRows');
     const emptyState = document.getElementById('emptyState');
     const searchInput = document.getElementById('searchInput');
+    const filterClassId = document.getElementById('filterClassId');
     const navButtons = Array.from(document.querySelectorAll('[data-view-target]'));
     const workspaces = Array.from(document.querySelectorAll('[data-admin-view]'));
     const activeViewTitle = document.getElementById('activeViewTitle');
@@ -762,11 +765,11 @@
       button.textContent = isHidden ? '隐藏' : '显示';
     }
 
-    function fillClassSelect(select, value = '') {
+    function fillClassSelect(select, value = '', emptyText = null) {
       select.innerHTML = '';
       const empty = document.createElement('option');
       empty.value = '';
-      empty.textContent = classes.length ? '请选择班级' : '先新增班级';
+      empty.textContent = emptyText !== null ? emptyText : (classes.length ? '请选择班级' : '先新增班级');
       select.append(empty);
 
       classes.forEach((classItem) => {
@@ -782,6 +785,7 @@
     function renderClassList() {
       classList.innerHTML = '';
       fillClassSelect(createClassId, createClassId.value);
+      fillClassSelect(filterClassId, filterClassId.value, '全部班级');
 
       classes.forEach((classItem) => {
         const row = document.createElement('div');
@@ -905,12 +909,15 @@
 
     function renderRows() {
       const keyword = searchInput.value.trim().toLowerCase();
+      const selectedClass = filterClassId.value;
       const filtered = sites.filter((site) => {
         const siteNumber = site.number || '';
-        return site.title.toLowerCase().includes(keyword)
+        const matchKeyword = site.title.toLowerCase().includes(keyword)
           || site.id.toLowerCase().includes(keyword)
           || (site.className || '').toLowerCase().includes(keyword)
           || siteNumber.includes(keyword);
+        const matchClass = selectedClass ? site.classId === selectedClass : true;
+        return matchKeyword && matchClass;
       });
 
       siteRows.innerHTML = '';
@@ -1270,6 +1277,7 @@
     });
     createForm.addEventListener('submit', createSite);
     searchInput.addEventListener('input', renderRows);
+    filterClassId.addEventListener('change', renderRows);
     navButtons.forEach((button) => {
       button.addEventListener('click', () => switchView(button.dataset.viewTarget));
     });
