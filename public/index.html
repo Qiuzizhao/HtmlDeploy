@@ -399,13 +399,12 @@
     .overlay {
       position: fixed;
       inset: 0;
-      z-index: 20;
+      z-index: 100;
       display: none;
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: rgba(23, 32, 51, 0.56);
-      backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.85); /* 增加不透明度，移除 backdrop-filter 以恢复 iframe 硬件加速 */
     }
 
     .overlay.is-open {
