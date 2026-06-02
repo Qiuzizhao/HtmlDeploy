@@ -386,6 +386,18 @@
       font-size: 13px;
     }
 
+    textarea.wrap-input {
+      min-height: 44px;
+      height: auto;
+      resize: none;
+      overflow: hidden;
+      font-family: inherit;
+      font-size: inherit;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      word-break: break-all;
+    }
+
     input:focus,
     textarea:focus {
       border-color: #38bdf8;
@@ -948,11 +960,25 @@
         indexCell.textContent = site.number || String(index + 1);
 
         const titleCell = document.createElement('td');
-        const titleInput = document.createElement('input');
-        titleInput.type = 'text';
+        const titleInput = document.createElement('textarea');
+        titleInput.className = 'wrap-input';
         titleInput.maxLength = 80;
+        titleInput.rows = 1;
         titleInput.value = site.title;
         titleInput.setAttribute('aria-label', `${site.title} 的网页名字`);
+        titleInput.addEventListener('input', function() {
+          this.style.height = '0';
+          this.style.height = this.scrollHeight + 'px';
+        });
+        titleInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+          }
+        });
+        setTimeout(() => {
+          titleInput.style.height = '0';
+          titleInput.style.height = titleInput.scrollHeight + 'px';
+        }, 0);
         titleCell.append(titleInput);
 
         const authorCell = document.createElement('td');

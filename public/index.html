@@ -289,16 +289,37 @@
       overflow-wrap: anywhere;
     }
 
+    .site-tags {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
     .site-class-tag {
       display: inline-flex;
       width: fit-content;
       max-width: 100%;
-      margin-bottom: 10px;
       padding: 5px 9px;
       border: 1px solid #a7f3d0;
       border-radius: 8px;
       background: #ecfdf5;
       color: #047857;
+      font-size: 13px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .site-author-tag {
+      display: inline-flex;
+      width: fit-content;
+      max-width: 100%;
+      padding: 5px 9px;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      background: #f0f9ff;
+      color: #0369a1;
       font-size: 13px;
       font-weight: 700;
       overflow-wrap: anywhere;
@@ -875,26 +896,29 @@
         title.className = 'site-title';
         title.textContent = site.title;
 
-        if (site.author) {
-          const author = document.createElement('div');
-          author.style.fontSize = '13px';
-          author.style.color = 'var(--muted)';
-          author.style.marginTop = '4px';
-          author.textContent = `作者：${site.author}`;
-          heading.append(number, title, author);
-        } else {
-          heading.append(number, title);
-        }
+        heading.append(number, title);
+
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'site-tags';
 
         const classTag = document.createElement('div');
         classTag.className = 'site-class-tag';
         classTag.textContent = site.className || '未分配';
+        tagsContainer.append(classTag);
+
+        if (site.author) {
+          const authorTag = document.createElement('div');
+          authorTag.className = 'site-author-tag';
+          authorTag.textContent = site.author;
+          tagsContainer.append(authorTag);
+        }
 
         const url = document.createElement('div');
         url.className = 'site-url';
         url.textContent = site.url;
+        tagsContainer.append(url);
 
-        content.append(heading, classTag, url);
+        content.append(heading, tagsContainer);
         cardMain.append(content);
 
         const actions = document.createElement('div');
@@ -915,7 +939,7 @@
 
     function renderClasses() {
       classTabs.innerHTML = '';
-      openUploadButton.disabled = !classes.length || !currentClassId;
+      openUploadButton.disabled = !classes.length || !currentClassId || !unlockedClassIds.has(currentClassId);
 
       const allButton = document.createElement('button');
       allButton.className = `class-tab${currentClassId ? '' : ' is-active'}`;
@@ -957,18 +981,23 @@
         : '/api/sites';
       const response = await fetch(sitesUrl);
       if (response.status === 401) {
+        openUploadButton.disabled = true;
         const data = await response.json().catch(() => ({}));
         renderClassPasswordPrompt('请输入班级密码后查看项目。', data.count || 0);
         return;
       }
 
       if (!response.ok) {
+        openUploadButton.disabled = true;
         throw new Error('加载项目失败');
       }
 
       const sites = await response.json();
       if (currentClassId) {
         unlockedClassIds.add(currentClassId);
+        openUploadButton.disabled = false;
+      } else {
+        openUploadButton.disabled = true;
       }
       renderSites(sites);
     }
