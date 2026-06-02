@@ -4,43 +4,50 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-02T12:02:59.817Z"
+    "updatedAt": "2026-06-02T17:48:06.778Z",
+    "uploadEnabled": false
   },
   {
     "id": "392f3c64",
     "name": "六5",
     "password": "003794",
     "createdAt": "2026-06-02T12:01:31.958Z",
-    "updatedAt": "2026-06-02T12:01:37.628Z"
+    "updatedAt": "2026-06-02T12:01:37.628Z",
+    "uploadEnabled": true
   },
   {
     "id": "b3f7dd30",
     "name": "六6",
     "password": "186559",
-    "createdAt": "2026-06-02T12:01:47.337Z"
+    "createdAt": "2026-06-02T12:01:47.337Z",
+    "uploadEnabled": true
   },
   {
     "id": "2c2fab13",
     "name": "六7",
     "password": "765140",
-    "createdAt": "2026-06-02T12:01:52.127Z"
+    "createdAt": "2026-06-02T12:01:52.127Z",
+    "uploadEnabled": true
   },
   {
     "id": "c37011bf",
     "name": "六8",
     "password": "815726",
-    "createdAt": "2026-06-02T12:01:55.583Z"
+    "createdAt": "2026-06-02T12:01:55.583Z",
+    "uploadEnabled": true
   },
   {
     "id": "f438ed26",
     "name": "六9",
     "password": "978153",
-    "createdAt": "2026-06-02T12:01:59.681Z"
+    "createdAt": "2026-06-02T12:01:59.681Z",
+    "uploadEnabled": true
   },
   {
     "id": "b4f9025a",
     "name": "六10",
     "password": "951585",
-    "createdAt": "2026-06-02T12:03:03.372Z"
+    "createdAt": "2026-06-02T12:03:03.372Z",
+    "uploadEnabled": true
   }
 ]
