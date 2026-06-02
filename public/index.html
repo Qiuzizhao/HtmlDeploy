@@ -631,6 +631,7 @@
   <main>
     <section class="class-filter-bar">
       <nav class="class-tabs" id="classTabs" aria-label="班级"></nav>
+      <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
     </section>
     <section class="grid" id="siteGrid" aria-live="polite"></section>
     <div class="empty" id="emptyState">还没有项目，点击右上角上传一个。</div>
@@ -650,7 +651,7 @@
         </label>
         <label>
           作者署名
-          <input id="authorInput" name="author" type="text" maxlength="40" placeholder="选填，如：张三">
+          <input id="authorInput" name="author" type="text" maxlength="40" placeholder="如：张三" required>
         </label>
         <label>
           HTML 文件
@@ -678,6 +679,7 @@
         </div>
         <div class="preview-actions">
           <button class="secondary-button" id="openPreviewExternal" type="button">新页面打开</button>
+          <button class="secondary-button" id="refreshPreview" type="button">刷新</button>
           <button class="icon-button" id="closePreview" type="button" aria-label="关闭预览窗口">×</button>
         </div>
       </div>
@@ -701,7 +703,9 @@
     const previewUrl = document.getElementById('previewUrl');
     const previewFrame = document.getElementById('previewFrame');
     const openPreviewExternal = document.getElementById('openPreviewExternal');
+    const refreshPreview = document.getElementById('refreshPreview');
     const openUploadButton = document.getElementById('openUpload');
+    const classProjectCount = document.getElementById('classProjectCount');
     const currentClassLabel = document.getElementById('currentClassLabel');
 
     let currentPreviewUrl = '';

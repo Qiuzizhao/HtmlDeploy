@@ -629,7 +629,7 @@
             </label>
             <label>
               作者署名
-              <input id="createAuthor" name="author" type="text" maxlength="40" placeholder="选填，如：张三">
+              <input id="createAuthor" name="author" type="text" maxlength="40" placeholder="如：张三" required>
             </label>
             <label>
               所属班级
@@ -950,7 +950,7 @@
         authorInput.type = 'text';
         authorInput.maxLength = 40;
         authorInput.value = site.author || '';
-        authorInput.placeholder = '选填';
+        authorInput.placeholder = '必填';
         authorInput.setAttribute('aria-label', `${site.title} 的作者`);
         authorCell.append(authorInput);
 
@@ -1083,6 +1083,11 @@
 
       if (!title) {
         setMessage(listMessage, '网页名字不能为空', true);
+        return;
+      }
+
+      if (!author) {
+        setMessage(listMessage, '作者署名不能为空', true);
         return;
       }
 

@@ -775,6 +775,10 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '网页名字不能为空' });
       }
 
+      if (!author) {
+        return res.status(400).json({ error: '作者署名不能为空' });
+      }
+
       if (!classItem) {
         return res.status(400).json({ error: '请选择有效班级' });
       }
@@ -859,6 +863,10 @@ function createApp(options = {}) {
 
       if (!title) {
         return res.status(400).json({ error: '网页名字不能为空' });
+      }
+
+      if (!author) {
+        return res.status(400).json({ error: '作者署名不能为空' });
       }
 
       if (!classItem) {
