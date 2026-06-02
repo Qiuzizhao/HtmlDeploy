@@ -837,6 +837,10 @@
 
     function renderSites(sites) {
       siteGrid.innerHTML = '';
+      
+      const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
+      classProjectCount.textContent = `${currentClassName}共有 ${sites.length} 个项目`;
+
       if (!classes.length) {
         emptyState.textContent = '请先到后台创建班级。';
       } else if (!currentClassId) {
@@ -1012,6 +1016,11 @@
     openPreviewExternal.addEventListener('click', () => {
       if (currentPreviewUrl) {
         window.open(currentPreviewUrl, '_blank', 'noopener');
+      }
+    });
+    refreshPreview.addEventListener('click', () => {
+      if (currentPreviewUrl) {
+        previewFrame.src = currentPreviewUrl;
       }
     });
 
