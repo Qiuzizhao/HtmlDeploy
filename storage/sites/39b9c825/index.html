@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>狂飙躲避球 - 小游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            background: #222;
+            display: block;
+            cursor: none; /* 隐藏鼠标指针，用游戏内的小球代替 */
+        }
+
+        .ui-panel {
+            margin-bottom: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        #score {
+            color: #00ffcc;
+        }
+
+        /* 结束和开始界面的遮罩层 */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        h1 {
+            color: #ff3366;
+            margin-bottom: 10px;
+            font-size: 36px;
+        }
+
+        p {
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            background: #00ffcc;
+            border: none;
+            border-radius: 25px;
+            color: #111;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        button:hover {
+            background: #00ccaa;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui-panel">
+        得分 (坚持时间): <span id="score">0.0</span> 秒
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="480" height="600"></canvas>
+        
+        <div id="overlay">
+            <h1 id="title">狂飙躲避球</h1>
+            <p id="description">用鼠标控制蓝色小球，躲避掉落的红球！</p>
+            <button id="start-btn" onclick="startGame()">开始游戏</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+        const title = document.getElementById('title');
+        const description = document.getElementById('description');
+        const startBtn = document.getElementById('start-btn');
+
+        // 游戏状态
+        let gameActive = false;
+        let score = 0;
+        let enemies = [];
+        let spawnRate = 20; // 多少帧生成一个敌人
+        let frameCount = 0;
+        let gameSpeed = 1;
+
+        // 玩家属性
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            radius: 12,
+            color: '#00ffcc'
+        };
+
+        // 监听鼠标移动
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            // 获取画布相对于视口的位置
+            const rect = canvas.getBoundingClientRect();
+            // 让玩家小球跟随鼠标，并限制在画布内
+            player.x = e.clientX - rect.left;
+            player.y = e.clientY - rect.top;
+
+            // 边缘碰撞限制
+            if (player.x < player.radius) player.x = player.radius;
+            if (player.x > canvas.width - player.radius) player.x = canvas.width - player.radius;
+            if (player.y < player.radius) player.y = player.radius;
+            if (player.y > canvas.height - player.radius) player.y = canvas.height - player.radius;
+        });
+
+        // 敌人（红球）构造函数
+        class Enemy {
+            constructor() {
+                this.radius = Math.random() * 15 + 8; // 随机大小
+                this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
+                this.y = -this.radius;
+                this.speed = (Math.random() * 3 + 2) * gameSpeed; // 基础速度随游戏难度提升
+                this.color = '#ff3366';
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.closePath();
+                ctx.shadowBlur = 0; // 重置发光效果
+            }
+        }
+
+        // 开始/重置游戏
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            enemies = [];
+            gameSpeed = 1;
+            frameCount = 0;
+            overlay.style.display = 'none';
+            animate();
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameActive = false;
+            overlay.style.display = 'flex';
+            title.innerText = '游戏结束';
+            description.innerHTML = `你坚持了 <strong style="color:#00ffcc">${score.toFixed(1)}</strong> 秒！`;
+            startBtn.innerText = '再来一局';
+        }
+
+        // 碰撞检测 (圆形碰撞)
+        function checkCollision(circle1, circle2) {
+            const dx = circle1.x - circle2.x;
+            const dy = circle1.y - circle2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < circle1.radius + circle2.radius;
+        }
+
+        // 游戏主循环
+        function animate() {
+            if (!gameActive) return;
+
+            // 1. 清屏
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 2. 绘制玩家
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+
+            // 3. 难度递增与计分
+            frameCount++;
+            score += 1 / 60; // 假设60帧每秒，每帧加1/60秒
+            scoreDisplay.innerText = score.toFixed(1);
+
+            // 每过5秒，速度提升20%
+            if (frameCount % 300 === 0) {
+                gameSpeed += 0.2;
+            }
+
+            // 4. 生成敌人
+            if (frameCount % Math.max(5, Math.floor(spawnRate / gameSpeed)) === 0) {
+                enemies.push(new Enemy());
+            }
+
+            // 5. 更新和绘制敌人
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].update();
+                enemies[i].draw();
+
+                // 检测与玩家的碰撞
+                if (checkCollision(player, enemies[i])) {
+                    gameOver();
+                    return;
+                }
+
+                // 移除移出屏幕的敌人
+                if (enemies[i].y - enemies[i].radius > canvas.height) {
+                    enemies.splice(i, 1);
+                }
+            }
+
+            // 6. 循环调用
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>

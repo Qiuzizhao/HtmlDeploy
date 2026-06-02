@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接金币小游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        canvas {
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            display: block;
+            border-radius: 8px;
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 1px 1px 0 white;
+        }
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 400px;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <div id="scoreBoard">得分: <span id="score">0</span> | 生命: <span id="lives">3</span></div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="gameOverScreen">
+        <h2>游戏结束!</h2>
+        <p>你的最终得分是: <span id="finalScore">0</span></p>
+        <button onclick="resetGame()">再玩一次</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const gameOverScreen = document.getElementById("gameOverScreen");
+const finalScoreEl = document.getElementById("finalScore");
+
+// 游戏变量
+let score = 0;
+let lives = 3;
+let gameOver = false;
+
+// 玩家（接金币的篮子）
+const player = {
+    x: 175,
+    y: 540,
+    width: 60,
+    height: 20,
+    speed: 8,
+    color: "#d35400"
+};
+
+// 金币
+const coin = {
+    x: Math.random() * (canvas.width - 20),
+    y: 0,
+    radius: 10,
+    speed: 4,
+    color: "#f1c40f"
+};
+
+// 键盘控制状态
+let rightPressed = false;
+let leftPressed = false;
+
+// 监听键盘事件
+document.addEventListener("keydown", keyDownHandler);
+document.addEventListener("keyup", keyUpHandler);
+// 监听鼠标/手指移动（兼容手机和鼠标）
+canvas.addEventListener("mousemove", mouseMoveHandler);
+canvas.addEventListener("touchmove", touchMoveHandler, { passive: true });
+
+function keyDownHandler(e) {
+    if(e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
+    if(e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
+}
+
+function keyUpHandler(e) {
+    if(e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
+    if(e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
+}
+
+function mouseMoveHandler(e) {
+    const relativeX = e.clientX - canvas.getBoundingClientRect().left;
+    if(relativeX > 0 && relativeX < canvas.width) {
+        player.x = relativeX - player.width / 2;
+    }
+}
+
+function touchMoveHandler(e) {
+    const relativeX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
+    if(relativeX > 0 && relativeX < canvas.width) {
+        player.x = relativeX - player.width / 2;
+    }
+}
+
+// 绘制玩家
+function drawPlayer() {
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    // 画一个有弧度的“篮子”
+    ctx.roundRect(player.x, player.y, player.width, player.height, 5);
+    ctx.fill();
+    ctx.closePath();
+}
+
+// 绘制金币
+function drawCoin() {
+    ctx.fillStyle = coin.color;
+    ctx.beginPath();
+    ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+    ctx.fill();
+    // 加个内圈让它看起来更像硬币
+    ctx.strokeStyle = "#f39c12";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
+}
+
+// 更新游戏状态
+function update() {
+    if (gameOver) return;
+
+    // 移动玩家（键盘）
+    if (rightPressed && player.x < canvas.width - player.width) player.x += player.speed;
+    if (leftPressed && player.x > 0) player.x -= player.speed;
+
+    // 金币下落
+    coin.y += coin.speed;
+
+    // 碰撞检测（金币落入篮子）
+    if (coin.y + coin.radius >= player.y && 
+        coin.x >= player.x && 
+        coin.x <= player.x + player.width) {
+        
+        score += 10;
+        scoreEl.innerText = score;
+        // 难度递增：每拿100分，金币下落速度变快一点
+        if (score % 100 === 0) coin.speed += 0.5;
+        resetCoin();
+    }
+
+    // 金币落地（漏接）
+    if (coin.y - coin.radius > canvas.height) {
+        lives--;
+        livesEl.innerText = lives;
+        if (lives <= 0) {
+            endGame();
+        } else {
+            resetCoin();
+        }
+    }
+}
+
+// 重置金币位置
+function resetCoin() {
+    coin.x = Math.random() * (canvas.width - coin.radius * 2) + coin.radius;
+    coin.y = 0;
+}
+
+// 游戏结束
+function endGame() {
+    gameOver = true;
+    finalScoreEl.innerText = score;
+    gameOverScreen.style.display = "flex";
+}
+
+// 重新开始游戏
+function resetGame() {
+    score = 0;
+    lives = 3;
+    coin.speed = 4;
+    gameOver = false;
+    scoreEl.innerText = score;
+    livesEl.innerText = lives;
+    gameOverScreen.style.display = "none";
+    resetCoin();
+    player.x = 175;
+}
+
+// 游戏主循环
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // 清屏
+
+    drawPlayer();
+    drawCoin();
+    update();
+
+    requestAnimationFrame(draw);
+}
+
+// 启动游戏
+draw();
+</script>
+
+</body>
+</html>
