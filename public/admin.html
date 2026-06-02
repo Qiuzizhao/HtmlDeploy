@@ -1087,7 +1087,6 @@
       }
 
       if (!author) {
-        // 检查作者署名
         setMessage(listMessage, '作者署名不能为空', true);
         return;
       }
@@ -1122,19 +1121,19 @@
       }
 
       const updatedSite = await response.json();
-        // 更新本地数据，只更新当前行而不是整个列表刷新
-        const index = sites.findIndex(s => s.id === site.id);
-        if (index !== -1) {
-          sites[index] = updatedSite;
-        }
-        
-        // 同步更新 className 以防修改了班级
-        const newClass = classes.find(c => c.id === updatedSite.classId);
-        if (newClass && index !== -1) {
+      // 更新本地数据，只更新当前行而不是整个列表刷新
+      const index = sites.findIndex((s) => s.id === site.id);
+      if (index !== -1) {
+        sites[index] = updatedSite;
+
+        // 同步更新 className，以防修改了班级
+        const newClass = classes.find((c) => c.id === updatedSite.classId);
+        if (newClass) {
           sites[index].className = newClass.name;
         }
+      }
 
-        setMessage(listMessage, '保存成功');
+      setMessage(listMessage, '保存成功');
     }
 
     async function createClass(event) {
