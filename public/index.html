@@ -649,6 +649,10 @@
           <input id="titleInput" name="title" type="text" maxlength="80" placeholder="例如：我的小游戏" required>
         </label>
         <label>
+          作者署名
+          <input id="authorInput" name="author" type="text" maxlength="40" placeholder="选填，如：张三">
+        </label>
+        <label>
           HTML 文件
           <input id="fileInput" name="file" type="file" accept=".html,text/html">
         </label>
@@ -689,6 +693,7 @@
     const previewOverlay = document.getElementById('previewOverlay');
     const uploadForm = document.getElementById('uploadForm');
     const titleInput = document.getElementById('titleInput');
+    const authorInput = document.getElementById('authorInput');
     const fileInput = document.getElementById('fileInput');
     const uploadHtmlContent = document.getElementById('uploadHtmlContent');
     const uploadMessage = document.getElementById('uploadMessage');
@@ -858,6 +863,17 @@
         title.className = 'site-title';
         title.textContent = site.title;
 
+        if (site.author) {
+          const author = document.createElement('div');
+          author.style.fontSize = '13px';
+          author.style.color = 'var(--muted)';
+          author.style.marginTop = '4px';
+          author.textContent = `作者：${site.author}`;
+          heading.append(number, title, author);
+        } else {
+          heading.append(number, title);
+        }
+
         const classTag = document.createElement('div');
         classTag.className = 'site-class-tag';
         classTag.textContent = site.className || '未分配';
@@ -866,7 +882,6 @@
         url.className = 'site-url';
         url.textContent = site.url;
 
-        heading.append(number, title);
         content.append(heading, classTag, url);
         cardMain.append(content);
 
@@ -964,6 +979,7 @@
 
       const formData = new FormData();
       formData.append('title', titleInput.value.trim());
+      formData.append('author', authorInput.value.trim());
       formData.append('classId', currentClassId);
       formData.append('htmlContent', htmlContent);
       if (file) {

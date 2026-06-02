@@ -601,6 +601,7 @@
                 <tr>
                   <th>序号</th>
                   <th>网页名字</th>
+                  <th>作者</th>
                   <th>班级</th>
                   <th>访问链接</th>
                   <th>上传时间</th>
@@ -625,6 +626,10 @@
             <label>
               网页名字
               <input id="createTitle" name="title" type="text" maxlength="80" placeholder="例如：我的小游戏" required>
+            </label>
+            <label>
+              作者署名
+              <input id="createAuthor" name="author" type="text" maxlength="40" placeholder="选填，如：张三">
             </label>
             <label>
               所属班级
@@ -680,6 +685,7 @@
   <script>
     const createForm = document.getElementById('createForm');
     const createTitle = document.getElementById('createTitle');
+    const createAuthor = document.getElementById('createAuthor');
     const createClassId = document.getElementById('createClassId');
     const createFile = document.getElementById('createFile');
     const createHtmlContent = document.getElementById('createHtmlContent');
@@ -915,6 +921,7 @@
         const matchKeyword = site.title.toLowerCase().includes(keyword)
           || site.id.toLowerCase().includes(keyword)
           || (site.className || '').toLowerCase().includes(keyword)
+          || (site.author || '').toLowerCase().includes(keyword)
           || siteNumber.includes(keyword);
         const matchClass = selectedClass ? site.classId === selectedClass : true;
         return matchKeyword && matchClass;
@@ -937,6 +944,15 @@
         titleInput.value = site.title;
         titleInput.setAttribute('aria-label', `${site.title} 的网页名字`);
         titleCell.append(titleInput);
+
+        const authorCell = document.createElement('td');
+        const authorInput = document.createElement('input');
+        authorInput.type = 'text';
+        authorInput.maxLength = 40;
+        authorInput.value = site.author || '';
+        authorInput.placeholder = '选填';
+        authorInput.setAttribute('aria-label', `${site.title} 的作者`);
+        authorCell.append(authorInput);
 
         const classCell = document.createElement('td');
         const classSelect = document.createElement('select');
@@ -973,7 +989,7 @@
         saveButton.className = 'primary-button';
         saveButton.type = 'button';
         saveButton.textContent = '保存';
-        saveButton.addEventListener('click', () => updateSite(site, titleInput, classSelect, fileInput));
+        saveButton.addEventListener('click', () => updateSite(site, titleInput, authorInput, classSelect, fileInput));
 
         const previewLink = document.createElement('a');
         previewLink.className = 'button';
@@ -997,7 +1013,7 @@
         actions.append(saveButton, previewLink, downloadLink, deleteButton);
         actionCell.append(actions);
 
-        row.append(indexCell, titleCell, classCell, urlCell, createdCell, fileCell, actionCell);
+        row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, fileCell, actionCell);
         siteRows.append(row);
       });
     }
@@ -1035,6 +1051,7 @@
 
       const formData = new FormData();
       formData.append('title', createTitle.value.trim());
+      formData.append('author', createAuthor.value.trim());
       formData.append('classId', createClassId.value);
       formData.append('htmlContent', htmlContent);
       if (file) {
@@ -1058,8 +1075,9 @@
       switchView('projects');
     }
 
-    async function updateSite(site, titleInput, classSelect, fileInput) {
+    async function updateSite(site, titleInput, authorInput, classSelect, fileInput) {
       const title = titleInput.value.trim();
+      const author = authorInput.value.trim();
       const classId = classSelect.value;
       const file = fileInput.files && fileInput.files[0];
 
@@ -1080,6 +1098,7 @@
 
       const formData = new FormData();
       formData.append('title', title);
+      formData.append('author', author);
       formData.append('classId', classId);
       if (file) {
         formData.append('file', file, file.name);

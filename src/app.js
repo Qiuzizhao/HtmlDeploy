@@ -762,9 +762,10 @@ function createApp(options = {}) {
   });
 
   app.post('/api/sites', upload.single('file'), async (req, res, next) => {
-    try {
-      const title = String(req.body.title || '').trim();
-      const classId = String(req.body.classId || '').trim();
+      try {
+        const title = String(req.body.title || '').trim();
+        const author = String(req.body.author || '').trim();
+        const classId = String(req.body.classId || '').trim();
       const htmlContent = String(req.body.htmlContent || '').trim();
       const file = req.file;
       const classes = await readClasses(classesFile);
@@ -800,6 +801,7 @@ function createApp(options = {}) {
         id,
         number: formatSiteNumber(nextNumberValue),
         title,
+        author,
         classId,
         createdAt: new Date().toISOString()
       };
@@ -840,10 +842,11 @@ function createApp(options = {}) {
   });
 
   app.put('/api/sites/:id', requireAdmin, upload.single('file'), async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const title = String(req.body.title || '').trim();
-      const classId = String(req.body.classId || '').trim();
+      try {
+        const { id } = req.params;
+        const title = String(req.body.title || '').trim();
+        const author = String(req.body.author || '').trim();
+        const classId = String(req.body.classId || '').trim();
       const file = req.file;
       const sites = await readSites(dataFile);
       const classes = await readClasses(classesFile);
@@ -869,6 +872,7 @@ function createApp(options = {}) {
       const site = {
         ...sites[siteIndex],
         title,
+        author,
         classId,
         updatedAt: new Date().toISOString()
       };
