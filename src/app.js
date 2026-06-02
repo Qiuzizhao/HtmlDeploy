@@ -257,14 +257,18 @@ async function readClasses(classesFile) {
 
     let changed = false;
     const normalizedClasses = classes.map((classItem) => {
-      if (isValidClassPassword(String(classItem.password || ''))) {
+      const passwordIsValid = isValidClassPassword(String(classItem.password || ''));
+      const hasUploadEnabled = typeof classItem.uploadEnabled === 'boolean';
+
+      if (passwordIsValid && hasUploadEnabled) {
         return classItem;
       }
 
       changed = true;
       return {
         ...classItem,
-        password: createClassPassword()
+        password: passwordIsValid ? classItem.password : createClassPassword(),
+        uploadEnabled: classItem.uploadEnabled !== false
       };
     });
 
@@ -339,6 +343,7 @@ function toPublicClass(classItem) {
   return {
     id: classItem.id,
     name: classItem.name,
+    uploadEnabled: classItem.uploadEnabled !== false,
     createdAt: classItem.createdAt,
     updatedAt: classItem.updatedAt
   };
@@ -616,6 +621,7 @@ function createApp(options = {}) {
         id: idGenerator(),
         name,
         password,
+        uploadEnabled: true,
         createdAt: new Date().toISOString()
       };
       classes.push(classItem);
@@ -685,6 +691,31 @@ function createApp(options = {}) {
         ...classes[classIndex],
         name,
         password: password || classes[classIndex].password || createClassPassword(),
+        uploadEnabled: classes[classIndex].uploadEnabled !== false,
+        updatedAt: new Date().toISOString()
+      };
+      await writeClasses(classesFile, classes);
+
+      return res.json(classes[classIndex]);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch('/api/classes/:id/upload-enabled', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const uploadEnabled = Boolean(req.body.uploadEnabled);
+      const classes = await readClasses(classesFile);
+      const classIndex = classes.findIndex((item) => item.id === id);
+
+      if (classIndex === -1) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+
+      classes[classIndex] = {
+        ...classes[classIndex],
+        uploadEnabled,
         updatedAt: new Date().toISOString()
       };
       await writeClasses(classesFile, classes);
@@ -782,6 +813,10 @@ function createApp(options = {}) {
 
       if (!classItem) {
         return res.status(400).json({ error: '请选择有效班级' });
+      }
+
+      if (classItem.uploadEnabled === false) {
+        return res.status(403).json({ error: '当前班级已禁用上传网页功能' });
       }
 
       if (!file && !htmlContent) {

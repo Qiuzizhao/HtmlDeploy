@@ -125,6 +125,12 @@
       transform: translateY(-1px);
     }
 
+    .upload-toggle-button.is-disabled {
+      border-color: #fecdd3;
+      background: #fff1f2;
+      color: var(--danger);
+    }
+
     .admin-shell {
       min-height: 100vh;
       display: grid;
@@ -320,7 +326,7 @@
 
     .class-row {
       display: grid;
-      grid-template-columns: 24px minmax(180px, 1fr) minmax(130px, 0.5fr) auto;
+      grid-template-columns: 24px minmax(180px, 1fr) minmax(130px, 0.5fr) minmax(110px, auto) auto;
       gap: 10px;
       align-items: center;
       padding: 12px;
@@ -328,6 +334,11 @@
       border-radius: 12px;
       background: #f0f9ff;
       transition: box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    .class-row.is-upload-disabled {
+      border-color: #e5e7eb;
+      background: #f8fafc;
     }
 
     .class-row.is-dragging {
@@ -806,8 +817,10 @@
       fillClassSelect(filterClassId, filterClassId.value, '全部班级');
 
       classes.forEach((classItem) => {
+        const uploadEnabled = classItem.uploadEnabled !== false;
         const row = document.createElement('div');
         row.className = 'class-row';
+        row.classList.toggle('is-upload-disabled', !uploadEnabled);
         row.dataset.id = classItem.id;
         row.draggable = false;
 
@@ -848,6 +861,13 @@
         passwordInput.value = classItem.password || '';
         passwordInput.setAttribute('aria-label', `${classItem.name} 的班级密码`);
 
+        const uploadToggleButton = document.createElement('button');
+        uploadToggleButton.className = `button upload-toggle-button${uploadEnabled ? '' : ' is-disabled'}`;
+        uploadToggleButton.type = 'button';
+        uploadToggleButton.textContent = uploadEnabled ? '上传已启用' : '上传已禁用';
+        uploadToggleButton.title = uploadEnabled ? '点击禁用该班级上传网页' : '点击启用该班级上传网页';
+        uploadToggleButton.addEventListener('click', () => toggleClassUpload(classItem, uploadToggleButton, row));
+
         const actions = document.createElement('div');
         actions.className = 'row-actions';
 
@@ -880,7 +900,7 @@
         deleteButton.addEventListener('click', () => deleteClass(classItem));
 
         actions.append(toggleButton, generateButton, saveButton, deleteButton);
-        row.append(dragHandle, input, passwordInput, actions);
+        row.append(dragHandle, input, passwordInput, uploadToggleButton, actions);
         classList.append(row);
       });
     }
@@ -1203,6 +1223,39 @@
       setMessage(classMessage, '新增班级成功');
       await loadClasses();
       await loadSites();
+    }
+
+    async function toggleClassUpload(classItem, button, row) {
+      const nextUploadEnabled = classItem.uploadEnabled === false;
+      button.disabled = true;
+
+      const response = await fetch(`/api/classes/${encodeURIComponent(classItem.id)}/upload-enabled`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadEnabled: nextUploadEnabled })
+      });
+
+      button.disabled = false;
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存上传状态失败' }));
+        setMessage(classMessage, result.error || '保存上传状态失败', true);
+        return;
+      }
+
+      const updatedClass = await response.json();
+      const index = classes.findIndex(c => c.id === classItem.id);
+      if (index !== -1) {
+        classes[index] = updatedClass;
+      }
+      classItem.uploadEnabled = updatedClass.uploadEnabled !== false;
+
+      const uploadEnabled = classItem.uploadEnabled !== false;
+      row.classList.toggle('is-upload-disabled', !uploadEnabled);
+      button.classList.toggle('is-disabled', !uploadEnabled);
+      button.textContent = uploadEnabled ? '上传已启用' : '上传已禁用';
+      button.title = uploadEnabled ? '点击禁用该班级上传网页' : '点击启用该班级上传网页';
+      setMessage(classMessage, uploadEnabled ? '已启用该班级上传' : '已禁用该班级上传');
     }
 
     async function updateClass(classItem, input, passwordInput, row) {

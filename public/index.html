@@ -798,6 +798,22 @@
     let currentClassId = '';
     const unlockedClassIds = new Set();
 
+    function getCurrentClass() {
+      return classes.find((item) => item.id === currentClassId);
+    }
+
+    function canUploadCurrentClass() {
+      const currentClass = getCurrentClass();
+      return Boolean(currentClassId && unlockedClassIds.has(currentClassId) && currentClass && currentClass.uploadEnabled !== false);
+    }
+
+    function updateUploadButtonState() {
+      const currentClass = getCurrentClass();
+      const uploadDisabledByClass = Boolean(currentClassId && currentClass && currentClass.uploadEnabled === false);
+      openUploadButton.disabled = !classes.length || !currentClassId || !unlockedClassIds.has(currentClassId) || uploadDisabledByClass;
+      openUploadButton.title = uploadDisabledByClass ? '当前班级已禁用上传网页' : '';
+    }
+
     function openOverlay(overlay) {
       overlay.classList.add('is-open');
       overlay.setAttribute('aria-hidden', 'false');
@@ -821,9 +837,15 @@
         return;
       }
 
+      if (!canUploadCurrentClass()) {
+        emptyState.textContent = '当前班级已禁用上传网页功能。';
+        emptyState.style.display = 'block';
+        return;
+      }
+
       uploadMessage.textContent = '';
       uploadForm.reset();
-      const currentClass = classes.find((item) => item.id === currentClassId);
+      const currentClass = getCurrentClass();
       currentClassLabel.textContent = `当前班级：${currentClass ? currentClass.name : '未选择'}`;
       openOverlay(uploadOverlay);
       titleInput.focus();
@@ -1078,7 +1100,7 @@
 
     function renderClasses() {
       classTabs.innerHTML = '';
-      openUploadButton.disabled = !classes.length || !currentClassId || !unlockedClassIds.has(currentClassId);
+      updateUploadButtonState();
 
       const allButton = document.createElement('button');
       allButton.className = `class-tab${currentClassId ? '' : ' is-active'}`;
@@ -1120,24 +1142,22 @@
         : '/api/sites';
       const response = await fetch(sitesUrl);
       if (response.status === 401) {
-        openUploadButton.disabled = true;
+        updateUploadButtonState();
         const data = await response.json().catch(() => ({}));
         renderClassPasswordPrompt('请输入班级密码后查看项目。', data.count || 0);
         return;
       }
 
       if (!response.ok) {
-        openUploadButton.disabled = true;
+        updateUploadButtonState();
         throw new Error('加载项目失败');
       }
 
       const sites = await response.json();
       if (currentClassId) {
         unlockedClassIds.add(currentClassId);
-        openUploadButton.disabled = false;
-      } else {
-        openUploadButton.disabled = true;
       }
+      updateUploadButtonState();
       renderSites(sites);
     }
 
