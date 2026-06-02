@@ -731,7 +731,8 @@
       }
 
       if (!unlockedClassIds.has(currentClassId)) {
-        renderClassPasswordPrompt('请先输入班级密码，再上传网页。');
+        // 尝试从当前的文本中提取数量，或者重新加载
+        loadSites();
         return;
       }
 
