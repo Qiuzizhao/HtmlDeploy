@@ -1,0 +1,11 @@
+#!/usr/bin/expect -f
+set timeout 30
+set password "G?-fT3\{,+c7x^#SH"
+spawn ssh -o StrictHostKeyChecking=no -p 23456 ubuntu@43.155.250.122 "cd /home/ubuntu/HtmlDeploy && git pull && pm2 restart html-deploy"
+expect {
+    "*assword:*" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}
