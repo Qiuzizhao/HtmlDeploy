@@ -225,10 +225,6 @@ function normalizeSiteNumbers(sites) {
   };
 }
 
-function createNextSiteNumber(sites) {
-  const maxNumber = sites.reduce((max, site) => Math.max(max, getSiteNumberValue(site)), 0);
-  return formatSiteNumber(maxNumber + 1);
-}
 
 async function readSites(dataFile) {
   await ensureJsonFile(dataFile);
@@ -796,15 +792,22 @@ function createApp(options = {}) {
       await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
 
       const sites = await readSites(dataFile);
+      const settings = await readSettings(settingsFile);
+      const currentMax = sites.reduce((max, s) => Math.max(max, getSiteNumberValue(s)), 0);
+      const nextNumberValue = Math.max(currentMax, settings.lastUsedSiteNumber || 0) + 1;
+
       const site = {
         id,
-        number: createNextSiteNumber(sites),
+        number: formatSiteNumber(nextNumberValue),
         title,
         classId,
         createdAt: new Date().toISOString()
       };
       sites.unshift(site);
       await writeSites(dataFile, sites);
+
+      settings.lastUsedSiteNumber = nextNumberValue;
+      await writeSettings(settingsFile, settings);
 
       return res.status(201).json({ ...site, className: classItem.name, url: `/site/${id}` });
     } catch (error) {
