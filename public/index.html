@@ -411,6 +411,11 @@
       display: flex;
     }
 
+    body.is-previewing .topbar,
+    body.is-previewing main {
+      visibility: hidden; /* 隐藏主页面以减少重绘负担 */
+    }
+
     .modal {
       width: min(460px, calc(100vw - 32px));
       border-radius: 16px;
@@ -780,12 +785,22 @@
       previewUrl.textContent = site.url;
       previewFrame.src = site.url;
       openOverlay(previewOverlay);
+      document.body.classList.add('is-previewing');
+      
+      // 强制聚焦 iframe，防止浏览器对未聚焦的 iframe 进行 requestAnimationFrame 降帧节流
+      setTimeout(() => {
+        previewFrame.focus();
+        if (previewFrame.contentWindow) {
+          previewFrame.contentWindow.focus();
+        }
+      }, 100);
     }
 
     function closePreview() {
       previewFrame.removeAttribute('src');
       currentPreviewUrl = '';
       closeOverlay(previewOverlay);
+      document.body.classList.remove('is-previewing');
     }
 
     async function unlockClass(classId, password, messageElement) {
