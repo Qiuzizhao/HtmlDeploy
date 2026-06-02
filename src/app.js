@@ -1,0 +1,817 @@
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const fsp = require('node:fs/promises');
+const path = require('node:path');
+
+const express = require('express');
+const multer = require('multer');
+
+const DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+const DEFAULT_ADMIN_PASSWORD = 'qqqyyy';
+const ADMIN_COOKIE_NAME = 'html_deploy_admin';
+const CLASS_COOKIE_PREFIX = 'html_deploy_class_';
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function createDefaultId() {
+  return crypto.randomBytes(4).toString('hex');
+}
+
+function createAdminToken(password) {
+  return crypto.createHash('sha256').update(`html-deploy:${password}`).digest('hex');
+}
+
+function createClassPassword() {
+  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+}
+
+function isValidClassPassword(password) {
+  return /^\d{6}$/.test(password);
+}
+
+function getClassCookieName(classId) {
+  const digest = crypto.createHash('sha256').update(String(classId)).digest('hex').slice(0, 16);
+  return `${CLASS_COOKIE_PREFIX}${digest}`;
+}
+
+function createClassToken(classItem) {
+  return crypto
+    .createHash('sha256')
+    .update(`html-deploy-class:${classItem.id}:${classItem.password || ''}`)
+    .digest('hex');
+}
+
+function parseCookies(header = '') {
+  return Object.fromEntries(
+    header
+      .split(';')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        const separator = item.indexOf('=');
+        if (separator === -1) {
+          return [item, ''];
+        }
+
+        return [item.slice(0, separator), decodeURIComponent(item.slice(separator + 1))];
+      })
+  );
+}
+
+function renderAdminLoginPage(errorMessage = '') {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>后台登录 - HtmlDeploy</title>
+  <style>
+    :root { color-scheme: light; --bg: #f4f6f2; --panel: #fff; --text: #1f2726; --muted: #68736f; --line: #dce3dd; --brand: #24715b; --danger: #b42318; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .login { width: min(400px, calc(100vw - 32px)); padding: 26px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 18px 42px rgba(31, 39, 38, 0.1); }
+    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; font-size: 20px; font-weight: 750; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 8px; background: var(--text); color: #fff; font-weight: 800; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 0 0 20px; color: var(--muted); }
+    label { display: grid; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 650; }
+    input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+    button { width: 100%; min-height: 42px; margin-top: 16px; border: 0; border-radius: 8px; background: var(--brand); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    .error { min-height: 20px; margin-top: 12px; color: var(--danger); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <form class="login" action="/admin-login" method="post">
+    <div class="brand"><span class="brand-mark">H</span><span>HtmlDeploy</span></div>
+    <h1>请输入后台密码</h1>
+    <p>验证后进入项目管理后台。</p>
+    <label>
+      后台密码
+      <input name="password" type="password" autocomplete="current-password" autofocus required>
+    </label>
+    <button type="submit">进入后台</button>
+    <div class="error">${escapeHtml(errorMessage)}</div>
+  </form>
+</body>
+</html>`;
+}
+
+function isHtmlFile(file) {
+  if (!file) {
+    return false;
+  }
+
+  const extension = path.extname(file.originalname || '').toLowerCase();
+  return extension === '.html' || extension === '.htm' || file.mimetype === 'text/html';
+}
+
+function resolveInside(baseDir, relativePath) {
+  const target = path.resolve(baseDir, relativePath);
+  const base = path.resolve(baseDir);
+
+  if (target !== base && !target.startsWith(base + path.sep)) {
+    throw new Error('Path escapes project directory');
+  }
+
+  return target;
+}
+
+async function ensureJsonFile(dataFile) {
+  await fsp.mkdir(path.dirname(dataFile), { recursive: true });
+  try {
+    await fsp.access(dataFile, fs.constants.F_OK);
+  } catch {
+    await fsp.writeFile(dataFile, '[]');
+  }
+}
+
+function formatSiteNumber(value) {
+  return String(value).padStart(5, '0');
+}
+
+function getSiteNumberValue(site) {
+  const value = Number.parseInt(site.number, 10);
+  return /^\d{5}$/.test(String(site.number || '')) && value > 0 ? value : 0;
+}
+
+function normalizeSiteNumbers(sites) {
+  let changed = false;
+  const usedNumbers = new Set();
+  const normalizedSites = sites.map((site, originalIndex) => {
+    const numberValue = getSiteNumberValue(site);
+    if (numberValue && !usedNumbers.has(numberValue)) {
+      usedNumbers.add(numberValue);
+      return { site, originalIndex, needsNumber: false };
+    }
+
+    if (site.number !== undefined) {
+      changed = true;
+    }
+
+    return {
+      site: { ...site },
+      originalIndex,
+      needsNumber: true
+    };
+  });
+
+  let nextNumber = usedNumbers.size ? Math.max(...usedNumbers) + 1 : 1;
+  const sitesNeedingNumbers = normalizedSites
+    .filter((item) => item.needsNumber)
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.site.createdAt || '');
+      const rightTime = Date.parse(right.site.createdAt || '');
+      const leftHasTime = Number.isFinite(leftTime);
+      const rightHasTime = Number.isFinite(rightTime);
+
+      if (leftHasTime && rightHasTime && leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+
+      if (leftHasTime !== rightHasTime) {
+        return leftHasTime ? -1 : 1;
+      }
+
+      return left.originalIndex - right.originalIndex;
+    });
+
+  for (const item of sitesNeedingNumbers) {
+    item.site.number = formatSiteNumber(nextNumber);
+    usedNumbers.add(nextNumber);
+    nextNumber += 1;
+    changed = true;
+  }
+
+  return {
+    sites: normalizedSites.map((item) => item.site),
+    changed
+  };
+}
+
+function createNextSiteNumber(sites) {
+  const maxNumber = sites.reduce((max, site) => Math.max(max, getSiteNumberValue(site)), 0);
+  return formatSiteNumber(maxNumber + 1);
+}
+
+async function readSites(dataFile) {
+  await ensureJsonFile(dataFile);
+  const raw = await fsp.readFile(dataFile, 'utf8');
+  try {
+    const sites = JSON.parse(raw);
+    if (!Array.isArray(sites)) {
+      return [];
+    }
+
+    const normalized = normalizeSiteNumbers(sites);
+    if (normalized.changed) {
+      await writeSites(dataFile, normalized.sites);
+    }
+
+    return normalized.sites;
+  } catch {
+    return [];
+  }
+}
+
+async function readClasses(classesFile) {
+  await ensureJsonFile(classesFile);
+  const raw = await fsp.readFile(classesFile, 'utf8');
+  try {
+    const classes = JSON.parse(raw);
+    if (!Array.isArray(classes)) {
+      return [];
+    }
+
+    let changed = false;
+    const normalizedClasses = classes.map((classItem) => {
+      if (isValidClassPassword(String(classItem.password || ''))) {
+        return classItem;
+      }
+
+      changed = true;
+      return {
+        ...classItem,
+        password: createClassPassword()
+      };
+    });
+
+    if (changed) {
+      await fsp.writeFile(classesFile, JSON.stringify(normalizedClasses, null, 2));
+    }
+
+    return normalizedClasses;
+  } catch {
+    return [];
+  }
+}
+
+async function writeSites(dataFile, sites) {
+  await fsp.mkdir(path.dirname(dataFile), { recursive: true });
+  await fsp.writeFile(dataFile, JSON.stringify(sites, null, 2));
+}
+
+async function writeClasses(classesFile, classes) {
+  await fsp.mkdir(path.dirname(classesFile), { recursive: true });
+  await fsp.writeFile(classesFile, JSON.stringify(classes, null, 2));
+}
+
+function attachClassName(site, classes) {
+  const classItem = classes.find((item) => item.id === site.classId);
+  return {
+    ...site,
+    className: classItem?.name || ''
+  };
+}
+
+function createDownloadFileName(site) {
+  const title = String(site.title || site.id || 'project').trim() || 'project';
+  const safeTitle = title.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+  return /\.(html|htm)$/i.test(safeTitle) ? safeTitle : `${safeTitle}.html`;
+}
+
+function toPublicClass(classItem) {
+  return {
+    id: classItem.id,
+    name: classItem.name,
+    createdAt: classItem.createdAt,
+    updatedAt: classItem.updatedAt
+  };
+}
+
+async function createUniqueId({ dataFile, storageDir, idGenerator }) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const id = idGenerator();
+    const sites = await readSites(dataFile);
+    const inData = sites.some((site) => site.id === id);
+    const siteDir = path.join(storageDir, id);
+    const inStorage = fs.existsSync(siteDir);
+
+    if (!inData && !inStorage) {
+      return id;
+    }
+  }
+
+  throw new Error('Unable to create unique project ID');
+}
+
+async function listProjectFiles(projectDir) {
+  const result = [];
+
+  async function walk(currentDir, prefix = '') {
+    const entries = await fsp.readdir(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolute = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(absolute, relative);
+      } else {
+        result.push(relative.replaceAll('\\', '/'));
+      }
+    }
+  }
+
+  await walk(projectDir);
+  return result.sort((a, b) => a.localeCompare(b));
+}
+
+async function renderFileList({ id, title, projectDir }) {
+  const files = await listProjectFiles(projectDir);
+  const items = files
+    .map((file) => {
+      const href = `/site/${encodeURIComponent(id)}/${file
+        .split('/')
+        .map((part) => encodeURIComponent(part))
+        .join('/')}`;
+      return `<li><a href="${href}">${escapeHtml(file)}</a></li>`;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title || id)} - 文件列表</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 32px; color: #172033; }
+    h1 { font-size: 22px; margin: 0 0 16px; }
+    ul { line-height: 1.9; padding-left: 22px; }
+    a { color: #2456d6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(title || id)}</h1>
+  <ul>${items || '<li>暂无文件</li>'}</ul>
+</body>
+</html>`;
+}
+
+function createApp(options = {}) {
+  const app = express();
+  const dataFile = options.dataFile || path.join(process.cwd(), 'data', 'sites.json');
+  const classesFile = options.classesFile || path.join(process.cwd(), 'data', 'classes.json');
+  const storageDir = options.storageDir || path.join(process.cwd(), 'storage', 'sites');
+  const publicDir = options.publicDir || path.join(process.cwd(), 'public');
+  const idGenerator = options.idGenerator || createDefaultId;
+  const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
+  const adminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
+  const adminToken = createAdminToken(adminPassword);
+
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    preservePath: true,
+    limits: {
+      files: 1,
+      fileSize: maxTotalBytes
+    }
+  });
+
+  function hasAdminAccess(req) {
+    const cookies = parseCookies(req.headers.cookie);
+    return cookies[ADMIN_COOKIE_NAME] === adminToken;
+  }
+
+  function hasClassAccess(req, classItem) {
+    const cookies = parseCookies(req.headers.cookie);
+    return cookies[getClassCookieName(classItem.id)] === createClassToken(classItem);
+  }
+
+  function requireAdmin(req, res, next) {
+    if (!hasAdminAccess(req)) {
+      return res.status(401).json({ error: '请先输入后台密码' });
+    }
+
+    return next();
+  }
+
+  async function canReadSite(req, id) {
+    const sites = await readSites(dataFile);
+    const site = sites.find((item) => item.id === id);
+    if (!site?.classId) {
+      return true;
+    }
+
+    const classes = await readClasses(classesFile);
+    const classItem = classes.find((item) => item.id === site.classId);
+    return classItem ? hasClassAccess(req, classItem) : true;
+  }
+
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+
+  app.get('/admin.html', (req, res) => {
+    if (!hasAdminAccess(req)) {
+      return res.type('html').send(renderAdminLoginPage());
+    }
+
+    return res.sendFile(path.join(publicDir, 'admin.html'));
+  });
+
+  app.post('/admin-login', (req, res) => {
+    const password = String(req.body.password || '');
+    if (password !== adminPassword) {
+      return res.status(401).type('html').send(renderAdminLoginPage('密码不正确'));
+    }
+
+    res.cookie(ADMIN_COOKIE_NAME, adminToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    return res.redirect(303, '/admin.html');
+  });
+
+  app.use(express.static(publicDir));
+
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+
+  app.get('/api/sites', async (req, res, next) => {
+    try {
+      const { classId } = req.query;
+      const sites = await readSites(dataFile);
+      const classes = await readClasses(classesFile);
+
+      if (classId) {
+        const classItem = classes.find((item) => item.id === classId);
+        if (!classItem) {
+          return res.status(404).json({ error: '班级不存在' });
+        }
+
+        if (!hasClassAccess(req, classItem)) {
+          return res.status(401).json({ error: '请输入班级密码' });
+        }
+      }
+
+      const filteredSites = classId
+        ? sites.filter((site) => site.classId === classId)
+        : sites.filter((site) => {
+            if (!site.classId || hasAdminAccess(req)) {
+              return true;
+            }
+
+            const classItem = classes.find((item) => item.id === site.classId);
+            return classItem ? hasClassAccess(req, classItem) : true;
+          });
+      res.json(filteredSites.map((site) => ({ ...attachClassName(site, classes), url: `/site/${site.id}` })));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/classes', async (req, res, next) => {
+    try {
+      const classes = await readClasses(classesFile);
+      res.json(classes.map(toPublicClass));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/admin/classes', requireAdmin, async (req, res, next) => {
+    try {
+      const classes = await readClasses(classesFile);
+      res.json(classes);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/classes', requireAdmin, async (req, res, next) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      const password = String(req.body.password || createClassPassword()).trim();
+      if (!name) {
+        return res.status(400).json({ error: '班级名称不能为空' });
+      }
+
+      if (!isValidClassPassword(password)) {
+        return res.status(400).json({ error: '班级密码必须是 6 位数字' });
+      }
+
+      const classes = await readClasses(classesFile);
+      if (classes.some((item) => item.name === name)) {
+        return res.status(400).json({ error: '班级名称已存在' });
+      }
+
+      const classItem = {
+        id: idGenerator(),
+        name,
+        password,
+        createdAt: new Date().toISOString()
+      };
+      classes.push(classItem);
+      await writeClasses(classesFile, classes);
+
+      return res.status(201).json(classItem);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/classes/:id', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const name = String(req.body.name || '').trim();
+      const password = String(req.body.password || '').trim();
+      const classes = await readClasses(classesFile);
+      const classIndex = classes.findIndex((item) => item.id === id);
+
+      if (classIndex === -1) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+
+      if (!name) {
+        return res.status(400).json({ error: '班级名称不能为空' });
+      }
+
+      if (classes.some((item) => item.id !== id && item.name === name)) {
+        return res.status(400).json({ error: '班级名称已存在' });
+      }
+
+      if (password && !isValidClassPassword(password)) {
+        return res.status(400).json({ error: '班级密码必须是 6 位数字' });
+      }
+
+      classes[classIndex] = {
+        ...classes[classIndex],
+        name,
+        password: password || classes[classIndex].password || createClassPassword(),
+        updatedAt: new Date().toISOString()
+      };
+      await writeClasses(classesFile, classes);
+
+      return res.json(classes[classIndex]);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/classes/:id/unlock', async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const password = String(req.body.password || '').trim();
+      const classes = await readClasses(classesFile);
+      const classItem = classes.find((item) => item.id === id);
+
+      if (!classItem) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+
+      if (password !== classItem.password) {
+        return res.status(401).json({ error: '班级密码不正确' });
+      }
+
+      res.cookie(getClassCookieName(id), createClassToken(classItem), {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/classes/:id', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const classes = await readClasses(classesFile);
+      const sites = await readSites(dataFile);
+
+      if (!classes.some((item) => item.id === id)) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+
+      if (sites.some((site) => site.classId === id)) {
+        return res.status(400).json({ error: '班级下还有项目，不能删除' });
+      }
+
+      await writeClasses(classesFile, classes.filter((item) => item.id !== id));
+      return res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/sites', upload.single('file'), async (req, res, next) => {
+    try {
+      const title = String(req.body.title || '').trim();
+      const classId = String(req.body.classId || '').trim();
+      const htmlContent = String(req.body.htmlContent || '').trim();
+      const file = req.file;
+      const classes = await readClasses(classesFile);
+      const classItem = classes.find((item) => item.id === classId);
+
+      if (!title) {
+        return res.status(400).json({ error: '网页名字不能为空' });
+      }
+
+      if (!classItem) {
+        return res.status(400).json({ error: '请选择有效班级' });
+      }
+
+      if (!file && !htmlContent) {
+        return res.status(400).json({ error: '请上传 HTML 文件或填写 HTML 代码' });
+      }
+
+      if (file && !isHtmlFile(file)) {
+        return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
+      }
+
+      const id = await createUniqueId({ dataFile, storageDir, idGenerator });
+      const projectDir = path.join(storageDir, id);
+      await fsp.mkdir(projectDir, { recursive: true });
+      await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
+
+      const sites = await readSites(dataFile);
+      const site = {
+        id,
+        number: createNextSiteNumber(sites),
+        title,
+        classId,
+        createdAt: new Date().toISOString()
+      };
+      sites.unshift(site);
+      await writeSites(dataFile, sites);
+
+      return res.status(201).json({ ...site, className: classItem.name, url: `/site/${id}` });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/sites/:id/download', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+      if (!site) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const indexPath = path.join(storageDir, id, 'index.html');
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).json({ error: '项目文件不存在' });
+      }
+
+      return res.download(indexPath, createDownloadFileName(site), (error) => {
+        if (error && !res.headersSent) {
+          next(error);
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/sites/:id', requireAdmin, upload.single('file'), async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const title = String(req.body.title || '').trim();
+      const classId = String(req.body.classId || '').trim();
+      const file = req.file;
+      const sites = await readSites(dataFile);
+      const classes = await readClasses(classesFile);
+      const classItem = classes.find((item) => item.id === classId);
+      const siteIndex = sites.findIndex((site) => site.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      if (!title) {
+        return res.status(400).json({ error: '网页名字不能为空' });
+      }
+
+      if (!classItem) {
+        return res.status(400).json({ error: '请选择有效班级' });
+      }
+
+      if (file && !isHtmlFile(file)) {
+        return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
+      }
+
+      const site = {
+        ...sites[siteIndex],
+        title,
+        classId,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (file) {
+        const projectDir = path.join(storageDir, id);
+        await fsp.mkdir(projectDir, { recursive: true });
+        await fsp.writeFile(path.join(projectDir, 'index.html'), file.buffer);
+      }
+
+      sites[siteIndex] = site;
+      await writeSites(dataFile, sites);
+
+      return res.json({ ...site, className: classItem.name, url: `/site/${id}` });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/sites/:id', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const nextSites = sites.filter((site) => site.id !== id);
+
+      if (nextSites.length === sites.length) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      await writeSites(dataFile, nextSites);
+      await fsp.rm(path.join(storageDir, id), { recursive: true, force: true });
+
+      return res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/site/:id', async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const projectDir = path.join(storageDir, id);
+
+      if (!fs.existsSync(projectDir)) {
+        return res.status(404).send('Not found');
+      }
+
+      if (!(await canReadSite(req, id))) {
+        return res.status(401).send('请输入班级密码');
+      }
+
+      const indexPath = path.join(projectDir, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+      const html = await renderFileList({ id, title: site?.title, projectDir });
+      return res.type('html').send(html);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/site/:id/*', async (req, res) => {
+    const { id } = req.params;
+    const requestedPath = req.params[0] || '';
+    const projectDir = path.join(storageDir, id);
+
+    if (!fs.existsSync(projectDir)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (!(await canReadSite(req, id))) {
+      return res.status(401).send('请输入班级密码');
+    }
+
+    let targetPath;
+    try {
+      targetPath = resolveInside(projectDir, requestedPath);
+    } catch {
+      return res.status(404).send('Not found');
+    }
+
+    if (!fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) {
+      return res.status(404).send('Not found');
+    }
+
+    return res.sendFile(targetPath);
+  });
+
+  app.use((error, req, res, next) => {
+    if (res.headersSent) {
+      return next(error);
+    }
+
+    if (error instanceof multer.MulterError) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.status(500).json({ error: error.message || '服务器错误' });
+  });
+
+  return app;
+}
+
+module.exports = {
+  createApp,
+  resolveInside
+};

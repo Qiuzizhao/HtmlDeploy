@@ -1,0 +1,615 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const fsp = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const test = require('node:test');
+const request = require('supertest');
+
+const { createApp } = require('../src/app');
+
+test('public index uses a single HTML file picker', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /<input[^>]+id="fileInput"[^>]+type="file"/);
+  assert.match(html, /<input[^>]+id="fileInput"[^>]+accept="\.html,text\/html"/);
+  assert.doesNotMatch(html, /<input[^>]+id="fileInput"[^>]+multiple/);
+  assert.doesNotMatch(html, /<input[^>]+id="fileInput"[^>]+webkitdirectory/);
+});
+
+test('public index does not show the project list heading or helper copy', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.doesNotMatch(html, /项目列表/);
+  assert.doesNotMatch(html, /上传项目文件后，点击卡片可在大窗口中预览。/);
+});
+
+test('public index renders a visible upload-order number on each project card', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /sites\.forEach\(\(site, index\)/);
+  assert.match(html, /className = 'site-heading'/);
+  assert.match(html, /className = 'site-number'/);
+  assert.match(html, /textContent = site\.number/);
+  assert.ok(html.indexOf("heading.append(number, title)") < html.indexOf("content.append(heading, url)"));
+  assert.doesNotMatch(html, /cardMain\.append\(number, content\)/);
+  assert.doesNotMatch(html, /textContent = String\(index \+ 1\)/);
+});
+
+test('public index loads class buttons and uploads to the selected class', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /id="classTabs"/);
+  assert.match(html, /id="classPasswordOverlay"/);
+  assert.match(html, /id="classPasswordInput"/);
+  assert.match(html, /fetch\('\/api\/classes'\)/);
+  assert.match(html, /\/api\/classes\/\$\{encodeURIComponent\(currentClassId\)\}\/unlock/);
+  assert.match(html, /\/api\/sites\?classId=/);
+  assert.match(html, /formData\.append\('classId', currentClassId\)/);
+});
+
+test('public index upload accepts either an HTML file or pasted code', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /<textarea[^>]+id="uploadHtmlContent"/);
+  assert.doesNotMatch(html, /<input[^>]+id="fileInput"[^>]+required/);
+  assert.match(html, /const htmlContent = uploadHtmlContent\.value\.trim\(\)/);
+  assert.match(html, /if \(!file && !htmlContent\)/);
+  assert.match(html, /formData\.append\('htmlContent', htmlContent\)/);
+});
+
+test('public index renders an all tab before class buttons', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /allButton\.textContent = '全部'/);
+  assert.match(html, /allButton\.addEventListener\('click', \(\) => selectClass\(''\)\)/);
+  assert.ok(html.indexOf('classTabs.append(allButton)') < html.indexOf('classes.forEach'));
+});
+
+test('public index only shows the new-page button in the preview header', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.doesNotMatch(html, /在新页面打开/);
+  assert.doesNotMatch(html, /id="openExternal"/);
+  assert.match(html, /id="openPreviewExternal"[^>]*>新页面打开<\/button>/);
+  assert.match(html, /let currentPreviewUrl = ''/);
+  assert.match(html, /window\.open\(currentPreviewUrl, '_blank', 'noopener'\)/);
+  assert.match(html, /actions\.append\(previewButton\)/);
+});
+
+test('public index opens preview only from the preview button', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /previewButton\.addEventListener\('click', \(\) => openPreview\(site\)\)/);
+  assert.doesNotMatch(html, /card\.addEventListener\('click'/);
+});
+
+test('public admin page exposes project CRUD controls', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /class="admin-shell"/);
+  assert.match(html, /class="admin-sidebar"/);
+  assert.match(html, /data-view-target="projects"/);
+  assert.match(html, /data-view-target="create"/);
+  assert.match(html, /data-view-target="classes"/);
+  assert.match(html, /data-admin-view="projects"[^>]+class="workspace is-active"/);
+  assert.match(html, /data-admin-view="create"[^>]+class="workspace"/);
+  assert.match(html, /data-admin-view="classes"[^>]+class="workspace"/);
+  assert.match(html, /function switchView/);
+  assert.match(html, /projectCount/);
+  assert.match(html, /classCount/);
+  assert.match(html, /id="createForm"/);
+  assert.match(html, /fetch\('\/api\/sites'/);
+  assert.match(html, /method: 'PUT'/);
+  assert.match(html, /method: 'DELETE'/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
+  assert.match(html, /textContent = '下载'/);
+  assert.match(html, /搜索项目名称或 ID/);
+  assert.match(html, /id="classForm"/);
+  assert.match(html, /id="classPasswordInput"/);
+  assert.match(html, /id="generateClassPassword"/);
+  assert.match(html, /id="createClassId"/);
+  assert.match(html, /id="createHtmlContent"/);
+  assert.match(html, /fetch\('\/api\/admin\/classes'/);
+  assert.match(html, /function generatePassword/);
+  assert.match(html, /formData\.append\('classId'/);
+  assert.match(html, /formData\.append\('htmlContent'/);
+});
+
+test('public admin class passwords are hidden by default with one show-hide toggle before random', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /id="classPasswordInput"[^>]+type="password"/);
+  assert.match(html, /id="toggleClassPassword"[^>]*>显示<\/button>/);
+  assert.doesNotMatch(html, /id="showClassPassword"/);
+  assert.doesNotMatch(html, /id="hideClassPassword"/);
+  assert.ok(html.indexOf('id="toggleClassPassword"') < html.indexOf('id="generateClassPassword"'));
+  assert.match(html, /togglePasswordVisibility\(classPasswordInput, toggleClassPassword\)/);
+
+  assert.match(html, /passwordInput\.type = 'password'/);
+  assert.match(html, /toggleButton\.textContent = '显示'/);
+  assert.match(html, /togglePasswordVisibility\(passwordInput, toggleButton\)/);
+  assert.ok(html.indexOf('actions.append(toggleButton, generateButton') !== -1);
+});
+
+async function makeTestApp(options = {}) {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-'));
+  const dataDir = path.join(root, 'data');
+  const storageDir = path.join(root, 'storage', 'sites');
+  const publicDir = path.join(root, 'public');
+  await fsp.mkdir(dataDir, { recursive: true });
+  await fsp.mkdir(storageDir, { recursive: true });
+  await fsp.mkdir(publicDir, { recursive: true });
+  await fsp.writeFile(path.join(publicDir, 'index.html'), '<!doctype html><title>Test Shell</title>');
+  await fsp.writeFile(path.join(publicDir, 'admin.html'), '<!doctype html><title>Admin Shell</title><form id="createForm"></form>');
+
+  const app = createApp({
+    dataFile: path.join(dataDir, 'sites.json'),
+    classesFile: path.join(dataDir, 'classes.json'),
+    storageDir,
+    publicDir,
+    ...options
+  });
+
+  return { app, root, dataDir, storageDir, publicDir };
+}
+
+test('GET /api/sites returns an empty list before uploads', async () => {
+  const { app } = await makeTestApp();
+
+  const response = await request(app).get('/api/sites').expect(200);
+
+  assert.deepEqual(response.body, []);
+});
+
+test('GET /api/sites assigns five-digit numbers to existing projects by creation order', async () => {
+  const { app, dataDir } = await makeTestApp();
+  await fsp.writeFile(
+    path.join(dataDir, 'sites.json'),
+    JSON.stringify(
+      [
+        { id: 'newer', title: '后添加', createdAt: '2026-01-02T00:00:00.000Z' },
+        { id: 'older', title: '先添加', createdAt: '2026-01-01T00:00:00.000Z' }
+      ],
+      null,
+      2
+    )
+  );
+
+  const response = await request(app).get('/api/sites').expect(200);
+  assert.deepEqual(
+    response.body.map((site) => [site.id, site.number]),
+    [
+      ['newer', '00002'],
+      ['older', '00001']
+    ]
+  );
+
+  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.deepEqual(
+    sites.map((site) => [site.id, site.number]),
+    [
+      ['newer', '00002'],
+      ['older', '00001']
+    ]
+  );
+});
+
+test('admin can create classes and public APIs expose class buttons', async () => {
+  const { app } = await makeTestApp({
+    idGenerator: () => 'classone'
+  });
+  const agent = request.agent(app);
+
+  await agent
+    .post('/api/classes')
+    .send({ name: '三年级一班' })
+    .expect(401);
+
+  await agent
+    .post('/admin-login')
+    .type('form')
+    .send({ password: 'qqqyyy' })
+    .expect(303);
+
+  const created = await agent
+    .post('/api/classes')
+    .send({ name: '三年级一班', password: '123456' })
+    .expect(201);
+
+  assert.equal(created.body.id, 'classone');
+  assert.equal(created.body.name, '三年级一班');
+  assert.equal(created.body.password, '123456');
+
+  const response = await request(app).get('/api/classes').expect(200);
+  assert.deepEqual(response.body.map((item) => item.name), ['三年级一班']);
+  assert.equal(response.body[0].password, undefined);
+
+  const adminResponse = await agent.get('/api/admin/classes').expect(200);
+  assert.equal(adminResponse.body[0].password, '123456');
+});
+
+test('POST /api/sites requires title and files', async () => {
+  const { app } = await makeTestApp();
+
+  await request(app).post('/api/sites').expect(400);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', 'No files')
+    .expect(400);
+});
+
+test('POST /api/sites saves one HTML file as index.html and records metadata', async () => {
+  const ids = ['class-a', 'abc123'];
+  const { app, storageDir, dataDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  const response = await request(app)
+    .post('/api/sites')
+    .field('title', '我的小游戏')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Game</h1>'), { filename: 'game.html' })
+    .expect(201);
+
+  assert.equal(response.body.id, 'abc123');
+  assert.equal(response.body.title, '我的小游戏');
+  assert.equal(response.body.classId, 'class-a');
+  assert.equal(response.body.className, '一班');
+  assert.equal(response.body.url, '/site/abc123');
+  assert.equal(response.body.number, '00001');
+
+  assert.equal(
+    await fsp.readFile(path.join(storageDir, 'abc123', 'index.html'), 'utf8'),
+    '<!doctype html><h1>Game</h1>'
+  );
+
+  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.equal(sites.length, 1);
+  assert.equal(sites[0].id, 'abc123');
+  assert.equal(sites[0].title, '我的小游戏');
+  assert.equal(sites[0].classId, 'class-a');
+  assert.equal(sites[0].number, '00001');
+});
+
+test('POST /api/sites can create a project from pasted HTML code', async () => {
+  const ids = ['class-a', 'code123'];
+  const { app, storageDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  const response = await request(app)
+    .post('/api/sites')
+    .field('title', '代码作品')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><h1>Code</h1>')
+    .expect(201);
+
+  assert.equal(response.body.id, 'code123');
+  assert.equal(response.body.title, '代码作品');
+  assert.equal(
+    await fsp.readFile(path.join(storageDir, 'code123', 'index.html'), 'utf8'),
+    '<!doctype html><h1>Code</h1>'
+  );
+});
+
+test('GET /api/sites can filter projects by class', async () => {
+  const ids = ['class-a', 'class-b', 'site-a', 'site-b'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await agent.post('/api/classes').send({ name: '二班', password: '222222' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '一班作品')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '二班作品')
+    .field('classId', 'class-b')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
+    .expect(201);
+
+  await request(app).get('/api/sites?classId=class-a').expect(401);
+
+  const visitor = request.agent(app);
+  await visitor.post('/api/classes/class-a/unlock').send({ password: '000000' }).expect(401);
+  await visitor.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+
+  const response = await visitor.get('/api/sites?classId=class-a').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
+});
+
+test('admin login does not unlock public class project lists', async () => {
+  const ids = ['class-a', 'site-a'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '一班作品')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .expect(201);
+
+  await agent.get('/api/sites?classId=class-a').expect(401);
+  await agent.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+
+  const response = await agent.get('/api/sites?classId=class-a').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
+});
+
+test('GET /api/sites without a class filter returns only unlocked class projects', async () => {
+  const ids = ['class-a', 'class-b', 'site-a', 'site-b'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await agent.post('/api/classes').send({ name: '二班', password: '222222' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '一班作品')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '二班作品')
+    .field('classId', 'class-b')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
+    .expect(201);
+
+  const visitor = request.agent(app);
+  await visitor.get('/api/sites').expect(200).expect([]);
+  await visitor.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+
+  const response = await visitor.get('/api/sites').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
+});
+
+test('POST /api/sites rejects non-HTML files and multiple files', async () => {
+  const { app } = await makeTestApp();
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', 'Not HTML')
+    .attach('file', Buffer.from('hello'), { filename: 'README.md' })
+    .expect(400);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', 'Too many')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
+    .expect(400);
+});
+
+test('POST /api/sites regenerates IDs that already exist', async () => {
+  const ids = ['class-a', 'taken', 'freeid'];
+  const { app, storageDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+  await fsp.mkdir(path.join(storageDir, 'taken'), { recursive: true });
+
+  const response = await request(app)
+    .post('/api/sites')
+    .field('title', 'Unique ID')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Hello</h1>'), { filename: 'index.html' })
+    .expect(201);
+
+  assert.equal(response.body.id, 'freeid');
+  assert.equal(fs.existsSync(path.join(storageDir, 'freeid', 'index.html')), true);
+});
+
+test('GET /admin.html requires the admin password before showing backend page', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+
+  const blocked = await agent.get('/admin.html').expect(200);
+  assert.match(blocked.text, /请输入后台密码/);
+  assert.doesNotMatch(blocked.text, /id="createForm"/);
+
+  await agent
+    .post('/admin-login')
+    .type('form')
+    .send({ password: 'wrong' })
+    .expect(401);
+
+  await agent
+    .post('/admin-login')
+    .type('form')
+    .send({ password: 'qqqyyy' })
+    .expect(303)
+    .expect('Location', '/admin.html');
+
+  const unlocked = await agent.get('/admin.html').expect(200);
+  assert.match(unlocked.text, /id="createForm"/);
+});
+
+test('PUT /api/sites/:id updates project title and optionally replaces HTML', async () => {
+  const ids = ['class-a', 'class-b', 'editable'];
+  const { app, storageDir, dataDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+  await agent.post('/api/classes').send({ name: '二班' }).expect(201);
+
+  await agent
+    .post('/api/sites')
+    .field('title', '旧名字')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Old</h1>'), { filename: 'old.html' })
+    .expect(201);
+
+  const unauthenticated = request.agent(app);
+  await agent
+    .get('/admin.html')
+    .expect(200);
+
+  await unauthenticated.put('/api/sites/editable').field('title', '未登录修改').field('classId', 'class-b').expect(401);
+
+  const response = await agent
+    .put('/api/sites/editable')
+    .field('title', '新名字')
+    .field('classId', 'class-b')
+    .attach('file', Buffer.from('<!doctype html><h1>New</h1>'), { filename: 'new.html' })
+    .expect(200);
+
+  assert.equal(response.body.id, 'editable');
+  assert.equal(response.body.title, '新名字');
+  assert.equal(response.body.classId, 'class-b');
+  assert.equal(response.body.className, '二班');
+  assert.equal(response.body.url, '/site/editable');
+  assert.ok(response.body.updatedAt);
+  assert.equal(
+    await fsp.readFile(path.join(storageDir, 'editable', 'index.html'), 'utf8'),
+    '<!doctype html><h1>New</h1>'
+  );
+
+  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.equal(sites[0].title, '新名字');
+  assert.equal(sites[0].classId, 'class-b');
+  assert.ok(sites[0].updatedAt);
+});
+
+test('DELETE /api/sites/:id removes project metadata and files', async () => {
+  const ids = ['class-a', 'deleted'];
+  const { app, storageDir, dataDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  await agent
+    .post('/api/sites')
+    .field('title', '要删除')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Delete</h1>'), { filename: 'index.html' })
+    .expect(201);
+
+  await request(app).delete('/api/sites/deleted').expect(401);
+
+  await agent.delete('/api/sites/deleted').expect(204);
+
+  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.deepEqual(sites, []);
+  assert.equal(fs.existsSync(path.join(storageDir, 'deleted')), false);
+  await request(app).get('/site/deleted').expect(404);
+});
+
+test('admin can download a project HTML file', async () => {
+  const ids = ['class-a', 'downloadable'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  await agent
+    .post('/api/sites')
+    .field('title', '下载作品')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Download</h1>'), { filename: 'download.html' })
+    .expect(201);
+
+  await request(app).get('/api/sites/downloadable/download').expect(401);
+
+  const response = await agent.get('/api/sites/downloadable/download').expect(200);
+  assert.match(response.headers['content-disposition'], /attachment/);
+  assert.match(response.headers['content-disposition'], /html/);
+  assert.equal(response.text, '<!doctype html><h1>Download</h1>');
+});
+
+test('admin cannot delete a class that still has projects', async () => {
+  const ids = ['class-a', 'site-a'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '一班作品')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .expect(201);
+
+  await agent.delete('/api/classes/class-a').expect(400);
+});
+
+test('GET /site/:id returns index.html when present', async () => {
+  const ids = ['class-a', 'withindex'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', 'Has index')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Hello</h1>'), { filename: 'index.html' })
+    .expect(201);
+
+  await request(app).get('/site/withindex').expect(401);
+
+  const visitor = request.agent(app);
+  await visitor.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+  const response = await visitor.get('/site/withindex').expect(200);
+
+  assert.match(response.text, /<h1>Hello<\/h1>/);
+});
+
+test('GET /site/:id/* blocks traversal for uploaded HTML projects', async () => {
+  const ids = ['class-a', 'files'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', 'Files')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Only HTML</h1>'), { filename: 'index.html' })
+    .expect(201);
+
+  const visitor = request.agent(app);
+  await visitor.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+  await visitor.get('/site/files/../data/config.json').expect(404);
+});

@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HtmlDeploy</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f2;
+      --panel: #ffffff;
+      --panel-soft: #f9faf7;
+      --text: #1f2726;
+      --muted: #68736f;
+      --line: #dce3dd;
+      --brand: #24715b;
+      --brand-dark: #195846;
+      --accent: #c47a22;
+      --danger: #b42318;
+      --shadow: 0 22px 60px rgba(31, 39, 38, 0.16);
+      --soft-shadow: 0 12px 32px rgba(31, 39, 38, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(36, 113, 91, 0.2);
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 max(24px, calc((100vw - 1120px) / 2));
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-size: 20px;
+      font-weight: 750;
+      letter-spacing: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--text);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 10px 22px rgba(31, 39, 38, 0.18);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-link {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .admin-link:hover {
+      border-color: #b8c8be;
+      background: #f8faf7;
+    }
+
+    .upload-button,
+    .primary-button {
+      min-height: 40px;
+      padding: 0 18px;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 650;
+      box-shadow: 0 10px 20px rgba(36, 113, 91, 0.18);
+    }
+
+    .upload-button:hover,
+    .primary-button:hover {
+      background: var(--brand-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(36, 113, 91, 0.22);
+    }
+
+    .upload-button:disabled,
+    .primary-button:disabled {
+      cursor: not-allowed;
+      background: #9ca8a1;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .secondary-button {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .secondary-button:hover {
+      border-color: #b8c8be;
+      background: #f8faf7;
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #edf1ed;
+      color: var(--text);
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .icon-button:hover {
+      background: #e0e8e0;
+    }
+
+    main {
+      width: min(1120px, calc(100vw - 40px));
+      margin: 30px auto 64px;
+    }
+
+    .class-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 2px;
+      overflow-x: auto;
+    }
+
+    .class-tab {
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .class-tab:hover {
+      border-color: #b8c8be;
+      background: #f8faf7;
+    }
+
+    .class-tab.is-active {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(36, 113, 91, 0.18);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .site-card {
+      min-height: 182px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--soft-shadow);
+      text-align: left;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    }
+
+    .site-card:hover {
+      border-color: #b5c8bc;
+      box-shadow: 0 18px 42px rgba(31, 39, 38, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .site-card-main {
+      min-width: 0;
+    }
+
+    .site-heading {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      min-width: 0;
+      margin-bottom: 12px;
+    }
+
+    .site-number {
+      flex: 0 0 auto;
+      padding: 3px 7px;
+      border-radius: 6px;
+      background: #eef5e9;
+      color: var(--brand-dark);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      border: 1px solid #d8e8d2;
+    }
+
+    .site-content {
+      min-width: 0;
+      padding-top: 2px;
+    }
+
+    .site-title {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .site-url {
+      display: inline-block;
+      max-width: 100%;
+      padding: 6px 9px;
+      border: 1px solid #e5e8e2;
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+
+    .card-actions .primary-button,
+    .card-actions .secondary-button {
+      min-height: 38px;
+    }
+
+    .empty {
+      padding: 56px 20px;
+      border: 1px dashed #b9c7bd;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+      text-align: center;
+      color: var(--muted);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(20, 29, 27, 0.55);
+      backdrop-filter: blur(8px);
+    }
+
+    .overlay.is-open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(460px, calc(100vw - 32px));
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .modal-head,
+    .preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    .modal-title,
+    .preview-title {
+      min-width: 0;
+      margin: 0;
+      font-size: 18px;
+      overflow-wrap: anywhere;
+    }
+
+    .modal-body {
+      display: grid;
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .current-class {
+      padding: 11px 12px;
+      border: 1px solid #d8e8d2;
+      border-radius: 8px;
+      background: #eef5e9;
+      color: var(--brand-dark);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 10px 12px;
+    }
+
+    input[type="text"],
+    input[type="file"] {
+      min-height: 44px;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      line-height: 1.5;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    input[type="text"]:focus,
+    input[type="file"]:focus,
+    textarea:focus {
+      border-color: #9db9aa;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 0 20px 20px;
+    }
+
+    .message {
+      min-height: 20px;
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    .preview {
+      width: min(1180px, calc(100vw - 32px));
+      height: min(780px, calc(100vh - 32px));
+      display: flex;
+      flex-direction: column;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.85);
+    }
+
+    .preview-meta {
+      min-width: 0;
+    }
+
+    .preview-url {
+      margin-top: 4px;
+      color: var(--accent);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    iframe {
+      flex: 1;
+      width: 100%;
+      border: 0;
+      background: #fff;
+    }
+
+    @media (max-width: 700px) {
+      .topbar {
+        height: 66px;
+        padding: 0 18px;
+      }
+
+      .brand {
+        font-size: 18px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+      }
+
+      .upload-button {
+        min-height: 38px;
+        padding: 0 13px;
+      }
+
+      .top-actions {
+        gap: 8px;
+      }
+
+      .admin-link {
+        min-height: 38px;
+        padding: 0 11px;
+      }
+
+      main {
+        width: min(100vw - 24px, 1120px);
+        margin-top: 22px;
+      }
+
+      .class-tabs {
+        margin-bottom: 14px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .site-card {
+        min-height: 174px;
+        padding: 16px;
+      }
+
+      .site-heading {
+        gap: 8px;
+      }
+
+      .site-number {
+        font-size: 11px;
+      }
+
+      .card-actions .primary-button,
+      .card-actions .secondary-button {
+        flex: 1 1 130px;
+      }
+
+      .overlay {
+        padding: 12px;
+      }
+
+      .preview {
+        height: calc(100vh - 24px);
+      }
+
+      .preview-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .preview-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">H</span>
+      <span>HtmlDeploy</span>
+    </div>
+    <div class="top-actions">
+      <a class="admin-link" href="/admin.html">后台管理</a>
+      <button class="upload-button" id="openUpload" type="button">＋ 上传网页</button>
+    </div>
+  </header>
+
+  <main>
+    <nav class="class-tabs" id="classTabs" aria-label="班级"></nav>
+    <section class="grid" id="siteGrid" aria-live="polite"></section>
+    <div class="empty" id="emptyState">还没有项目，点击右上角上传一个。</div>
+  </main>
+
+  <div class="overlay" id="uploadOverlay" aria-hidden="true">
+    <form class="modal" id="uploadForm">
+      <div class="modal-head">
+        <h2 class="modal-title">上传网页</h2>
+        <button class="icon-button" id="closeUpload" type="button" aria-label="关闭上传弹窗">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="current-class" id="currentClassLabel"></div>
+        <label>
+          网页名字
+          <input id="titleInput" name="title" type="text" maxlength="80" placeholder="例如：我的小游戏" required>
+        </label>
+        <label>
+          HTML 文件
+          <input id="fileInput" name="file" type="file" accept=".html,text/html">
+        </label>
+        <label>
+          HTML 代码
+          <textarea id="uploadHtmlContent" name="htmlContent" placeholder="可以直接粘贴完整 HTML 代码。上传文件和填写代码二选一即可。"></textarea>
+        </label>
+        <div class="message" id="uploadMessage"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-button" id="cancelUpload" type="button">取消</button>
+        <button class="primary-button" type="submit">确定上传</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="overlay" id="classPasswordOverlay" aria-hidden="true">
+    <form class="modal" id="classPasswordForm">
+      <div class="modal-head">
+        <h2 class="modal-title" id="classPasswordTitle">输入班级密码</h2>
+        <button class="icon-button" id="closeClassPassword" type="button" aria-label="关闭班级密码弹窗">×</button>
+      </div>
+      <div class="modal-body">
+        <label>
+          班级密码
+          <input id="classPasswordInput" name="password" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" required>
+        </label>
+        <div class="message" id="classPasswordMessage"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-button" id="cancelClassPassword" type="button">取消</button>
+        <button class="primary-button" type="submit">确定</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="overlay" id="previewOverlay" aria-hidden="true">
+    <section class="preview">
+      <div class="preview-head">
+        <div class="preview-meta">
+          <h2 class="preview-title" id="previewTitle"></h2>
+          <div class="preview-url" id="previewUrl"></div>
+        </div>
+        <div class="preview-actions">
+          <button class="secondary-button" id="openPreviewExternal" type="button">新页面打开</button>
+          <button class="icon-button" id="closePreview" type="button" aria-label="关闭预览窗口">×</button>
+        </div>
+      </div>
+      <iframe id="previewFrame" title="项目预览"></iframe>
+    </section>
+  </div>
+
+  <script>
+    const classTabs = document.getElementById('classTabs');
+    const siteGrid = document.getElementById('siteGrid');
+    const emptyState = document.getElementById('emptyState');
+    const uploadOverlay = document.getElementById('uploadOverlay');
+    const classPasswordOverlay = document.getElementById('classPasswordOverlay');
+    const classPasswordForm = document.getElementById('classPasswordForm');
+    const classPasswordTitle = document.getElementById('classPasswordTitle');
+    const classPasswordInput = document.getElementById('classPasswordInput');
+    const classPasswordMessage = document.getElementById('classPasswordMessage');
+    const previewOverlay = document.getElementById('previewOverlay');
+    const uploadForm = document.getElementById('uploadForm');
+    const titleInput = document.getElementById('titleInput');
+    const fileInput = document.getElementById('fileInput');
+    const uploadHtmlContent = document.getElementById('uploadHtmlContent');
+    const uploadMessage = document.getElementById('uploadMessage');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewUrl = document.getElementById('previewUrl');
+    const previewFrame = document.getElementById('previewFrame');
+    const openPreviewExternal = document.getElementById('openPreviewExternal');
+    const openUploadButton = document.getElementById('openUpload');
+    const currentClassLabel = document.getElementById('currentClassLabel');
+
+    let currentPreviewUrl = '';
+    let classes = [];
+    let currentClassId = '';
+    const unlockedClassIds = new Set();
+
+    function openOverlay(overlay) {
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeOverlay(overlay) {
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function openUpload() {
+      if (!currentClassId) {
+        emptyState.textContent = '请先到后台创建班级，再上传网页。';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      if (!unlockedClassIds.has(currentClassId)) {
+        openClassPassword();
+        return;
+      }
+
+      uploadMessage.textContent = '';
+      uploadForm.reset();
+      const currentClass = classes.find((item) => item.id === currentClassId);
+      currentClassLabel.textContent = `当前班级：${currentClass ? currentClass.name : '未选择'}`;
+      openOverlay(uploadOverlay);
+      titleInput.focus();
+    }
+
+    function closeUpload() {
+      closeOverlay(uploadOverlay);
+    }
+
+    function openClassPassword() {
+      const currentClass = classes.find((item) => item.id === currentClassId);
+      classPasswordTitle.textContent = currentClass ? `输入「${currentClass.name}」密码` : '输入班级密码';
+      classPasswordMessage.textContent = '';
+      classPasswordForm.reset();
+      openOverlay(classPasswordOverlay);
+      classPasswordInput.focus();
+    }
+
+    function closeClassPassword() {
+      closeOverlay(classPasswordOverlay);
+    }
+
+    function openPreview(site) {
+      currentPreviewUrl = site.url;
+      previewTitle.textContent = site.title;
+      previewUrl.textContent = site.url;
+      previewFrame.src = site.url;
+      openOverlay(previewOverlay);
+    }
+
+    function closePreview() {
+      previewFrame.removeAttribute('src');
+      currentPreviewUrl = '';
+      closeOverlay(previewOverlay);
+    }
+
+    function renderSites(sites) {
+      siteGrid.innerHTML = '';
+      if (!classes.length) {
+        emptyState.textContent = '请先到后台创建班级。';
+      } else if (!currentClassId) {
+        emptyState.textContent = '还没有可查看的项目。';
+      } else {
+        emptyState.textContent = '当前班级还没有项目。';
+      }
+      emptyState.style.display = sites.length ? 'none' : 'block';
+
+      sites.forEach((site, index) => {
+        const card = document.createElement('article');
+        card.className = 'site-card';
+
+        const cardMain = document.createElement('div');
+        cardMain.className = 'site-card-main';
+
+        const content = document.createElement('div');
+        content.className = 'site-content';
+
+        const heading = document.createElement('div');
+        heading.className = 'site-heading';
+
+        const number = document.createElement('span');
+        number.className = 'site-number';
+        number.textContent = site.number;
+
+        const title = document.createElement('h2');
+        title.className = 'site-title';
+        title.textContent = site.title;
+
+        const url = document.createElement('div');
+        url.className = 'site-url';
+        url.textContent = site.url;
+
+        heading.append(number, title);
+        content.append(heading, url);
+        cardMain.append(content);
+
+        const actions = document.createElement('div');
+        actions.className = 'card-actions';
+
+        const previewButton = document.createElement('button');
+        previewButton.className = 'primary-button';
+        previewButton.type = 'button';
+        previewButton.textContent = '预览项目';
+        previewButton.addEventListener('click', () => openPreview(site));
+
+        actions.append(previewButton);
+        card.append(cardMain, actions);
+
+        siteGrid.append(card);
+      });
+    }
+
+    function renderClasses() {
+      classTabs.innerHTML = '';
+      openUploadButton.disabled = !classes.length || !currentClassId;
+
+      const allButton = document.createElement('button');
+      allButton.className = `class-tab${currentClassId ? '' : ' is-active'}`;
+      allButton.type = 'button';
+      allButton.textContent = '全部';
+      allButton.addEventListener('click', () => selectClass(''));
+      classTabs.append(allButton);
+
+      classes.forEach((classItem) => {
+        const button = document.createElement('button');
+        button.className = `class-tab${classItem.id === currentClassId ? ' is-active' : ''}`;
+        button.type = 'button';
+        button.textContent = classItem.name;
+        button.addEventListener('click', () => selectClass(classItem.id));
+        classTabs.append(button);
+      });
+    }
+
+    async function loadClasses() {
+      const response = await fetch('/api/classes');
+      classes = await response.json();
+
+      if (!classes.some((item) => item.id === currentClassId)) {
+        currentClassId = '';
+      }
+
+      renderClasses();
+    }
+
+    async function selectClass(classId) {
+      currentClassId = classId;
+      renderClasses();
+      await loadSites();
+    }
+
+    async function loadSites() {
+      const sitesUrl = currentClassId
+        ? `/api/sites?classId=${encodeURIComponent(currentClassId)}`
+        : '/api/sites';
+      const response = await fetch(sitesUrl);
+      if (response.status === 401) {
+        renderSites([]);
+        emptyState.textContent = '请输入班级密码后查看项目。';
+        emptyState.style.display = 'block';
+        openClassPassword();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('加载项目失败');
+      }
+
+      const sites = await response.json();
+      if (currentClassId) {
+        unlockedClassIds.add(currentClassId);
+      }
+      renderSites(sites);
+    }
+
+    classPasswordForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      classPasswordMessage.textContent = '';
+
+      const response = await fetch(`/api/classes/${encodeURIComponent(currentClassId)}/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: classPasswordInput.value.trim() })
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '密码错误' }));
+        classPasswordMessage.textContent = result.error || '密码错误';
+        return;
+      }
+
+      unlockedClassIds.add(currentClassId);
+      closeClassPassword();
+      await loadSites();
+    });
+
+    uploadForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      uploadMessage.textContent = '';
+
+      const file = fileInput.files && fileInput.files[0];
+      const htmlContent = uploadHtmlContent.value.trim();
+      if (!file && !htmlContent) {
+        uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码。';
+        return;
+      }
+
+      const fileName = file ? file.name.toLowerCase() : '';
+      if (file && !fileName.endsWith('.html') && !fileName.endsWith('.htm')) {
+        uploadMessage.textContent = '当前版本只支持上传 HTML 文件。';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('title', titleInput.value.trim());
+      formData.append('classId', currentClassId);
+      formData.append('htmlContent', htmlContent);
+      if (file) {
+        formData.append('file', file, file.name);
+      }
+
+      const response = await fetch('/api/sites', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '上传失败' }));
+        uploadMessage.textContent = result.error || '上传失败';
+        return;
+      }
+
+      closeUpload();
+      await loadSites();
+    });
+
+    openUploadButton.addEventListener('click', openUpload);
+    document.getElementById('closeUpload').addEventListener('click', closeUpload);
+    document.getElementById('cancelUpload').addEventListener('click', closeUpload);
+    document.getElementById('closeClassPassword').addEventListener('click', closeClassPassword);
+    document.getElementById('cancelClassPassword').addEventListener('click', closeClassPassword);
+    document.getElementById('closePreview').addEventListener('click', closePreview);
+    openPreviewExternal.addEventListener('click', () => {
+      if (currentPreviewUrl) {
+        window.open(currentPreviewUrl, '_blank', 'noopener');
+      }
+    });
+
+    uploadOverlay.addEventListener('click', (event) => {
+      if (event.target === uploadOverlay) {
+        closeUpload();
+      }
+    });
+
+    classPasswordOverlay.addEventListener('click', (event) => {
+      if (event.target === classPasswordOverlay) {
+        closeClassPassword();
+      }
+    });
+
+    previewOverlay.addEventListener('click', (event) => {
+      if (event.target === previewOverlay) {
+        closePreview();
+      }
+    });
+
+    async function boot() {
+      await loadClasses();
+      await loadSites();
+    }
+
+    boot().catch((error) => {
+      emptyState.textContent = `加载项目失败：${error.message}`;
+      emptyState.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
