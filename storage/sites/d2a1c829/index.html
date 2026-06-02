@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>磁暴共振：动能轨道</title>
+    <style>
+        :root {
+            --neon-blue: #00f0ff;
+            --neon-purple: #bd00ff;
+            --neon-pink: #ff007f;
+            --bg-dark: #05050f;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #fff;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 90vw;
+            max-width: 850px;
+            aspect-ratio: 16 / 9;
+            background: radial-gradient(circle, #0c0b24 0%, #03030a 100%);
+            border: 2px solid rgba(189, 0, 255, 0.3);
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(189, 0, 255, 0.15);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* 顶部数据看板 */
+        .hud {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hud-item {
+            background: rgba(13, 10, 28, 0.7);
+            border: 1px solid rgba(189, 0, 255, 0.2);
+            padding: 6px 14px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #stability-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        #stability-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-pink), var(--neon-blue));
+            box-shadow: 0 0 8px var(--neon-blue);
+            transition: width 0.1s;
+        }
+
+        /* 提示层 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 15, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.3s ease;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin: 0 0 10px 0;
+            letter-spacing: 3px;
+            background: linear-gradient(45deg, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+        }
+
+        .instructions {
+            background: rgba(189, 0, 255, 0.05);
+            border: 1px dashed rgba(189, 0, 255, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 480px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #b4b4d6;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .instructions strong {
+            color: var(--neon-blue);
+        }
+
+        #menu-desc {
+            font-size: 14px;
+            color: #e2e8f0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            max-width: 480px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            color: white;
+            border: none;
+            padding: 12px 36px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.7);
+        }
+
+        .footer-tips {
+            margin-top: 15px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <!-- HUD 仪表盘 -->
+        <div class="hud">
+            <div class="hud-item">
+                Core Integrity: 
+                <div id="stability-bar">
+                    <div id="stability-fill"></div>
+                </div>
+            </div>
+            <div class="hud-item" style="color: var(--neon-blue);">
+                Flux Distance: <span id="distance-val">0</span>m
+            </div>
+        </div>
+
+        <canvas id="fluxCanvas"></canvas>
+
+        <!-- 游戏覆盖界面 -->
+        <div id="overlay" class="overlay">
+            <h1 id="menu-title">FLUX NODE: KINETIC ORBIT</h1>
+            <div style="color: var(--neon-purple); font-size: 12px; margin-bottom: 15px; letter-spacing: 4px;">动能约束 · 矢量弹射</div>
+            
+            <!-- 初始说明面板 -->
+            <div class="instructions" id="menu-instructions">
+                🌌 <strong>量子电磁规则：</strong><br>
+                1. 屏幕中飞行的<b>白绿色小球</b>是处于激发态的<b>高能核芯</b>。<br>
+                2. <b>按下并按住鼠标左键（或长按屏幕）</b>可以激活光标处的<b>电磁引力阱</b>。<br>
+                3. 引力会将核芯吸过来。你可以像抛流星锤一样，在空中<b>甩动光标</b>让它加速绕转！<br>
+                4. <b>松开鼠标</b>，核芯会在瞬间失去约束，沿切线飞出。利用该惯性避开红色危险体并收集蓝色能源！
+            </div>
+
+            <!-- 结束状态说明（修复了缺少此元素的错误） -->
+            <p id="menu-desc" style="display: none;"></p>
+
+            <button class="btn" onclick="startSystem()">同步引力波段</button>
+        </div>
+    </div>
+
+    <div class="footer-tips">控制技巧：合理利用惯性滑行，不要一直按住鼠标吸附！</div>
+
+    <script>
+        const canvas = document.getElementById('fluxCanvas');
+        const ctx = canvas.getContext('2d');
+        const stabilityFill = document.getElementById('stability-fill');
+        const distanceDisplay = document.getElementById('distance-val');
+        const overlay = document.getElementById('overlay');
+        const menuTitle = document.getElementById('menu-title');
+        const menuInstructions = document.getElementById('menu-instructions');
+        const menuDesc = document.getElementById('menu-desc');
+        const startBtn = document.querySelector('.btn');
+
+        // 设置高清分辨率支持
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // 物理常数与环境配置
+        let gameActive = false;
+        let score = 0;
+        let integrity = 100;
+        let speedMultiplier = 1;
+        let gameTime = 0;
+
+        // 鼠标/触控位置与状态
+        const pointer = { x: 0, y: 0, active: false };
+
+        // 1. 核芯（能量球）物理引擎参数
+        const core = {
+            x: 100,
+            y: 250,
+            vx: 4,
+            vy: -2,
+            radius: 8,
+            mass: 1.2,
+            maxSpeed: 12,
+            drag: 0.992, // 空气微弱阻力，防止速度无限增加
+            trail: []
+        };
+
+        // 2. 障碍物与能量电池组
+        let obstacles = [];
+        let batteries = [];
+        let particles = [];
+
+        // ----------------- 音频引擎 (Web Audio API) -----------------
+        let audioCtx = null;
+        let magneticSynth = null;
+        let ambientSynth = null;
+        let globalGain = null;
+        let audioInitialized = false;
+
+        function initAudio() {
+            if (audioInitialized) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+
+                globalGain = audioCtx.createGain();
+                globalGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+
+                // 产生电磁场共振音
+                magneticSynth = audioCtx.createOscillator();
+                magneticSynth.type = 'sawtooth'; // 模拟电磁齿状波形
+                magneticSynth.frequency.setValueAtTime(100, audioCtx.currentTime);
+
+                const bandpass = audioCtx.createBiquadFilter();
+                bandpass.type = 'bandpass';
+                bandpass.frequency.setValueAtTime(200, audioCtx.currentTime);
+                bandpass.Q.setValueAtTime(4, audioCtx.currentTime);
+
+                const synthGain = audioCtx.createGain();
+                synthGain.gain.setValueAtTime(0, audioCtx.currentTime); // 默认无声
+
+                magneticSynth.connect(bandpass);
+                bandpass.connect(synthGain);
+                synthGain.connect(globalGain);
+
+                // 背景微弱环境无人声底音
+                ambientSynth = audioCtx.createOscillator();
+                ambientSynth.type = 'sine';
+                ambientSynth.frequency.setValueAtTime(60, audioCtx.currentTime);
+                
+                const ambientGain = audioCtx.createGain();
+                ambientGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+
+                ambientSynth.connect(ambientGain);
+                ambientGain.connect(globalGain);
+
+                globalGain.connect(audioCtx.destination);
+
+                magneticSynth.start();
+                ambientSynth.start();
+
+                // 存储引用
+                audioCtx.synthGain = synthGain;
+                audioCtx.bandpass = bandpass;
+                audioCtx.magneticSynth = magneticSynth;
+
+                audioInitialized = true;
+            } catch (e) {
+                console.warn("音频引擎初始化失败（可能处于静音政策限制）：", e);
+            }
+        }
+
+        // 3. 输入控制捕获
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            pointer.x = clientX - rect.left;
+            pointer.y = clientY - rect.top;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            pointer.active = true;
+            getPointerPos(e);
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        });
+
+        canvas.addEventListener('mousemove', getPointerPos);
+
+        window.addEventListener('mouseup', () => {
+            pointer.active = false;
+        });
+
+        // 移动端兼容
+        canvas.addEventListener('touchstart', (e) => {
+            pointer.active = true;
+            getPointerPos(e);
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            getPointerPos(e);
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', () => {
+            pointer.active = false;
+        });
+
+        // ----------------- 物理运动与逻辑生成 -----------------
+        function startSystem() {
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            gameActive = true;
+            score = 0;
+            integrity = 100;
+            gameTime = 0;
+            speedMultiplier = 1;
+
+            core.x = 100;
+            core.y = 250;
+            core.vx = 4;
+            core.vy = -3;
+            core.trail = [];
+
+            obstacles = [];
+            batteries = [];
+            particles = [];
+
+            // 隐藏初始规则，显示结束可能需要的元素容器
+            menuInstructions.style.display = 'none';
+            menuDesc.style.display = 'none';
+
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 300);
+
+            resizeCanvas();
+            animate();
+        }
+
+        function gameOver() {
+            gameActive = false;
+            pointer.active = false;
+            
+            if (audioCtx && audioCtx.synthGain) {
+                audioCtx.synthGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+            }
+
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                overlay.style.opacity = '1';
+            }, 50);
+
+            menuTitle.innerText = "KINETIC DISRUPTION";
+            menuTitle.style.color = "var(--neon-pink)";
+            
+            // 完美更新游戏结束面板文字（已修复此处因缺失 DOM 节点导致的崩溃）
+            menuInstructions.style.display = 'none';
+            menuDesc.style.display = 'block';
+            menuDesc.innerHTML = `
+                约束失效！高能核芯已经撞击汽化。<br>
+                系统最大推进航程: <strong style="color:var(--neon-blue);font-size: 18px;">${Math.round(score)}</strong> 米
+            `;
+            startBtn.innerText = "重启重力反应堆";
+        }
+
+        // 产生废墟障碍与能量晶体
+        function generateProceduralElements() {
+            const logicalWidth = canvas.width / window.devicePixelRatio;
+            gameTime++;
+
+            // 1. 每过一定时间生成一个浮动陨石障碍物
+            if (gameTime % 90 === 0) {
+                obstacles.push({
+                    x: logicalWidth + 30,
+                    y: Math.random() * 340 + 80,
+                    radius: Math.random() * 15 + 12,
+                    speed: (Math.random() * 1.5 + 2) * speedMultiplier,
+                    pulse: Math.random() * Math.PI
+                });
+            }
+
+            // 2. 每过一段时间生成一个高能电池（供玩家收集）
+            if (gameTime % 70 === 0) {
+                batteries.push({
+                    x: logicalWidth + 20,
+                    y: Math.random() * 380 + 60,
+                    radius: 7,
+                    speed: 2.2 * speedMultiplier,
+                    pulse: 0
+                });
+            }
+
+            // 随着时间推进，缓慢增加世界卷动速度
+            if (gameTime % 500 === 0) {
+                speedMultiplier = Math.min(2.5, speedMultiplier + 0.15);
+            }
+        }
+
+        // ----------------- 核心引擎更新 -----------------
+        function update() {
+            if (!gameActive) return;
+
+            const logicalWidth = canvas.width / window.devicePixelRatio;
+            const logicalHeight = canvas.height / window.devicePixelRatio;
+
+            // 1. 生成关卡元素
+            generateProceduralElements();
+
+            // 2. 磁力阱物理拉力计算（核心引力弹弓）
+            if (pointer.active) {
+                const dx = pointer.x - core.x;
+                const dy = pointer.y - core.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 2) {
+                    // 经典的电磁物理万有引力衰减定律：F = G * M / (R^1.2)
+                    const pullForce = Math.min(0.65, 30 / Math.pow(distance, 1.1));
+                    
+                    // 施加加速度向量
+                    core.vx += (dx / distance) * pullForce;
+                    core.vy += (dy / distance) * pullForce;
+                }
+
+                // 调节电磁共鸣音色
+                if (audioCtx && audioCtx.synthGain) {
+                    const soundPitch = Math.max(120, Math.min(900, 20000 / (distance + 15)));
+                    const soundVol = Math.min(0.25, 12 / (distance + 10));
+                    
+                    audioCtx.magneticSynth.frequency.setTargetAtTime(soundPitch, audioCtx.currentTime, 0.08);
+                    audioCtx.bandpass.frequency.setTargetAtTime(soundPitch * 1.5, audioCtx.currentTime, 0.08);
+                    audioCtx.synthGain.gain.setTargetAtTime(soundVol, audioCtx.currentTime, 0.08);
+                }
+            } else {
+                // 失去磁场时，合成器迅速静音
+                if (audioCtx && audioCtx.synthGain) {
+                    audioCtx.synthGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                }
+            }
+
+            // 3. 速度约束限制
+            core.vx *= core.drag;
+            core.vy *= core.drag;
+
+            const currentSpeed = Math.sqrt(core.vx * core.vx + core.vy * core.vy);
+            if (currentSpeed > core.maxSpeed) {
+                core.vx = (core.vx / currentSpeed) * core.maxSpeed;
+                core.vy = (core.vy / currentSpeed) * core.maxSpeed;
+            }
+
+            // 更新能量球的位置
+            core.x += core.vx;
+            core.y += core.vy;
+
+            // 记录拖尾粒子
+            core.trail.push({ x: core.x, y: core.y });
+            if (core.trail.length > 22) core.trail.shift();
+
+            // 4. 边界弹性碰撞
+            const padding = core.radius;
+            if (core.x < padding) {
+                core.x = padding; core.vx = -core.vx * 0.7; triggerImpact(core.x, core.y, 'wall');
+            }
+            if (core.x > logicalWidth - padding) {
+                core.x = logicalWidth - padding; core.vx = -core.vx * 0.7; triggerImpact(core.x, core.y, 'wall');
+            }
+            if (core.y < padding) {
+                core.y = padding; core.vy = -core.vy * 0.7; triggerImpact(core.x, core.y, 'wall');
+            }
+            if (core.y > logicalHeight - padding) {
+                core.y = logicalHeight - padding; core.vy = -core.vy * 0.7; triggerImpact(core.x, core.y, 'wall');
+            }
+
+            // 5. 障碍物碰撞检测与物理移动
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= obs.speed; // 向左滚动
+
+                // 陨石的微弱上下浮动
+                obs.pulse += 0.02;
+                obs.y += Math.sin(obs.pulse) * 0.3;
+
+                // 核心碰撞
+                const distToCore = Math.sqrt((core.x - obs.x)**2 + (core.y - obs.y)**2);
+                if (distToCore < core.radius + obs.radius) {
+                    triggerImpact(core.x, core.y, 'damage');
+                    obstacles.splice(i, 1);
+                    integrity -= 25; // 遭受重大创伤
+                    continue;
+                }
+
+                // 清理过界障碍
+                if (obs.x < -40) obstacles.splice(i, 1);
+            }
+
+            // 6. 能源收集检测
+            for (let i = batteries.length - 1; i >= 0; i--) {
+                let bat = batteries[i];
+                bat.x -= bat.speed;
+                bat.pulse += 0.05;
+
+                const distToCore = Math.sqrt((core.x - bat.x)**2 + (core.y - bat.y)**2);
+                if (distToCore < core.radius + bat.radius + 8) {
+                    triggerImpact(bat.x, bat.y, 'collect');
+                    batteries.splice(i, 1);
+                    integrity = Math.min(100, integrity + 15); // 回充能量
+                    score += 150; // 加分
+                    continue;
+                }
+
+                if (bat.x < -20) batteries.splice(i, 1);
+            }
+
+            // 7. 更新微碎屑粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.025;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // 8. 数据与核心死亡逻辑判定
+            score += 0.2; // 随生存里程得分
+            distanceDisplay.innerText = Math.round(score);
+            stabilityFill.style.width = `${integrity}%`;
+
+            if (integrity <= 0) {
+                gameOver();
+            }
+        }
+
+        // 碰撞引发火花
+        function triggerImpact(x, y, type) {
+            let color = 'rgba(0, 240, 255, 0.8)';
+            let count = 10;
+            if (type === 'damage') {
+                color = 'rgba(255, 0, 127, 0.9)';
+                count = 25;
+            } else if (type === 'collect') {
+                color = 'rgba(189, 0, 255, 0.9)';
+                count = 15;
+            }
+
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 3 + 1,
+                    alpha: 1,
+                    color: color
+                });
+            }
+        }
+
+        // ----------------- 精致画面绘制 -----------------
+        function draw() {
+            ctx.fillStyle = "rgba(5, 5, 15, 0.22)"; // 长曝光残影
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const logicalWidth = canvas.width / window.devicePixelRatio;
+            const logicalHeight = canvas.height / window.devicePixelRatio;
+
+            // 1. 绘制科幻宇宙虚线网格
+            ctx.strokeStyle = "rgba(189, 0, 255, 0.03)";
+            ctx.lineWidth = 1;
+            for (let x = 0; x < logicalWidth; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, logicalHeight); ctx.stroke();
+            }
+            for (let y = 0; y < logicalHeight; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(logicalWidth, y); ctx.stroke();
+            }
+
+            // 2. 绘制电磁引力节点
+            if (pointer.active && gameActive) {
+                // 引力波扩散圈
+                const waveRadius = (gameTime % 25) * 2;
+                ctx.beginPath();
+                ctx.arc(pointer.x, pointer.y, waveRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 240, 255, ${1 - waveRadius/50})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // 绘制磁拉力力线
+                ctx.beginPath();
+                ctx.moveTo(pointer.x, pointer.y);
+                ctx.lineTo(core.x, core.y);
+                ctx.strokeStyle = "rgba(0, 240, 255, 0.4)";
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]); // 磁力脉冲
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 绘制电磁井实心光点
+                ctx.beginPath();
+                ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "var(--neon-blue)";
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "var(--neon-blue)";
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // 3. 绘制高能核芯与其流畅拖尾
+            if (gameActive) {
+                // 绘制渐变柔和拖尾
+                ctx.beginPath();
+                for (let i = 0; i < core.trail.length; i++) {
+                    const pt = core.trail[i];
+                    const size = core.radius * (i / core.trail.length);
+                    ctx.fillStyle = `rgba(0, 240, 255, ${0.4 * (i / core.trail.length)})`;
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 核芯实体
+                ctx.beginPath();
+                ctx.arc(core.x, core.y, core.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "#ffffff";
+                ctx.strokeStyle = "var(--neon-blue)";
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = "var(--neon-blue)";
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // 4. 绘制废墟障碍（红色不规则陨石）
+            obstacles.forEach(obs => {
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 0, 127, 0.15)";
+                ctx.strokeStyle = "var(--neon-pink)";
+                ctx.lineWidth = 2.5;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "var(--neon-pink)";
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // 陨石核心机械圈
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y, obs.radius * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = "var(--neon-pink)";
+                ctx.fill();
+            });
+
+            // 5. 绘制能量晶体
+            batteries.forEach(bat => {
+                const rotation = bat.pulse;
+                ctx.save();
+                ctx.translate(bat.x, bat.y);
+                ctx.rotate(rotation);
+
+                // 绘制菱形电量晶体
+                ctx.beginPath();
+                ctx.moveTo(0, -bat.radius);
+                ctx.lineTo(bat.radius, 0);
+                ctx.lineTo(0, bat.radius);
+                ctx.lineTo(-bat.radius, 0);
+                ctx.closePath();
+
+                ctx.fillStyle = "rgba(189, 0, 255, 0.3)";
+                ctx.strokeStyle = "var(--neon-purple)";
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = "var(--neon-purple)";
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 6. 绘制高频爆炸粒子
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // 动画控制系统
+        function animate() {
+            if (!gameActive) return;
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // 启动预检
+        resizeCanvas();
+    </script>
+</body>
+</html>
