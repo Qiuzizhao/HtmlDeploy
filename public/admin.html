@@ -587,7 +587,7 @@
           </div>
           <div class="toolbar">
             <div class="toolbar-left">
-              <input id="searchInput" type="search" placeholder="搜索项目名称或 ID">
+              <input id="searchInput" type="search" placeholder="搜索项目名称、ID 或序号">
             </div>
             <div class="toolbar-right">
               <button class="button" id="reloadButton" type="button">刷新列表</button>
@@ -906,9 +906,11 @@
     function renderRows() {
       const keyword = searchInput.value.trim().toLowerCase();
       const filtered = sites.filter((site) => {
+        const siteNumber = site.number || '';
         return site.title.toLowerCase().includes(keyword)
           || site.id.toLowerCase().includes(keyword)
-          || (site.className || '').toLowerCase().includes(keyword);
+          || (site.className || '').toLowerCase().includes(keyword)
+          || siteNumber.includes(keyword);
       });
 
       siteRows.innerHTML = '';
