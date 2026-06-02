@@ -1051,7 +1051,7 @@
 
         const previewLink = document.createElement('a');
         previewLink.className = 'button';
-        previewLink.href = site.url;
+        previewLink.href = site.previewUrl || site.url;
         previewLink.target = '_blank';
         previewLink.rel = 'noopener';
         previewLink.textContent = '预览';

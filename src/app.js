@@ -367,6 +367,7 @@ function toPublicSite(site, classes, thumbnailDir) {
   return {
     ...attachClassName(site, classes),
     url: `/site/${site.id}`,
+    previewUrl: `/preview/${site.id}`,
     thumbnailUrl: getThumbnailUrl(thumbnailDir, site.id)
   };
 }
@@ -498,6 +499,69 @@ async function renderFileList({ id, title, projectDir }) {
 <body>
   <h1>${escapeHtml(title || id)}</h1>
   <ul>${items || '<li>暂无文件</li>'}</ul>
+</body>
+</html>`;
+}
+
+function renderPreviewPage({ id, title }) {
+  const siteUrl = `/site/${encodeURIComponent(id)}`;
+  const pageTitle = `${title || id} - 预览`;
+
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(pageTitle)}</title>
+  <style>
+    :root { color-scheme: dark; --bar: #101418; --line: rgba(255, 255, 255, 0.12); --text: #f4f7f8; --muted: #aeb9bd; --button: rgba(255, 255, 255, 0.1); --button-hover: rgba(255, 255, 255, 0.18); }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #050608; color: var(--text); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { display: grid; grid-template-rows: 46px minmax(0, 1fr); }
+    .toolbar { height: 46px; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 14px; border-bottom: 1px solid var(--line); background: var(--bar); contain: layout paint style; }
+    .title { min-width: 0; flex: 1; display: grid; gap: 1px; }
+    .name, .url { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .name { font-size: 14px; font-weight: 720; }
+    .url { font-size: 11px; color: var(--muted); }
+    .actions { display: flex; align-items: center; gap: 6px; }
+    button, a { min-height: 32px; padding: 0 11px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 7px; background: var(--button); color: var(--text); font: inherit; font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer; }
+    button:hover, a:hover { background: var(--button-hover); }
+    iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+    @media (max-width: 560px) {
+      body { grid-template-rows: 42px minmax(0, 1fr); }
+      .toolbar { height: 42px; padding: 5px 6px 5px 10px; }
+      .url, .open-original { display: none; }
+      button, a { min-height: 30px; padding: 0 9px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="title">
+      <div class="name">${escapeHtml(title || id)}</div>
+      <div class="url">${escapeHtml(siteUrl)}</div>
+    </div>
+    <div class="actions">
+      <button id="refreshButton" type="button">刷新</button>
+      <a class="open-original" href="${siteUrl}" target="_blank" rel="noopener">原页面</a>
+      <button id="closeButton" type="button">关闭</button>
+    </div>
+  </header>
+  <iframe id="previewFrame" src="${siteUrl}" title="${escapeHtml(title || id)}" allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" data-src="${siteUrl}"></iframe>
+  <script>
+    const frame = document.getElementById('previewFrame');
+    const baseUrl = frame.dataset.src;
+    document.getElementById('refreshButton').addEventListener('click', () => {
+      frame.src = baseUrl + (baseUrl.includes('?') ? '&' : '?') + '_refresh=' + Date.now();
+      requestAnimationFrame(() => frame.focus());
+    });
+    document.getElementById('closeButton').addEventListener('click', () => {
+      window.close();
+    });
+    window.addEventListener('load', () => {
+      requestAnimationFrame(() => frame.focus());
+    });
+  </script>
 </body>
 </html>`;
 }
@@ -1120,6 +1184,27 @@ function createApp(options = {}) {
       await fsp.rm(getThumbnailPath(thumbnailDir, id), { force: true });
 
       return res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/preview/:id', async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+      const projectDir = path.join(storageDir, id);
+
+      if (!site || !fs.existsSync(projectDir)) {
+        return res.status(404).send('Not found');
+      }
+
+      if (!(await canReadSite(req, id))) {
+        return res.status(401).send('请输入班级密码');
+      }
+
+      return res.type('html').send(renderPreviewPage({ id, title: site.title }));
     } catch (error) {
       next(error);
     }

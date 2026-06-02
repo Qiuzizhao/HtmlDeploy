@@ -822,6 +822,7 @@
     const currentClassLabel = document.getElementById('currentClassLabel');
 
     let currentPreviewUrl = '';
+    let currentPreviewExternalUrl = '';
     let classes = [];
     let currentClassId = '';
     const unlockedClassIds = new Set();
@@ -943,7 +944,7 @@
       ].join(',');
       const targetName = `htmlDeployPreview_${String(site.id || 'site').replace(/[^a-z0-9_-]/gi, '_')}`;
 
-      const opened = window.open(site.url, targetName, features);
+      const opened = window.open(site.previewUrl || site.url, targetName, features);
       if (opened) {
         opened.opener = null;
         opened.focus();
@@ -956,6 +957,7 @@
     function openPreview(site) {
       renderPreviewBackdrop();
       currentPreviewUrl = site.url;
+      currentPreviewExternalUrl = site.previewUrl || site.url;
       previewTitle.textContent = site.title;
       previewUrl.textContent = site.url;
       previewFrame.src = site.url;
@@ -967,6 +969,7 @@
     function closePreview() {
       previewFrame.removeAttribute('src');
       currentPreviewUrl = '';
+      currentPreviewExternalUrl = '';
       closeOverlay(previewOverlay);
       document.body.classList.remove('is-previewing');
       clearPreviewBackdrop();
@@ -1250,8 +1253,8 @@
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
     document.getElementById('closePreview').addEventListener('click', closePreview);
     openPreviewExternal.addEventListener('click', () => {
-      if (currentPreviewUrl) {
-        window.open(currentPreviewUrl, '_blank', 'noopener');
+      if (currentPreviewExternalUrl) {
+        window.open(currentPreviewExternalUrl, '_blank', 'noopener');
       }
     });
     refreshPreview.addEventListener('click', () => {
