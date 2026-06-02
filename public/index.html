@@ -860,7 +860,7 @@
 
         const classTag = document.createElement('div');
         classTag.className = 'site-class-tag';
-        classTag.textContent = `班级：${site.className || '未分配'}`;
+        classTag.textContent = site.className || '未分配';
 
         const url = document.createElement('div');
         url.className = 'site-url';
