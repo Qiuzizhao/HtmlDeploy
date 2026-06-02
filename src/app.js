@@ -349,6 +349,90 @@ function toPublicClass(classItem) {
   };
 }
 
+function getThumbnailPath(thumbnailDir, id) {
+  return path.join(thumbnailDir, `${id}.png`);
+}
+
+function getThumbnailUrl(thumbnailDir, id) {
+  const thumbnailPath = getThumbnailPath(thumbnailDir, id);
+  try {
+    const stat = fs.statSync(thumbnailPath);
+    return `/thumbnails/${encodeURIComponent(id)}.png?v=${Math.round(stat.mtimeMs)}`;
+  } catch {
+    return '';
+  }
+}
+
+function toPublicSite(site, classes, thumbnailDir) {
+  return {
+    ...attachClassName(site, classes),
+    url: `/site/${site.id}`,
+    thumbnailUrl: getThumbnailUrl(thumbnailDir, site.id)
+  };
+}
+
+function getRequestOrigin(req) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  return `${protocol}://${req.get('host')}`;
+}
+
+async function loadChromium() {
+  try {
+    return require('playwright').chromium;
+  } catch {
+    throw new Error('缺少 Playwright 依赖，请先运行 npm install 并安装 Chromium 浏览器');
+  }
+}
+
+async function generateSiteThumbnail({ id, origin, thumbnailDir, adminToken }) {
+  const chromium = await loadChromium();
+  await fsp.mkdir(thumbnailDir, { recursive: true });
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage']
+  });
+
+  try {
+    const context = await browser.newContext({
+      viewport: { width: 1024, height: 576 },
+      deviceScaleFactor: 1,
+      ignoreHTTPSErrors: true
+    });
+
+    await context.addCookies([{
+      name: ADMIN_COOKIE_NAME,
+      value: adminToken,
+      url: origin,
+      httpOnly: true,
+      sameSite: 'Lax'
+    }]);
+
+    const page = await context.newPage();
+    await page.goto(`${origin}/site/${encodeURIComponent(id)}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 20000
+    });
+    await page.waitForTimeout(1400);
+
+    const thumbnailPath = getThumbnailPath(thumbnailDir, id);
+    await page.screenshot({
+      path: thumbnailPath,
+      type: 'png',
+      fullPage: false
+    });
+    await context.close();
+
+    return {
+      id,
+      thumbnailUrl: getThumbnailUrl(thumbnailDir, id)
+    };
+  } finally {
+    await browser.close();
+  }
+}
+
 async function createUniqueId({ dataFile, storageDir, idGenerator }) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const id = idGenerator();
@@ -424,6 +508,7 @@ function createApp(options = {}) {
   const classesFile = options.classesFile || path.join(process.cwd(), 'data', 'classes.json');
   const settingsFile = options.settingsFile || path.join(process.cwd(), 'data', 'settings.json');
   const storageDir = options.storageDir || path.join(process.cwd(), 'storage', 'sites');
+  const thumbnailDir = options.thumbnailDir || path.join(process.cwd(), 'storage', 'thumbnails');
   const publicDir = options.publicDir || path.join(process.cwd(), 'public');
   const idGenerator = options.idGenerator || createDefaultId;
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
@@ -483,6 +568,14 @@ function createApp(options = {}) {
     return classItem ? hasClassAccess(req, classItem) : true;
   }
 
+  function generateThumbnailLater(id, origin) {
+    setTimeout(() => {
+      generateSiteThumbnail({ id, origin, thumbnailDir, adminToken }).catch((error) => {
+        console.warn(`[Thumbnail] Failed to generate ${id}: ${error.message}`);
+      });
+    }, 0);
+  }
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
 
@@ -538,7 +631,7 @@ function createApp(options = {}) {
       const filteredSites = classId
         ? sites.filter((site) => site.classId === classId)
         : sites;
-      res.json(filteredSites.map((site) => ({ ...attachClassName(site, classes), url: `/site/${site.id}` })));
+      res.json(filteredSites.map((site) => toPublicSite(site, classes, thumbnailDir)));
     } catch (error) {
       next(error);
     }
@@ -566,7 +659,7 @@ function createApp(options = {}) {
     try {
       const sites = await readSites(dataFile);
       const classes = await readClasses(classesFile);
-      res.json(sites.map((site) => ({ ...attachClassName(site, classes), url: `/site/${site.id}` })));
+      res.json(sites.map((site) => toPublicSite(site, classes, thumbnailDir)));
     } catch (error) {
       next(error);
     }
@@ -793,6 +886,25 @@ function createApp(options = {}) {
     }
   });
 
+  app.get('/thumbnails/:id.png', async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      if (!(await canReadSite(req, id))) {
+        return res.status(401).send('请输入班级密码');
+      }
+
+      const thumbnailPath = getThumbnailPath(thumbnailDir, id);
+      if (!fs.existsSync(thumbnailPath)) {
+        return res.status(404).send('Not found');
+      }
+
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.sendFile(thumbnailPath);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post('/api/sites', upload.single('file'), async (req, res, next) => {
       try {
         const title = String(req.body.title || '').trim();
@@ -851,7 +963,63 @@ function createApp(options = {}) {
       settings.lastUsedSiteNumber = nextNumberValue;
       await writeSettings(settingsFile, settings);
 
-      return res.status(201).json({ ...site, className: classItem.name, url: `/site/${id}` });
+      generateThumbnailLater(id, getRequestOrigin(req));
+
+      return res.status(201).json(toPublicSite(site, classes, thumbnailDir));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/sites/:id/thumbnail', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+
+      if (!site) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const result = await generateSiteThumbnail({
+        id,
+        origin: getRequestOrigin(req),
+        thumbnailDir,
+        adminToken
+      });
+      return res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/admin/thumbnails', requireAdmin, async (req, res, next) => {
+    try {
+      const sites = await readSites(dataFile);
+      const requestedIds = Array.isArray(req.body.siteIds)
+        ? new Set(req.body.siteIds.map((id) => String(id)))
+        : null;
+      const targetSites = requestedIds
+        ? sites.filter((site) => requestedIds.has(site.id))
+        : sites;
+      const generated = [];
+      const failed = [];
+      const origin = getRequestOrigin(req);
+
+      for (const site of targetSites) {
+        try {
+          generated.push(await generateSiteThumbnail({
+            id: site.id,
+            origin,
+            thumbnailDir,
+            adminToken
+          }));
+        } catch (error) {
+          failed.push({ id: site.id, error: error.message });
+        }
+      }
+
+      return res.json({ generated, failed });
     } catch (error) {
       next(error);
     }
@@ -925,12 +1093,13 @@ function createApp(options = {}) {
         const projectDir = path.join(storageDir, id);
         await fsp.mkdir(projectDir, { recursive: true });
         await fsp.writeFile(path.join(projectDir, 'index.html'), file.buffer);
+        generateThumbnailLater(id, getRequestOrigin(req));
       }
 
       sites[siteIndex] = site;
       await writeSites(dataFile, sites);
 
-      return res.json({ ...site, className: classItem.name, url: `/site/${id}` });
+      return res.json(toPublicSite(site, classes, thumbnailDir));
     } catch (error) {
       next(error);
     }
@@ -948,6 +1117,7 @@ function createApp(options = {}) {
 
       await writeSites(dataFile, nextSites);
       await fsp.rm(path.join(storageDir, id), { recursive: true, force: true });
+      await fsp.rm(getThumbnailPath(thumbnailDir, id), { force: true });
 
       return res.status(204).send();
     } catch (error) {

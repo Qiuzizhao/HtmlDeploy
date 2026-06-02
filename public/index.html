@@ -254,6 +254,34 @@
       min-width: 0;
     }
 
+    .site-cover {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      margin-bottom: 15px;
+      overflow: hidden;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #e0f2fe, #ecfdf5);
+    }
+
+    .site-cover img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .site-cover-placeholder {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--brand-dark);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
     .site-heading {
       display: flex;
       align-items: baseline;
@@ -1043,6 +1071,21 @@
         const cardMain = document.createElement('div');
         cardMain.className = 'site-card-main';
 
+        const cover = document.createElement('div');
+        cover.className = 'site-cover';
+        if (site.thumbnailUrl) {
+          const image = document.createElement('img');
+          image.src = site.thumbnailUrl;
+          image.alt = `${site.title} 的封面图`;
+          image.loading = 'lazy';
+          cover.append(image);
+        } else {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'site-cover-placeholder';
+          placeholder.textContent = '暂无封面';
+          cover.append(placeholder);
+        }
+
         const content = document.createElement('div');
         content.className = 'site-content';
 
@@ -1080,7 +1123,7 @@
         tagsContainer.append(url);
 
         content.append(heading, tagsContainer);
-        cardMain.append(content);
+        cardMain.append(cover, content);
 
         const actions = document.createElement('div');
         actions.className = 'card-actions';

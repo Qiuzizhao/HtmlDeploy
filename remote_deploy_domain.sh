@@ -8,6 +8,12 @@ DOMAIN="htmldeploy.qiuzizhao.com"
 echo "Updating application on custom port..."
 cd $APP_DIR
 
+echo "Installing production dependencies..."
+npm install --omit=dev
+
+echo "Ensuring Playwright Chromium is installed..."
+npx playwright install --with-deps chromium
+
 # 停止并删除旧的实例（如果存在）
 pm2 delete html-deploy || true
 
