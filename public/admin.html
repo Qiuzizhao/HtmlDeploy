@@ -797,7 +797,7 @@
         const row = document.createElement('div');
         row.className = 'class-row';
         row.dataset.id = classItem.id;
-        row.draggable = true;
+        row.draggable = false;
 
         const dragHandle = document.createElement('div');
         dragHandle.className = 'drag-handle';
@@ -812,6 +812,16 @@
           </svg>
         `;
         dragHandle.title = '拖拽调整顺序';
+        
+        dragHandle.addEventListener('mousedown', () => {
+          row.draggable = true;
+        });
+        dragHandle.addEventListener('mouseup', () => {
+          row.draggable = false;
+        });
+        dragHandle.addEventListener('mouseleave', () => {
+          row.draggable = false;
+        });
 
         const input = document.createElement('input');
         input.type = 'text';
@@ -1282,6 +1292,7 @@
       const row = e.target.closest('.class-row');
       if (row) {
         row.classList.remove('is-dragging');
+        row.draggable = false;
       }
       if (!draggedRow) return;
       draggedRow = null;
