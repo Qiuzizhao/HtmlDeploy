@@ -10,6 +10,7 @@ const DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
 const DEFAULT_ADMIN_PASSWORD = 'qqqyyy';
 const ADMIN_COOKIE_NAME = 'html_deploy_admin';
 const CLASS_COOKIE_PREFIX = 'html_deploy_class_';
+const ALL_COOKIE_NAME = 'html_deploy_all';
 
 function escapeHtml(value) {
   return String(value)
@@ -45,6 +46,13 @@ function createClassToken(classItem) {
   return crypto
     .createHash('sha256')
     .update(`html-deploy-class:${classItem.id}:${classItem.password || ''}`)
+    .digest('hex');
+}
+
+function createAllToken(settings) {
+  return crypto
+    .createHash('sha256')
+    .update(`html-deploy-all:${settings.allPassword || ''}`)
     .digest('hex');
 }
 
@@ -252,6 +260,31 @@ async function readClasses(classesFile) {
   }
 }
 
+async function readSettings(settingsFile) {
+  await fsp.mkdir(path.dirname(settingsFile), { recursive: true });
+  let settings = {};
+
+  try {
+    const raw = await fsp.readFile(settingsFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      settings = parsed;
+    }
+  } catch {
+    settings = {};
+  }
+
+  if (!isValidClassPassword(String(settings.allPassword || ''))) {
+    settings = {
+      ...settings,
+      allPassword: createClassPassword()
+    };
+    await writeSettings(settingsFile, settings);
+  }
+
+  return settings;
+}
+
 async function writeSites(dataFile, sites) {
   await fsp.mkdir(path.dirname(dataFile), { recursive: true });
   await fsp.writeFile(dataFile, JSON.stringify(sites, null, 2));
@@ -260,6 +293,11 @@ async function writeSites(dataFile, sites) {
 async function writeClasses(classesFile, classes) {
   await fsp.mkdir(path.dirname(classesFile), { recursive: true });
   await fsp.writeFile(classesFile, JSON.stringify(classes, null, 2));
+}
+
+async function writeSettings(settingsFile, settings) {
+  await fsp.mkdir(path.dirname(settingsFile), { recursive: true });
+  await fsp.writeFile(settingsFile, JSON.stringify(settings, null, 2));
 }
 
 function attachClassName(site, classes) {
@@ -358,6 +396,7 @@ function createApp(options = {}) {
   const app = express();
   const dataFile = options.dataFile || path.join(process.cwd(), 'data', 'sites.json');
   const classesFile = options.classesFile || path.join(process.cwd(), 'data', 'classes.json');
+  const settingsFile = options.settingsFile || path.join(process.cwd(), 'data', 'settings.json');
   const storageDir = options.storageDir || path.join(process.cwd(), 'storage', 'sites');
   const publicDir = options.publicDir || path.join(process.cwd(), 'public');
   const idGenerator = options.idGenerator || createDefaultId;
@@ -384,6 +423,11 @@ function createApp(options = {}) {
     return cookies[getClassCookieName(classItem.id)] === createClassToken(classItem);
   }
 
+  function hasAllAccess(req, settings) {
+    const cookies = parseCookies(req.headers.cookie);
+    return cookies[ALL_COOKIE_NAME] === createAllToken(settings);
+  }
+
   function requireAdmin(req, res, next) {
     if (!hasAdminAccess(req)) {
       return res.status(401).json({ error: '请先输入后台密码' });
@@ -396,6 +440,15 @@ function createApp(options = {}) {
     const sites = await readSites(dataFile);
     const site = sites.find((item) => item.id === id);
     if (!site?.classId) {
+      return true;
+    }
+
+    if (hasAdminAccess(req)) {
+      return true;
+    }
+
+    const settings = await readSettings(settingsFile);
+    if (hasAllAccess(req, settings)) {
       return true;
     }
 
@@ -440,6 +493,7 @@ function createApp(options = {}) {
       const { classId } = req.query;
       const sites = await readSites(dataFile);
       const classes = await readClasses(classesFile);
+      const settings = await readSettings(settingsFile);
 
       if (classId) {
         const classItem = classes.find((item) => item.id === classId);
@@ -450,18 +504,13 @@ function createApp(options = {}) {
         if (!hasClassAccess(req, classItem)) {
           return res.status(401).json({ error: '请输入班级密码' });
         }
+      } else if (!hasAllAccess(req, settings)) {
+        return res.status(401).json({ error: '请输入全部密码' });
       }
 
       const filteredSites = classId
         ? sites.filter((site) => site.classId === classId)
-        : sites.filter((site) => {
-            if (!site.classId || hasAdminAccess(req)) {
-              return true;
-            }
-
-            const classItem = classes.find((item) => item.id === site.classId);
-            return classItem ? hasClassAccess(req, classItem) : true;
-          });
+        : sites;
       res.json(filteredSites.map((site) => ({ ...attachClassName(site, classes), url: `/site/${site.id}` })));
     } catch (error) {
       next(error);
@@ -481,6 +530,44 @@ function createApp(options = {}) {
     try {
       const classes = await readClasses(classesFile);
       res.json(classes);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/admin/sites', requireAdmin, async (req, res, next) => {
+    try {
+      const sites = await readSites(dataFile);
+      const classes = await readClasses(classesFile);
+      res.json(sites.map((site) => ({ ...attachClassName(site, classes), url: `/site/${site.id}` })));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/admin/settings', requireAdmin, async (req, res, next) => {
+    try {
+      const settings = await readSettings(settingsFile);
+      return res.json(settings);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/admin/settings', requireAdmin, async (req, res, next) => {
+    try {
+      const allPassword = String(req.body.allPassword || '').trim();
+      if (!isValidClassPassword(allPassword)) {
+        return res.status(400).json({ error: '全部密码必须是 6 位数字' });
+      }
+
+      const settings = {
+        ...(await readSettings(settingsFile)),
+        allPassword,
+        updatedAt: new Date().toISOString()
+      };
+      await writeSettings(settingsFile, settings);
+      return res.json(settings);
     } catch (error) {
       next(error);
     }
@@ -572,6 +659,26 @@ function createApp(options = {}) {
       }
 
       res.cookie(getClassCookieName(id), createClassToken(classItem), {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/all/unlock', async (req, res, next) => {
+    try {
+      const password = String(req.body.password || '').trim();
+      const settings = await readSettings(settingsFile);
+
+      if (password !== settings.allPassword) {
+        return res.status(401).json({ error: '全部密码不正确' });
+      }
+
+      res.cookie(ALL_COOKIE_NAME, createAllToken(settings), {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000

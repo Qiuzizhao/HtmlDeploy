@@ -7,17 +7,18 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4f6f2;
+      --bg: #f6f8fb;
       --panel: #ffffff;
-      --panel-soft: #f9faf7;
-      --text: #1f2726;
-      --muted: #68736f;
-      --line: #dce3dd;
-      --brand: #24715b;
-      --brand-dark: #195846;
-      --accent: #c47a22;
-      --danger: #b42318;
-      --shadow: 0 18px 42px rgba(31, 39, 38, 0.1);
+      --panel-soft: #f3f7fb;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dce5ef;
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --accent: #0f766e;
+      --danger: #dc2626;
+      --danger-soft: #fff1f2;
+      --shadow: 0 18px 42px rgba(23, 32, 51, 0.1);
     }
 
     * {
@@ -27,7 +28,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: var(--bg);
+      background: linear-gradient(180deg, #f8fafc 0%, #eef4f8 100%);
       color: var(--text);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -67,11 +68,11 @@
       display: grid;
       place-items: center;
       border-radius: 8px;
-      background: var(--text);
+      background: var(--brand);
       color: #fff;
       font-size: 18px;
       font-weight: 800;
-      box-shadow: 0 10px 22px rgba(31, 39, 38, 0.18);
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
     }
 
     .button,
@@ -91,7 +92,7 @@
     .primary-button {
       background: var(--brand);
       color: #fff;
-      box-shadow: 0 10px 20px rgba(36, 113, 91, 0.18);
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
     }
 
     .primary-button:hover {
@@ -101,23 +102,24 @@
 
     .button {
       border: 1px solid var(--line);
-      background: var(--panel);
+      background: rgba(255, 255, 255, 0.86);
       color: var(--text);
     }
 
     .button:hover {
-      border-color: #b8c8be;
-      background: #f8faf7;
+      border-color: #b7c8dc;
+      background: #f3f7fb;
+      color: var(--brand-dark);
     }
 
     .danger-button {
-      background: #fff1f0;
+      background: var(--danger-soft);
       color: var(--danger);
-      border: 1px solid #f4c7c3;
+      border: 1px solid #fecdd3;
     }
 
     .danger-button:hover {
-      background: #ffe4e2;
+      background: #ffe4e6;
     }
 
     .admin-shell {
@@ -135,7 +137,9 @@
       gap: 24px;
       padding: 22px 16px;
       border-right: 1px solid var(--line);
-      background: #ffffff;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 10px 0 30px rgba(23, 32, 51, 0.05);
+      backdrop-filter: blur(14px);
     }
 
     .side-nav {
@@ -159,14 +163,14 @@
     }
 
     .nav-button:hover {
-      background: #eef5e9;
+      background: #f3f7fb;
       color: var(--brand-dark);
     }
 
     .nav-button.is-active {
       background: var(--brand);
       color: #fff;
-      box-shadow: 0 10px 22px rgba(36, 113, 91, 0.16);
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
     }
 
     .sidebar-footer {
@@ -221,7 +225,7 @@
 
     .summary-value {
       display: block;
-      color: var(--brand-dark);
+      color: var(--brand);
       font-size: 24px;
       font-weight: 800;
       line-height: 1;
@@ -246,7 +250,7 @@
     .panel {
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel);
+      background: rgba(255, 255, 255, 0.9);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -296,6 +300,14 @@
       align-items: end;
     }
 
+    .all-password-form {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto auto;
+      gap: 12px;
+      padding: 20px 20px 0;
+      align-items: end;
+    }
+
     .class-list {
       display: grid;
       gap: 10px;
@@ -310,7 +322,7 @@
       padding: 12px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel-soft);
+      background: #f8fafc;
     }
 
     label {
@@ -330,7 +342,7 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #fff;
+      background: #fcfdff;
       color: var(--text);
       padding: 10px 12px;
     }
@@ -353,7 +365,7 @@
 
     input:focus,
     textarea:focus {
-      border-color: #9db9aa;
+      border-color: #68d5cf;
     }
 
     .toolbar {
@@ -363,6 +375,7 @@
       gap: 12px;
       padding: 16px 20px;
       border-bottom: 1px solid var(--line);
+      background: #fbfdff;
     }
 
     .toolbar-left,
@@ -398,7 +411,7 @@
       color: var(--muted);
       font-size: 12px;
       font-weight: 750;
-      background: #fbfcfa;
+      background: #f3f8ff;
     }
 
     tr:last-child td {
@@ -407,7 +420,7 @@
 
     .index-cell {
       width: 72px;
-      color: var(--brand-dark);
+      color: var(--brand);
       font-size: 24px;
       font-weight: 800;
     }
@@ -487,6 +500,7 @@
         grid-template-columns: 1fr;
       }
 
+      .all-password-form,
       .class-form,
       .class-row {
         grid-template-columns: 1fr;
@@ -607,6 +621,15 @@
             <h2 class="panel-title">班级管理</h2>
             <div class="message" id="classMessage"></div>
           </div>
+          <form class="all-password-form" id="allPasswordForm">
+            <label>
+              全部密码
+              <input id="allPasswordInput" name="allPassword" type="password" inputmode="numeric" maxlength="6" placeholder="6位数字" required>
+            </label>
+            <button class="button" id="toggleAllPassword" type="button">显示</button>
+            <button class="button" id="generateAllPassword" type="button">随机生成</button>
+            <button class="primary-button" id="saveAllPassword" type="submit">保存全部密码</button>
+          </form>
           <form class="class-form" id="classForm">
             <label>
               班级名称
@@ -633,6 +656,8 @@
     const createFile = document.getElementById('createFile');
     const createHtmlContent = document.getElementById('createHtmlContent');
     const classForm = document.getElementById('classForm');
+    const allPasswordForm = document.getElementById('allPasswordForm');
+    const allPasswordInput = document.getElementById('allPasswordInput');
     const classNameInput = document.getElementById('classNameInput');
     const classPasswordInput = document.getElementById('classPasswordInput');
     const classList = document.getElementById('classList');
@@ -650,6 +675,7 @@
 
     let sites = [];
     let classes = [];
+    let settings = {};
     const viewTitles = {
       projects: '项目管理',
       create: '新增项目',
@@ -785,6 +811,43 @@
       });
     }
 
+    async function loadSettings() {
+      const response = await fetch('/api/admin/settings');
+      if (!response.ok) {
+        setMessage(classMessage, '加载全部密码失败', true);
+        return;
+      }
+
+      settings = await response.json();
+      allPasswordInput.value = settings.allPassword || '';
+    }
+
+    async function saveAllPassword(event) {
+      event.preventDefault();
+      const allPassword = allPasswordInput.value.trim();
+
+      if (!/^\d{6}$/.test(allPassword)) {
+        setMessage(classMessage, '全部密码必须是 6 位数字', true);
+        return;
+      }
+
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allPassword })
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存全部密码失败' }));
+        setMessage(classMessage, result.error || '保存全部密码失败', true);
+        return;
+      }
+
+      settings = await response.json();
+      allPasswordInput.value = settings.allPassword || '';
+      setMessage(classMessage, '保存全部密码成功');
+    }
+
     async function loadClasses() {
       const response = await fetch('/api/admin/classes');
       if (!response.ok) {
@@ -890,7 +953,7 @@
 
     async function loadSites() {
       setMessage(listMessage, '加载中...');
-      const response = await fetch('/api/sites');
+      const response = await fetch('/api/admin/sites');
       if (!response.ok) {
         setMessage(listMessage, '加载项目失败', true);
         return;
@@ -1088,6 +1151,14 @@
       await loadSites();
     }
 
+    allPasswordForm.addEventListener('submit', saveAllPassword);
+    const toggleAllPassword = document.getElementById('toggleAllPassword');
+    toggleAllPassword.addEventListener('click', () => {
+      togglePasswordVisibility(allPasswordInput, toggleAllPassword);
+    });
+    document.getElementById('generateAllPassword').addEventListener('click', () => {
+      allPasswordInput.value = generatePassword();
+    });
     classForm.addEventListener('submit', createClass);
     const toggleClassPassword = document.getElementById('toggleClassPassword');
     toggleClassPassword.addEventListener('click', () => {
@@ -1102,11 +1173,13 @@
       button.addEventListener('click', () => switchView(button.dataset.viewTarget));
     });
     document.getElementById('reloadButton').addEventListener('click', async () => {
+      await loadSettings();
       await loadClasses();
       await loadSites();
     });
 
     async function boot() {
+      await loadSettings();
       await loadClasses();
       await loadSites();
     }

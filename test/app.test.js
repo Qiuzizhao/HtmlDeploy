@@ -31,21 +31,41 @@ test('public index renders a visible upload-order number on each project card', 
   assert.match(html, /className = 'site-heading'/);
   assert.match(html, /className = 'site-number'/);
   assert.match(html, /textContent = site\.number/);
-  assert.ok(html.indexOf("heading.append(number, title)") < html.indexOf("content.append(heading, url)"));
+  assert.ok(html.indexOf("heading.append(number, title)") < html.indexOf("content.append(heading, classTag, url)"));
   assert.doesNotMatch(html, /cardMain\.append\(number, content\)/);
   assert.doesNotMatch(html, /textContent = String\(index \+ 1\)/);
+});
+
+test('public index shows the class name tag on project cards', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /className = 'site-class-tag'/);
+  assert.match(html, /textContent = `班级：\$\{site\.className \|\| '未分配'\}`/);
+  assert.ok(html.indexOf("className = 'site-class-tag'") < html.indexOf("url.className = 'site-url'"));
 });
 
 test('public index loads class buttons and uploads to the selected class', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
   assert.match(html, /id="classTabs"/);
-  assert.match(html, /id="classPasswordOverlay"/);
-  assert.match(html, /id="classPasswordInput"/);
+  assert.doesNotMatch(html, /id="classPasswordOverlay"/);
+  assert.match(html, /function renderClassPasswordPrompt/);
+  assert.match(html, /className = 'unlock-panel'/);
   assert.match(html, /fetch\('\/api\/classes'\)/);
-  assert.match(html, /\/api\/classes\/\$\{encodeURIComponent\(currentClassId\)\}\/unlock/);
+  assert.match(html, /\/api\/classes\/\$\{encodeURIComponent\(classId\)\}\/unlock/);
   assert.match(html, /\/api\/sites\?classId=/);
   assert.match(html, /formData\.append\('classId', currentClassId\)/);
+});
+
+test('public index renders class password entry inside the project grid', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /siteGrid\.append\(panel\)/);
+  assert.match(html, /input\.type = 'password'/);
+  assert.match(html, /button\.textContent = currentClassId \? '解锁班级' : '解锁全部'/);
+  assert.match(html, /renderClassPasswordPrompt\('请输入班级密码后查看项目。'\)/);
+  assert.doesNotMatch(html, /openClassPassword\(\)/);
+  assert.doesNotMatch(html, /closeClassPassword\(\)/);
 });
 
 test('public index upload accepts either an HTML file or pasted code', async () => {
@@ -64,6 +84,15 @@ test('public index renders an all tab before class buttons', async () => {
   assert.match(html, /allButton\.textContent = '全部'/);
   assert.match(html, /allButton\.addEventListener\('click', \(\) => selectClass\(''\)\)/);
   assert.ok(html.indexOf('classTabs.append(allButton)') < html.indexOf('classes.forEach'));
+});
+
+test('public index separates class tabs from the project grid', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /class="class-filter-bar"/);
+  assert.match(html, /<nav class="class-tabs" id="classTabs"/);
+  assert.ok(html.indexOf('class="class-filter-bar"') < html.indexOf('id="siteGrid"'));
+  assert.doesNotMatch(html, /<main>\s*<nav class="class-tabs"/);
 });
 
 test('public index only shows the new-page button in the preview header', async () => {
@@ -99,7 +128,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /projectCount/);
   assert.match(html, /classCount/);
   assert.match(html, /id="createForm"/);
-  assert.match(html, /fetch\('\/api\/sites'/);
+  assert.match(html, /fetch\('\/api\/admin\/sites'/);
   assert.match(html, /method: 'PUT'/);
   assert.match(html, /method: 'DELETE'/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
@@ -132,6 +161,19 @@ test('public admin class passwords are hidden by default with one show-hide togg
   assert.ok(html.indexOf('actions.append(toggleButton, generateButton') !== -1);
 });
 
+test('public admin can edit the all-projects password in class management', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /全部密码/);
+  assert.match(html, /id="allPasswordInput"[^>]+type="password"/);
+  assert.match(html, /id="toggleAllPassword"[^>]*>显示<\/button>/);
+  assert.match(html, /id="generateAllPassword"[^>]*>随机生成<\/button>/);
+  assert.match(html, /id="saveAllPassword"[^>]*>保存全部密码<\/button>/);
+  assert.match(html, /fetch\('\/api\/admin\/settings'\)/);
+  assert.match(html, /method: 'PUT'/);
+  assert.match(html, /body: JSON\.stringify\(\{ allPassword \}\)/);
+});
+
 async function makeTestApp(options = {}) {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-'));
   const dataDir = path.join(root, 'data');
@@ -157,13 +199,19 @@ async function makeTestApp(options = {}) {
 test('GET /api/sites returns an empty list before uploads', async () => {
   const { app } = await makeTestApp();
 
-  const response = await request(app).get('/api/sites').expect(200);
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const response = await agent.get('/api/admin/sites').expect(200);
 
   assert.deepEqual(response.body, []);
 });
 
 test('GET /api/sites assigns five-digit numbers to existing projects by creation order', async () => {
   const { app, dataDir } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
   await fsp.writeFile(
     path.join(dataDir, 'sites.json'),
     JSON.stringify(
@@ -176,7 +224,7 @@ test('GET /api/sites assigns five-digit numbers to existing projects by creation
     )
   );
 
-  const response = await request(app).get('/api/sites').expect(200);
+  const response = await agent.get('/api/admin/sites').expect(200);
   assert.deepEqual(
     response.body.map((site) => [site.id, site.number]),
     [
@@ -193,6 +241,39 @@ test('GET /api/sites assigns five-digit numbers to existing projects by creation
       ['older', '00001']
     ]
   );
+});
+
+test('admin can set the all-projects password and visitors must unlock all projects', async () => {
+  const { app } = await makeTestApp({
+    idGenerator: (() => {
+      const ids = ['class-a', 'site-a', 'site-b'];
+      return () => ids.shift() || 'fallback';
+    })()
+  });
+  const admin = request.agent(app);
+  const visitor = request.agent(app);
+
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const initialSettings = await admin.get('/api/admin/settings').expect(200);
+  assert.match(initialSettings.body.allPassword, /^\d{6}$/);
+
+  await admin.put('/api/admin/settings').send({ allPassword: '654321' }).expect(200);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await admin
+    .post('/api/sites')
+    .field('title', '项目一')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>项目一</title>')
+    .expect(201);
+
+  await visitor.get('/api/sites').expect(401);
+  await visitor.post('/api/all/unlock').send({ password: '000000' }).expect(401);
+  await visitor.post('/api/all/unlock').send({ password: '654321' }).expect(200);
+
+  const response = await visitor.get('/api/sites').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['项目一']);
+  await visitor.get('/site/site-a').expect(200);
 });
 
 test('admin can create classes and public APIs expose class buttons', async () => {
@@ -357,13 +438,38 @@ test('admin login does not unlock public class project lists', async () => {
   assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
 });
 
-test('GET /api/sites without a class filter returns only unlocked class projects', async () => {
+test('admin login does not unlock the all-projects public list', async () => {
+  const ids = ['class-a', 'site-a'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.put('/api/admin/settings').send({ allPassword: '333333' }).expect(200);
+  await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '一班作品')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .expect(201);
+
+  await agent.get('/api/sites').expect(401);
+  await agent.post('/api/all/unlock').send({ password: '333333' }).expect(200);
+
+  const response = await agent.get('/api/sites').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
+});
+
+test('GET /api/sites without a class filter requires the all-projects password', async () => {
   const ids = ['class-a', 'class-b', 'site-a', 'site-b'];
   const { app } = await makeTestApp({
     idGenerator: () => ids.shift()
   });
   const agent = request.agent(app);
   await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.put('/api/admin/settings').send({ allPassword: '333333' }).expect(200);
   await agent.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
   await agent.post('/api/classes').send({ name: '二班', password: '222222' }).expect(201);
 
@@ -382,11 +488,11 @@ test('GET /api/sites without a class filter returns only unlocked class projects
     .expect(201);
 
   const visitor = request.agent(app);
-  await visitor.get('/api/sites').expect(200).expect([]);
-  await visitor.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+  await visitor.get('/api/sites').expect(401);
+  await visitor.post('/api/all/unlock').send({ password: '333333' }).expect(200);
 
   const response = await visitor.get('/api/sites').expect(200);
-  assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
+  assert.deepEqual(response.body.map((site) => site.title), ['二班作品', '一班作品']);
 });
 
 test('POST /api/sites rejects non-HTML files and multiple files', async () => {
