@@ -849,7 +849,7 @@
         saveButton.className = 'primary-button';
         saveButton.type = 'button';
         saveButton.textContent = '保存';
-        saveButton.addEventListener('click', () => updateClass(classItem, input, passwordInput));
+        saveButton.addEventListener('click', () => updateClass(classItem, input, passwordInput, row));
 
         const deleteButton = document.createElement('button');
         deleteButton.className = 'danger-button';
@@ -989,7 +989,7 @@
         saveButton.className = 'primary-button';
         saveButton.type = 'button';
         saveButton.textContent = '保存';
-        saveButton.addEventListener('click', () => updateSite(site, titleInput, authorInput, classSelect, fileInput));
+        saveButton.addEventListener('click', () => updateSite(site, titleInput, authorInput, classSelect, fileInput, row));
 
         const previewLink = document.createElement('a');
         previewLink.className = 'button';
@@ -1075,7 +1075,7 @@
       switchView('projects');
     }
 
-    async function updateSite(site, titleInput, authorInput, classSelect, fileInput) {
+    async function updateSite(site, titleInput, authorInput, classSelect, fileInput, row) {
       const title = titleInput.value.trim();
       const author = authorInput.value.trim();
       const classId = classSelect.value;
@@ -1087,6 +1087,7 @@
       }
 
       if (!author) {
+        // 检查作者署名
         setMessage(listMessage, '作者署名不能为空', true);
         return;
       }
@@ -1120,8 +1121,20 @@
         return;
       }
 
-      setMessage(listMessage, '保存成功');
-      await loadSites();
+      const updatedSite = await response.json();
+        // 更新本地数据，只更新当前行而不是整个列表刷新
+        const index = sites.findIndex(s => s.id === site.id);
+        if (index !== -1) {
+          sites[index] = updatedSite;
+        }
+        
+        // 同步更新 className 以防修改了班级
+        const newClass = classes.find(c => c.id === updatedSite.classId);
+        if (newClass && index !== -1) {
+          sites[index].className = newClass.name;
+        }
+
+        setMessage(listMessage, '保存成功');
     }
 
     async function createClass(event) {
@@ -1157,7 +1170,7 @@
       await loadSites();
     }
 
-    async function updateClass(classItem, input, passwordInput) {
+    async function updateClass(classItem, input, passwordInput, row) {
       const name = input.value.trim();
       const password = passwordInput.value.trim();
       if (!name) {
@@ -1182,9 +1195,21 @@
         return;
       }
 
+      const updatedClass = await response.json();
+      // 更新本地数据
+      const index = classes.findIndex(c => c.id === classItem.id);
+      if (index !== -1) {
+        classes[index] = updatedClass;
+      }
+      // 更新项目列表中的班级名称
+      sites.forEach(s => {
+        if (s.classId === updatedClass.id) {
+          s.className = updatedClass.name;
+        }
+      });
+      // 重新渲染项目列表以反映更新后的班级名，但不刷新整个页面或重新请求
+      renderRows();
       setMessage(classMessage, '保存班级成功');
-      await loadClasses();
-      await loadSites();
     }
 
     async function deleteClass(classItem) {
