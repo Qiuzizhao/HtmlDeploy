@@ -783,9 +783,12 @@
       }
     }
 
-    function renderClassPasswordPrompt(message = '请输入班级密码后查看项目。') {
+    function renderClassPasswordPrompt(message = '请输入班级密码后查看项目。', count = 0) {
       siteGrid.innerHTML = '';
       emptyState.style.display = 'none';
+
+      const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
+      classProjectCount.textContent = `${currentClassName}共有 ${count} 个项目`;
 
       const currentClass = classes.find((item) => item.id === currentClassId);
       const panel = document.createElement('form');
@@ -953,7 +956,8 @@
         : '/api/sites';
       const response = await fetch(sitesUrl);
       if (response.status === 401) {
-        renderClassPasswordPrompt('请输入班级密码后查看项目。');
+        const data = await response.json().catch(() => ({}));
+        renderClassPasswordPrompt('请输入班级密码后查看项目。', data.count || 0);
         return;
       }
 
