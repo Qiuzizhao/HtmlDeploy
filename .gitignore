@@ -1,4 +1,4 @@
 node_modules/
-data/*.json
-storage/sites/*
+# data/*.json
+# storage/sites/*
 !storage/sites/.gitkeep

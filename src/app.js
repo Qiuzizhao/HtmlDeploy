@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
+const { exec } = require('node:child_process');
 
 const express = require('express');
 const multer = require('multer');
@@ -71,6 +72,27 @@ function parseCookies(header = '') {
         return [item.slice(0, separator), decodeURIComponent(item.slice(separator + 1))];
       })
   );
+}
+
+let syncTimeout = null;
+function syncDataToGithub() {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+  }
+  syncTimeout = setTimeout(() => {
+    console.log('[Git Sync] Starting backup to GitHub...');
+    exec('git add --all data/ storage/ && git commit -m "Auto backup data" && git push', { cwd: process.cwd() }, (error, stdout, stderr) => {
+      if (error) {
+        if (stdout.includes('nothing to commit') || stderr.includes('nothing to commit')) {
+          console.log('[Git Sync] No changes to backup.');
+        } else {
+          console.error('[Git Sync] Error:', error.message);
+        }
+      } else {
+        console.log('[Git Sync] Backup successful!');
+      }
+    });
+  }, 3000);
 }
 
 function renderAdminLoginPage(errorMessage = '') {
@@ -288,16 +310,19 @@ async function readSettings(settingsFile) {
 async function writeSites(dataFile, sites) {
   await fsp.mkdir(path.dirname(dataFile), { recursive: true });
   await fsp.writeFile(dataFile, JSON.stringify(sites, null, 2));
+  syncDataToGithub();
 }
 
 async function writeClasses(classesFile, classes) {
   await fsp.mkdir(path.dirname(classesFile), { recursive: true });
   await fsp.writeFile(classesFile, JSON.stringify(classes, null, 2));
+  syncDataToGithub();
 }
 
 async function writeSettings(settingsFile, settings) {
   await fsp.mkdir(path.dirname(settingsFile), { recursive: true });
   await fsp.writeFile(settingsFile, JSON.stringify(settings, null, 2));
+  syncDataToGithub();
 }
 
 function attachClassName(site, classes) {
@@ -600,6 +625,36 @@ function createApp(options = {}) {
       await writeClasses(classesFile, classes);
 
       return res.status(201).json(classItem);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/classes/order', requireAdmin, async (req, res, next) => {
+    try {
+      const { classIds } = req.body;
+      if (!Array.isArray(classIds)) {
+        return res.status(400).json({ error: '无效的排序数据' });
+      }
+
+      const classes = await readClasses(classesFile);
+      const newClasses = [];
+      
+      for (const id of classIds) {
+        const classItem = classes.find(c => c.id === id);
+        if (classItem) {
+          newClasses.push(classItem);
+        }
+      }
+
+      for (const classItem of classes) {
+        if (!classIds.includes(classItem.id)) {
+          newClasses.push(classItem);
+        }
+      }
+
+      await writeClasses(classesFile, newClasses);
+      return res.json({ ok: true });
     } catch (error) {
       next(error);
     }
