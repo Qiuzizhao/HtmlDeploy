@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>经典打砖块</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(120deg,#192a56,#273c75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 30px;
+            font-family: Microsoft YaHei;
+        }
+        h1{
+            color:#fff;
+            margin-bottom:10px;
+        }
+        #info{
+            color:#fff;
+            font-size:18px;
+            margin-bottom:8px;
+        }
+        #game{
+            border:3px solid #70a1ff;
+            box-shadow: 0 0 20px #5352ed80;
+            background:#0c1445;
+        }
+        .tip{
+            margin-top:12px;
+            color:#ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧱 打砖块小游戏</h1>
+    <div id="info">得分：<span id="score">0</span></div>
+    <canvas id="game" width="480" height="520"></canvas>
+    <div class="tip">鼠标左右移动控制挡板，打掉全部砖块即可通关</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreText = document.getElementById('score');
+
+// 挡板配置
+const paddle = {
+    w:90,
+    h:14,
+    x:canvas.width/2 - 45,
+    y:canvas.height -30,
+    speed:8
+}
+// 小球配置
+const ball = {
+    r:7,
+    x:canvas.width/2,
+    y:canvas.height -45,
+    dx:4,
+    dy:-4
+}
+// 砖块参数
+const brickInfo = {
+    w:55,
+    h:22,
+    row:6,
+    col:8,
+    padding:4,
+    top:30,
+    left:10
+}
+// 砖块颜色数组
+const brickColors = ['#ff4757','#ffa502','#ffdd59','#2ed573','#1e90ff','#a55eea'];
+
+// 创建砖块数组
+let bricks = [];
+let score = 0;
+let allBrickCount = brickInfo.row * brickInfo.col;
+
+// 初始化砖块
+function initBrick(){
+    bricks = [];
+    for(let r=0;r<brickInfo.row;r++){
+        for(let c=0;c<brickInfo.col;c++){
+            let x = c*(brickInfo.w+brickInfo.padding)+brickInfo.left;
+            let y = r*(brickInfo.h+brickInfo.padding)+brickInfo.top;
+            bricks.push({x,y,exist:true,color:brickColors[r]});
+        }
+    }
+}
+
+// 鼠标移动控制挡板
+canvas.addEventListener('mousemove',(e)=>{
+    let rect = canvas.getBoundingClientRect();
+    let mx = e.clientX - rect.left;
+    paddle.x = mx - paddle.w/2;
+    // 边界限制
+    if(paddle.x <0) paddle.x=0;
+    if(paddle.x+paddle.w>canvas.width) paddle.x = canvas.width-paddle.w;
+})
+
+// 绘制挡板
+function drawPaddle(){
+    ctx.fillStyle='#70a1ff';
+    ctx.fillRect(paddle.x,paddle.y,paddle.w,paddle.h);
+    ctx.strokeStyle='#fff';
+    ctx.strokeRect(paddle.x,paddle.y,paddle.w,paddle.h);
+}
+
+// 绘制小球
+function drawBall(){
+    ctx.beginPath();
+    ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+    ctx.fillStyle='#fff';
+    ctx.fill();
+    ctx.closePath();
+}
+
+// 绘制砖块
+function drawBrick(){
+    bricks.forEach(item=>{
+        if(item.exist){
+            ctx.fillStyle=item.color;
+            ctx.fillRect(item.x,item.y,brickInfo.w,brickInfo.h);
+            ctx.strokeStyle='#fff5';
+            ctx.strokeRect(item.x,item.y,brickInfo.w,brickInfo.h);
+        }
+    })
+}
+
+// 小球碰撞逻辑
+function update(){
+    // 左右墙壁反弹
+    if(ball.x-ball.r <=0 || ball.x+ball.r >=canvas.width){
+        ball.dx = -ball.dx;
+    }
+    // 顶部墙壁反弹
+    if(ball.y-ball.r <=0){
+        ball.dy = -ball.dy;
+    }
+    // 挡板碰撞
+    if(ball.y+ball.r >= paddle.y && ball.x>paddle.x && ball.x < paddle.x+paddle.w){
+        ball.dy = -ball.dy;
+    }
+    // 触底失败
+    if(ball.y+ball.r>canvas.height){
+        alert('游戏失败！得分：'+score+'，刷新页面重新开始');
+        cancelAnimationFrame(ani);
+    }
+
+    // 砖块碰撞
+    bricks.forEach(b=>{
+        if(b.exist){
+            if(ball.x>b.x && ball.x <b.x+brickInfo.w && ball.y-ball.r <b.y+brickInfo.h && ball.y+ball.r>b.y){
+                ball.dy = -ball.dy;
+                b.exist = false;
+                score +=10;
+                scoreText.textContent = score;
+                // 通关判断
+                let left = bricks.filter(i=>i.exist).length;
+                if(left===0){
+                    alert('恭喜通关！总得分：'+score);
+                    cancelAnimationFrame(ani);
+                }
+            }
+        }
+    })
+
+    // 更新小球坐标
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+}
+
+// 游戏循环
+function render(){
+    // 清空画布
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawPaddle();
+    drawBall();
+    drawBrick();
+    update();
+    ani = requestAnimationFrame(render);
+}
+
+// 启动游戏
+initBrick();
+let ani = requestAnimationFrame(render);
+</script>
+</body>
+</html>

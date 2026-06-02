@@ -81,7 +81,7 @@ function syncDataToGithub() {
   }
   syncTimeout = setTimeout(() => {
     console.log('[Git Sync] Starting backup to GitHub...');
-    exec('git add --all data/ storage/ && git commit -m "Auto backup data" && git push', { cwd: process.cwd() }, (error, stdout, stderr) => {
+    exec('git add . && git commit -m "Auto backup data" && git push', { cwd: process.cwd() }, (error, stdout, stderr) => {
       if (error) {
         if (stdout.includes('nothing to commit') || stderr.includes('nothing to commit')) {
           console.log('[Git Sync] No changes to backup.');
