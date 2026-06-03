@@ -1,0 +1,272 @@
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奇迹暖暖 - 华丽变装工坊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        warm: {
+                            pink: '#FFD1DC',
+                            dark: '#FF8DA1',
+                            purple: '#C9A7EB',
+                            blue: '#A7C7E7',
+                            gold: '#FFD700'
+                        }
+                    },
+                    fontFamily: {
+                        beauty: ['Segoe UI', 'Microsoft YaHei', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .bg-gradient-luxury {
+                background: linear-gradient(135deg, #FFD1DC 0%, #C9A7EB 30%, #A7C7E7 70%, #FF8DA1 100%);
+            }
+            .card-glow {
+                box-shadow: 0 0 15px rgba(255, 209, 220, 0.6), 0 0 30px rgba(201, 167, 235, 0.4);
+            }
+            .btn-luxury {
+                background: linear-gradient(90deg, #FF8DA1, #C9A7EB);
+                transition: all 0.3s;
+            }
+            .btn-luxury:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(255, 141, 161, 0.4);
+            }
+            .dress-item {
+                transition: all 0.3s ease;
+            }
+            .dress-item:hover {
+                transform: scale(1.05);
+                border-color: #FFD700;
+            }
+            .hair-item {
+                transition: all 0.3s ease;
+            }
+            .hair-item:hover {
+                transform: scale(1.05);
+                border-color: #FFD700;
+            }
+            .accessory-item {
+                transition: all 0.3s ease;
+            }
+            .accessory-item:hover {
+                transform: scale(1.05);
+                border-color: #FFD700;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-luxury min-h-screen font-beauty">
+    <!-- 顶部标题 -->
+    <header class="text-center py-6 px-4">
+        <h1 class="text-[clamp(1.8rem,5vw,3rem)] font-bold text-white drop-shadow-lg mb-2">
+            <i class="fa-solid fa-crown text-warm-gold mr-2"></i>奇迹暖暖 · 华丽变装工坊
+        </h1>
+        <p class="text-white/90 text-lg">打造属于你的绝美华丽造型</p>
+    </header>
+
+    <!-- 主容器 -->
+    <main class="max-w-7xl mx-auto px-4 pb-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 左侧：模特展示区 -->
+        <div class="lg:col-span-1 bg-white/30 backdrop-blur-md rounded-2xl p-5 card-glow">
+            <h2 class="text-center text-xl font-semibold text-white mb-4">✨ 你的华丽造型 ✨</h2>
+            <div class="relative w-full h-[500px] bg-white/20 rounded-xl overflow-hidden flex items-center justify-center">
+                <!-- 基础人物 -->
+                <div id="model" class="relative w-64 h-full">
+                    <!-- 发型 -->
+                    <div id="hair" class="absolute top-8 left-1/2 -translate-x-1/2 w-48 h-60 bg-[#FF9BB3] rounded-full z-20 transition-all"></div>
+                    
+                    <!-- 脸部 -->
+                    <div class="absolute top-16 left-1/2 -translate-x-1/2 w-36 h-44 bg-[#FFDFE5] rounded-full z-30">
+                        <div class="absolute top-14 left-8 w-5 h-5 rounded-full bg-black"></div>
+                        <div class="absolute top-14 right-8 w-5 h-5 rounded-full bg-black"></div>
+                        <div class="absolute top-28 left-1/2 -translate-x-1/2 w-8 h-3 bg-[#FF8DA1] rounded-full"></div>
+                    </div>
+                    
+                    <!-- 衣服 -->
+                    <div id="dress" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-[380px] bg-gradient-to-b from-warm-dark to-warm-purple rounded-t-[50%] z-10 transition-all"></div>
+                    
+                    <!-- 装饰 -->
+                    <div id="accessory" class="absolute top-4 left-1/2 -translate-x-1/2 z-40 transition-all opacity-0">
+                        <div class="w-32 h-10 bg-warm-gold rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+            <button id="resetBtn" class="btn-luxury w-full mt-4 py-3 rounded-xl text-white font-bold text-lg">
+                <i class="fa-solid fa-rotate-right mr-2"></i>重置装扮
+            </button>
+        </div>
+
+        <!-- 右侧：装扮区 -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- 发型切换 -->
+            <div class="bg-white/30 backdrop-blur-md rounded-2xl p-5 card-glow">
+                <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-user-check text-warm-gold mr-2"></i>多彩发型切换
+                </h2>
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    <div class="hair-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-hair="#FF9BB3">
+                        <div class="w-12 h-12 rounded-full bg-[#FF9BB3] mx-auto mb-1"></div>
+                        <p class="text-white text-sm">樱花粉</p>
+                    </div>
+                    <div class="hair-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-hair="#FFD700">
+                        <div class="w-12 h-12 rounded-full bg-[#FFD700] mx-auto mb-1"></div>
+                        <p class="text-white text-sm">鎏金</p>
+                    </div>
+                    <div class="hair-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-hair="#2C2C2C">
+                        <div class="w-12 h-12 rounded-full bg-[#2C2C2C] mx-auto mb-1"></div>
+                        <p class="text-white text-sm">墨黑</p>
+                    </div>
+                    <div class="hair-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-hair="#E5E4E2">
+                        <div class="w-12 h-12 rounded-full bg-[#E5E4E2] mx-auto mb-1"></div>
+                        <p class="text-white text-sm">银白</p>
+                    </div>
+                    <div class="hair-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-hair="#6A4C93">
+                        <div class="w-12 h-12 rounded-full bg-[#6A4C93] mx-auto mb-1"></div>
+                        <p class="text-white text-sm">紫蓝</p>
+                    </div>
+                    <div class="hair-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-hair="#F4ACB7">
+                        <div class="w-12 h-12 rounded-full bg-[#F4ACB7] mx-auto mb-1"></div>
+                        <p class="text-white text-sm">蜜桃</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 华丽服装切换 -->
+            <div class="bg-white/30 backdrop-blur-md rounded-2xl p-5 card-glow">
+                <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-shirt text-warm-gold mr-2"></i>华丽礼服套装
+                </h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div class="dress-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-dress="from-warm-dark to-warm-purple">
+                        <div class="w-16 h-20 bg-gradient-to-b from-warm-dark to-warm-purple rounded-t-xl mx-auto mb-1"></div>
+                        <p class="text-white text-sm">幻紫蔷薇</p>
+                    </div>
+                    <div class="dress-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-dress="from-[#FF7A9A] to-[#FFA8B7]">
+                        <div class="w-16 h-20 bg-gradient-to-b from-[#FF7A9A] to-[#FFA8B7] rounded-t-xl mx-auto mb-1"></div>
+                        <p class="text-white text-sm">樱花恋曲</p>
+                    </div>
+                    <div class="dress-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-dress="from-[#8A2BE2] to-[#9370DB]">
+                        <div class="w-16 h-20 bg-gradient-to-b from-[#8A2BE2] to-[#9370DB] rounded-t-xl mx-auto mb-1"></div>
+                        <p class="text-white text-sm">紫罗兰</p>
+                    </div>
+                    <div class="dress-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-dress="from-[#4682B4] to-[#87CEEB]">
+                        <div class="w-16 h-20 bg-gradient-to-b from-[#4682B4] to-[#87CEEB] rounded-t-xl mx-auto mb-1"></div>
+                        <p class="text-white text-sm">深海梦境</p>
+                    </div>
+                    <div class="dress-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-dress="from-[#FF69B4] to-[#FFB6C1]">
+                        <div class="w-16 h-20 bg-gradient-to-b from-[#FF69B4] to-[#FFB6C1] rounded-t-xl mx-auto mb-1"></div>
+                        <p class="text-white text-sm">甜心公主</p>
+                    </div>
+                    <div class="dress-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-dress="from-[#DAA520] to-[#FFD700]">
+                        <div class="w-16 h-20 bg-gradient-to-b from-[#DAA520] to-[#FFD700] rounded-t-xl mx-auto mb-1"></div>
+                        <p class="text-white text-sm">鎏金盛典</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 装饰切换 -->
+            <div class="bg-white/30 backdrop-blur-md rounded-2xl p-5 card-glow">
+                <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-gem text-warm-gold mr-2"></i>华丽装饰
+                </h2>
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    <div class="accessory-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-acc="crown">
+                        <i class="fa-solid fa-crown text-warm-gold text-2xl mx-auto mb-1"></i>
+                        <p class="text-white text-sm">钻石皇冠</p>
+                    </div>
+                    <div class="accessory-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-acc="flower">
+                        <i class="fa-solid fa-leaf text-green-400 text-2xl mx-auto mb-1"></i>
+                        <p class="text-white text-sm">花环</p>
+                    </div>
+                    <div class="accessory-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-acc="bow">
+                        <i class="fa-solid fa-ribbon text-warm-dark text-2xl mx-auto mb-1"></i>
+                        <p class="text-white text-sm">蝴蝶结</p>
+                    </div>
+                    <div class="accessory-item p-3 rounded-lg bg-white/40 text-center cursor-pointer border-2 border-transparent" data-acc="none">
+                        <i class="fa-solid fa-x text-white text-2xl mx-auto mb-1"></i>
+                        <p class="text-white text-sm">无装饰</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部 -->
+    <footer class="text-center py-4 text-white/80 text-sm">
+        <p>✨ 奇迹暖暖华丽变装工坊 - 打造你的梦幻造型 ✨</p>
+    </footer>
+
+    <script>
+        // 换装逻辑
+        const hairEl = document.getElementById('hair');
+        const dressEl = document.getElementById('dress');
+        const accessoryEl = document.getElementById('accessory');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // 切换发型
+        document.querySelectorAll('.hair-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.hair-item').forEach(i => i.classList.remove('border-warm-gold'));
+                item.classList.add('border-warm-gold');
+                hairEl.style.backgroundColor = item.dataset.hair;
+            });
+        });
+
+        // 切换服装
+        document.querySelectorAll('.dress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.dress-item').forEach(i => i.classList.remove('border-warm-gold'));
+                item.classList.add('border-warm-gold');
+                dressEl.className = `absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-[380px] bg-gradient-to-b ${item.dataset.dress} rounded-t-[50%] z-10 transition-all`;
+            });
+        });
+
+        // 切换装饰
+        document.querySelectorAll('.accessory-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.accessory-item').forEach(i => i.classList.remove('border-warm-gold'));
+                item.classList.add('border-warm-gold');
+                
+                const type = item.dataset.acc;
+                accessoryEl.className = 'absolute top-4 left-1/2 -translate-x-1/2 z-40 transition-all';
+                
+                if(type === 'none') {
+                    accessoryEl.classList.add('opacity-0');
+                } else {
+                    accessoryEl.classList.remove('opacity-0');
+                    accessoryEl.innerHTML = '';
+                    
+                    if(type === 'crown') {
+                        accessoryEl.innerHTML = '<i class="fa-solid fa-crown text-warm-gold text-4xl"></i>';
+                    } else if(type === 'flower') {
+                        accessoryEl.innerHTML = '<i class="fa-solid fa-leaf text-green-400 text-4xl"></i>';
+                    } else if(type === 'bow') {
+                        accessoryEl.innerHTML = '<i class="fa-solid fa-ribbon text-warm-dark text-4xl"></i>';
+                    }
+                }
+            });
+        });
+
+        // 重置装扮
+        resetBtn.addEventListener('click', () => {
+            hairEl.style.backgroundColor = '#FF9BB3';
+            dressEl.className = 'absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-[380px] bg-gradient-to-b from-warm-dark to-warm-purple rounded-t-[50%] z-10 transition-all';
+            accessoryEl.className = 'absolute top-4 left-1/2 -translate-x-1/2 z-40 transition-all opacity-0';
+            
+            document.querySelectorAll('.hair-item, .dress-item, .accessory-item').forEach(i => {
+                i.classList.remove('border-warm-gold');
+            });
+        });
+    </script>
+</body>
+</html>
