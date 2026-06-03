@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>快乐消消消</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"微软雅黑",sans-serif}
+body{
+    background:linear-gradient(135deg,#ff9a9e,#fad0c4);
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;padding:20px;
+}
+.title{
+    font-size:36px;color:#fff;text-shadow:2px 2px 6px #888;margin-bottom:12px;
+}
+.info-box{
+    display:flex;gap:40px;font-size:20px;color:#fff;margin-bottom:15px;
+}
+#gameBox{
+    background:rgba(255,255,255,0.35);
+    padding:12px;border-radius:16px;box-shadow:0 8px 24px #0003;
+}
+.row{display:flex;}
+.item{
+    width:45px;height:45px;margin:3px;border-radius:8px;cursor:pointer;
+    transition:all 0.2s ease;
+}
+.item:hover{transform:scale(1.08)}
+.selected{box-shadow:0 0 0 4px #fff;border:2px solid white;transform:scale(1.1)}
+#restart{
+    margin-top:18px;padding:10px 32px;border:none;border-radius:30px;
+    background:#ff5d73;color:#fff;font-size:18px;cursor:pointer;
+}
+#restart:hover{background:#ff3f59}
+</style>
+</head>
+<body>
+    <h1 class="title">快乐消消消</h1>
+    <div class="info-box">
+        <div>得分：<span id="score">0</span></div>
+        <div>剩余步数：<span id="step">30</span></div>
+    </div>
+    <div id="gameBox"></div>
+    <button id="restart">重新开局</button>
+
+<script>
+//配置
+const col = 8;
+const row = 8;
+const typeNum = 5; //5种图案颜色
+let arr = [];
+let select = null;
+let score = 0;
+let step = 30;
+const colors = ['#ff6b6b','#4ecdc4','#ffe66d','#95e1d3','#a855f7'];
+const scoreDom = document.getElementById('score');
+const stepDom = document.getElementById('step');
+const gameBox = document.getElementById('gameBox');
+const restartBtn = document.getElementById('restart');
+
+//初始化地图
+function initMap(){
+    arr = [];score=0;step=30;
+    scoreDom.innerText = score;
+    stepDom.innerText = step;
+    gameBox.innerHTML = '';
+    for(let i=0;i<row;i++){
+        let r = document.createElement('div');
+        r.className='row';
+        arr[i]=[];
+        for(let j=0;j<col;j++){
+            let t = getRandomType();
+            arr[i][j]=t;
+            let div = createItem(i,j,t);
+            r.appendChild(div);
+        }
+        gameBox.appendChild(r);
+    }
+    //开局消除循环
+    setTimeout(dropAndClear,200);
+}
+
+function getRandomType(){
+    return Math.floor(Math.random()*typeNum);
+}
+
+//生成格子
+function createItem(i,j,type){
+    let div = document.createElement('div');
+    div.className='item';
+    div.dataset.r = i;
+    div.dataset.c = j;
+    div.dataset.t = type;
+    div.style.background = colors[type];
+    div.onclick = ()=>clickItem(i,j,div);
+    return div;
+}
+
+//点击方块
+function clickItem(i,j,dom){
+    if(step<=0)return alert('步数用完啦！游戏结束，点击重新开局');
+    //第一次选中
+    if(!select){
+        clearAllSelect();
+        dom.classList.add('selected');
+        select = {r:i,c:j,dom:dom};
+    }else{
+        //第二次，判断是否相邻
+        let sr = select.r;
+        let sc = select.c;
+        let isNear = ((Math.abs(sr-i)===1&&sc===j)||(Math.abs(sc-j)===1&&sr===i));
+        if(isNear){
+            //交换数据
+            swap(sr,sc,i,j);
+            step--;
+            stepDom.innerText=step;
+            clearAllSelect();
+            select=null;
+            setTimeout(dropAndClear,150);
+        }else{
+            clearAllSelect();
+            dom.classList.add('selected');
+            select={r:i,c:j,dom:dom};
+        }
+    }
+}
+
+//交换两个格子
+function swap(r1,c1,r2,c2){
+    //数组交换
+    let temp = arr[r1][c1];
+    arr[r1][c1] = arr[r2][c2];
+    arr[r2][c2] = temp;
+    //页面重绘
+    refreshView();
+}
+
+//清空选中样式
+function clearAllSelect(){
+    document.querySelectorAll('.selected').forEach(d=>d.classList.remove('selected'));
+    select=null;
+}
+
+//刷新整盘视图
+function refreshView(){
+    gameBox.innerHTML='';
+    for(let i=0;i<row;i++){
+        let r = document.createElement('div');
+        r.className='row';
+        for(let j=0;j<col;j++){
+            let d = createItem(i,j,arr[i][j]);
+            r.appendChild(d);
+        }
+        gameBox.appendChild(r);
+    }
+}
+
+//查找可消除坐标
+function findClearList(){
+    let clearSet = new Set();
+    //横向三连
+    for(let i=0;i<row;i++){
+        for(let j=0;j<col-2;j++){
+            let v = arr[i][j];
+            if(v === arr[i][j+1] && v === arr[i][j+2]){
+                clearSet.add(`${i}_${j}`);
+                clearSet.add(`${i}_${j+1}`);
+                clearSet.add(`${i}_${j+2}`);
+                //向后继续匹配
+                let k = j+3;
+                while(k<col&&arr[i][k]===v){
+                    clearSet.add(`${i}_${k}`);k++;
+                }
+            }
+        }
+    }
+    //纵向三连
+    for(let j=0;j<col;j++){
+        for(let i=0;i<row-2;i++){
+            let v = arr[i][j];
+            if(v === arr[i+1][j] && v === arr[i+2][j]){
+                clearSet.add(`${i}_${j}`);
+                clearSet.add(`${i+1}_${j}`);
+                clearSet.add(`${i+2}_${j}`);
+                let k=i+3;
+                while(k<row&&arr[k][j]===v){
+                    clearSet.add(`${k}_${j}`);k++;
+                }
+            }
+        }
+    }
+    return Array.from(clearSet).map(s=>{let[a,b]=s.split('_');return {r:+a,c:+b}});
+}
+
+//下落+消除循环
+function dropAndClear(){
+    let list = findClearList();
+    if(list.length===0)return;
+    //加分
+    score += list.length*10;
+    scoreDom.innerText = score;
+    //清空消除位置
+    list.forEach(({r,c})=>arr[r][c]=null);
+    //方块下落
+    for(let c=0;c<col;c++){
+        let newCol = [];
+        //收集本列有效方块
+        for(let r=0;r<row;r++){
+            if(arr[r][c]!==null)newCol.push(arr[r][c]);
+        }
+        //上方补新方块
+        let emptyNum = row-newCol.length;
+        for(let i=0;i<emptyNum;i++) newCol.unshift(getRandomType());
+        //写回数组
+        for(let r=0;r<row;r++) arr[r][c]=newCol[r];
+    }
+    refreshView();
+    //递归继续消除连锁
+    setTimeout(dropAndClear,220);
+}
+
+restartBtn.onclick = initMap;
+initMap();
+</script>
+</body>
+</html>
