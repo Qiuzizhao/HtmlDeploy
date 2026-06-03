@@ -11,7 +11,7 @@ HtmlDeploy 是一个轻量的静态 HTML 页面部署平台，适合课堂展示
 - 后台可以为每个班级单独启用或禁用“上传网页”功能。禁用后，前台选中该班级时“上传网页”按钮会变灰且无法点击，后端接口也会拒绝绕过按钮的上传请求。
 - 平台可以自动打开项目并截取封面图，前台项目卡片会优先显示对应封面。后台支持单个刷新封面和批量生成全部封面。
 - 项目卡片支持预览。默认优先用独立预览窗口打开项目，避免小窗口 iframe 预览对游戏或 Canvas 项目的性能造成明显影响。
-- 后台管理界面位于 `/admin.html`，默认管理员密码为 `qqqyyy`。后台支持项目管理、班级管理、班级密码、全部密码、班级排序、项目下载和删除。
+- 后台管理界面位于 `/admin.html`，默认管理员密码为 `qqqyyy`。后台支持项目管理、代码编辑、AI 代码优化、班级管理、班级密码、全部密码、班级排序、项目下载和删除。
 - 已上传的 HTML 项目保存在本地 `storage/sites/`，元数据保存在 `data/*.json`，不依赖关系型数据库。
 
 ## 2. 技术栈
@@ -32,7 +32,7 @@ HtmlDeploy 是一个轻量的静态 HTML 页面部署平台，适合课堂展示
 - `src/app.js`：后端核心逻辑，包含 Express 路由、文件上传、项目 CRUD、班级权限、Cookie 校验、本地 JSON 读写和上传开关校验。
 - `public/`：前端静态资源目录。
   - `index.html`：前台首页，包含班级筛选、密码解锁、上传弹窗、项目卡片和项目预览逻辑。
-  - `admin.html`：后台管理页面，包含项目管理、班级管理、全部密码管理和班级上传开关。
+  - `admin.html`：后台管理页面，包含项目管理、代码编辑、违禁词、班级管理、全部密码管理和班级上传开关。
 - `data/`：JSON 数据目录。
   - `sites.json`：保存项目元数据，例如 ID、编号、标题、作者、班级和创建时间。
   - `classes.json`：保存班级信息、班级密码和 `uploadEnabled` 上传开关。
@@ -111,7 +111,8 @@ HtmlDeploy 是一个轻量的静态 HTML 页面部署平台，适合课堂展示
 后台支持：
 
 - 新增、编辑、删除项目。
-- 替换项目 HTML 文件。
+- 在代码窗口中查看、编辑或替换项目 HTML 代码。
+- 在代码窗口中调用 LLM API 辅助优化 HTML 代码。
 - 下载项目 HTML 文件。
 - 新增、编辑、删除班级。
 - 调整班级显示顺序。
@@ -155,7 +156,22 @@ HtmlDeploy 是一个轻量的静态 HTML 页面部署平台，适合课堂展示
 npx playwright install --with-deps chromium
 ```
 
-## 9. 部署方式
+## 9. AI 代码优化
+
+后台项目管理中点击“代码”可打开代码窗口。点击“AI优化”后，后端会把当前编辑框中的 HTML 发给服务器配置的 LLM API，返回优化后的 HTML 并填回编辑框。AI 优化不会自动保存，确认无误后需要再点击“保存代码”。
+
+该功能使用 OpenAI-compatible Chat Completions 接口，API Key 只配置在服务器环境变量中，不会暴露给前端：
+
+```bash
+export LLM_API_KEY="你的 API Key"
+export LLM_MODEL="gpt-4o-mini"
+# 可选，默认 https://api.openai.com/v1
+export LLM_API_BASE_URL="https://api.openai.com/v1"
+```
+
+也支持使用 `OPENAI_API_KEY`、`OPENAI_MODEL`、`OPENAI_BASE_URL` 作为环境变量名。
+
+## 10. 部署方式
 
 ### 自建服务器部署
 
@@ -178,7 +194,7 @@ npx playwright install --with-deps chromium
 - 生成 Nginx 反向代理配置。
 - 重启 Nginx 让配置生效。
 
-## 10. 注意事项
+## 11. 注意事项
 
 - 项目数据直接写入 `data/` 和 `storage/`，生产环境部署时需要做好备份。
 - 项目封面图写入 `storage/thumbnails/`，不纳入 Git；如果迁移服务器，需要单独备份该目录。

@@ -81,6 +81,78 @@ function createForbiddenWordError(match) {
   return `${match.field}不能包含违禁词「${match.word}」`;
 }
 
+function stripCodeFence(value) {
+  const content = String(value || '').trim();
+  const fenced = content.match(/^```(?:html)?\s*([\s\S]*?)\s*```$/i)
+    || content.match(/```(?:html)?\s*([\s\S]*?)\s*```/i);
+  return (fenced ? fenced[1] : content).trim();
+}
+
+function getLlmConfig(options = {}) {
+  return {
+    apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
+    baseUrl: options.llmApiBaseUrl || process.env.LLM_API_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini'
+  };
+}
+
+function getChatCompletionsUrl(baseUrl) {
+  const normalizedBaseUrl = String(baseUrl || '').replace(/\/+$/, '');
+  return normalizedBaseUrl.endsWith('/chat/completions')
+    ? normalizedBaseUrl
+    : `${normalizedBaseUrl}/chat/completions`;
+}
+
+async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmConfig }) {
+  if (!llmConfig.apiKey) {
+    throw new Error('请先在服务器环境变量中配置 LLM_API_KEY 或 OPENAI_API_KEY');
+  }
+
+  const response = await fetch(getChatCompletionsUrl(llmConfig.baseUrl), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${llmConfig.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: llmConfig.model,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content: [
+            '你是资深前端工程师，负责优化单个 HTML 项目的代码。',
+            '目标是提升性能、稳定性、可读性和兼容性，同时保留原有玩法、视觉风格、交互和页面文案。',
+            '不要添加新的外部网络依赖；除非原代码已经依赖，否则保持单文件 HTML 可运行。',
+            '只返回完整 HTML 源码，不要解释，不要 Markdown，不要代码块包裹。'
+          ].join('\n')
+        },
+        {
+          role: 'user',
+          content: [
+            `项目名称：${siteTitle || '未命名项目'}`,
+            instruction ? `额外要求：${instruction}` : '',
+            '请优化下面的 HTML 代码，并返回完整可运行 HTML：',
+            htmlContent
+          ].filter(Boolean).join('\n\n')
+        }
+      ]
+    })
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error?.message || `AI 优化接口调用失败：${response.status}`);
+  }
+
+  const optimizedContent = stripCodeFence(result.choices?.[0]?.message?.content || '');
+  if (!optimizedContent) {
+    throw new Error('AI 没有返回可用代码');
+  }
+
+  return optimizedContent;
+}
+
 function getClassCookieName(classId) {
   const digest = crypto.createHash('sha256').update(String(classId)).digest('hex').slice(0, 16);
   return `${CLASS_COOKIE_PREFIX}${digest}`;
@@ -624,6 +696,7 @@ function createApp(options = {}) {
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
   const adminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
   const adminToken = createAdminToken(adminPassword);
+  const llmConfig = getLlmConfig(options);
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -1241,6 +1314,38 @@ function createApp(options = {}) {
       return res.json(toPublicSite(site, classes, thumbnailDir));
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.post('/api/sites/:id/ai-optimize-code', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const htmlContent = String(req.body.htmlContent || '');
+      const instruction = String(req.body.instruction || '').trim();
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+
+      if (!site) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      if (!htmlContent.trim()) {
+        return res.status(400).json({ error: '代码不能为空' });
+      }
+
+      const optimizedContent = await optimizeHtmlWithLlm({
+        htmlContent,
+        siteTitle: site.title,
+        instruction,
+        llmConfig
+      });
+
+      return res.json({
+        htmlContent: optimizedContent,
+        model: llmConfig.model
+      });
+    } catch (error) {
+      return res.status(error.message.includes('配置') ? 400 : 502).json({ error: error.message });
     }
   });
 

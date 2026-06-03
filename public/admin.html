@@ -901,6 +901,7 @@
           <button class="button" id="reloadCodeButton" type="button">重新加载</button>
         </div>
         <div class="code-actions-right">
+          <button class="button" id="optimizeCodeButton" type="button">AI优化</button>
           <button class="primary-button" id="saveCodeButton" type="button">保存代码</button>
         </div>
       </footer>
@@ -943,6 +944,7 @@
     const codeEditor = document.getElementById('codeEditor');
     const codeFileInput = document.getElementById('codeFileInput');
     const reloadCodeButton = document.getElementById('reloadCodeButton');
+    const optimizeCodeButton = document.getElementById('optimizeCodeButton');
     const saveCodeButton = document.getElementById('saveCodeButton');
 
     let sites = [];
@@ -1100,6 +1102,7 @@
     function setCodeBusy(isBusy) {
       codeEditor.disabled = isBusy;
       saveCodeButton.disabled = isBusy;
+      optimizeCodeButton.disabled = isBusy;
       reloadCodeButton.disabled = isBusy;
       codeFileInput.disabled = isBusy;
     }
@@ -1182,6 +1185,39 @@
       renderRows();
       setCodeMessage('代码已保存，封面会在后台自动刷新。');
       setMessage(listMessage, `「${updatedSite.title}」代码已保存`);
+    }
+
+    async function optimizeCurrentCode() {
+      if (!currentCodeSite) {
+        return;
+      }
+
+      const htmlContent = codeEditor.value;
+      if (!htmlContent.trim()) {
+        setCodeMessage('代码不能为空', true);
+        return;
+      }
+
+      setCodeBusy(true);
+      setCodeMessage('正在调用 AI 优化代码...');
+
+      const response = await fetch(`/api/sites/${encodeURIComponent(currentCodeSite.id)}/ai-optimize-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ htmlContent })
+      });
+      setCodeBusy(false);
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'AI 优化失败' }));
+        setCodeMessage(result.error || 'AI 优化失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      codeEditor.value = result.htmlContent || htmlContent;
+      setCodeMessage(`AI 优化完成${result.model ? `（${result.model}）` : ''}，确认后请点击保存代码。`);
+      codeEditor.focus();
     }
 
     function renderClassList() {
@@ -1915,6 +1951,7 @@
         loadSiteCode(currentCodeSite);
       }
     });
+    optimizeCodeButton.addEventListener('click', optimizeCurrentCode);
     saveCodeButton.addEventListener('click', saveCurrentCode);
     codeFileInput.addEventListener('change', async () => {
       const file = codeFileInput.files && codeFileInput.files[0];
