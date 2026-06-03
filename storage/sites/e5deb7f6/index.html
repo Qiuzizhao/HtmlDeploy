@@ -4,19 +4,33 @@
     <meta charset="UTF-8">
     <title>Three.js 赛车 Pro - 真实物理与小地图</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        #ui {
-            position: absolute; top: 20px; left: 20px;
-            color: #00ff00; font-family: 'Courier New', monospace;
-            font-size: 24px; pointer-events: none;
-            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px;
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
         }
-        /* 小地图容器 */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
         #minimap {
-            position: absolute; top: 20px; right: 20px;
-            width: 200px; height: 200px;
-            border: 2px solid #555; border-radius: 50%;
-            overflow: hidden; background: rgba(0,0,0,0.3);
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #555;
+            border-radius: 50%;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
@@ -33,259 +47,355 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <script>
-        // --- 全局变量 ---
-        let scene, renderer, world;
-        let camera, miniMapCamera;
-        let carVehicle, chassisBody;
-        let wheelMeshes = [], chassisMesh;
-        const loader = new THREE.GLTFLoader();
-        const keys = { w: false, s: false, a: false, d: false };
+        (function() {
+            'use strict';
 
-        // 物理参数
-        const mass = 150;
-        const engineForce = 1500;
-        const brakeForce = 100;
-        const steerValue = 0.5;
-
-        init();
-
-        function init() {
-            // 1. 场景与渲染器
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x333333);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(renderer.domElement);
-
-            // 2. 相机设置
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-            
-            // 小地图相机：正交相机，从天而降
-            const mapSize = 100;
-            miniMapCamera = new THREE.OrthographicCamera(-mapSize, mapSize, mapSize, -mapSize, 1, 500);
-            miniMapCamera.up.set(0, 0, -1); // 修正坐标系
-
-            // 3. 物理世界
-            world = new CANNON.World();
-            world.gravity.set(0, -9.82, 0);
-            world.defaultContactMaterial.friction = 0.1;
-
-            // 4. 灯光
-            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambient);
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(50, 100, 50);
-            sun.castShadow = true;
-            sun.shadow.camera.left = -100; sun.shadow.camera.right = 100;
-            sun.shadow.camera.top = 100; sun.shadow.camera.bottom = -100;
-            sun.shadow.mapSize.set(2048, 2048);
-            scene.add(sun);
-
-            createLevel();
-            createPhysicsCar();
-            loadCarModel();
-            setupControls();
-            animate();
-        }
-
-        // --- 赛道与级别 ---
-        function createLevel() {
-            // 地面物理
-            const groundMat = new CANNON.Material("ground");
-            const groundBody = new CANNON.Body({ mass: 0, material: groundMat });
-            groundBody.addShape(new CANNON.Plane());
-            groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
-            world.addBody(groundBody);
-
-            // 地面视觉
-            const grid = new THREE.GridHelper(1000, 100, 0x444444, 0x222222);
-            scene.add(grid);
-
-            // 简单的赛道围栏
-            const trackGeo = new THREE.TorusGeometry(80, 5, 16, 100);
-            const trackMat = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
-            const trackMesh = new THREE.Mesh(trackGeo, trackMat);
-            trackMesh.rotation.x = Math.PI/2;
-            trackMesh.receiveShadow = true;
-            scene.add(trackMesh);
-
-            // 围栏物理（简化为圆环附近的物体或直接用 Plane 限制）
-        }
-
-        // --- 核心：RaycastVehicle 物理车辆 ---
-        function createPhysicsCar() {
-            // 1. 底盘刚体
-            const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.4, 2));
-            chassisBody = new CANNON.Body({ mass: mass });
-            chassisBody.addShape(chassisShape);
-            chassisBody.position.set(0, 4, 0);
-            
-            // 2. 创建车辆系统
-            carVehicle = new CANNON.RaycastVehicle({
-                chassisBody: chassisBody,
-                indexForwardAxis: 2, // Z轴前进
-                indexRightAxis: 0,   // X轴右侧
-                indexUpAxis: 1       // Y轴向上
-            });
-
-            // 3. 悬挂配置
-            const wheelOptions = {
-                radius: 0.5,
-                directionLocal: new CANNON.Vec3(0, -1, 0),
-                suspensionStiffness: 30,
-                suspensionRestLength: 0.3,
-                frictionSlip: 1.4,
-                dampingRelaxation: 2.3,
-                dampingCompression: 4.4,
-                maxSuspensionForce: 100000,
-                rollInfluence: 0.01,
-                axleLocal: new CANNON.Vec3(-1, 0, 0), // 轮轴方向
-                chassisConnectionPointLocal: new CANNON.Vec3(1, 1, 0), // 后面会被覆盖
+            // 全局配置
+            const CONFIG = {
+                mass: 150,
+                engineForce: 1500,
+                brakeForce: 100,
+                steerValue: 0.5,
+                cameraOffset: new THREE.Vector3(0, 4, -10),
+                cameraLerpFactor: 0.1,
+                minimapSize: 200,
+                minimapMargin: 20,
+                groundSize: 1000,
+                trackRadius: 80,
+                trackWidth: 5,
             };
 
-            // 4. 添加 4 个轮子位置
-            const pos = [
-                new CANNON.Vec3(-1, -0.2, 1.5), // 前左
-                new CANNON.Vec3(1, -0.2, 1.5),  // 前右
-                new CANNON.Vec3(-1, -0.2, -1.5),// 后左
-                new CANNON.Vec3(1, -0.2, -1.5)  // 后右
-            ];
-            pos.forEach(p => {
-                wheelOptions.chassisConnectionPointLocal.copy(p);
-                carVehicle.addWheel(wheelOptions);
-            });
+            let scene, renderer, world;
+            let camera, miniMapCamera;
+            let carVehicle, chassisBody;
+            let wheelMeshes = [],
+                chassisMesh;
+            const keys = { w: false, s: false, a: false, d: false };
+            const loader = new THREE.GLTFLoader();
 
-            carVehicle.addToWorld(world);
+            // 缓存 DOM 元素
+            const speedEl = document.getElementById('speed');
+            const gearEl = document.getElementById('gear');
 
-            // 5. 轮子视觉占位（在模型加载前显示）
-            const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 20);
-            wheelGeo.rotateZ(Math.PI/2);
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            for (let i = 0; i < 4; i++) {
-                const w = new THREE.Mesh(wheelGeo, wheelMat);
-                w.castShadow = true;
-                scene.add(w);
-                wheelMeshes.push(w);
-            }
-        }
+            // 临时向量池，减少垃圾回收
+            const _v3 = new THREE.Vector3();
+            const _q = new THREE.Quaternion();
 
-        // --- 加载精美模型 ---
-        function loadCarModel() {
-            // 这里使用 Three.js 官方提供的经典赛车模型
-            const modelUrl = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Ferrari.glb';
-            
-            loader.load(modelUrl, (gltf) => {
-                chassisMesh = gltf.scene;
-                // 调整模型比例以适应物理碰撞盒
-                chassisMesh.scale.set(0.022, 0.022, 0.022); 
-                chassisMesh.traverse(child => {
-                    if(child.isMesh) child.castShadow = true;
-                });
-                scene.add(chassisMesh);
-                
-                // 这里可以进一步提取模型里的四个轮子进行独立控制，
-                // 本代码为演示简洁，沿用物理生成的轮子。
-            });
-        }
+            init();
 
-        // --- 渲染循环 ---
-        function animate() {
-            requestAnimationFrame(animate);
+            function init() {
+                // 场景
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x333333);
 
-            // 1. 更新物理
-            world.step(1/60);
-
-            // 2. 车辆操控驱动
-            updateDrive();
-
-            // 3. 同步视觉
-            // 底盘
-            if (chassisMesh) {
-                chassisMesh.position.copy(chassisBody.position);
-                chassisMesh.quaternion.copy(chassisBody.quaternion);
-            }
-            // 轮子同步
-            for (let i = 0; i < carVehicle.wheelInfos.length; i++) {
-                carVehicle.updateWheelTransform(i);
-                const t = carVehicle.wheelInfos[i].worldTransform;
-                wheelMeshes[i].position.copy(t.position);
-                wheelMeshes[i].quaternion.copy(t.quaternion);
-            }
-
-            // 4. 摄像机跟随
-            const goal = new THREE.Vector3(0, 4, -10);
-            const carPos = new THREE.Vector3().copy(chassisBody.position);
-            const carDir = new THREE.Vector3(0, 0, 1).applyQuaternion(chassisBody.quaternion);
-            
-            const camTarget = carPos.clone().add(carDir.multiplyScalar(-10)).add(new THREE.Vector3(0, 4, 0));
-            camera.position.lerp(camTarget, 0.1);
-            camera.lookAt(carPos);
-
-            // 5. 更新小地图位置
-            miniMapCamera.position.set(chassisBody.position.x, 100, chassisBody.position.z);
-
-            // 6. 渲染 - 双视角
-            // 主场景
-            renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
-            renderer.render(scene, camera);
-
-            // 小地图渲染（渲染在右上角）
-            renderer.setScissorTest(true);
-            const mapSize = 200;
-            renderer.setScissor(window.innerWidth - mapSize - 20, window.innerHeight - mapSize - 20, mapSize, mapSize);
-            renderer.setViewport(window.innerWidth - mapSize - 20, window.innerHeight - mapSize - 20, mapSize, mapSize);
-            renderer.render(scene, miniMapCamera);
-            renderer.setScissorTest(false);
-
-            // 7. UI 更新
-            const speed = (chassisBody.velocity.length() * 3.6).toFixed(0);
-            document.getElementById('speed').innerText = speed;
-        }
-
-        function updateDrive() {
-            // 重置动力
-            carVehicle.applyEngineForce(0, 2);
-            carVehicle.applyEngineForce(0, 3);
-            carVehicle.setSteeringValue(0, 0);
-            carVehicle.setSteeringValue(0, 1);
-            carVehicle.setBrake(0, 0); carVehicle.setBrake(0, 1);
-            carVehicle.setBrake(0, 2); carVehicle.setBrake(0, 3);
-
-            if (keys.w) {
-                carVehicle.applyEngineForce(-engineForce, 2);
-                carVehicle.applyEngineForce(-engineForce, 3);
-            }
-            if (keys.s) {
-                // 如果在前进则制动，如果静止则倒车
-                carVehicle.applyEngineForce(engineForce * 0.5, 2);
-                carVehicle.applyEngineForce(engineForce * 0.5, 3);
-            }
-            if (keys.a) {
-                carVehicle.setSteeringValue(steerValue, 0);
-                carVehicle.setSteeringValue(steerValue, 1);
-            }
-            if (keys.d) {
-                carVehicle.setSteeringValue(-steerValue, 0);
-                carVehicle.setSteeringValue(-steerValue, 1);
-            }
-            if (!keys.w && !keys.s) {
-                carVehicle.setBrake(brakeForce * 0.2, 0);
-                carVehicle.setBrake(brakeForce * 0.2, 1);
-            }
-        }
-
-        function setupControls() {
-            window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
-            window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
+                // 渲染器
+                renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
                 renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        }
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.body.appendChild(renderer.domElement);
+
+                // 主相机
+                camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+                // 小地图相机（正交俯视）
+                miniMapCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 1, 500);
+                miniMapCamera.up.set(0, 0, -1);
+
+                // 物理世界
+                world = new CANNON.World();
+                world.gravity.set(0, -9.82, 0);
+                world.defaultContactMaterial.friction = 0.1;
+
+                // 灯光
+                const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambient);
+                const sun = new THREE.DirectionalLight(0xffffff, 1);
+                sun.position.set(50, 100, 50);
+                sun.castShadow = true;
+                sun.shadow.mapSize.width = 2048;
+                sun.shadow.mapSize.height = 2048;
+                const d = 100;
+                sun.shadow.camera.left = -d;
+                sun.shadow.camera.right = d;
+                sun.shadow.camera.top = d;
+                sun.shadow.camera.bottom = -d;
+                sun.shadow.camera.near = 0.1;
+                sun.shadow.camera.far = 300;
+                scene.add(sun);
+
+                createLevel();
+                createPhysicsCar();
+                loadCarModel();
+                setupControls();
+                animate();
+            }
+
+            function createLevel() {
+                // 地面物理
+                const groundMat = new CANNON.Material("ground");
+                const groundBody = new CANNON.Body({ mass: 0, material: groundMat });
+                groundBody.addShape(new CANNON.Plane());
+                groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+                world.addBody(groundBody);
+
+                // 地面视觉 - 网格辅助
+                const grid = new THREE.GridHelper(CONFIG.groundSize, 100, 0x444444, 0x222222);
+                scene.add(grid);
+
+                // 简化赛道围栏 - 使用环状 Torus 作为视觉参考
+                const trackGeo = new THREE.TorusGeometry(CONFIG.trackRadius, CONFIG.trackWidth, 16, 100);
+                const trackMat = new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.7, metalness: 0.2 });
+                const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+                trackMesh.rotation.x = Math.PI / 2;
+                trackMesh.position.y = 0.1;
+                trackMesh.receiveShadow = true;
+                scene.add(trackMesh);
+
+                // 围栏缺乏物理碰撞，暂时忽略
+            }
+
+            function createPhysicsCar() {
+                const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.4, 2));
+                chassisBody = new CANNON.Body({ mass: CONFIG.mass });
+                chassisBody.addShape(chassisShape);
+                chassisBody.position.set(0, 4, 0);
+
+                carVehicle = new CANNON.RaycastVehicle({
+                    chassisBody: chassisBody,
+                    indexForwardAxis: 2,
+                    indexRightAxis: 0,
+                    indexUpAxis: 1
+                });
+
+                const wheelOptions = {
+                    radius: 0.5,
+                    directionLocal: new CANNON.Vec3(0, -1, 0),
+                    suspensionStiffness: 30,
+                    suspensionRestLength: 0.3,
+                    frictionSlip: 1.4,
+                    dampingRelaxation: 2.3,
+                    dampingCompression: 4.4,
+                    maxSuspensionForce: 100000,
+                    rollInfluence: 0.01,
+                    axleLocal: new CANNON.Vec3(-1, 0, 0),
+                    chassisConnectionPointLocal: new CANNON.Vec3(1, 1, 0)
+                };
+
+                const positions = [
+                    new CANNON.Vec3(-1, -0.2, 1.5),
+                    new CANNON.Vec3(1, -0.2, 1.5),
+                    new CANNON.Vec3(-1, -0.2, -1.5),
+                    new CANNON.Vec3(1, -0.2, -1.5)
+                ];
+
+                positions.forEach(p => {
+                    wheelOptions.chassisConnectionPointLocal.copy(p);
+                    carVehicle.addWheel(wheelOptions);
+                });
+
+                carVehicle.addToWorld(world);
+
+                // 创建轮子的视觉占位几何体（导入模型后会隐藏）
+                const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 20);
+                wheelGeo.rotateZ(Math.PI / 2);
+                const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+                for (let i = 0; i < 4; i++) {
+                    const w = new THREE.Mesh(wheelGeo, wheelMat);
+                    w.castShadow = true;
+                    w.receiveShadow = true;
+                    scene.add(w);
+                    wheelMeshes.push(w);
+                }
+            }
+
+            function loadCarModel() {
+                const modelUrl = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Ferrari.glb';
+
+                loader.load(modelUrl,
+                    (gltf) => {
+                        chassisMesh = gltf.scene;
+                        chassisMesh.scale.set(0.022, 0.022, 0.022);
+                        chassisMesh.traverse(child => {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        scene.add(chassisMesh);
+                        // 隐藏默认轮子视觉，让模型自带轮子显现？或者保持原样（原代码未替换轮子视觉）
+                        // 为了视觉一致，我们隐藏物理轮子并让模型轮子跟随物理（这里简单处理：轮子仍为圆柱）
+                    },
+                    undefined,
+                    (error) => {
+                        console.error('模型加载失败，使用后备几何体', error);
+                        const backupGeo = new THREE.BoxGeometry(2, 0.8, 4);
+                        const backupMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                        chassisMesh = new THREE.Mesh(backupGeo, backupMat);
+                        chassisMesh.castShadow = true;
+                        chassisMesh.receiveShadow = true;
+                        scene.add(chassisMesh);
+                    }
+                );
+            }
+
+            function updateDrive() {
+                // 重置所有控制
+                carVehicle.applyEngineForce(0, 2);
+                carVehicle.applyEngineForce(0, 3);
+                carVehicle.setSteeringValue(0, 0);
+                carVehicle.setSteeringValue(0, 1);
+                carVehicle.setBrake(0, 0);
+                carVehicle.setBrake(0, 1);
+                carVehicle.setBrake(0, 2);
+                carVehicle.setBrake(0, 3);
+
+                // 根据按键输入驱动
+                if (keys.w) {
+                    carVehicle.applyEngineForce(-CONFIG.engineForce, 2);
+                    carVehicle.applyEngineForce(-CONFIG.engineForce, 3);
+                }
+                if (keys.s) {
+                    // 倒车/反向推进
+                    carVehicle.applyEngineForce(CONFIG.engineForce * 0.5, 2);
+                    carVehicle.applyEngineForce(CONFIG.engineForce * 0.5, 3);
+                }
+                if (keys.a) {
+                    carVehicle.setSteeringValue(CONFIG.steerValue, 0);
+                    carVehicle.setSteeringValue(CONFIG.steerValue, 1);
+                }
+                if (keys.d) {
+                    carVehicle.setSteeringValue(-CONFIG.steerValue, 0);
+                    carVehicle.setSteeringValue(-CONFIG.steerValue, 1);
+                }
+
+                // 没有前进/后退时轻制动
+                if (!keys.w && !keys.s) {
+                    const brake = CONFIG.brakeForce * 0.2;
+                    carVehicle.setBrake(brake, 0);
+                    carVehicle.setBrake(brake, 1);
+                }
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                world.step(1 / 60);
+
+                updateDrive();
+
+                // 同步底盘视觉
+                if (chassisMesh) {
+                    chassisMesh.position.copy(chassisBody.position);
+                    chassisMesh.quaternion.copy(chassisBody.quaternion);
+                }
+
+                // 同步轮子视觉
+                for (let i = 0; i < carVehicle.wheelInfos.length; i++) {
+                    carVehicle.updateWheelTransform(i);
+                    const t = carVehicle.wheelInfos[i].worldTransform;
+                    wheelMeshes[i].position.copy(t.position);
+                    wheelMeshes[i].quaternion.copy(t.quaternion);
+                }
+
+                // 更新主相机（跟随车辆）
+                const carPos = chassisBody.position;
+                const carQuat = chassisBody.quaternion;
+                const offset = CONFIG.cameraOffset.clone();
+
+                // 将偏移量转换到车辆局部方向
+                const offsetWorld = offset.clone().applyQuaternion(carQuat);
+                const targetPos = carPos.clone().add(offsetWorld);
+
+                camera.position.lerp(targetPos, CONFIG.cameraLerpFactor);
+                camera.lookAt(carPos);
+
+                // 更新小地图相机（正交俯视）
+                miniMapCamera.position.set(carPos.x, 100, carPos.z);
+                miniMapCamera.lookAt(carPos.x, 0, carPos.z);
+
+                // 渲染主场景
+                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+                renderer.setScissorTest(false);
+                renderer.render(scene, camera);
+
+                // 渲染小地图（右上角圆形区域）
+                const mapSize = CONFIG.minimapSize;
+                const margin = CONFIG.minimapMargin;
+                const x = window.innerWidth - mapSize - margin;
+                const y = window.innerHeight - mapSize - margin;
+
+                renderer.setScissorTest(true);
+                renderer.setScissor(x, y, mapSize, mapSize);
+                renderer.setViewport(x, y, mapSize, mapSize);
+                // 清除小地图区域背景
+                renderer.clear(true, true, true);
+                renderer.render(scene, miniMapCamera);
+                renderer.setScissorTest(false);
+
+                // 更新速度 UI
+                const speedKmh = (chassisBody.velocity.length() * 3.6).toFixed(0);
+                speedEl.textContent = speedKmh;
+                gearEl.textContent = 'D';
+            }
+
+            function setupControls() {
+                window.addEventListener('keydown', (e) => {
+                    const key = e.key.toLowerCase();
+                    if (key in keys) keys[key] = true;
+                });
+                window.addEventListener('keyup', (e) => {
+                    const key = e.key.toLowerCase();
+                    if (key in keys) keys[key] = false;
+                });
+                window.addEventListener('resize', () => {
+                    const w = window.innerWidth;
+                    const h = window.innerHeight;
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                });
+
+                // 移动端触摸控制（平滑体验）
+                // 简单补充：使用触摸事件模拟 WASD
+                let touchStartX = 0,
+                    touchStartY = 0;
+                window.addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+                    // 默认前进
+                    keys.w = true;
+                    keys.s = keys.a = keys.d = false;
+                });
+                window.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const dx = touch.clientX - touchStartX;
+                    const dy = touch.clientY - touchStartY;
+                    const threshold = 20;
+                    // 重置
+                    keys.w = keys.s = keys.a = keys.d = false;
+                    if (dy < -threshold) {
+                        keys.w = true;
+                    } else if (dy > threshold) {
+                        keys.s = true;
+                    } else {
+                        keys.w = true; // 默认前进
+                    }
+                    if (dx < -threshold) {
+                        keys.a = true;
+                    } else if (dx > threshold) {
+                        keys.d = true;
+                    }
+                });
+                window.addEventListener('touchend', (e) => {
+                    keys.w = keys.s = keys.a = keys.d = false;
+                });
+            }
+        })();
     </script>
+
 </body>
 </html>
