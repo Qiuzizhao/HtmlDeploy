@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>打靶射击小游戏</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#999;display:flex;flex-direction:column;align-items:center;padding:20px;overflow:hidden}
+        #game{
+            width:700px;height:500px;background:#fff;
+            border:3px solid #333;position:relative;cursor:crosshair;
+        }
+        .target{
+            border-radius:50%;position:absolute;transform:translate(-50%,-50%);
+        }
+        /*靶环颜色*/
+        .t1{width:120px;height:120px;background:#fff;border:3px solid black}
+        .t2{width:90px;height:90px;background:red;margin:15px auto;border-radius:50%}
+        .t3{width:50px;height:50px;background:#fff;margin:20px auto;border-radius:50%}
+        .t4{width:20px;height:20px;background:red;margin:15px auto;border-radius:50%}
+        .score-info{font-size:22px;margin-bottom:10px;font-weight:bold}
+        #restart{padding:7px 20px;margin-top:12px;font-size:17px;cursor:pointer}
+        .hit{position:absolute;color:red;font-weight:bold;font-size:24px;pointer-events:none}
+    </style>
+</head>
+<body>
+    <div class="score-info">得分：<span id="score">0</span>｜剩余子弹：<span id="bullet">15</span></div>
+    <div id="game"></div>
+    <button id="restart">重新开局</button>
+
+<script>
+const gameBox=document.getElementById('game');
+const scoreDom=document.getElementById('score');
+const bulletDom=document.getElementById('bullet');
+let score=0,bullet=15;
+
+//随机生成靶子
+function createTarget(){
+    gameBox.innerHTML='';
+    let x=Math.floor(Math.random()*550+80);
+    let y=Math.floor(Math.random()*350+80);
+    let tar=document.createElement('div');
+    tar.className='target t1';
+    tar.style.left=x+'px';tar.style.top=y+'px';
+    tar.innerHTML=`<div class="t2"><div class="t3"><div class="t4"></div></div></div>`;
+    gameBox.appendChild(tar);
+    return {x,y,dom:tar};
+}
+
+//初始化
+function init(){
+    score=0;bullet=15;
+    scoreDom.innerText=score;
+    bulletDom.innerText=bullet;
+    createTarget();
+}
+
+//点击射击
+gameBox.onclick=e=>{
+    if(bullet<=0)return;
+    bullet--;
+    bulletDom.innerText=bullet;
+    let tar=gameBox.querySelector('.target');
+    let tarRect=tar.getBoundingClientRect();
+    let gameRect=gameBox.getBoundingClientRect();
+    //点击相对坐标
+    let cx=e.clientX-gameRect.left;
+    let cy=e.clientY-gameRect.top;
+    let tx=tarRect.left-gameRect.left+tarRect.width/2;
+    let ty=tarRect.top-gameRect.top+tarRect.height/2;
+    //计算距离，越靠近中心分越高
+    let dis=Math.hypot(cx-tx,cy-ty);
+    let addScore=0;
+    if(dis<10)addScore=50;
+    else if(dis<25)addScore=30;
+    else if(dis<45)addScore=15;
+    else if(dis<60)addScore=5;
+    score+=addScore;
+    scoreDom.innerText=score;
+
+    //弹出得分文字
+    let tip=document.createElement('div');
+    tip.className='hit';
+    tip.innerText='+'+addScore;
+    tip.style.left=cx+'px';tip.style.top=cy+'px';
+    gameBox.appendChild(tip);
+    setTimeout(()=>tip.remove(),600);
+
+    //打中换新靶
+    if(addScore>0){
+        setTimeout(createTarget,300);
+    }
+}
+
+document.getElementById('restart').onclick=init;
+init();
+</script>
+</body>
+</html>
