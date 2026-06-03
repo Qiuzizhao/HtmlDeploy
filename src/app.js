@@ -89,6 +89,16 @@ function stripCodeFence(value) {
   return (fenced ? fenced[1] : content).trim();
 }
 
+function normalizeSiteTitle(value) {
+  return String(value || '')
+    .replace(/^["'“”‘’「」《》]+|["'“”‘’「」《》]+$/g, '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean)
+    ?.slice(0, 80)
+    .trim() || '';
+}
+
 function getLlmConfig(options = {}) {
   return {
     apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
@@ -160,6 +170,63 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
   }
 
   return optimizedContent;
+}
+
+async function nameSiteWithLlm({ codeSnapshot, currentTitle, author, llmConfig }) {
+  if (!llmConfig.apiKey) {
+    throw new Error('请先在服务器环境变量中配置 LLM_API_KEY 或 OPENAI_API_KEY');
+  }
+
+  const requestBody = {
+    model: llmConfig.model,
+    temperature: 0.3,
+    stream: false,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是网页项目命名助手。',
+          '请根据项目代码判断它是什么网页、小游戏或作品，并给出适合展示在项目卡片上的中文名称。',
+          '只返回一个名称，不要解释，不要标点包裹，不要 Markdown。',
+          '名称应简短具体，最好 2 到 12 个中文字符，最长不超过 20 个中文字符。'
+        ].join('\n')
+      },
+      {
+        role: 'user',
+        content: [
+          `当前名称：${currentTitle || '未命名项目'}`,
+          author ? `作者：${author}` : '',
+          '请阅读下面的项目代码并重新命名：',
+          String(codeSnapshot || '').slice(0, 60000)
+        ].filter(Boolean).join('\n\n')
+      }
+    ]
+  };
+
+  if (llmConfig.thinkingType) {
+    requestBody.thinking = { type: llmConfig.thinkingType };
+  }
+
+  const response = await fetch(getChatCompletionsUrl(llmConfig.baseUrl), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${llmConfig.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error?.message || `AI 命名接口调用失败：${response.status}`);
+  }
+
+  const title = normalizeSiteTitle(stripCodeFence(result.choices?.[0]?.message?.content || ''));
+  if (!title) {
+    throw new Error('AI 没有返回可用名称');
+  }
+
+  return title;
 }
 
 function getClassCookieName(classId) {
@@ -1761,6 +1828,69 @@ function createApp(options = {}) {
       const classes = await readClasses(classesFile);
       return res.json({
         site: toPublicSite(site, classes, thumbnailDir),
+        model: llmConfig.model
+      });
+    } catch (error) {
+      return res.status(error.message.includes('配置') ? 400 : 502).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/sites/:id/ai-name', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((item) => item.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const projectDir = path.join(storageDir, id);
+      if (!fs.existsSync(projectDir)) {
+        return res.status(404).json({ error: '项目文件不存在' });
+      }
+
+      const { combinedText } = await readProjectCodeSnapshot(projectDir);
+      if (!combinedText.trim()) {
+        return res.status(400).json({ error: '项目代码为空' });
+      }
+
+      const title = await nameSiteWithLlm({
+        codeSnapshot: combinedText,
+        currentTitle: sites[siteIndex].title,
+        author: sites[siteIndex].author,
+        llmConfig
+      });
+
+      if (sites[siteIndex].forbiddenWhitelist !== true) {
+        const settings = await readSettings(settingsFile);
+        const forbiddenMatch = findForbiddenWordMatch(
+          { title, author: sites[siteIndex].author || '' },
+          settings.forbiddenWords
+        );
+        if (forbiddenMatch) {
+          return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+        }
+      }
+
+      const latestSites = await readSites(dataFile);
+      const latestSiteIndex = latestSites.findIndex((item) => item.id === id);
+      if (latestSiteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const site = {
+        ...latestSites[latestSiteIndex],
+        title,
+        updatedAt: new Date().toISOString()
+      };
+      latestSites[latestSiteIndex] = site;
+      await writeSites(dataFile, latestSites);
+
+      const classes = await readClasses(classesFile);
+      return res.json({
+        site: toPublicSite(site, classes, thumbnailDir),
+        title,
         model: llmConfig.model
       });
     } catch (error) {

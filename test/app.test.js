@@ -157,8 +157,11 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
   assert.match(html, /textContent = 'AI优化'/);
+  assert.match(html, /textContent = aiNameButton\.disabled \? '命名中\.\.\.' : 'AI命名'/);
+  assert.match(html, /function nameSiteWithAi/);
   assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
   assert.match(html, /textContent = forbiddenWhitelisted \? '移出白名单' : '白名单'/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-name/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/enabled/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/forbidden-whitelist/);
@@ -1054,6 +1057,119 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
     assert.equal(requestPayload.model, 'fake-model');
     assert.equal(requestPayload.stream, false);
     assert.match(requestPayload.messages[1].content, /Original/);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('POST /api/sites/:id/ai-name names and saves a project title', async () => {
+  let requestPayload = null;
+  const llmServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    requestPayload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: '霓虹星跃'
+          }
+        }
+      ]
+    }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'ai-name'];
+    const { app, dataDir } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmThinkingType: 'disabled'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+    await agent
+      .post('/api/sites')
+      .field('title', '旧名字')
+      .field('author', '测试作者')
+      .field('classId', 'class-a')
+      .attach('file', Buffer.from('<!doctype html><canvas id="game"></canvas><script>let score=0;</script>'), { filename: 'game.html' })
+      .expect(201);
+
+    const response = await agent.post('/api/sites/ai-name/ai-name').send({}).expect(200);
+
+    assert.equal(response.body.site.id, 'ai-name');
+    assert.equal(response.body.site.title, '霓虹星跃');
+    assert.equal(response.body.title, '霓虹星跃');
+    assert.equal(response.body.model, 'fake-model');
+    assert.equal(requestPayload.model, 'fake-model');
+    assert.equal(requestPayload.stream, false);
+    assert.equal(requestPayload.thinking.type, 'disabled');
+    assert.match(requestPayload.messages[1].content, /canvas/);
+
+    const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+    assert.equal(sites[0].title, '霓虹星跃');
+    assert.ok(sites[0].updatedAt);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('POST /api/sites/:id/ai-name rejects forbidden AI titles', async () => {
+  const llmServer = http.createServer(async (req, res) => {
+    for await (const _chunk of req) {
+      // Drain request body.
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: '坏词游戏'
+          }
+        }
+      ]
+    }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'bad-ai-name'];
+    const { app, dataDir } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+    await agent
+      .post('/api/sites')
+      .field('title', '原名')
+      .field('author', '测试作者')
+      .field('classId', 'class-a')
+      .field('htmlContent', '<!doctype html><title>原名</title>')
+      .expect(201);
+    await agent
+      .put('/api/admin/settings')
+      .send({ allPassword: '111111', forbiddenWords: ['坏词'] })
+      .expect(200);
+
+    const response = await agent.post('/api/sites/bad-ai-name/ai-name').send({}).expect(400);
+    assert.match(response.body.error, /违禁词/);
+
+    const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+    assert.equal(sites[0].title, '原名');
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));
