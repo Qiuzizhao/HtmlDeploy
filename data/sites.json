@@ -343,12 +343,12 @@
   {
     "id": "33e43c09",
     "number": "00043",
-    "title": "奶龙",
+    "title": "奶龙左右移动",
     "author": "吴泽坤",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:59.638Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.402Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:02.868Z"
   },
   {
     "id": "faab8286",
