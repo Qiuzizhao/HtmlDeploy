@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>节奏音游 - 极简版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            font-size: 18px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .judge-line {
+            height: 80px;
+            background: rgba(255,255,255,0.1);
+            border-bottom: 3px solid #00ff88;
+            position: relative;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tracks {
+            display: flex;
+            height: 100%;
+        }
+
+        .track {
+            flex: 1;
+            border-right: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+        }
+
+        .track:last-child {
+            border-right: none;
+        }
+
+        .hit-btn {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 70px;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .hit-btn.active {
+            background: rgba(0,255,136,0.3);
+        }
+
+        .note {
+            position: absolute;
+            width: 90%;
+            height: 25px;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            border-radius: 5px;
+            left: 5%;
+            transition: top 0.05s linear;
+        }
+
+        .effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            opacity: 0;
+            animation: fadeOut 0.6s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translate(-50%, -60%); }
+            100% { opacity: 0; transform: translate(-50%, -90%); }
+        }
+
+        .start-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 18px;
+            background: #00ff88;
+            border: none;
+            border-radius: 30px;
+            color: #111;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="score-board">
+            <div>分数: <span id="score">0</span></div>
+            <div>连击: <span id="combo">0</span></div>
+        </div>
+
+        <div class="judge-line">
+            <div class="tracks">
+                <div class="track" data-track="0"><div class="hit-btn" data-btn="0"></div></div>
+                <div class="track" data-track="1"><div class="hit-btn" data-btn="1"></div></div>
+                <div class="track" data-track="2"><div class="hit-btn" data-btn="2"></div></div>
+                <div class="track" data-track="3"><div class="hit-btn" data-btn="3"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="start-btn" id="startBtn">开始游戏</button>
+
+    <script>
+        // 游戏核心数据
+        const game = {
+            score: 0,
+            combo: 0,
+            maxCombo: 0,
+            isPlaying: false,
+            notes: [],
+            speed: 3,
+            judgeLineY: 80,
+            audioCtx: null
+        };
+
+        // 音效对象
+        const sounds = {
+            hit: null,
+            perfect: null,
+            great: null
+        };
+
+        // 谱面（时间ms + 轨道0-3）
+        const chart = [
+            {time: 500, track: 0},
+            {time: 800, track: 2},
+            {time: 1100, track: 1},
+            {time: 1400, track: 3},
+            {time: 1700, track: 0},
+            {time: 2000, track: 2},
+            {time: 2300, track: 1},
+            {time: 2600, track: 3},
+            {time: 3000, track: 0},
+            {time: 3200, track: 1},
+            {time: 3400, track: 2},
+            {time: 3600, track: 3},
+            {time: 4000, track: 0},
+            {time: 4300, track: 2},
+            {time: 4600, track: 1},
+            {time: 4900, track: 3},
+        ];
+
+        // 初始化音频
+        function initAudio() {
+            game.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // 生成打击音效
+        function playSound(type) {
+            if (!game.audioCtx) return;
+            
+            const osc = game.audioCtx.createOscillator();
+            const gain = game.audioCtx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(game.audioCtx.destination);
+
+            if (type === 'perfect') {
+                osc.frequency.value = 800;
+                gain.gain.value = 0.3;
+            } else if (type === 'great') {
+                osc.frequency.value = 600;
+                gain.gain.value = 0.2;
+            } else {
+                osc.frequency.value = 400;
+                gain.gain.value = 0.15;
+            }
+
+            osc.start();
+            setTimeout(() => osc.stop(), 100);
+        }
+
+        // 创建音符
+        function createNote(track) {
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.dataset.track = track;
+            note.style.top = '0px';
+            
+            document.querySelector(`.track[data-track="${track}"]`).appendChild(note);
+            return note;
+        }
+
+        // 判定效果
+        function showEffect(text, color) {
+            const eff = document.createElement('div');
+            eff.className = 'effect';
+            eff.textContent = text;
+            eff.style.color = color;
+            document.body.appendChild(eff);
+            setTimeout(() => eff.remove(), 600);
+        }
+
+        // 点击判定
+        function hitNote(track) {
+            const trackEl = document.querySelector(`.track[data-track="${track}"]`);
+            const notes = trackEl.querySelectorAll('.note');
+            if (!notes.length) return;
+
+            let hit = false;
+            notes.forEach(note => {
+                const top = parseInt(note.style.top);
+                const diff = Math.abs(top - game.judgeLineY);
+
+                if (diff < 30) {
+                    // 完美
+                    game.score += 300;
+                    game.combo++;
+                    showEffect('PERFECT!', '#00ff88');
+                    playSound('perfect');
+                    note.remove();
+                    hit = true;
+                } else if (diff < 60) {
+                    // 优秀
+                    game.score += 150;
+                    game.combo++;
+                    showEffect('GREAT!', '#00ccff');
+                    playSound('great');
+                    note.remove();
+                    hit = true;
+                }
+            });
+
+            if (!hit) {
+                game.combo = 0;
+                showEffect('MISS', '#ff4444');
+            }
+
+            updateScore();
+        }
+
+        // 更新分数
+        function updateScore() {
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('combo').textContent = game.combo;
+            if (game.combo > game.maxCombo) game.maxCombo = game.combo;
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            if (!game.isPlaying) return;
+
+            game.notes.forEach((noteData, index) => {
+                const noteEl = noteData.element;
+                if (!noteEl) return;
+
+                // 音符下落
+                let top = parseInt(noteEl.style.top) || 0;
+                top += game.speed;
+                noteEl.style.top = top + 'px';
+
+                // 超出判定线未点击 = MISS
+                if (top > game.judgeLineY + 100) {
+                    noteEl.remove();
+                    game.notes[index] = null;
+                    game.combo = 0;
+                    updateScore();
+                }
+            });
+
+            game.notes = game.notes.filter(n => n);
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 生成谱面
+        function spawnNotes() {
+            const startTime = Date.now();
+            chart.forEach(n => {
+                setTimeout(() => {
+                    if (!game.isPlaying) return;
+                    const el = createNote(n.track);
+                    game.notes.push({element: el, track: n.track});
+                }, n.time);
+            });
+
+            // 游戏结束
+            setTimeout(() => {
+                if (!game.isPlaying) return;
+                game.isPlaying = false;
+                alert(`游戏结束！\n最终分数：${game.score}\n最大连击：${game.maxCombo}`);
+                document.getElementById('startBtn').style.display = 'block';
+            }, 6000);
+        }
+
+        // 开始游戏
+        document.getElementById('startBtn').addEventListener('click', () => {
+            // 重置游戏
+            game.score = 0;
+            game.combo = 0;
+            game.maxCombo = 0;
+            game.notes = [];
+            game.isPlaying = true;
+            
+            document.querySelectorAll('.note').forEach(n => n.remove());
+            updateScore();
+            initAudio();
+            
+            document.getElementById('startBtn').style.display = 'none';
+            spawnNotes();
+            gameLoop();
+        });
+
+        // 点击轨道判定
+        document.querySelectorAll('.hit-btn').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.classList.add('active');
+                hitNote(parseInt(btn.dataset.btn));
+            });
+            btn.addEventListener('mouseup', () => btn.classList.remove('active'));
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                btn.classList.add('active');
+                hitNote(parseInt(btn.dataset.btn));
+            });
+            btn.addEventListener('touchend', () => btn.classList.remove('active'));
+        });
+    </script>
+</body>
+</html>
