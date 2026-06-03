@@ -1,9 +1,8 @@
-```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>躲避球小游戏-高速版</title>
     <style>
         * {
@@ -22,21 +21,38 @@
             color: white;
             user-select: none;
             overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
         #gameCanvas {
             border: 3px solid #ffffff;
             background: #000;
             touch-action: none;
+            max-width: 100vw;
+            max-height: 80vh;
+            display: block;
         }
         .score {
             font-size: 24px;
             margin-bottom: 10px;
             font-weight: bold;
+            text-align: center;
         }
         .tips {
             margin-top: 10px;
             font-size: 16px;
             color: #ccc;
+            text-align: center;
+            padding: 0 12px;
+        }
+        @media (max-width: 420px) {
+            .score {
+                font-size: 20px;
+                margin-bottom: 6px;
+            }
+            .tips {
+                font-size: 13px;
+                margin-top: 6px;
+            }
         }
     </style>
 </head>
@@ -49,50 +65,58 @@
         (function() {
             'use strict';
 
+            // ─── DOM ──────────────────────────────────────────
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
-            const scoreElement = document.getElementById('score');
+            const scoreEl = document.getElementById('score');
 
             const W = canvas.width;
             const H = canvas.height;
 
-            const PLAYER_WIDTH = 30;
-            const PLAYER_HEIGHT = 30;
+            // ─── 配置 ─────────────────────────────────────────
+            const PLAYER_W = 30;
+            const PLAYER_H = 30;
             const PLAYER_SPEED = 6;
-            const PLAYER_START_X = W / 2 - PLAYER_WIDTH / 2;
+            const PLAYER_START_X = W / 2 - PLAYER_W / 2;
             const PLAYER_START_Y = H - 50;
 
-            const BALL_MIN_RADIUS = 12;
-            const BALL_MAX_RADIUS = 24;
-            const BALL_MIN_SPEED = 5;
-            const BALL_MAX_SPEED = 9;
+            const BALL_RADIUS_MIN = 12;
+            const BALL_RADIUS_MAX = 24;
+            const BALL_SPEED_MIN = 5;
+            const BALL_SPEED_MAX = 9;
             const SPAWN_INTERVAL_MS = 450;
 
+            // ─── 状态 ─────────────────────────────────────────
             const player = {
                 x: PLAYER_START_X,
                 y: PLAYER_START_Y,
-                w: PLAYER_WIDTH,
-                h: PLAYER_HEIGHT,
+                w: PLAYER_W,
+                h: PLAYER_H,
                 speed: PLAYER_SPEED
             };
 
             let balls = [];
-            let keys = {};
             let score = 0;
-            let lastDisplayedScore = -1;
             let gameOver = false;
             let gameRunning = false;
-            let spawnTimerId = null;
-            let animationFrameId = null;
 
-            // ── 键盘事件 ──
+            let animId = null;
+            let lastTime = 0;
+            let spawnAccum = 0;
+
+            // ─── 键盘 ─────────────────────────────────────────
+            const keys = {};
+
             function onKeyDown(e) {
                 const key = e.key;
                 keys[key] = true;
+
                 if (key === ' ') {
                     e.preventDefault();
                     if (gameOver) resetGame();
+                    return;
                 }
+
                 if (key.startsWith('Arrow')) {
                     e.preventDefault();
                 }
@@ -102,61 +126,98 @@
                 keys[e.key] = false;
             }
 
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
+            window.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keyup', onKeyUp);
 
-            // ── 小球生成 ──
+            // ─── 触摸 / 鼠标 ─────────────────────────────────
+            let touchActive = false;
+
+            function getCanvasCoords(clientX, clientY) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            function movePlayerTo(clientX, clientY) {
+                if (gameOver) return;
+                const pos = getCanvasCoords(clientX, clientY);
+                player.x = Math.max(0, Math.min(pos.x - player.w / 2, W - player.w));
+                player.y = Math.max(0, Math.min(pos.y - player.h / 2, H - player.h));
+            }
+
+            function onTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (!touch) return;
+                touchActive = true;
+                if (gameOver) {
+                    resetGame();
+                    return;
+                }
+                movePlayerTo(touch.clientX, touch.clientY);
+            }
+
+            function onTouchMove(e) {
+                e.preventDefault();
+                if (!touchActive || gameOver) return;
+                const touch = e.touches[0];
+                if (!touch) return;
+                movePlayerTo(touch.clientX, touch.clientY);
+            }
+
+            function onTouchEnd(e) {
+                e.preventDefault();
+                touchActive = false;
+            }
+
+            function onTouchCancel(e) {
+                e.preventDefault();
+                touchActive = false;
+            }
+
+            canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+            canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+            canvas.addEventListener('touchcancel', onTouchCancel, { passive: false });
+
+            // 鼠标支持（可选，提升桌面体验）
+            let mouseDown = false;
+
+            function onMouseDown(e) {
+                mouseDown = true;
+                if (gameOver) {
+                    resetGame();
+                    return;
+                }
+                movePlayerTo(e.clientX, e.clientY);
+            }
+
+            function onMouseMove(e) {
+                if (!mouseDown || gameOver) return;
+                movePlayerTo(e.clientX, e.clientY);
+            }
+
+            function onMouseUp(e) {
+                mouseDown = false;
+            }
+
+            canvas.addEventListener('mousedown', onMouseDown);
+            canvas.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+
+            // ─── 小球 ─────────────────────────────────────────
             function spawnBall() {
-                if (gameOver) return;
-                const radius = BALL_MIN_RADIUS + Math.random() * (BALL_MAX_RADIUS - BALL_MIN_RADIUS);
+                const radius = BALL_RADIUS_MIN + Math.random() * (BALL_RADIUS_MAX - BALL_RADIUS_MIN);
                 const x = radius + Math.random() * (W - 2 * radius);
-                const y = -radius;
-                const speed = BALL_MIN_SPEED + Math.random() * (BALL_MAX_SPEED - BALL_MIN_SPEED);
-                balls.push({ x, y, radius, speed });
+                const speed = BALL_SPEED_MIN + Math.random() * (BALL_SPEED_MAX - BALL_SPEED_MIN);
+                balls.push({ x, y: -radius, radius, speed });
             }
 
-            // ── 玩家移动 ──
-            function movePlayer() {
-                if (gameOver) return;
-                if (keys['ArrowLeft'] && player.x > 0) {
-                    player.x -= player.speed;
-                }
-                if (keys['ArrowRight'] && player.x < W - player.w) {
-                    player.x += player.speed;
-                }
-                if (keys['ArrowUp'] && player.y > 0) {
-                    player.y -= player.speed;
-                }
-                if (keys['ArrowDown'] && player.y < H - player.h) {
-                    player.y += player.speed;
-                }
-            }
-
-            // ── 更新小球 ──
-            function updateBalls() {
-                if (gameOver) return;
-                let scoreGain = 0;
-                const alive = [];
-                for (let i = 0; i < balls.length; i++) {
-                    const ball = balls[i];
-                    ball.y += ball.speed;
-                    if (ball.y - ball.radius > H) {
-                        scoreGain++;
-                    } else {
-                        alive.push(ball);
-                    }
-                }
-                balls = alive;
-                if (scoreGain > 0) {
-                    score += scoreGain;
-                    if (score !== lastDisplayedScore) {
-                        scoreElement.textContent = score;
-                        lastDisplayedScore = score;
-                    }
-                }
-            }
-
-            // ── 圆形与矩形碰撞检测 ──
+            // ─── 碰撞 ─────────────────────────────────────────
             function circleRectCollision(cx, cy, cr, rx, ry, rw, rh) {
                 const closestX = Math.max(rx, Math.min(cx, rx + rw));
                 const closestY = Math.max(ry, Math.min(cy, ry + rh));
@@ -165,8 +226,40 @@
                 return (dx * dx + dy * dy) < (cr * cr);
             }
 
-            function checkCollision() {
+            // ─── 更新 ─────────────────────────────────────────
+            function update(deltaMs) {
                 if (gameOver) return;
+
+                // 键盘移动
+                if (keys['ArrowLeft'] || keys['a']) player.x = Math.max(0, player.x - player.speed);
+                if (keys['ArrowRight'] || keys['d']) player.x = Math.min(W - player.w, player.x + player.speed);
+                if (keys['ArrowUp'] || keys['w']) player.y = Math.max(0, player.y - player.speed);
+                if (keys['ArrowDown'] || keys['s']) player.y = Math.min(H - player.h, player.y + player.speed);
+
+                // 生成小球（基于时间累积）
+                spawnAccum += deltaMs;
+                while (spawnAccum >= SPAWN_INTERVAL_MS) {
+                    spawnBall();
+                    spawnAccum -= SPAWN_INTERVAL_MS;
+                }
+
+                // 更新小球位置 & 计分
+                let gained = 0;
+                for (let i = balls.length - 1; i >= 0; i--) {
+                    const b = balls[i];
+                    b.y += b.speed;
+                    if (b.y - b.radius > H) {
+                        gained++;
+                        balls.splice(i, 1);
+                    }
+                }
+
+                if (gained > 0) {
+                    score += gained;
+                    scoreEl.textContent = score;
+                }
+
+                // 碰撞检测
                 const px = player.x;
                 const py = player.y;
                 const pw = player.w;
@@ -175,23 +268,21 @@
                     const b = balls[i];
                     if (circleRectCollision(b.x, b.y, b.radius, px, py, pw, ph)) {
                         gameOver = true;
-                        if (spawnTimerId !== null) {
-                            clearInterval(spawnTimerId);
-                            spawnTimerId = null;
-                        }
-                        return;
+                        break;
                     }
                 }
             }
 
-            // ── 渲染 ──
+            // ─── 渲染 ─────────────────────────────────────────
             function draw() {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, W, H);
 
+                // 玩家
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(player.x, player.y, player.w, player.h);
 
+                // 小球
                 ctx.fillStyle = '#ff3333';
                 for (let i = 0; i < balls.length; i++) {
                     const b = balls[i];
@@ -200,6 +291,7 @@
                     ctx.fill();
                 }
 
+                // 游戏结束
                 if (gameOver) {
                     ctx.fillStyle = '#ff3333';
                     ctx.font = '40px Arial';
@@ -213,57 +305,91 @@
                 }
             }
 
-            // ── 游戏主循环 ──
-            function gameLoop(timestamp) {
+            // ─── 主循环 ───────────────────────────────────────
+            function loop(timestamp) {
                 if (!gameRunning) return;
-                if (!gameOver) {
-                    movePlayer();
-                    updateBalls();
-                    checkCollision();
+
+                if (lastTime === 0) {
+                    lastTime = timestamp;
                 }
+
+                const delta = Math.min(timestamp - lastTime, 50); // 防止长时间切后台后跳跃
+                lastTime = timestamp;
+
+                update(delta);
                 draw();
-                animationFrameId = requestAnimationFrame(gameLoop);
+
+                animId = requestAnimationFrame(loop);
             }
 
-            // ── 重置游戏 ──
-            function resetGame() {
-                if (spawnTimerId !== null) {
-                    clearInterval(spawnTimerId);
-                    spawnTimerId = null;
+            function startLoop() {
+                if (animId !== null) return;
+                lastTime = 0;
+                spawnAccum = 0;
+                gameRunning = true;
+                animId = requestAnimationFrame(loop);
+            }
+
+            function stopLoop() {
+                if (animId !== null) {
+                    cancelAnimationFrame(animId);
+                    animId = null;
                 }
+                gameRunning = false;
+                lastTime = 0;
+            }
+
+            // ─── 重置 ─────────────────────────────────────────
+            function resetGame() {
+                stopLoop();
+
                 player.x = PLAYER_START_X;
                 player.y = PLAYER_START_Y;
                 balls = [];
                 score = 0;
-                lastDisplayedScore = -1;
-                scoreElement.textContent = '0';
+                spawnAccum = 0;
+                lastTime = 0;
                 gameOver = false;
-                spawnTimerId = setInterval(spawnBall, SPAWN_INTERVAL_MS);
+
+                scoreEl.textContent = '0';
+
+                startLoop();
             }
 
-            // ── 启动游戏 ──
-            function startGame() {
-                if (gameRunning) return;
-                gameRunning = true;
-                resetGame();
-                gameLoop();
-            }
-
-            startGame();
-
-            // ── 页面可见性变化时保持稳定 ──
-            document.addEventListener('visibilitychange', function() {
+            // ─── 可见性 ───────────────────────────────────────
+            function onVisibilityChange() {
                 if (document.hidden) {
-                    if (spawnTimerId !== null) {
-                        clearInterval(spawnTimerId);
-                        spawnTimerId = null;
+                    if (gameRunning) {
+                        stopLoop();
                     }
                 } else {
-                    if (gameRunning && !gameOver && spawnTimerId === null) {
-                        spawnTimerId = setInterval(spawnBall, SPAWN_INTERVAL_MS);
+                    if (!gameRunning && !gameOver) {
+                        // 游戏进行中被暂停，恢复
+                        startLoop();
+                    } else if (gameOver) {
+                        // 游戏结束状态，确保循环已停止
+                        if (animId !== null) {
+                            cancelAnimationFrame(animId);
+                            animId = null;
+                            gameRunning = false;
+                        }
+                        // 重新绘制一次显示结束画面
+                        draw();
                     }
                 }
+            }
+
+            document.addEventListener('visibilitychange', onVisibilityChange);
+
+            // 页面卸载时清理
+            window.addEventListener('beforeunload', function() {
+                stopLoop();
+                window.removeEventListener('keydown', onKeyDown);
+                window.removeEventListener('keyup', onKeyUp);
             });
+
+            // ─── 启动 ─────────────────────────────────────────
+            startLoop();
 
         })();
     </script>
