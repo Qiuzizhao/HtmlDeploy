@@ -865,7 +865,62 @@ function createApp(options = {}) {
   app.get('/api/admin/settings', requireAdmin, async (req, res, next) => {
     try {
       const settings = await readSettings(settingsFile);
+      if (req.query.includeForbiddenWords === 'false') {
+        const { forbiddenWords, ...summarySettings } = settings;
+        return res.json({
+          ...summarySettings,
+          forbiddenWordsCount: forbiddenWords?.length || 0
+        });
+      }
+
       return res.json(settings);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/admin/forbidden-words', requireAdmin, async (req, res, next) => {
+    try {
+      const settings = await readSettings(settingsFile);
+      const words = Array.isArray(settings.forbiddenWords) ? settings.forbiddenWords : [];
+      const query = String(req.query.q || '').trim();
+      const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
+      const limit = Math.min(200, Math.max(1, Number.parseInt(req.query.limit, 10) || 100));
+      const normalizedQuery = query.toLocaleLowerCase();
+      const filteredWords = normalizedQuery
+        ? words.filter((word) => String(word).toLocaleLowerCase().includes(normalizedQuery))
+        : words;
+
+      return res.json({
+        words: filteredWords.slice(offset, offset + limit),
+        total: filteredWords.length,
+        allTotal: words.length,
+        query,
+        offset,
+        limit
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/admin/forbidden-words', requireAdmin, async (req, res, next) => {
+    try {
+      const previousSettings = await readSettings(settingsFile);
+      const previousWords = Array.isArray(previousSettings.forbiddenWords) ? previousSettings.forbiddenWords : [];
+      const addedWords = normalizeForbiddenWords(req.body.forbiddenWords);
+      const forbiddenWords = normalizeForbiddenWords([...previousWords, ...addedWords]);
+      const settings = {
+        ...previousSettings,
+        forbiddenWords,
+        updatedAt: new Date().toISOString()
+      };
+
+      await writeSettings(settingsFile, settings);
+      return res.status(201).json({
+        added: forbiddenWords.length - previousWords.length,
+        total: forbiddenWords.length
+      });
     } catch (error) {
       next(error);
     }
