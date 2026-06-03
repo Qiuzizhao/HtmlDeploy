@@ -511,6 +511,53 @@ test('admin can disable a class password so visitors can read it without unlocki
   await visitor.get('/site/site-a').expect(200);
 });
 
+test('admin can disable a project so public lists and pages hide it', async () => {
+  const ids = ['class-a', 'visible-site', 'hidden-site'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const admin = request.agent(app);
+  const visitor = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await admin.patch('/api/classes/class-a/password-enabled').send({ passwordEnabled: false }).expect(200);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '可见项目')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>可见项目</title>')
+    .expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '隐藏项目')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>隐藏项目</title>')
+    .expect(201);
+
+  const disabled = await admin
+    .patch('/api/sites/hidden-site/enabled')
+    .send({ enabled: false })
+    .expect(200);
+  assert.equal(disabled.body.enabled, false);
+
+  const publicSites = await visitor.get('/api/sites?classId=class-a').expect(200);
+  assert.deepEqual(publicSites.body.map((site) => site.title), ['可见项目']);
+  await visitor.get('/site/visible-site').expect(200);
+  await visitor.get('/site/hidden-site').expect(404);
+
+  const adminSites = await admin.get('/api/admin/sites').expect(200);
+  assert.deepEqual(
+    adminSites.body.map((site) => [site.id, site.enabled]),
+    [
+      ['hidden-site', false],
+      ['visible-site', true]
+    ]
+  );
+});
+
 test('admin login does not unlock public class project lists', async () => {
   const ids = ['class-a', 'site-a'];
   const { app } = await makeTestApp({
