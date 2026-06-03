@@ -60,6 +60,26 @@ function normalizeForbiddenWords(value) {
   return words.slice(0, MAX_FORBIDDEN_WORDS);
 }
 
+function rankForbiddenWordMatch(word, normalizedQuery, originalIndex) {
+  const normalizedWord = String(word || '').toLocaleLowerCase();
+  const matchIndex = normalizedWord.indexOf(normalizedQuery);
+  return {
+    exact: normalizedWord === normalizedQuery ? 0 : 1,
+    prefix: normalizedWord.startsWith(normalizedQuery) ? 0 : 1,
+    matchIndex,
+    length: normalizedWord.length,
+    originalIndex
+  };
+}
+
+function compareForbiddenWordMatches(left, right) {
+  return left.rank.exact - right.rank.exact
+    || left.rank.prefix - right.rank.prefix
+    || left.rank.matchIndex - right.rank.matchIndex
+    || left.rank.length - right.rank.length
+    || left.rank.originalIndex - right.rank.originalIndex;
+}
+
 function findForbiddenWordMatch({ title, author }, forbiddenWords) {
   const fields = [
     { label: '网页名字', value: title },
@@ -1017,7 +1037,11 @@ function createApp(options = {}) {
       const limit = Math.min(200, Math.max(1, Number.parseInt(req.query.limit, 10) || 100));
       const normalizedQuery = query.toLocaleLowerCase();
       const filteredWords = normalizedQuery
-        ? words.filter((word) => String(word).toLocaleLowerCase().includes(normalizedQuery))
+        ? words
+          .map((word, originalIndex) => ({ word, rank: rankForbiddenWordMatch(word, normalizedQuery, originalIndex) }))
+          .filter((item) => item.rank.matchIndex !== -1)
+          .sort(compareForbiddenWordMatches)
+          .map((item) => item.word)
         : words;
 
       return res.json({

@@ -370,6 +370,24 @@ test('admin can query forbidden words without loading the full list', async () =
   assert.equal(filtered.body.allTotal, 251);
 });
 
+test('admin forbidden word search ranks exact and short matches first', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await agent
+    .put('/api/admin/settings')
+    .send({
+      allPassword: '111111',
+      forbiddenWords: ['abc1', '110', '21', '1号', '1', 'x1', '10']
+    })
+    .expect(200);
+
+  const response = await agent.get('/api/admin/forbidden-words?q=1&limit=10').expect(200);
+  assert.deepEqual(response.body.words, ['1', '10', '1号', '110', '21', 'x1', 'abc1']);
+  assert.equal(response.body.total, 7);
+});
+
 test('admin can delete forbidden words', async () => {
   const { app } = await makeTestApp();
   const agent = request.agent(app);
