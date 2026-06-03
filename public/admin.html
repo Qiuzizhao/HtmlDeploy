@@ -318,6 +318,18 @@
       align-items: end;
     }
 
+    .forbidden-words-form {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
+      gap: 12px;
+      padding: 16px 20px 0;
+      align-items: end;
+    }
+
+    .forbidden-words-form textarea {
+      min-height: 96px;
+    }
+
     .class-list {
       display: grid;
       gap: 10px;
@@ -547,6 +559,7 @@
       }
 
       .all-password-form,
+      .forbidden-words-form,
       .class-form {
         grid-template-columns: 1fr;
       }
@@ -687,6 +700,13 @@
             <button class="button" id="generateAllPassword" type="button">随机生成</button>
             <button class="primary-button" id="saveAllPassword" type="submit">保存全部密码</button>
           </form>
+          <form class="forbidden-words-form" id="forbiddenWordsForm">
+            <label>
+              违禁词
+              <textarea id="forbiddenWordsInput" name="forbiddenWords" placeholder="一行一个词，或用逗号分隔"></textarea>
+            </label>
+            <button class="primary-button" id="saveForbiddenWords" type="submit">保存违禁词</button>
+          </form>
           <form class="class-form" id="classForm">
             <label>
               班级名称
@@ -716,6 +736,8 @@
     const classForm = document.getElementById('classForm');
     const allPasswordForm = document.getElementById('allPasswordForm');
     const allPasswordInput = document.getElementById('allPasswordInput');
+    const forbiddenWordsForm = document.getElementById('forbiddenWordsForm');
+    const forbiddenWordsInput = document.getElementById('forbiddenWordsInput');
     const classNameInput = document.getElementById('classNameInput');
     const classPasswordInput = document.getElementById('classPasswordInput');
     const classList = document.getElementById('classList');
@@ -796,6 +818,45 @@
       button.textContent = isHidden ? '隐藏' : '显示';
     }
 
+    function parseForbiddenWords(value) {
+      const seen = new Set();
+      return String(value || '')
+        .split(/[\n,，、;；]+/)
+        .map((word) => word.trim())
+        .filter((word) => {
+          const key = word.toLocaleLowerCase();
+          if (!word || seen.has(key)) {
+            return false;
+          }
+
+          seen.add(key);
+          return true;
+        });
+    }
+
+    function formatForbiddenWords(words) {
+      return Array.isArray(words) ? words.join('\n') : '';
+    }
+
+    function findForbiddenWordMatch(title, author) {
+      const forbiddenWords = Array.isArray(settings.forbiddenWords) ? settings.forbiddenWords : [];
+      const fields = [
+        { label: '网页名字', value: title },
+        { label: '作者署名', value: author }
+      ];
+
+      for (const field of fields) {
+        const text = String(field.value || '').toLocaleLowerCase();
+        for (const word of forbiddenWords) {
+          if (text.includes(String(word).toLocaleLowerCase())) {
+            return `${field.label}不能包含违禁词「${word}」`;
+          }
+        }
+      }
+
+      return '';
+    }
+
     function fillClassSelect(select, value = '', emptyText = null) {
       select.innerHTML = '';
       const empty = document.createElement('option');
@@ -811,6 +872,32 @@
       });
 
       select.value = value;
+    }
+
+    function openProjectWindow(site) {
+      const availableWidth = window.screen?.availWidth || window.innerWidth;
+      const availableHeight = window.screen?.availHeight || window.innerHeight;
+      const width = Math.min(1280, Math.max(960, Math.round(availableWidth * 0.82)));
+      const height = Math.min(840, Math.max(640, Math.round(availableHeight * 0.82)));
+      const left = Math.max(0, Math.round((availableWidth - width) / 2));
+      const top = Math.max(0, Math.round((availableHeight - height) / 2));
+      const features = [
+        'popup=yes',
+        `width=${width}`,
+        `height=${height}`,
+        `left=${left}`,
+        `top=${top}`
+      ].join(',');
+      const targetName = `htmlDeployPreview_${String(site.id || 'site').replace(/[^a-z0-9_-]/gi, '_')}`;
+      const opened = window.open(site.previewUrl || site.url, targetName, features);
+
+      if (!opened) {
+        return false;
+      }
+
+      opened.opener = null;
+      opened.focus();
+      return true;
     }
 
     function renderClassList() {
@@ -916,6 +1003,7 @@
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
+      forbiddenWordsInput.value = formatForbiddenWords(settings.forbiddenWords);
     }
 
     async function saveAllPassword(event) {
@@ -942,6 +1030,27 @@
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
       setMessage(classMessage, '保存全部密码成功');
+    }
+
+    async function saveForbiddenWords(event) {
+      event.preventDefault();
+      const forbiddenWords = parseForbiddenWords(forbiddenWordsInput.value);
+
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forbiddenWords })
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存违禁词失败' }));
+        setMessage(classMessage, result.error || '保存违禁词失败', true);
+        return;
+      }
+
+      settings = await response.json();
+      forbiddenWordsInput.value = formatForbiddenWords(settings.forbiddenWords);
+      setMessage(classMessage, forbiddenWords.length ? `已保存 ${forbiddenWords.length} 个违禁词` : '已清空违禁词');
     }
 
     async function loadClasses() {
@@ -1055,6 +1164,11 @@
         previewLink.target = '_blank';
         previewLink.rel = 'noopener';
         previewLink.textContent = '预览';
+        previewLink.addEventListener('click', (event) => {
+          if (openProjectWindow(site)) {
+            event.preventDefault();
+          }
+        });
 
         const downloadLink = document.createElement('a');
         downloadLink.className = 'button';
@@ -1155,8 +1269,15 @@
       event.preventDefault();
       setMessage(createMessage, '');
 
+      const title = createTitle.value.trim();
+      const author = createAuthor.value.trim();
       const file = createFile.files && createFile.files[0];
       const htmlContent = createHtmlContent.value.trim();
+      const forbiddenMessage = findForbiddenWordMatch(title, author);
+      if (forbiddenMessage) {
+        setMessage(createMessage, forbiddenMessage, true);
+        return;
+      }
 
       if (!file && !htmlContent) {
         setMessage(createMessage, '请上传 HTML 文件或填写 HTML 代码', true);
@@ -1169,8 +1290,8 @@
       }
 
       const formData = new FormData();
-      formData.append('title', createTitle.value.trim());
-      formData.append('author', createAuthor.value.trim());
+      formData.append('title', title);
+      formData.append('author', author);
       formData.append('classId', createClassId.value);
       formData.append('htmlContent', htmlContent);
       if (file) {
@@ -1207,6 +1328,12 @@
 
       if (!author) {
         setMessage(listMessage, '作者署名不能为空', true);
+        return;
+      }
+
+      const forbiddenMessage = findForbiddenWordMatch(title, author);
+      if (forbiddenMessage) {
+        setMessage(listMessage, forbiddenMessage, true);
         return;
       }
 
@@ -1461,6 +1588,7 @@
     });
 
     allPasswordForm.addEventListener('submit', saveAllPassword);
+    forbiddenWordsForm.addEventListener('submit', saveForbiddenWords);
     const toggleAllPassword = document.getElementById('toggleAllPassword');
     toggleAllPassword.addEventListener('click', () => {
       togglePasswordVisibility(allPasswordInput, toggleAllPassword);

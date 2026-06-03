@@ -38,6 +38,49 @@ function isValidClassPassword(password) {
   return /^\d{6}$/.test(password);
 }
 
+function normalizeForbiddenWords(value) {
+  const items = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[\n,，、;；]+/);
+  const seen = new Set();
+  const words = [];
+
+  items.forEach((item) => {
+    const word = String(item || '').trim();
+    const key = word.toLocaleLowerCase();
+    if (!word || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    words.push(word);
+  });
+
+  return words.slice(0, 200);
+}
+
+function findForbiddenWordMatch({ title, author }, forbiddenWords) {
+  const fields = [
+    { label: '网页名字', value: title },
+    { label: '作者署名', value: author }
+  ];
+
+  for (const field of fields) {
+    const text = String(field.value || '').toLocaleLowerCase();
+    for (const word of forbiddenWords) {
+      if (text.includes(String(word).toLocaleLowerCase())) {
+        return { field: field.label, word };
+      }
+    }
+  }
+
+  return null;
+}
+
+function createForbiddenWordError(match) {
+  return `${match.field}不能包含违禁词「${match.word}」`;
+}
+
 function getClassCookieName(classId) {
   const digest = crypto.createHash('sha256').update(String(classId)).digest('hex').slice(0, 16);
   return `${CLASS_COOKIE_PREFIX}${digest}`;
@@ -304,7 +347,10 @@ async function readSettings(settingsFile) {
     await writeSettings(settingsFile, settings);
   }
 
-  return settings;
+  return {
+    ...settings,
+    forbiddenWords: normalizeForbiddenWords(settings.forbiddenWords)
+  };
 }
 
 async function writeSites(dataFile, sites) {
@@ -738,16 +784,33 @@ function createApp(options = {}) {
     }
   });
 
+  app.get('/api/upload-rules', async (req, res, next) => {
+    try {
+      const settings = await readSettings(settingsFile);
+      return res.json({
+        forbiddenWords: settings.forbiddenWords
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.put('/api/admin/settings', requireAdmin, async (req, res, next) => {
     try {
-      const allPassword = String(req.body.allPassword || '').trim();
+      const previousSettings = await readSettings(settingsFile);
+      const allPassword = req.body.allPassword === undefined
+        ? previousSettings.allPassword
+        : String(req.body.allPassword || '').trim();
       if (!isValidClassPassword(allPassword)) {
         return res.status(400).json({ error: '全部密码必须是 6 位数字' });
       }
 
       const settings = {
-        ...(await readSettings(settingsFile)),
+        ...previousSettings,
         allPassword,
+        forbiddenWords: req.body.forbiddenWords === undefined
+          ? previousSettings.forbiddenWords
+          : normalizeForbiddenWords(req.body.forbiddenWords),
         updatedAt: new Date().toISOString()
       };
       await writeSettings(settingsFile, settings);
@@ -987,6 +1050,12 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '作者署名不能为空' });
       }
 
+      const settings = await readSettings(settingsFile);
+      const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
+      if (forbiddenMatch) {
+        return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+      }
+
       if (!classItem) {
         return res.status(400).json({ error: '请选择有效班级' });
       }
@@ -1009,7 +1078,6 @@ function createApp(options = {}) {
       await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
 
       const sites = await readSites(dataFile);
-      const settings = await readSettings(settingsFile);
       const currentMax = sites.reduce((max, s) => Math.max(max, getSiteNumberValue(s)), 0);
       const nextNumberValue = Math.max(currentMax, settings.lastUsedSiteNumber || 0) + 1;
 
@@ -1135,6 +1203,12 @@ function createApp(options = {}) {
 
       if (!author) {
         return res.status(400).json({ error: '作者署名不能为空' });
+      }
+
+      const settings = await readSettings(settingsFile);
+      const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
+      if (forbiddenMatch) {
+        return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
       }
 
       if (!classItem) {

@@ -824,6 +824,7 @@
     let currentPreviewUrl = '';
     let currentPreviewExternalUrl = '';
     let classes = [];
+    let uploadRules = { forbiddenWords: [] };
     let currentClassId = '';
     const unlockedClassIds = new Set();
 
@@ -834,6 +835,25 @@
     function canUploadCurrentClass() {
       const currentClass = getCurrentClass();
       return Boolean(currentClassId && unlockedClassIds.has(currentClassId) && currentClass && currentClass.uploadEnabled !== false);
+    }
+
+    function findForbiddenWordMatch(title, author) {
+      const forbiddenWords = Array.isArray(uploadRules.forbiddenWords) ? uploadRules.forbiddenWords : [];
+      const fields = [
+        { label: '网页名字', value: title },
+        { label: '作者署名', value: author }
+      ];
+
+      for (const field of fields) {
+        const text = String(field.value || '').toLocaleLowerCase();
+        for (const word of forbiddenWords) {
+          if (text.includes(String(word).toLocaleLowerCase())) {
+            return `${field.label}不能包含违禁词「${word}」`;
+          }
+        }
+      }
+
+      return '';
     }
 
     function updateUploadButtonState() {
@@ -1176,6 +1196,16 @@
       renderClasses();
     }
 
+    async function loadUploadRules() {
+      const response = await fetch('/api/upload-rules');
+      if (!response.ok) {
+        uploadRules = { forbiddenWords: [] };
+        return;
+      }
+
+      uploadRules = await response.json();
+    }
+
     async function selectClass(classId) {
       currentClassId = classId;
       renderClasses();
@@ -1213,6 +1243,14 @@
 
       const file = fileInput.files && fileInput.files[0];
       const htmlContent = uploadHtmlContent.value.trim();
+      const title = titleInput.value.trim();
+      const author = authorInput.value.trim();
+      const forbiddenMessage = findForbiddenWordMatch(title, author);
+      if (forbiddenMessage) {
+        uploadMessage.textContent = forbiddenMessage;
+        return;
+      }
+
       if (!file && !htmlContent) {
         uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码。';
         return;
@@ -1225,8 +1263,8 @@
       }
 
       const formData = new FormData();
-      formData.append('title', titleInput.value.trim());
-      formData.append('author', authorInput.value.trim());
+      formData.append('title', title);
+      formData.append('author', author);
       formData.append('classId', currentClassId);
       formData.append('htmlContent', htmlContent);
       if (file) {
@@ -1277,6 +1315,7 @@
     });
 
     async function boot() {
+      await loadUploadRules();
       await loadClasses();
       await loadSites();
     }
