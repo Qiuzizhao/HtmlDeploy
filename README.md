@@ -177,7 +177,7 @@ export LLM_API_BASE_URL="https://api.openai.com/v1"
 export LLM_API_KEY="你的 DeepSeek API Key"
 export LLM_API_BASE_URL="https://api.deepseek.com"
 export LLM_MODEL="deepseek-v4-flash"
-export LLM_THINKING_TYPE="enabled"
+export LLM_THINKING_TYPE="disabled"
 export LLM_REASONING_EFFORT="high"
 ```
 
