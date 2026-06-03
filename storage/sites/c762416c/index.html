@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幽闭规则 - 3D恐怖怪谈</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: '微软雅黑', sans-serif;
+            cursor: crosshair;
+        }
+        /* 3D画布 */
+        #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        /* UI界面层 */
+        .ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        /* 规则面板 */
+        .rule-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.92);
+            border: 2px solid #8b0000;
+            padding: 25px;
+            color: #ff4444;
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: all;
+            line-height: 1.8;
+        }
+        .rule-panel.active {
+            opacity: 1;
+        }
+        .rule-title {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff0000;
+            letter-spacing: 2px;
+        }
+        .rule-content {
+            font-size: 16px;
+            margin-bottom: 25px;
+        }
+        .rule-item {
+            margin: 12px 0;
+            padding-left: 10px;
+            border-left: 2px solid #660000;
+        }
+        /* 选择按钮 */
+        .choice-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #1a1a1a;
+            color: #ff6666;
+            border: 1px solid #8b0000;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .choice-btn:hover {
+            background: #8b0000;
+            color: #fff;
+            box-shadow: 0 0 15px #ff0000;
+        }
+        /* 心跳提示 */
+        .heartbeat {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            color: #ff0000;
+            font-size: 14px;
+            text-shadow: 0 0 8px #ff0000;
+            opacity: 0.7;
+        }
+        /* 游戏结束界面 */
+        .ending-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ff0000;
+            font-size: 36px;
+            text-shadow: 0 0 20px #ff0000;
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: all;
+        }
+        .ending-panel.active {
+            opacity: 1;
+        }
+        .ending-desc {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #fff;
+        }
+        /* 加载界面 */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ff4444;
+        }
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            animation: fade 1.5s infinite;
+        }
+        @keyframes fade {
+            0%,100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 3D场景画布 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI层 -->
+    <div class="ui-layer">
+        <!-- 规则面板 -->
+        <div class="rule-panel" id="rulePanel">
+            <div class="rule-title">【幽闭房间生存规则】</div>
+            <div class="rule-content" id="ruleContent">
+                <div class="rule-item">1. 你被困在这间废弃房间内，必须严格遵守所有规则。</div>
+                <div class="rule-item">2. 房间里的规则会实时变化，违背规则将付出代价。</div>
+                <div class="rule-item">3. 绝对不要相信突然出现的红色文字。</div>
+                <div class="rule-item">4. 保持安静，它能听见你的心跳。</div>
+                <div class="rule-item">5. 做出你的选择，这将决定你的生死。</div>
+            </div>
+            <div class="choice-btn" id="choice1">遵守全部规则，等待救援</div>
+            <div class="choice-btn" id="choice2">无视规则，强行破门</div>
+            <div class="choice-btn" id="choice3">跟随红色文字的指示行动</div>
+        </div>
+
+        <!-- 心跳状态 -->
+        <div class="heartbeat" id="heartBeat">心跳：正常</div>
+
+        <!-- 结局面板 -->
+        <div class="ending-panel" id="endingPanel">
+            <div id="endingTitle"></div>
+            <div class="ending-desc" id="endingDesc"></div>
+        </div>
+    </div>
+
+    <!-- 加载界面 -->
+    <div class="loading" id="loading">
+        <div>正在进入幽闭规则...</div>
+        <div class="loading-text">加载3D恐怖场景中</div>
+    </div>
+
+    <!-- 音频 -->
+    <audio id="bgm" loop volume="0.3">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-horror-atmosphere-ambience-790.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="heartbeatAudio" loop volume="0.5">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-heartbeat-pulse-steady-499.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="scareAudio" volume="0.8">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-horror-jumpscare-sting-1709.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // 基础变量
+        let scene, camera, renderer;
+        let playerSpeed = 0.05;
+        let isGameOver = false;
+        let heartbeatLevel = 1;
+
+        // DOM元素
+        const loading = document.getElementById('loading');
+        const rulePanel = document.getElementById('rulePanel');
+        const endingPanel = document.getElementById('endingPanel');
+        const heartBeat = document.getElementById('heartBeat');
+        const endingTitle = document.getElementById('endingTitle');
+        const endingDesc = document.getElementById('endingDesc');
+        
+        // 音频
+        const bgm = document.getElementById('bgm');
+        const heartbeatAudio = document.getElementById('heartbeatAudio');
+        const scareAudio = document.getElementById('scareAudio');
+
+        // 初始化3D场景
+        function init3D() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+            scene.fog = new THREE.Fog(0x000000, 5, 15);
+
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.7, 3);
+
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // 添加灯光
+            const ambientLight = new THREE.AmbientLight(0x222222, 0.3);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0x8b0000, 1, 10);
+            pointLight.position.set(0, 2, 0);
+            pointLight.castShadow = true;
+            scene.add(pointLight);
+
+            // 创建房间
+            createRoom();
+
+            // 渲染循环
+            animate();
+        }
+
+        // 创建3D房间
+        function createRoom() {
+            // 地面
+            const groundGeometry = new THREE.PlaneGeometry(20, 20);
+            const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // 墙壁
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
+            
+            // 后墙
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 6), wallMaterial);
+            backWall.position.set(0, 3, -8);
+            scene.add(backWall);
+            
+            // 左墙
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 6), wallMaterial);
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.position.set(-5, 3, -3);
+            scene.add(leftWall);
+            
+            // 右墙
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 6), wallMaterial);
+            rightWall.rotation.y = -Math.PI / 2;
+            rightWall.position.set(5, 3, -3);
+            scene.add(rightWall);
+
+            // 恐怖家具
+            const chairGeometry = new THREE.BoxGeometry(0.5, 1, 0.5);
+            const chair = new THREE.Mesh(chairGeometry, new THREE.MeshStandardMaterial({ color: 0x222222 }));
+            chair.position.set(-1.5, 0.5, -2);
+            scene.add(chair);
+        }
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            if(isGameOver) return;
+
+            // 心跳动态效果
+            heartbeatAudio.volume = heartbeatLevel * 0.5;
+            if(heartbeatLevel > 1) {
+                camera.position.y += Math.sin(Date.now() * 0.01) * 0.02;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // 游戏初始化
+        function startGame() {
+            // 播放音效
+            bgm.play().catch(err => console.log('音频需用户交互后播放'));
+            heartbeatAudio.play().catch(err => console.log('音频需用户交互后播放'));
+            
+            // 显示规则面板
+            rulePanel.classList.add('active');
+            loading.style.display = 'none';
+        }
+
+        // 心跳升级
+        function increaseHeartbeat() {
+            heartbeatLevel = 2;
+            heartBeat.textContent = "心跳：急促！！";
+            heartBeat.style.fontSize = "18px";
+            heartBeat.style.opacity = "1";
+        }
+
+        // 游戏结局
+        function showEnding(isGoodEnding) {
+            isGameOver = true;
+            rulePanel.classList.remove('active');
+            heartbeatAudio.pause();
+            bgm.volume = 0.1;
+
+            if(isGoodEnding) {
+                // 好结局
+                endingTitle.textContent = "【生还】";
+                endingDesc.textContent = "你严格遵守了规则，成功等到了救援，逃离了这个房间";
+                endingTitle.style.color = "#00ff00";
+                endingTitle.style.textShadow = "0 0 20px #00ff00";
+            } else {
+                // 坏结局
+                scareAudio.play();
+                endingTitle.textContent = "【死亡】";
+                endingDesc.textContent = "你违背了规则，被房间里的存在吞噬，永远被困于此";
+            }
+            
+            endingPanel.classList.add('active');
+        }
+
+        // 按钮事件
+        document.getElementById('choice1').addEventListener('click', () => {
+            increaseHeartbeat();
+            setTimeout(() => showEnding(true), 2000);
+        });
+
+        document.getElementById('choice2').addEventListener('click', () => {
+            increaseHeartbeat();
+            setTimeout(() => showEnding(false), 1500);
+        });
+
+        document.getElementById('choice3').addEventListener('click', () => {
+            increaseHeartbeat();
+            setTimeout(() => showEnding(false), 1500);
+        });
+
+        // 窗口适配
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 点击页面启动游戏（解决音频自动播放限制）
+        document.addEventListener('click', () => {
+            if(loading.style.display !== 'none') startGame();
+        }, { once: true });
+
+        // 启动3D场景
+        init3D();
+    </script>
+</body>
+</html>
