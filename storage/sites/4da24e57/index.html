@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>躺平发育 - 猛鬼宿舍</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif}
+        body{background:#1a1a2e;color:#fff;overflow:hidden}
+        .game-container{width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#2a2a3e,#121218)}
+        .game-header{font-size:28px;margin-bottom:15px;color:#00ffcc;text-shadow:0 0 10px #00ffcc}
+        .game-info{display:flex;gap:30px;margin-bottom:10px;font-size:18px}
+        .info-item{padding:5px 15px;background:#333;border-radius:10px;border:1px solid #555}
+        .game-map{width:800px;height:500px;background:#111;border:3px solid #444;border-radius:10px;position:relative;overflow:hidden}
+        .room{width:120px;height:100px;background:#222;border:2px solid #666;border-radius:8px;position:absolute;display:flex;align-items:center;justify-content:center;cursor:pointer}
+        .room-empty{background:#181825}
+        .room-door{width:40px;height:80px;background:#666;border:2px solid #888;position:absolute;right:0;top:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold}
+        .room-bed{width:35px;height:35px;background:#ffd700;border-radius:50%;position:absolute;left:20px;top:30px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:bold}
+        .tower{width:30px;height:30px;background:#ff4444;border-radius:5px;position:absolute;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;box-shadow:0 0 8px #ff4444}
+        .ghost{width:50px;height:50px;background:#7700ff;border-radius:50%;position:absolute;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;box-shadow:0 0 15px #7700ff;animation:ghostFloat 1s infinite alternate}
+        @keyframes ghostFloat{0%{transform:translateY(0)}100%{transform:translateY(-5px)}}
+        .build-panel{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;background:#222;padding:10px;border-radius:10px;border:2px solid #555}
+        .build-btn{padding:8px 12px;background:#333;color:#fff;border:1px solid #777;border-radius:5px;cursor:pointer;transition:.3s}
+        .build-btn:hover{background:#444;border-color:#00ffcc}
+        .build-btn.disabled{background:#222;color:#666;cursor:not-allowed}
+        .game-over{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.9);padding:40px 60px;border-radius:15px;border:3px solid #ff4444;text-align:center;z-index:99}
+        .game-over h2{font-size:36px;color:#ff4444;margin-bottom:20px}
+        .game-over p{font-size:20px;margin-bottom:15px}
+        .restart-btn{padding:10px 25px;background:#00ffcc;color:#000;border:none;border-radius:8px;font-size:18px;cursor:pointer;margin-top:10px}
+        .win{border-color:#00ffcc}
+        .win h2{color:#00ffcc}
+        .hide{display:none}
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">🛏️ 躺平发育 · 猛鬼宿舍</div>
+        <div class="game-info">
+            <div class="info-item">金币：<span id="gold">50</span></div>
+            <div class="info-item">门等级：<span id="door-level">1</span></div>
+            <div class="info-item">床等级：<span id="bed-level">1</span></div>
+            <div class="info-item">猛鬼血量：<span id="ghost-hp">100</span></div>
+        </div>
+        <div class="game-map" id="map">
+            <!-- 房间 -->
+            <div class="room room-empty" id="room1" style="top:50px;left:100px">
+                <div class="room-door" id="door">1级门</div>
+                <div class="room-bed" id="bed">+1</div>
+            </div>
+            <!-- 猛鬼 -->
+            <div class="ghost hide" id="ghost">猛鬼</div>
+            <!-- 建造面板 -->
+            <div class="build-panel">
+                <button class="build-btn" id="build-door">升级门(50)</button>
+                <button class="build-btn" id="build-bed">升级床(50)</button>
+                <button class="build-btn" id="build-tower">建造炮台(80)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏结束弹窗 -->
+    <div class="game-over hide" id="game-over">
+        <h2 id="result-title">游戏结束</h2>
+        <p id="result-desc">猛鬼攻破了你的房门！</p>
+        <button class="restart-btn" onclick="restartGame()">重新开始</button>
+    </div>
+
+    <script>
+        // 游戏数据
+        const game = {
+            gold: 50,
+            doorLevel: 1,
+            doorHp: 100,
+            bedLevel: 1,
+            ghostHp: 100,
+            ghostAttack: 10,
+            isStarted: false,
+            isGameOver: false,
+            goldInterval: null,
+            ghostInterval: null,
+            towerList: []
+        }
+
+        // DOM元素
+        const goldEl = document.getElementById('gold');
+        const doorLevelEl = document.getElementById('door-level');
+        const bedLevelEl = document.getElementById('bed-level');
+        const ghostHpEl = document.getElementById('ghost-hp');
+        const roomEl = document.getElementById('room1');
+        const doorEl = document.getElementById('door');
+        const bedEl = document.getElementById('bed');
+        const ghostEl = document.getElementById('ghost');
+        const gameOverEl = document.getElementById('game-over');
+        const resultTitleEl = document.getElementById('result-title');
+        const resultDescEl = document.getElementById('result-desc');
+
+        // 进入房间（躺平）
+        roomEl.onclick = () => {
+            if(game.isStarted || game.isGameOver) return;
+            startGame();
+        }
+
+        // 游戏开始
+        function startGame(){
+            game.isStarted = true;
+            roomEl.classList.remove('room-empty');
+            ghostEl.classList.remove('hide');
+            ghostEl.style.top = '50px';
+            ghostEl.style.left = '250px';
+            
+            // 自动产金币
+            game.goldInterval = setInterval(() => {
+                game.gold += game.bedLevel;
+                updateUI();
+            }, 1000);
+
+            // 猛鬼攻击
+            game.ghostInterval = setInterval(ghostAttack, 1500);
+
+            // 绑定建造按钮
+            document.getElementById('build-door').onclick = upgradeDoor;
+            document.getElementById('build-bed').onclick = upgradeBed;
+            document.getElementById('build-tower').onclick = buildTower;
+
+            updateUI();
+        }
+
+        // 更新界面
+        function updateUI(){
+            goldEl.textContent = game.gold;
+            doorLevelEl.textContent = game.doorLevel;
+            bedLevelEl.textContent = game.bedLevel;
+            ghostHpEl.textContent = game.ghostHp;
+            doorEl.textContent = `${game.doorLevel}级门`;
+            bedEl.textContent = `+${game.bedLevel}`;
+        }
+
+        // 升级门
+        function upgradeDoor(){
+            const cost = game.doorLevel * 50;
+            if(game.gold < cost || game.isGameOver) return;
+            game.gold -= cost;
+            game.doorLevel++;
+            game.doorHp = game.doorLevel * 100;
+            updateUI();
+        }
+
+        // 升级床
+        function upgradeBed(){
+            const cost = game.bedLevel * 50;
+            if(game.gold < cost || game.isGameOver) return;
+            game.gold -= cost;
+            game.bedLevel++;
+            updateUI();
+        }
+
+        // 建造炮台
+        function buildTower(){
+            if(game.gold < 80 || game.isGameOver) return;
+            game.gold -= 80;
+            
+            const tower = document.createElement('div');
+            tower.className = 'tower';
+            tower.textContent = '炮';
+            tower.style.top = '60px';
+            tower.style.left = '160px';
+            document.getElementById('map').appendChild(tower);
+            
+            game.towerList.push(tower);
+            updateUI();
+            
+            // 炮台自动攻击
+            setInterval(() => {
+                if(game.ghostHp > 0 && !game.isGameOver) ghostDamage(5);
+            }, 1000);
+        }
+
+        // 猛鬼攻击门
+        function ghostAttack(){
+            if(game.isGameOver) return;
+            game.doorHp -= game.ghostAttack;
+            
+            if(game.doorHp <= 0){
+                gameOver(false);
+            }
+        }
+
+        // 炮台攻击猛鬼
+        function ghostDamage(damage){
+            if(game.ghostHp <= 0) return;
+            game.ghostHp -= damage;
+            if(game.ghostHp <= 0){
+                gameOver(true);
+            }
+            updateUI();
+        }
+
+        // 游戏结束
+        function gameOver(isWin){
+            game.isGameOver = true;
+            clearInterval(game.goldInterval);
+            clearInterval(game.ghostInterval);
+            gameOverEl.classList.remove('hide');
+            
+            if(isWin){
+                resultTitleEl.textContent = '🎉 游戏胜利';
+                resultDescEl.textContent = '你成功击败了猛鬼！';
+                gameOverEl.classList.add('win');
+            }else{
+                resultTitleEl.textContent = '💀 游戏失败';
+                resultDescEl.textContent = '房门被猛鬼攻破了！';
+            }
+        }
+
+        // 重新开始
+        function restartGame(){
+            location.reload();
+        }
+    </script>
+</body>
+</html>
