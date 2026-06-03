@@ -34,6 +34,10 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
+    body.is-code-window-open {
+      overflow: hidden;
+    }
+
     button,
     input,
     select,
@@ -1082,6 +1086,7 @@
     function closeCodeWindow() {
       codeOverlay.classList.remove('is-open');
       codeOverlay.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('is-code-window-open');
       currentCodeSite = null;
       codeEditor.value = '';
       codeFileInput.value = '';
@@ -1115,6 +1120,7 @@
       codeWindowMeta.textContent = `${site.number || site.id} · ${site.url}`;
       codeOverlay.classList.add('is-open');
       codeOverlay.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('is-code-window-open');
       await loadSiteCode(site);
     }
 
@@ -1909,6 +1915,11 @@
         closeCodeWindow();
       }
     });
+    codeOverlay.addEventListener('wheel', (event) => {
+      if (event.target !== codeEditor) {
+        event.preventDefault();
+      }
+    }, { passive: false });
 
     async function boot() {
       await loadSettings();
