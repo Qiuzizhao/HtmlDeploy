@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>节奏音游 - 极致优化版</title>
+    <title>节奏音游 - 修正掉落版</title>
     <style>
         * {
             margin: 0;
@@ -49,23 +49,20 @@
             overflow: hidden;
             border: 2px solid #7c3aed;
             flex-shrink: 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* 判定线 */
+        /* 这里的 line 距离底部 100px，相当于距离顶部 420px */
         .line {
             position: absolute;
             bottom: 100px;
             left: 0;
             width: 100%;
-            height: 4px;
+            height: 3px;
             background: linear-gradient(90deg, #7c3aed, #ec4899);
             z-index: 10;
             pointer-events: none;
-            box-shadow: 0 0 8px #7c3aed;
         }
 
-        /* 轨道容器 */
         .lanes {
             position: absolute;
             bottom: 0;
@@ -73,106 +70,62 @@
             width: 100%;
             height: 100px;
             display: flex;
-            background: rgba(255, 255, 255, 0.02);
         }
 
         .lane {
             flex: 1;
             border-top: 1px solid #3f3f74;
-            border-right: 1px solid rgba(63, 63, 116, 0.3);
+            border-right: 1px solid rgba(63, 63, 116, 0.5);
             cursor: pointer;
             position: relative;
-            transition: background-color 0.05s ease;
         }
-        .lane:last-child {
-            border-right: none;
-        }
+        .lane:last-child { border-right: none; }
 
-        /* 轨道点击/按住时的高亮反馈 */
-        .lane.active {
-            background-color: rgba(124, 58, 237, 0.2);
-        }
-
-        /* 音符 */
+        /* 【修正】音符现在相对于 .game 绝对定位，从 top: 0 开始往下掉 */
         .note {
             position: absolute;
-            width: 80%;
-            height: 16px;
+            top: 0;
+            width: 20%; 
+            height: 18px;
             background: linear-gradient(90deg, #a78bfa, #ec4899);
-            border-radius: 8px;
-            left: 10%;
+            border-radius: 9px;
             will-change: transform;
             pointer-events: none;
-            box-shadow: 0 2px 6px rgba(236, 72, 153, 0.4);
         }
 
-        /* 打击特效提示 */
         .effect {
             position: absolute;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
-            left: var(--effect-left, 50%);
-            top: 380px;
+            color: white;
+            left: 50%;
+            top: 420px; /* 特效显示在判定线附近 */
             transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 20;
-            animation: effectFly 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
-            text-shadow: 0 0 8px rgba(0,0,0,0.8);
+            animation: effectFly 0.5s ease-out forwards;
         }
 
         @keyframes effectFly {
-            0% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(0.8);
-            }
-            30% {
-                transform: translate(-50%, -50%) scale(1.1);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -100px) scale(1);
-            }
+            0% { opacity: 1; transform: translate(-50%, -50%); }
+            100% { opacity: 0; transform: translate(-50%, -120px); }
         }
 
         #start {
-            padding: 12px 36px;
+            padding: 10px 28px;
             border-radius: 30px;
             border: none;
-            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            background: #7c3aed;
             color: white;
             font-size: 16px;
-            font-weight: bold;
             cursor: pointer;
             user-select: none;
-            transition: transform 0.1s, box-shadow 0.2s;
+            transition: transform 0.1s, background 0.2s;
             touch-action: manipulation;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
         }
 
-        #start:active {
-            transform: scale(0.95);
-        }
-
-        #start:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* PC端按键提示小标签 */
-        .key-tip {
-            position: absolute;
-            bottom: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            color: #6366f1;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            pointer-events: none;
-        }
+        #start:active { transform: scale(0.96); }
+        #start:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     </style>
 </head>
 <body>
@@ -181,11 +134,11 @@
 
     <div class="game" id="gameContainer">
         <div class="line"></div>
-        <div class="lanes" id="lanesContainer">
-            <div class="lane" data-lane="0"><span class="key-tip">D</span></div>
-            <div class="lane" data-lane="1"><span class="key-tip">F</span></div>
-            <div class="lane" data-lane="2"><span class="key-tip">J</span></div>
-            <div class="lane" data-lane="3"><span class="key-tip">K</span></div>
+        <div class="lanes">
+            <div class="lane" data-lane="0"></div>
+            <div class="lane" data-lane="1"></div>
+            <div class="lane" data-lane="2"></div>
+            <div class="lane" data-lane="3"></div>
         </div>
     </div>
 
@@ -195,35 +148,28 @@
         (function() {
             "use strict";
 
-            // ---------- DOM 引用 ----------
             const scoreEl = document.getElementById('score');
             const gameEl = document.getElementById('gameContainer');
-            const lanesContainer = document.getElementById('lanesContainer');
             const laneEls = document.querySelectorAll('.lane');
             const startBtn = document.getElementById('start');
 
-            // ---------- 常量 ----------
-            const SPEED = 380; // 像素/秒
+            // ---------- 【修正】调整了判定高度数值 ----------
+            const SPEED = 360; 
             const LANE_COUNT = 4;
             const GAME_DURATION_MS = 5000;
-            const JUDGE_MIN = 340; // 扩大了微小的判定范围提高容错率
-            const JUDGE_MAX = 430;
-            const REMOVE_Y = 410;
+            const JUDGE_MIN = 390; // 判定线是 420px 处，给上下留出判定区间
+            const JUDGE_MAX = 450;
+            const REMOVE_Y = 530;  // 超过游戏高度(520px)后销毁
             const NOTE_INIT_Y = -20;
             const SCORE_PER_HIT = 100;
             const MAX_DELTA_MS = 50; 
-            
-            // 键盘映射表
-            const KEY_MAP = { 'd': 0, 'f': 1, 'j': 2, 'k': 3, 'D': 0, 'F': 1, 'J': 2, 'K': 3 };
 
-            // ---------- 状态 ----------
             let score = 0;
             let running = false;
             let rafId = null;
             let timers = [];
-            let notes = [];
+            const notes = [];
 
-            // ---------- 谱面 ----------
             const MAP = [
                 { lane: 0, t: 500 },
                 { lane: 2, t: 800 },
@@ -239,45 +185,45 @@
                 { lane: 3, t: 3800 },
             ];
 
-            // ---------- 工具函数 ----------
             function safeSplice(arr, item) {
-                const idx = arr.indexOf(item);
+                var idx = arr.indexOf(item);
                 if (idx !== -1) arr.splice(idx, 1);
             }
 
             function clearTimers() {
-                timers.forEach(clearTimeout);
+                timers.forEach(function(t) { clearTimeout(t); });
                 timers = [];
             }
 
-            // ---------- 特效 ----------
             function showEffect(text, laneIndex, color) {
-                const e = document.createElement('div');
+                var e = document.createElement('div');
                 e.className = 'effect';
                 e.textContent = text;
                 e.style.color = color;
 
-                // 计算轨道中心相对于 game 容器的百分比位置（使用 CSS 变量提高灵活性）
-                const laneWidth = 100 / LANE_COUNT;
-                const leftPercent = laneIndex * laneWidth + laneWidth / 2;
-                e.style.setProperty('--effect-left', `${leftPercent}%`);
+                var laneWidth = 100 / LANE_COUNT;
+                var leftPercent = laneIndex * laneWidth + laneWidth / 2;
+                e.style.left = leftPercent + '%';
+                e.style.top = '420px'; 
 
                 gameEl.appendChild(e);
-                
-                const timer = setTimeout(() => {
-                    e.remove();
-                }, 400);
+                var timer = setTimeout(function() {
+                    if (e.parentNode) e.remove();
+                }, 500);
                 timers.push(timer);
             }
 
-            // ---------- 音符管理 ----------
+            // ---------- 【修正】音符生成在 game 容器中 ----------
             function spawn(laneIndex) {
-                const lane = laneEls[laneIndex];
-                if (!lane) return;
-                
-                const note = document.createElement('div');
+                var note = document.createElement('div');
                 note.className = 'note';
-                lane.appendChild(note);
+                
+                // 计算横向百分比定位
+                var laneWidth = 100 / LANE_COUNT;
+                var leftPercent = laneIndex * laneWidth + (laneWidth - 20) / 2; // 居中处理
+                note.style.left = leftPercent + '%';
+                
+                gameEl.appendChild(note); // 挂载到大背景上
                 
                 notes.push({
                     dom: note,
@@ -287,23 +233,26 @@
             }
 
             function removeNote(noteObj) {
-                if (noteObj.dom) noteObj.dom.remove();
+                if (noteObj.dom && noteObj.dom.parentNode) {
+                    noteObj.dom.remove();
+                }
                 safeSplice(notes, noteObj);
             }
 
             function clearAllNotes() {
-                notes.forEach(n => { if (n.dom) n.dom.remove(); });
+                for (var i = notes.length - 1; i >= 0; i--) {
+                    var n = notes[i];
+                    if (n.dom && n.dom.parentNode) n.dom.remove();
+                }
                 notes.length = 0;
             }
 
-            // ---------- 更新逻辑 ----------
             function updateNotes(deltaSec) {
-                const move = SPEED * deltaSec;
-                // 从后往前遍历防漏掉索引
-                for (let i = notes.length - 1; i >= 0; i--) {
-                    const n = notes[i];
+                var move = SPEED * deltaSec;
+                for (var i = notes.length - 1; i >= 0; i--) {
+                    var n = notes[i];
                     n.y += move;
-                    n.dom.style.transform = `translateY(${n.y}px)`;
+                    n.dom.style.transform = 'translateY(' + n.y + 'px)';
 
                     if (n.y > REMOVE_Y) {
                         removeNote(n);
@@ -311,16 +260,16 @@
                 }
             }
 
-            // ---------- 判定 ----------
+            // ---------- 【修正】判定核心逻辑优化 ----------
             function judge(laneIndex) {
                 if (!running) return;
 
-                let hit = null;
-                // 寻找该轨道上最接近判定线中点的音符
-                for (let i = 0; i < notes.length; i++) {
-                    const n = notes[i];
+                var hit = null;
+                for (var i = 0; i < notes.length; i++) {
+                    var n = notes[i];
                     if (n.lane === laneIndex && n.y > JUDGE_MIN && n.y < JUDGE_MAX) {
-                        if (!hit || Math.abs(n.y - 380) < Math.abs(hit.y - 380)) {
+                        // 谁最接近判定线（420px）就判定谁
+                        if (!hit || Math.abs(n.y - 420) < Math.abs(hit.y - 420)) {
                             hit = n;
                         }
                     }
@@ -336,9 +285,7 @@
                 scoreEl.textContent = score;
             }
 
-            // ---------- 游戏循环 ----------
-            let lastTime = 0;
-
+            var lastTime = 0;
             function gameLoop(timestamp) {
                 if (!running) return;
                 if (lastTime === 0) {
@@ -346,23 +293,18 @@
                     rafId = requestAnimationFrame(gameLoop);
                     return;
                 }
-                let delta = timestamp - lastTime;
+                var delta = timestamp - lastTime;
                 lastTime = timestamp;
-                
                 if (delta > MAX_DELTA_MS) delta = MAX_DELTA_MS;
-                const deltaSec = delta / 1000;
+                var deltaSec = delta / 1000;
 
                 updateNotes(deltaSec);
                 rafId = requestAnimationFrame(gameLoop);
             }
 
-            // ---------- 重置与游戏控制 ----------
             function resetGame() {
                 running = false;
-                if (rafId) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                }
+                if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
                 clearTimers();
                 clearAllNotes();
                 score = 0;
@@ -375,19 +317,12 @@
             function endGame() {
                 if (!running) return;
                 running = false;
-                if (rafId) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                }
+                if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
                 clearTimers();
                 clearAllNotes();
                 startBtn.disabled = false;
                 startBtn.textContent = '开始游戏';
-                
-                // 延迟微小时间弹窗，确保得分和UI在弹窗前渲染完毕
-                setTimeout(() => {
-                    alert('游戏结束！分数：' + score);
-                }, 50);
+                alert('游戏结束！分数：' + score);
             }
 
             function startGame() {
@@ -400,58 +335,37 @@
 
                 rafId = requestAnimationFrame(gameLoop);
 
-                // 生成谱面
-                MAP.forEach(item => {
-                    const timer = setTimeout(() => {
+                MAP.forEach(function(item) {
+                    var timer = setTimeout(function() {
                         if (running) spawn(item.lane);
                     }, item.t);
                     timers.push(timer);
                 });
 
-                // 定时倒计时结束
-                const endTimer = setTimeout(endGame, GAME_DURATION_MS);
+                var endTimer = setTimeout(function() {
+                    endGame();
+                }, GAME_DURATION_MS);
                 timers.push(endTimer);
             }
 
-            // ---------- 事件绑定（事件委托优化） ----------
-            
-            // 触摸/鼠标点击：在父级容器拦截
-            lanesContainer.addEventListener('pointerdown', (e) => {
+            function onLanePointer(e) {
                 e.preventDefault();
-                const laneEl = e.target.closest('.lane');
-                if (!laneEl) return;
-
-                const idx = parseInt(laneEl.getAttribute('data-lane'), 10);
+                var laneEl = e.currentTarget;
+                var idx = parseInt(laneEl.getAttribute('data-lane'), 10);
                 if (!isNaN(idx)) {
                     judge(idx);
-                    
-                    // 动态添加按压视觉反馈
-                    laneEl.classList.add('active');
-                    setTimeout(() => laneEl.classList.remove('active'), 80);
                 }
-            });
+            }
 
-            // PC端键盘支持（D, F, J, K）
-            window.addEventListener('keydown', (e) => {
-                if (!running) return;
-                const laneIdx = KEY_MAP[e.key];
-                if (laneIdx !== undefined) {
-                    judge(laneIdx);
-                    
-                    // 键盘按压视觉反馈
-                    const laneEl = laneEls[laneIdx];
-                    if (laneEl) {
-                        laneEl.classList.add('active');
-                        setTimeout(() => laneEl.classList.remove('active'), 80);
-                    }
-                }
-            });
+            for (var i = 0; i < laneEls.length; i++) {
+                var lane = laneEls[i];
+                lane.setAttribute('data-lane', i);
+                lane.addEventListener('pointerdown', onLanePointer);
+            }
 
-            // 开始按钮
             startBtn.addEventListener('click', startGame);
 
-            // 页面卸载清理
-            window.addEventListener('beforeunload', () => {
+            window.addEventListener('beforeunload', function() {
                 running = false;
                 if (rafId) cancelAnimationFrame(rafId);
                 clearTimers();
