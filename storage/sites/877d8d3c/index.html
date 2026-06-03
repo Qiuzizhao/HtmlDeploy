@@ -3,45 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D建房模拟器</title>
+<title>3D 智能建房模拟器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{overflow:hidden;background:#87CEEB;font-family:sans-serif}
-#ui{
-    position:absolute;top:12px;left:12px;z-index:99;
-    background:rgba(255,255,255,0.92);padding:14px 16px;border-radius:10px;
-    box-shadow:0 2px 12px rgba(0,0,0,0.15);user-select:none;
-    backdrop-filter:blur(4px)
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #1a1a1a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* 现代感 UI 面板 */
+#ui {
+    position: absolute; top: 20px; left: 20px; z-index: 99;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 20px; border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    user-select: none;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.4);
+    width: 320px;
 }
-#ui h4{margin-bottom:8px;font-size:14px;color:#333}
-.btn-group{display:flex;gap:6px;flex-wrap:wrap}
-button{padding:7px 14px;margin:0;border:none;border-radius:5px;cursor:pointer;font-size:13px;transition:all 0.15s;outline:none}
-button:active{transform:scale(0.95)}
-#wood{background:#deb887;color:#333}
-#wood.active{box-shadow:0 0 0 3px #fff,0 0 0 5px #a0784c}
-#stone{background:#999;color:#fff}
-#stone.active{box-shadow:0 0 0 3px #fff,0 0 0 5px #555}
-#brick{background:#cd7840;color:#fff}
-#brick.active{box-shadow:0 0 0 3px #fff,0 0 0 5px #8a4f28}
-#clear{background:#e04545;color:#fff;margin-left:4px}
-#clear:hover{background:#c0392b}
+#ui h4 { margin-bottom: 4px; font-size: 16px; color: #2c3e50; font-weight: 600; }
+#ui p { margin-bottom: 14px; font-size: 12px; color: #7f8c8d; line-height: 1.4; }
+
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+    padding: 10px 16px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+button:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+button:active { transform: translateY(1px); }
+
+/* 材料按钮自定义配色 */
+#wood { background: #b8860b; color: #fff; }
+#wood.active { ring: 3px #b8860b; box-shadow: 0 0 0 3px #1a1a1a, 0 0 0 6px #b8860b; }
+#stone { background: #7f8c8d; color: #fff; }
+#stone.active { box-shadow: 0 0 0 3px #1a1a1a, 0 0 0 6px #7f8c8d; }
+#brick { background: #d35400; color: #fff; }
+#brick.active { box-shadow: 0 0 0 3px #1a1a1a, 0 0 0 6px #d35400; }
+
+#clear { background: #e74c3c; color: #fff; margin-left: auto; font-weight: bold;}
+#clear:hover { background: #c0392b; }
 </style>
 </head>
 <body>
 <div id="ui">
-    <h4>3D建房｜WASD移动 鼠标拖拽旋转视角</h4>
+    <h4>3D 建房模拟器</h4>
+    <p>操作指南：WASD 键移动玩家角色<br>鼠标左键：放置方块 / 右键：拆除方块<br>按住鼠标左键并拖拽：旋转场景视角</p>
     <div class="btn-group">
-        <button id="wood" class="active">木头</button>
-        <button id="stone">石头</button>
-        <button id="brick">砖块</button>
-        <button id="clear">清空建筑</button>
+        <button id="wood" class="active">木材</button>
+        <button id="stone">石材</button>
+        <button id="brick">红砖</button>
+        <button id="clear">清空</button>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script>
-// ========== 全局状态 ==========
+// ========== 全局状态与配置 ==========
 let scene, camera, renderer, controls;
 const blockList = [];
 let selectMat = 'wood';
@@ -50,68 +68,103 @@ const BLOCK_SIZE = 2;
 const HALF_BLOCK = BLOCK_SIZE / 2;
 const key = {};
 
-// 可复用对象（减少GC压力）
 const _raycaster = new THREE.Raycaster();
 const _mouse = new THREE.Vector2();
-const _pos = new THREE.Vector3();
 
-// ========== 材质配置 ==========
+// 全局复用几何体，极大提升高频创建性能
+const blockGeometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+// 高级 PBR 材质配置（带粗糙度和金属度，表现更细腻的受光面）
 const MATERIALS = {
-    wood: 0xdeb887,
-    stone: 0x999999,
-    brick: 0xcd7840
+    wood: new THREE.MeshStandardMaterial({ color: 0xc19a6b, roughness: 0.7, metalness: 0.1 }),
+    stone: new THREE.MeshStandardMaterial({ color: 0x95a5a6, roughness: 0.8, metalness: 0.2 }),
+    brick: new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.6, metalness: 0.0 })
 };
 
 // ========== 初始化场景 ==========
 function initScene() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
+    // 使用渐变天蓝色
+    scene.background = new THREE.Color(0xdff9fb);
+    scene.fog = new THREE.FogExp2(0xdff9fb, 0.015); // 加入雾效让远景更自然
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(15, 12, 18);
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(20, 18, 25);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
+    // 开启阴影映射
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; // 采用电影级色调映射改善色彩
+    renderer.toneMappingExposure = 1.0;
+
     document.body.appendChild(renderer.domElement);
 
+    // 视角控制器优化
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05; // 限制镜头不能穿透到地面以下
     controls.target.set(0, 1, 0);
 }
 
-// ========== 灯光 ==========
+// ========== 逼真的光影系统 ==========
 function initLights() {
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(20, 30, 20);
-    scene.add(dirLight);
-
-    const ambLight = new THREE.AmbientLight(0xffffff, 0.45);
+    const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambLight);
 
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.25);
-    backLight.position.set(-10, 5, -10);
-    scene.add(backLight);
+    // 主太阳光，用于生成阴影
+    const dirLight = new THREE.DirectionalLight(0xfff9e6, 1.0);
+    dirLight.position.set(30, 40, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048; // 高清阴影
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 100;
+    const d = 30;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    dirLight.shadow.bias = -0.0005; 
+    scene.add(dirLight);
+
+    // 蓝色天空地面反射光
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+    hemiLight.position.set(0, 200, 0);
+    scene.add(hemiLight);
 }
 
-// ========== 地面 ==========
+// ========== 地面与网格线 ==========
 function initGround() {
-    const geo = new THREE.PlaneGeometry(50, 50);
-    const mat = new THREE.MeshLambertMaterial({ color: 0x7ccd7c });
+    const worldSize = 60;
+    const geo = new THREE.PlaneGeometry(worldSize, worldSize);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x6ab04c, roughness: 0.9, metalness: 0.1 });
     const ground = new THREE.Mesh(geo, mat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
     ground.name = 'ground';
+    ground.receiveShadow = true; // 接收阴影
     scene.add(ground);
+
+    // 增加沙盒建筑必备的网格辅助线
+    const grid = new THREE.GridHelper(worldSize, worldSize / BLOCK_SIZE, 0x485e74, 0xb2bec3);
+    grid.position.y = 0.01; // 微微高于地面防止渲染闪烁闪烁
+    grid.material.opacity = 0.25;
+    grid.material.transparent = true;
+    scene.add(grid);
 }
 
 // ========== 玩家角色 ==========
 function initPlayer() {
-    const geo = new THREE.BoxGeometry(1.2, 1.8, 1);
-    const mat = new THREE.MeshLambertMaterial({ color: 0x4285F4 });
+    const geo = new THREE.CylinderGeometry(0.6, 0.6, 2.0, 16);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x22a6b3, roughness: 0.4, metalness: 0.5 });
     player = new THREE.Mesh(geo, mat);
-    player.position.set(0, 0.9, 0);
+    player.position.set(0, 1.0, 0);
+    player.castShadow = true;
+    player.receiveShadow = true;
     scene.add(player);
 }
 
@@ -119,70 +172,86 @@ function initPlayer() {
 function initKeyboard() {
     document.addEventListener('keydown', (e) => { key[e.code] = true; });
     document.addEventListener('keyup', (e) => { key[e.code] = false; });
+    // 阻止浏览器右键菜单弹出，用于支持右键拆砖
+    document.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-// ========== 玩家移动 ==========
+// ========== 玩家平滑移动 ==========
 function movePlayer() {
     if (!player) return;
     const speed = 0.15;
-    if (key['KeyW']) player.position.z -= speed;
-    if (key['KeyS']) player.position.z += speed;
-    if (key['KeyA']) player.position.x -= speed;
-    if (key['KeyD']) player.position.x += speed;
+    if (key['KeyW'] || key['ArrowUp']) player.position.z -= speed;
+    if (key['KeyS'] || key['ArrowDown']) player.position.z += speed;
+    if (key['KeyA'] || key['ArrowLeft']) player.position.x -= speed;
+    if (key['KeyD'] || key['ArrowRight']) player.position.x += speed;
 
-    // 限制移动范围（防止跑出地面）
-    const limit = 23;
+    const limit = 28;
     player.position.x = Math.max(-limit, Math.min(limit, player.position.x));
     player.position.z = Math.max(-limit, Math.min(limit, player.position.z));
 }
 
-// ========== 放置方块 ==========
+// ========== 精准方块放置与拆除 (核心逻辑优化) ==========
 function initClickHandler() {
     const dom = renderer.domElement;
 
-    dom.addEventListener('click', (e) => {
+    dom.addEventListener('pointerdown', (e) => {
+        // 只响应鼠标左键(0)和鼠标右键(2)
+        if (e.button !== 0 && e.button !== 2) return;
+
         const rect = dom.getBoundingClientRect();
         _mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         _mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
         _raycaster.setFromCamera(_mouse, camera);
-
-        // 收集可点击物体
         const targets = [scene.getObjectByName('ground'), ...blockList].filter(Boolean);
-        if (targets.length === 0) return;
-
         const hits = _raycaster.intersectObjects(targets);
+
         if (hits.length === 0) return;
-
         const hit = hits[0];
-        _pos.copy(hit.point);
 
-        // 对齐网格
-        _pos.x = Math.round(_pos.x / BLOCK_SIZE) * BLOCK_SIZE;
-        _pos.z = Math.round(_pos.z / BLOCK_SIZE) * BLOCK_SIZE;
-        _pos.y = Math.max(0, Math.round(_pos.y / BLOCK_SIZE) * BLOCK_SIZE) + HALF_BLOCK;
-
-        // 防止在已占据位置重复放置（检查距离）
-        for (let i = 0; i < blockList.length; i++) {
-            const b = blockList[i];
-            if (Math.abs(b.position.x - _pos.x) < 0.1 &&
-                Math.abs(b.position.y - _pos.y) < 0.1 &&
-                Math.abs(b.position.z - _pos.z) < 0.1) {
-                return;
+        // --- 右键：拆除方块 ---
+        if (e.button === 2) {
+            if (hit.object.name !== 'ground') {
+                scene.remove(hit.object);
+                const index = blockList.indexOf(hit.object);
+                if (index > -1) blockList.splice(index, 1);
             }
+            return;
         }
 
-        const color = MATERIALS[selectMat] || MATERIALS.wood;
-        const geo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-        const mat = new THREE.MeshLambertMaterial({ color });
-        const block = new THREE.Mesh(geo, mat);
-        block.position.copy(_pos);
+        // --- 左键：放置方块 ---
+        // 核心优化：基于相交面的法线方向(Normal)精准计算新方块的中心坐标
+        const targetPos = new THREE.Vector3();
+        if (hit.object.name === 'ground') {
+            // 点击地面时
+            targetPos.x = Math.floor((hit.point.x + HALF_BLOCK) / BLOCK_SIZE) * BLOCK_SIZE;
+            targetPos.z = Math.floor((hit.point.z + HALF_BLOCK) / BLOCK_SIZE) * BLOCK_SIZE;
+            targetPos.y = HALF_BLOCK;
+        } else {
+            // 点击已有方块时，沿着接触面的法线方向外推半个方块的身位
+            const normal = hit.face.normal.clone();
+            // 考虑方块自身的旋转旋转（这里由于方块未旋转，直接使用世界法线）
+            const originCenter = hit.object.position;
+            targetPos.copy(originCenter).add(normal.multiplyScalar(BLOCK_SIZE));
+        }
+
+        // 再次安全检查，避免在同一绝对坐标重叠生成方块
+        for (let b of blockList) {
+            if (targetPos.distanceTo(b.position) < 0.1) return;
+        }
+
+        // 生成新方块
+        const mat = MATERIALS[selectMat] || MATERIALS.wood;
+        const block = new THREE.Mesh(blockGeometry, mat);
+        block.position.copy(targetPos);
+        block.castShadow = true;   // 开启投射阴影
+        block.receiveShadow = true;// 开启接收阴影
         scene.add(block);
         blockList.push(block);
     });
 }
 
-// ========== UI 事件 ==========
+// ========== UI 交互控制 ==========
 function initUI() {
     const btnWood = document.getElementById('wood');
     const btnStone = document.getElementById('stone');
@@ -192,40 +261,31 @@ function initUI() {
     function setActive(mat) {
         selectMat = mat;
         [btnWood, btnStone, btnBrick].forEach(el => el.classList.remove('active'));
-        if (mat === 'wood') btnWood.classList.add('active');
-        else if (mat === 'stone') btnStone.classList.add('active');
-        else if (mat === 'brick') btnBrick.classList.add('active');
+        document.getElementById(mat).classList.add('active');
     }
 
     btnWood.addEventListener('click', () => setActive('wood'));
     btnStone.addEventListener('click', () => setActive('stone'));
     btnBrick.addEventListener('click', () => setActive('brick'));
+    
     btnClear.addEventListener('click', () => {
-        for (let i = blockList.length - 1; i >= 0; i--) {
-            scene.remove(blockList[i]);
-            blockList[i].geometry.dispose();
-            blockList[i].material.dispose();
+        if(confirm("确定要清空所有建造的方块吗？")) {
+            blockList.forEach(b => scene.remove(b));
+            blockList.length = 0;
         }
-        blockList.length = 0;
     });
 }
 
-// ========== 窗口自适应（带防抖） ==========
+// ========== 窗口自适应 ==========
 function initResize() {
-    let timer = null;
-    const handler = () => {
-        if (timer) cancelAnimationFrame(timer);
-        timer = requestAnimationFrame(() => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            timer = null;
-        });
-    };
-    window.addEventListener('resize', handler);
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 }
 
-// ========== 渲染循环 ==========
+// ========== 游戏主循环 ==========
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
@@ -233,7 +293,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// ========== 启动 ==========
+// ========== 初始化启动 ==========
 function init() {
     initScene();
     initLights();
@@ -246,12 +306,7 @@ function init() {
     animate();
 }
 
-// 当页面完全加载后启动
-if (document.readyState === 'complete') {
-    init();
-} else {
-    window.addEventListener('load', init);
-}
+window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
