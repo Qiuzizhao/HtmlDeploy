@@ -1833,6 +1833,7 @@
 
       filtered.forEach((site, index) => {
         const enabled = site.enabled !== false;
+        const forbiddenWhitelisted = site.forbiddenWhitelist === true;
         const row = document.createElement('tr');
         row.classList.toggle('is-disabled-project', !enabled);
 
@@ -1934,6 +1935,13 @@
         enabledButton.title = enabled ? '点击后该项目会在前台隐藏' : '点击后该项目会恢复到前台显示';
         enabledButton.addEventListener('click', () => toggleSiteEnabled(site, enabledButton));
 
+        const whitelistButton = document.createElement('button');
+        whitelistButton.className = forbiddenWhitelisted ? 'warning-button' : 'button';
+        whitelistButton.type = 'button';
+        whitelistButton.textContent = forbiddenWhitelisted ? '移出白名单' : '白名单';
+        whitelistButton.title = forbiddenWhitelisted ? '移出后会参与违禁词审查' : '加入后会跳过违禁词审查';
+        whitelistButton.addEventListener('click', () => toggleForbiddenWhitelist(site, whitelistButton));
+
         const previewLink = document.createElement('a');
         previewLink.className = 'button';
         previewLink.href = site.previewUrl || site.url;
@@ -1977,7 +1985,7 @@
         deleteButton.textContent = '删除';
         deleteButton.addEventListener('click', () => deleteSite(site));
 
-        actions.append(saveButton, enabledButton, previewLink, codeButton, aiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
+        actions.append(saveButton, enabledButton, whitelistButton, previewLink, codeButton, aiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
         actionCell.append(actions);
 
         row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, thumbnailCell, actionCell);
@@ -2146,7 +2154,7 @@
         return;
       }
 
-      const forbiddenMessage = findForbiddenWordMatch(title, author);
+      const forbiddenMessage = site.forbiddenWhitelist === true ? '' : findForbiddenWordMatch(title, author);
       if (forbiddenMessage) {
         setMessage(listMessage, forbiddenMessage, true);
         return;
@@ -2214,6 +2222,33 @@
       }
       renderRows();
       setMessage(listMessage, updatedSite.enabled === false ? '项目已禁用，前台将隐藏' : '项目已启用，前台将显示');
+    }
+
+    async function toggleForbiddenWhitelist(site, button) {
+      const nextWhitelisted = site.forbiddenWhitelist !== true;
+      button.disabled = true;
+
+      const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/forbidden-whitelist`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forbiddenWhitelist: nextWhitelisted })
+      });
+
+      button.disabled = false;
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存白名单状态失败' }));
+        setMessage(listMessage, result.error || '保存白名单状态失败', true);
+        return;
+      }
+
+      const updatedSite = await response.json();
+      const index = sites.findIndex((item) => item.id === updatedSite.id);
+      if (index !== -1) {
+        sites[index] = updatedSite;
+      }
+      renderRows();
+      setMessage(listMessage, updatedSite.forbiddenWhitelist === true ? '项目已加入违禁词审查白名单' : '项目已移出违禁词审查白名单');
     }
 
     async function createClass(event) {

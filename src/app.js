@@ -1299,10 +1299,12 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '作者署名不能为空' });
       }
 
-      const settings = await readSettings(settingsFile);
-      const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
-      if (forbiddenMatch) {
-        return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+      if (sites[siteIndex].forbiddenWhitelist !== true) {
+        const settings = await readSettings(settingsFile);
+        const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
+        if (forbiddenMatch) {
+          return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+        }
       }
 
       if (!classItem) {
@@ -1337,6 +1339,7 @@ function createApp(options = {}) {
         author,
         classId,
         enabled: true,
+        forbiddenWhitelist: false,
         createdAt: new Date().toISOString()
       };
       sites.unshift(site);
@@ -1417,6 +1420,10 @@ function createApp(options = {}) {
       let changed = false;
 
       const nextSites = sites.map((site) => {
+        if (site.forbiddenWhitelist === true) {
+          return site;
+        }
+
         const match = findForbiddenWordMatch(
           { title: site.title || '', author: site.author || '' },
           forbiddenWords
@@ -1453,7 +1460,8 @@ function createApp(options = {}) {
       }
 
       return res.json({
-        checked: sites.length,
+        checked: sites.filter((site) => site.forbiddenWhitelist !== true).length,
+        skipped: sites.filter((site) => site.forbiddenWhitelist === true).length,
         matched: matches.length,
         disabled: disabledCount,
         matches
@@ -1477,6 +1485,32 @@ function createApp(options = {}) {
       const site = {
         ...sites[siteIndex],
         enabled,
+        updatedAt: new Date().toISOString()
+      };
+      sites[siteIndex] = site;
+      await writeSites(dataFile, sites);
+
+      const classes = await readClasses(classesFile);
+      return res.json(toPublicSite(site, classes, thumbnailDir));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch('/api/sites/:id/forbidden-whitelist', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const forbiddenWhitelist = Boolean(req.body.forbiddenWhitelist);
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((site) => site.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const site = {
+        ...sites[siteIndex],
+        forbiddenWhitelist,
         updatedAt: new Date().toISOString()
       };
       sites[siteIndex] = site;

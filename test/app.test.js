@@ -158,8 +158,10 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /textContent = '下载'/);
   assert.match(html, /textContent = 'AI优化'/);
   assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
+  assert.match(html, /textContent = forbiddenWhitelisted \? '移出白名单' : '白名单'/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/enabled/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/forbidden-whitelist/);
   assert.match(html, /project-disabled-warning/);
   assert.match(html, /搜索项目名称、ID 或序号/);
   assert.match(html, /id="classForm"/);
@@ -640,6 +642,87 @@ test('admin forbidden audit disables projects with forbidden title or author', a
       ['safe-site', true]
     ]
   );
+});
+
+test('admin can whitelist a project from forbidden audits and edits', async () => {
+  const ids = ['class-a', 'safe-site', 'whitelist-site', 'blocked-site'];
+  const { app, dataDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '安全项目')
+    .field('author', '普通作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>安全项目</title>')
+    .expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '包含坏词但白名单')
+    .field('author', '普通作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>包含坏词但白名单</title>')
+    .expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '普通项目')
+    .field('author', '坏作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>普通项目</title>')
+    .expect(201);
+
+  await admin
+    .put('/api/admin/settings')
+    .send({ allPassword: '111111', forbiddenWords: ['坏词', '坏作者'] })
+    .expect(200);
+
+  await request(app)
+    .patch('/api/sites/whitelist-site/forbidden-whitelist')
+    .send({ forbiddenWhitelist: true })
+    .expect(401);
+
+  const whitelisted = await admin
+    .patch('/api/sites/whitelist-site/forbidden-whitelist')
+    .send({ forbiddenWhitelist: true })
+    .expect(200);
+  assert.equal(whitelisted.body.forbiddenWhitelist, true);
+
+  const audit = await admin.post('/api/admin/sites/forbidden-audit').send({}).expect(200);
+  assert.equal(audit.body.checked, 2);
+  assert.equal(audit.body.skipped, 1);
+  assert.equal(audit.body.matched, 1);
+  assert.equal(audit.body.disabled, 1);
+  assert.deepEqual(
+    audit.body.matches.map((match) => [match.id, match.field, match.word]),
+    [['blocked-site', '作者署名', '坏作者']]
+  );
+
+  const sites = await admin.get('/api/admin/sites').expect(200);
+  assert.deepEqual(
+    sites.body.map((site) => [site.id, site.enabled, site.forbiddenWhitelist === true]),
+    [
+      ['blocked-site', false, false],
+      ['whitelist-site', true, true],
+      ['safe-site', true, false]
+    ]
+  );
+
+  const edited = await admin
+    .put('/api/sites/whitelist-site')
+    .field('title', '坏词标题仍允许')
+    .field('author', '坏作者也允许')
+    .field('classId', 'class-a')
+    .expect(200);
+  assert.equal(edited.body.title, '坏词标题仍允许');
+  assert.equal(edited.body.author, '坏作者也允许');
+  assert.equal(edited.body.forbiddenWhitelist, true);
+
+  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.equal(savedSites.find((site) => site.id === 'whitelist-site').forbiddenWhitelist, true);
 });
 
 test('admin login does not unlock public class project lists', async () => {
