@@ -156,7 +156,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
-  assert.match(html, /textContent = 'AI优化'/);
+  assert.match(html, /textContent = aiOptimizeButton\.disabled \? '优化中\.\.\.' : 'AI优化'/);
   assert.match(html, /textContent = directedAiOptimizeButton\.disabled \? '优化中\.\.\.' : '定向AI优化'/);
   assert.match(html, /id="directedAiOverlay"/);
   assert.match(html, /function openDirectedAiWindow/);
