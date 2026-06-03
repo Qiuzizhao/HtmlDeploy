@@ -437,6 +437,7 @@ async function readSettings(settingsFile) {
 
   return {
     ...settings,
+    allPasswordEnabled: settings.allPasswordEnabled !== false,
     forbiddenWords: normalizeForbiddenWords(settings.forbiddenWords)
   };
 }
@@ -740,6 +741,10 @@ function createApp(options = {}) {
   }
 
   function hasAllAccess(req, settings) {
+    if (settings.allPasswordEnabled === false) {
+      return true;
+    }
+
     const cookies = parseCookies(req.headers.cookie);
     return cookies[ALL_COOKIE_NAME] === createAllToken(settings);
   }
@@ -958,6 +963,9 @@ function createApp(options = {}) {
       const settings = {
         ...previousSettings,
         allPassword,
+        allPasswordEnabled: req.body.allPasswordEnabled === undefined
+          ? previousSettings.allPasswordEnabled !== false
+          : Boolean(req.body.allPasswordEnabled),
         forbiddenWords: req.body.forbiddenWords === undefined
           ? previousSettings.forbiddenWords
           : normalizeForbiddenWords(req.body.forbiddenWords),
@@ -1164,6 +1172,10 @@ function createApp(options = {}) {
     try {
       const password = String(req.body.password || '').trim();
       const settings = await readSettings(settingsFile);
+
+      if (settings.allPasswordEnabled === false) {
+        return res.json({ ok: true });
+      }
 
       if (password !== settings.allPassword) {
         return res.status(401).json({ error: '全部密码不正确' });

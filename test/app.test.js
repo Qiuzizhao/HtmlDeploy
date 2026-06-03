@@ -185,12 +185,15 @@ test('public admin can edit the all-projects password in class management', asyn
   assert.match(html, /id="toggleAllPassword"[^>]*>显示<\/button>/);
   assert.match(html, /id="generateAllPassword"[^>]*>随机生成<\/button>/);
   assert.match(html, /id="saveAllPassword"[^>]*>保存全部密码<\/button>/);
+  assert.match(html, /id="toggleAllPasswordEnabled"[^>]*>密码已启用<\/button>/);
+  assert.match(html, /function toggleAllProjectsPasswordEnabled/);
   assert.match(html, /fetch\('\/api\/admin\/settings\?includeForbiddenWords=false'\)/);
   assert.match(html, /\/api\/admin\/forbidden-words\?\$\{params\.toString\(\)\}/);
   assert.match(html, /id="forbiddenWordsSearchInput"/);
   assert.match(html, /id="forbiddenWordsResults"/);
   assert.match(html, /method: 'PUT'/);
   assert.match(html, /body: JSON\.stringify\(\{ allPassword \}\)/);
+  assert.match(html, /body: JSON\.stringify\(\{ allPasswordEnabled: nextEnabled \}\)/);
 });
 
 async function makeTestApp(options = {}) {
@@ -697,6 +700,37 @@ test('GET /api/sites without a class filter requires the all-projects password',
 
   const response = await visitor.get('/api/sites').expect(200);
   assert.deepEqual(response.body.map((site) => site.title), ['二班作品', '一班作品']);
+});
+
+test('admin can disable the all-projects password so visitors can read all projects without unlocking', async () => {
+  const ids = ['class-a', 'site-a'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const admin = request.agent(app);
+  const visitor = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.put('/api/admin/settings').send({ allPassword: '333333' }).expect(200);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '全部免密码项目')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>全部免密码项目</title>')
+    .expect(201);
+
+  await visitor.get('/api/sites').expect(401);
+
+  const settings = await admin
+    .put('/api/admin/settings')
+    .send({ allPasswordEnabled: false })
+    .expect(200);
+  assert.equal(settings.body.allPasswordEnabled, false);
+
+  const response = await visitor.get('/api/sites').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['全部免密码项目']);
+  await visitor.post('/api/all/unlock').send({ password: '' }).expect(200);
 });
 
 test('POST /api/sites rejects non-HTML files and multiple files', async () => {

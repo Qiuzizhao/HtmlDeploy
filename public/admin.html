@@ -342,7 +342,7 @@
 
     .all-password-form {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) auto auto auto;
+      grid-template-columns: minmax(220px, 1fr) auto auto auto auto;
       gap: 12px;
       padding: 20px 20px 0;
       align-items: end;
@@ -963,6 +963,7 @@
             <button class="button" id="toggleAllPassword" type="button">显示</button>
             <button class="button" id="generateAllPassword" type="button">随机生成</button>
             <button class="primary-button" id="saveAllPassword" type="submit">保存全部密码</button>
+            <button class="button password-toggle-button" id="toggleAllPasswordEnabled" type="button">密码已启用</button>
           </form>
           <form class="class-form" id="classForm">
             <label>
@@ -1047,6 +1048,7 @@
     const classForm = document.getElementById('classForm');
     const allPasswordForm = document.getElementById('allPasswordForm');
     const allPasswordInput = document.getElementById('allPasswordInput');
+    const toggleAllPasswordEnabled = document.getElementById('toggleAllPasswordEnabled');
     const forbiddenWordsForm = document.getElementById('forbiddenWordsForm');
     const forbiddenWordsSearchForm = document.getElementById('forbiddenWordsSearchForm');
     const forbiddenWordsSearchInput = document.getElementById('forbiddenWordsSearchInput');
@@ -1101,6 +1103,13 @@
       classes: '班级管理',
       forbidden: '违禁词'
     };
+
+    function renderAllPasswordEnabledButton() {
+      const enabled = settings.allPasswordEnabled !== false;
+      toggleAllPasswordEnabled.classList.toggle('is-disabled', !enabled);
+      toggleAllPasswordEnabled.textContent = enabled ? '密码已启用' : '密码已解除';
+      toggleAllPasswordEnabled.title = enabled ? '点击解除全部项目查看密码' : '点击启用全部项目查看密码';
+    }
 
     function setMessage(element, text, isError = false) {
       element.textContent = text;
@@ -1567,6 +1576,7 @@
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
+      renderAllPasswordEnabledButton();
       forbiddenWordsInput.value = '';
       forbiddenWordsState.allTotal = settings.forbiddenWordsCount || 0;
       forbiddenWordsState.total = settings.forbiddenWordsCount || 0;
@@ -1597,7 +1607,32 @@
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
+      renderAllPasswordEnabledButton();
       setMessage(classMessage, '保存全部密码成功');
+    }
+
+    async function toggleAllProjectsPasswordEnabled() {
+      const nextEnabled = settings.allPasswordEnabled === false;
+      toggleAllPasswordEnabled.disabled = true;
+
+      const response = await fetch('/api/admin/settings?includeForbiddenWords=false', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allPasswordEnabled: nextEnabled })
+      });
+
+      toggleAllPasswordEnabled.disabled = false;
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存全部密码状态失败' }));
+        setMessage(classMessage, result.error || '保存全部密码状态失败', true);
+        return;
+      }
+
+      settings = await response.json();
+      allPasswordInput.value = settings.allPassword || '';
+      renderAllPasswordEnabledButton();
+      setMessage(classMessage, settings.allPasswordEnabled === false ? '已解除全部密码' : '已启用全部密码');
     }
 
     async function saveForbiddenWords(event) {
@@ -2303,6 +2338,7 @@
     toggleAllPassword.addEventListener('click', () => {
       togglePasswordVisibility(allPasswordInput, toggleAllPassword);
     });
+    toggleAllPasswordEnabled.addEventListener('click', toggleAllProjectsPasswordEnabled);
     document.getElementById('generateAllPassword').addEventListener('click', () => {
       allPasswordInput.value = generatePassword();
     });
