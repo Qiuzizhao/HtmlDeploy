@@ -206,6 +206,28 @@
 
     .class-refresh-button {
       flex: 0 0 auto;
+      width: 76px;
+      min-height: 42px;
+      border-color: transparent;
+      background: linear-gradient(135deg, #fb923c, #f97316);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(249, 115, 22, 0.28);
+      transition: background 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+    }
+
+    .class-refresh-button:hover {
+      border-color: transparent;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff;
+      box-shadow: 0 10px 22px rgba(249, 115, 22, 0.34);
+    }
+
+    .class-refresh-button:disabled {
+      cursor: wait;
+      opacity: 0.72;
+      transform: none;
+      box-shadow: none;
     }
 
     .class-tab {
@@ -1260,7 +1282,6 @@
 
     async function refreshCurrentClassSites() {
       refreshClassSitesButton.disabled = true;
-      refreshClassSitesButton.textContent = '刷新中...';
       try {
         await loadSites();
       } catch (error) {
@@ -1268,7 +1289,6 @@
         emptyState.style.display = 'block';
       } finally {
         refreshClassSitesButton.disabled = false;
-        refreshClassSitesButton.textContent = '刷新';
       }
     }
 
