@@ -423,11 +423,11 @@
     "id": "fb022f2b",
     "number": "00034",
     "title": "躲避球",
-    "author": "鸡贼",
+    "author": "无",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:13:07.526Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T15:43:56.019Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:44:31.882Z"
   },
   {
     "id": "7709ded1",
