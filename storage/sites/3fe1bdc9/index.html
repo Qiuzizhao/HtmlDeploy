@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>3D城市模拟经营【修复版】</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{overflow:hidden;margin:0;}
+#info{
+    position:absolute;top:10px;left:10px;
+    background:rgba(0,0,0,0.65);color:#fff;padding:14px;border-radius:10px;z-index:10;
+}
+#status{
+    position:absolute;top:10px;right:180px;background:rgba(0,0,0,0.65);color:#fff;padding:10px 16px;border-radius:8px;
+}
+#minimap{
+    position:absolute;top:10px;right:10px;width:150px;height:150px;background:#346;color:#fff;border:2px solid #fff;
+}
+#toolBar{
+    position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,0.6);padding:12px;border-radius:12px;
+}
+button{
+    padding:7px 12px;margin:0 4px;border:0;border-radius:5px;cursor:pointer;font-size:13px;
+}
+</style>
+</head>
+<body>
+<div id="info">
+【操作说明】<br>
+左键：放置选中物体｜滚轮缩放<br>
+左键拖拽=旋转视角｜右键拖拽=平移地图<br>
+自动网格吸附，建筑对齐方格
+</div>
+<div id="status">
+资金：<span id="money">5000</span>￥<br>
+人口：<span id="pop">0</span>人<br>
+昼夜：<span id="daytxt">白天</span>
+</div>
+<canvas id="minimap" width="150" height="150"></canvas>
+<div id="toolBar">
+<button onclick="setBuild('house')">居民楼(800￥ +60人)</button>
+<button onclick="setBuild('shop')">商场(2200￥ +20人/秒营收)</button>
+<button onclick="setBuild('factory')">工厂(3500￥ -15人 +45￥/秒)</button>
+<button onclick="setBuild('road')">铺设道路(120￥)</button>
+<button onclick="setBuild('tree')">种树(30￥)</button>
+<button onclick="clearAll()">清空全城</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ==========全局数据配置==========
+let scene,camera,renderer,controls,raycaster,mouse;
+let ground,water;
+//经济数据
+let money=5000,population=0;
+const moneyDom=document.getElementById('money');
+const popDom=document.getElementById('pop');
+const dayTxt=document.getElementById('daytxt');
+//建造模式
+let buildType='house';
+//网格大小 吸附格子
+const gridSize=6;
+//物体容器
+const buildArr=[],roadArr=[],treeArr=[],carArr=[];
+//昼夜
+let dayTime=0;
+let ambientLight,dirLight;
+//小地图
+const miniCanvas = document.getElementById('minimap');
+const miniCtx=miniCanvas.getContext('2d');
+
+//建筑参数配置
+const buildConfig={
+    house:{cost:800,popAdd:60,earn:0,color:0xffdd99},
+    shop:{cost:2200,popAdd:20,earn:20,color:0x99ccff},
+    factory:{cost:3500,popAdd:-15,earn:45,color:0xbbbbbb},
+    road:{cost:120,popAdd:0,earn:0,color:0x333333},
+    tree:{cost:30,popAdd:0,earn:0,color:0x339933}
+}
+
+//初始化
+function init(){
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,300);
+    camera.position.set(70,90,70);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.shadowMap.enabled=true;
+    document.body.appendChild(renderer.domElement);
+
+    controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true;
+
+    //灯光
+    ambientLight=new THREE.AmbientLight(0xffffff,0.55);
+    dirLight=new THREE.DirectionalLight(0xffffff,0.9);
+    dirLight.position.set(50,90,30);
+    dirLight.castShadow=true;
+    scene.add(ambientLight,dirLight);
+
+    //地面草地
+    const groundGeo=new THREE.PlaneGeometry(240,240);
+    ground=new THREE.Mesh(groundGeo,new THREE.MeshLambertMaterial({color:0x59b859}));
+    ground.rotation.x=-Math.PI/2;
+    ground.receiveShadow=true;
+    scene.add(ground);
+
+    //中间湖泊
+    const waterGeo=new THREE.PlaneGeometry(45,45);
+    water=new THREE.Mesh(waterGeo,new THREE.MeshLambertMaterial({color:0x3488dd}));
+    water.rotation.x=-Math.PI/2;
+    water.position.y=0.12;
+    scene.add(water);
+
+    raycaster=new THREE.Raycaster();
+    mouse=new THREE.Vector2();
+
+    window.addEventListener('resize',onWinResize);
+    renderer.domElement.addEventListener('mousedown',onClickBuild);
+
+    //定时经济收益
+    setInterval(calcIncome,1000);
+    //生成初始AI小车
+    createCar();
+}
+
+//切换建造类型
+function setBuild(type){buildType=type;}
+
+//网格坐标吸附取整
+function snapGrid(pos){
+    return {
+        x:Math.round(pos.x/gridSize)*gridSize,
+        z:Math.round(pos.z/gridSize)*gridSize
+    }
+}
+
+//点击建造
+function onClickBuild(e){
+    mouse.x=(e.clientX/window.innerWidth)*2-1;
+    mouse.y=-(e.clientY/window.innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hit=raycaster.intersectObject(ground);
+    if(!hit.length)return;
+    const rawPos=hit[0].point;
+    const pos=snapGrid(rawPos);
+    const cfg=buildConfig[buildType];
+    if(money<cfg.cost){alert('资金不足！');return;}
+
+    //扣费+人口变更
+    money-=cfg.cost;
+    population+=cfg.popAdd;
+    updateStatus();
+
+    let obj;
+    if(buildType==='road'){
+        const geo=new THREE.BoxGeometry(gridSize,0.32,gridSize);
+        obj=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:cfg.color}));
+        obj.position.set(pos.x,0.16,pos.z);
+        obj.receiveShadow=true;
+        roadArr.push(obj);
+    }else if(buildType==='tree'){
+        //树干+树冠
+        const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,3),new THREE.MeshLambertMaterial({color:0x664422}));
+        const crown=new THREE.Mesh(new THREE.SphereGeometry(2.2),new THREE.MeshLambertMaterial({color:cfg.color}));
+        trunk.position.set(pos.x,1.5,pos.z);
+        crown.position.set(pos.x,3.8,pos.z);
+        obj=new THREE.Group();
+        obj.add(trunk,crown);
+        treeArr.push(obj);
+    }else{
+        //三种楼房随机尺寸
+        let h,w,d;
+        if(buildType==='house'){w=3.2;d=3.2;h=5+Math.random()*6}
+        else if(buildType==='shop'){w=5;d=5;h=4+Math.random()*3}
+        else{w=7;d=7;h=7+Math.random()*5}
+        const geo=new THREE.BoxGeometry(w,h,d);
+        obj=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:cfg.color}));
+        obj.position.set(pos.x,h/2,pos.z);
+        obj.castShadow=true;
+        buildArr.push(obj);
+        obj.userData={earn:cfg.earn};
+    }
+    scene.add(obj);
+}
+
+//每秒经济结算
+function calcIncome(){
+    let total=0;
+    buildArr.forEach(b=>{total+=b.userData.earn||0})
+    money+=total;
+    updateStatus();
+}
+
+//刷新UI数值
+function updateStatus(){
+    moneyDom.textContent=money;
+    popDom.textContent=Math.max(0,population);
+}
+
+//清空所有
+function clearAll(){
+    buildArr.forEach(o=>scene.remove(o));
+    roadArr.forEach(o=>scene.remove(o));
+    treeArr.forEach(o=>scene.remove(o));
+    carArr.forEach(o=>scene.remove(o));
+    buildArr.length=roadArr.length=treeArr.length=carArr.length=0;
+    money=5000;population=0;
+    updateStatus();
+}
+
+//生成AI小车
+function createCar(){
+    const carGeo=new THREE.BoxGeometry(2,1,3);
+    const carMat=new THREE.MeshLambertMaterial({color:new THREE.Color(Math.random(),Math.random(),Math.random())});
+    const car=new THREE.Mesh(carGeo,carMat);
+    car.position.set((Math.random()-0.5)*120,0.5,(Math.random()-0.5)*120);
+    car.userData={speed:0.06+Math.random()*0.04,dir:Math.random()*Math.PI*2};
+    car.castShadow=true;
+    scene.add(car);
+    carArr.push(car);
+    //持续补充新车
+    setTimeout(createCar,8000);
+}
+
+//昼夜系统更新
+function updateDayNight(){
+    dayTime+=0.00025;
+    const dayRatio=(Math.sin(dayTime)+1)/2;
+    dayTxt.textContent=dayRatio>0.45?'白天':'夜晚';
+    //亮度随时间变化
+    ambientLight.intensity=0.2+dayRatio*0.5;
+    dirLight.intensity=0.25+dayRatio*0.85;
+    //天光颜色白天蓝/夜晚深蓝
+    const skyCol=new THREE.Color();
+    skyCol.setHSL(0.55,0.6,0.35+dayRatio*0.55);
+    scene.background=skyCol;
+    scene.fog=new THREE.Fog(skyCol,30,180);
+}
+
+//小车自动移动
+function updateCar(){
+    carArr.forEach(car=>{
+        const d=car.userData;
+        car.position.x+=Math.cos(d.dir)*d.speed;
+        car.position.z+=Math.sin(d.dir)*d.speed;
+        //撞边界随机变向
+        if(Math.abs(car.position.x)>115||Math.abs(car.position.z)>115){
+            d.dir=Math.random()*Math.PI*2;
+        }
+    })
+}
+
+//右上角小地图渲染
+function drawMiniMap(){
+    const w=miniCanvas.width,h=miniCanvas.height;
+    miniCtx.fillStyle='#225522';
+    miniCtx.fillRect(0,0,w,h);
+    const scale=w/240;
+    //湖泊
+    miniCtx.fillStyle='#3377dd';
+    miniCtx.fillRect(w/2-45*scale/2,h/2-45*scale/2,45*scale,45*scale);
+    //建筑红点
+    miniCtx.fillStyle='#ff3333';
+    buildArr.forEach(b=>{
+        const x=w/2+b.position.x*scale;
+        const y=h/2+b.position.z*scale;
+        miniCtx.fillRect(x-2,y-2,4,4);
+    })
+    //道路灰点
+    miniCtx.fillStyle='#555555';
+    roadArr.forEach(r=>{
+        const x=w/2+r.position.x*scale;
+        const y=h/2+r.position.z*scale;
+        miniCtx.fillRect(x-2,y-2,4,4);
+    })
+    //小车黄色
+    miniCtx.fillStyle='#ffdd00';
+    carArr.forEach(c=>{
+        const x=w/2+c.position.x*scale;
+        const y=h/2+c.position.z*scale;
+        miniCtx.fillRect(x-2,y-2,4,4);
+    })
+}
+
+function onWinResize(){
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+}
+
+//主渲染循环
+function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    updateDayNight();
+    updateCar();
+    drawMiniMap();
+    renderer.render(scene,camera);
+}
+
+//启动
+init();
+animate();
+</script>
+</body>
+</html>
