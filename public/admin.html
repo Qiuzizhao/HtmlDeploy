@@ -568,6 +568,18 @@
       border-bottom: 0;
     }
 
+    tr.is-disabled-project td {
+      background: #fff1f2;
+      border-bottom-color: #fecdd3;
+    }
+
+    tr.is-disabled-project .wrap-input,
+    tr.is-disabled-project input,
+    tr.is-disabled-project select {
+      border-color: #fecdd3;
+      background: #fffafa;
+    }
+
     .index-cell {
       width: 72px;
       color: var(--brand);
@@ -1697,6 +1709,7 @@
       filtered.forEach((site, index) => {
         const enabled = site.enabled !== false;
         const row = document.createElement('tr');
+        row.classList.toggle('is-disabled-project', !enabled);
 
         const indexCell = document.createElement('td');
         indexCell.className = 'index-cell';

@@ -94,8 +94,7 @@ function getLlmConfig(options = {}) {
     apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
     baseUrl: options.llmApiBaseUrl || process.env.LLM_API_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || '',
-    reasoningEffort: options.llmReasoningEffort || process.env.LLM_REASONING_EFFORT || ''
+    thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || ''
   };
 }
 
@@ -139,10 +138,6 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
 
   if (llmConfig.thinkingType) {
     requestBody.thinking = { type: llmConfig.thinkingType };
-  }
-
-  if (llmConfig.reasoningEffort) {
-    requestBody.reasoning_effort = llmConfig.reasoningEffort;
   }
 
   const response = await fetch(getChatCompletionsUrl(llmConfig.baseUrl), {
