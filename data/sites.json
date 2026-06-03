@@ -503,22 +503,22 @@
   {
     "id": "4adc8e0f",
     "number": "00025",
-    "title": "键盘音游",
+    "title": "四键音游",
     "author": "1",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:07.906Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T15:34:44.887Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:52.497Z"
   },
   {
     "id": "7d5703bd",
     "number": "00024",
-    "title": "雷霆奶龙跑酷小游戏",
+    "title": "雷霆奶龙跑酷",
     "author": "孤寡老人",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:03.330Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.462Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:56.940Z"
   },
   {
     "id": "848ad2a3",
@@ -531,12 +531,12 @@
   {
     "id": "4891a2f7",
     "number": "00022",
-    "title": "XIAOZI7891",
+    "title": "三角洲行动射击游戏",
     "author": "SKY",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:40.909Z",
-    "updatedAt": "2026-06-03T14:12:18.469Z",
-    "enabled": false
+    "updatedAt": "2026-06-03T15:35:01.947Z",
+    "enabled": true
   },
   {
     "id": "877d8d3c",
