@@ -885,7 +885,7 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
       chunks.push(chunk);
     }
     requestPayload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
     res.end(JSON.stringify({
       choices: [
         {
@@ -933,6 +933,7 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
     assert.equal(requestPayload.stream, false);
     assert.match(requestPayload.messages[1].content, /Original/);
   } finally {
+    llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));
   }
 });
@@ -954,7 +955,7 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
     }
     llmReceived();
     await releasePromise;
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
     res.end(JSON.stringify({
       choices: [
         {
@@ -986,7 +987,20 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
       .attach('file', Buffer.from('<!doctype html><h1>Original</h1>'), { filename: 'old.html' })
       .expect(201);
 
-    const optimizeRequest = agent.post('/api/sites/ai-race/ai-optimize-save').send({});
+    const optimizePromise = new Promise((resolve, reject) => {
+      agent
+        .post('/api/sites/ai-race/ai-optimize-save')
+        .send({})
+        .expect(200)
+        .end((error, response) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve(response);
+        });
+    });
     await llmReceivedPromise;
 
     const sitesPath = path.join(dataDir, 'sites.json');
@@ -999,7 +1013,7 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
     await fsp.writeFile(sitesPath, JSON.stringify(sites, null, 2));
 
     releaseLlm();
-    const response = await optimizeRequest.expect(200);
+    const response = await optimizePromise;
 
     assert.equal(response.body.site.title, '并发修改后的标题');
     assert.equal(response.body.site.author, '并发修改作者');
@@ -1013,6 +1027,7 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
     assert.equal(savedSites[0].author, '并发修改作者');
     assert.ok(savedSites[0].updatedAt);
   } finally {
+    llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));
   }
 });
