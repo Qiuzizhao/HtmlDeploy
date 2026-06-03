@@ -1209,6 +1209,12 @@
       setCodeMessage('');
     }
 
+    function copyCodeWithSelectionFallback() {
+      codeViewer.focus();
+      codeViewer.select();
+      return document.execCommand('copy');
+    }
+
     async function copyProjectCode() {
       if (!currentCodeText) {
         return;
@@ -1218,12 +1224,14 @@
         if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(currentCodeText);
         } else {
-          codeViewer.focus();
-          codeViewer.select();
-          document.execCommand('copy');
+          copyCodeWithSelectionFallback();
         }
         setCodeMessage('已复制完整项目代码。');
       } catch {
+        if (copyCodeWithSelectionFallback()) {
+          setCodeMessage('已复制完整项目代码。');
+          return;
+        }
         setCodeMessage('复制失败，请手动选中代码复制。', true);
       }
     }
