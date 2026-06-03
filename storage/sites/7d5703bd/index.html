@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>雷霆奶龙大冒险</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>雷霆奶龙大冒险 Pro</title>
     <style>
         * {
             margin: 0;
@@ -11,306 +11,253 @@
             box-sizing: border-box;
             font-family: system-ui, -apple-system, sans-serif;
             user-select: none;
+            -webkit-user-select: none;
         }
         body {
-            background: #0a1028;
+            background: #060919;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 10px;
             min-height: 100vh;
             justify-content: center;
-            touch-action: manipulation;
-        }
-        #gameBox {
-            width: min(95vw, 800px);
-            height: 500px;
-            background: linear-gradient(#3474e6, #87cefa);
-            position: relative;
-            overflow: hidden;
-            border: 3px solid #ffd100;
-            border-radius: 12px;
             touch-action: none;
-            will-change: transform;
-            contain: layout style;
-        }
-        #nailong {
-            width: 60px;
-            height: 65px;
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            background: #ffdd22;
-            border-radius: 50% 50% 45% 45%;
-            border: 3px solid #ffaa00;
-            z-index: 2;
-            box-shadow: 0 0 12px #fff, 0 0 22px #0cf, 0 0 35px #0099ff;
-            will-change: transform;
-            transform: translate3d(80px, -80px, 0);
-            contain: layout style;
-            pointer-events: none;
-        }
-        #nailong::before {
-            content: "";
-            position: absolute;
-            width: 16px;
-            height: 22px;
-            background: #0cf;
-            top: -18px;
-            left: 22px;
-            clip-path: polygon(50% 0, 0 100%, 100% 100%);
-            box-shadow: 0 0 8px #0ff;
-        }
-        #nailong::after {
-            content: "⚡";
-            position: absolute;
-            right: -14px;
-            top: 12px;
-            font-size: 24px;
-            color: #0ff;
-            text-shadow: 0 0 10px #0cf;
-            animation: lightning 0.4s infinite alternate;
-        }
-        @keyframes lightning {
-            from {
-                opacity: 0.4;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        .ground {
-            width: 100%;
-            height: 80px;
-            background: #8b5a2b;
-            position: absolute;
-            bottom: 0;
-            pointer-events: none;
-        }
-        .light {
-            width: 32px;
-            height: 36px;
-            position: absolute;
-            color: #0ff;
-            font-size: 32px;
-            text-shadow: 0 0 10px cyan;
-            will-change: transform;
-            pointer-events: none;
-            z-index: 1;
-        }
-        .cloud {
-            width: 75px;
-            height: 42px;
-            background: #333;
-            border-radius: 50%;
-            position: absolute;
-            box-shadow: inset 0 0 10px #111, 0 4px 12px rgba(0, 0, 0, 0.3);
-            will-change: transform;
-            pointer-events: none;
-            z-index: 1;
+            overflow: hidden;
         }
         .ui {
             width: min(95vw, 800px);
             display: flex;
             justify-content: space-between;
             color: #fff;
-            padding: 8px 0;
+            padding: 12px 6px;
             font-size: 18px;
-            font-weight: 500;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            font-weight: bold;
+            letter-spacing: 1px;
         }
+        #score-box { color: #ffd100; text-shadow: 0 0 10px rgba(255,209,0,0.5); }
+        #max-box { color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.5); }
+
+        #gameBox {
+            width: min(95vw, 800px);
+            height: 500px;
+            background: linear-gradient(180deg, #1a2a6c, #2759c2, #87cefa);
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #ffd100;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+        }
+        
+        /* 奶龙主体设计升级 */
+        #nailong {
+            width: 55px;
+            height: 60px;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            background: #ffdd22;
+            border-radius: 54% 54% 45% 45%;
+            border: 3px solid #ffaa00;
+            z-index: 5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset -4px -4px 0 #e6bc00;
+            transition: transform 0.05s linear;
+        }
+        /* 恐龙背鳍 */
+        #nailong::before {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #ffaa00;
+            top: 10px;
+            left: -8px;
+            border-radius: 3px;
+            transform: rotate(-45deg);
+            box-shadow: 0 16px 0 #ffaa00, 0 32px 0 #ffaa00;
+        }
+        /* 脸部呆萌眼睛 */
+        #nailong::after {
+            content: "• ◡ •";
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 12px;
+            left: 2px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #331a00;
+            letter-spacing: 2px;
+        }
+        /* 伴随闪电 */
+        .thunder-aura {
+            position: absolute;
+            right: -15px;
+            top: -10px;
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            animation: aura-glow 0.3s infinite alternate;
+            pointer-events: none;
+        }
+        @keyframes aura-glow {
+            from { transform: scale(0.8) rotate(10deg); opacity: 0.5; }
+            to { transform: scale(1.1) rotate(-10deg); opacity: 1; }
+        }
+
+        /* 场景元素 */
+        .ground {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(180deg, #6d4c41, #3e2723);
+            position: absolute;
+            bottom: 0;
+            border-top: 4px solid #4caf50;
+            z-index: 2;
+        }
+
+        .light {
+            position: absolute;
+            font-size: 30px;
+            filter: drop-shadow(0 0 8px #00ffff);
+            animation: rotate-light 1s infinite linear;
+            z-index: 3;
+        }
+        @keyframes rotate-light {
+            0% { transform: translate3d(0,0,0) scale(1); }
+            50% { transform: translate3d(0,-5px,0) scale(1.15); }
+            100% { transform: translate3d(0,0,0) scale(1); }
+        }
+
+        .cloud {
+            position: absolute;
+            background: #2c3e50;
+            border-radius: 20px;
+            box-shadow: inset -5px -5px 0px rgba(0,0,0,0.3);
+            z-index: 4;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: #2c3e50;
+            border-radius: 50%;
+        }
+        .cloud::before { width: 40px; height: 40px; top: -20px; left: 15px; }
+        .cloud::after { width: 30px; height: 30px; top: -15px; right: 10px; }
+
+        /* 闪电粒子爆裂 */
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #00ffff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 6;
+        }
+
+        /* UI 与面板 */
         .btn-box {
-            margin-top: 8px;
+            margin-top: 15px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
         }
         button {
-            padding: 6px 16px;
+            padding: 10px 24px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             background: #ffd100;
-            color: #000;
+            color: #060919;
             font-weight: bold;
             cursor: pointer;
-            font-size: 15px;
-            transition: transform 0.1s, background 0.2s;
-            touch-action: manipulation;
-            min-height: 36px;
-            min-width: 80px;
+            font-size: 16px;
+            box-shadow: 0 4px 0 #c2a000;
+            transition: all 0.1s ease;
         }
         button:active {
-            transform: scale(0.95);
-            background: #e6bc00;
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #c2a000;
         }
-        button:hover {
-            background: #ffe44d;
-        }
+
         .tip {
-            color: #ccc;
-            font-size: 13px;
-            margin-top: 6px;
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 12px;
             text-align: center;
-            max-width: min(95vw, 800px);
+            line-height: 1.5;
         }
+
         #gameOverlay {
             position: absolute;
             inset: 0;
-            background: rgba(10, 16, 40, 0.85);
-            backdrop-filter: blur(4px);
+            background: rgba(6, 9, 25, 0.9);
+            backdrop-filter: blur(6px);
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 10;
-            border-radius: 10px;
-            animation: fadeIn 0.35s ease;
         }
-        #gameOverlay.show {
-            display: flex;
+        #gameOverlay.show { display: flex; }
+        
+        .overlay-title {
+            font-size: 42px;
+            color: #ff3b30;
+            font-weight: 900;
+            text-shadow: 0 0 20px rgba(255,59,48,0.4);
+            margin-bottom: 15px;
         }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.92);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        #gameOverlay .overlay-title {
-            font-size: 38px;
-            color: #ffd100;
-            font-weight: bold;
-            text-shadow: 0 0 20px rgba(255, 209, 0, 0.4);
-            margin-bottom: 10px;
-        }
-        #gameOverlay .overlay-score {
-            font-size: 22px;
-            color: #fff;
-            margin: 6px 0;
-        }
-        #gameOverlay .overlay-best {
-            font-size: 18px;
-            color: #87cefa;
-            margin-bottom: 18px;
-        }
-        #gameOverlay .overlay-btn {
-            padding: 10px 36px;
-            border: none;
-            border-radius: 30px;
-            background: #ffd100;
-            color: #000;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.2s;
-            box-shadow: 0 4px 20px rgba(255, 209, 0, 0.3);
-            touch-action: manipulation;
-        }
-        #gameOverlay .overlay-btn:active {
-            transform: scale(0.94);
-        }
-        #gameOverlay .overlay-btn:hover {
-            box-shadow: 0 6px 28px rgba(255, 209, 0, 0.5);
-        }
+        .overlay-score { font-size: 24px; color: #fff; margin: 8px 0; }
+        .overlay-best { font-size: 18px; color: #00ffcc; margin-bottom: 25px; }
+
         .score-popup {
             position: absolute;
             color: #ffd100;
-            font-weight: bold;
-            font-size: 22px;
+            font-weight: 900;
+            font-size: 24px;
             pointer-events: none;
-            z-index: 5;
-            animation: popUp 0.6s ease forwards;
-            text-shadow: 0 0 10px rgba(255, 209, 0, 0.5);
+            z-index: 8;
+            animation: popUp 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+            text-shadow: 0 0 8px #ffd100;
         }
         @keyframes popUp {
-            0% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-50px) scale(1.3);
-            }
+            0% { opacity: 0; transform: translateY(0) scale(0.5); }
+            30% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1); }
         }
+
+        /* 屏幕震动 */
+        .shake { animation: shakeAnim 0.15s ease-in-out 2; }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            25% { transform: translate3d(-6px, 4px, 0); }
+            75% { transform: translate3d(6px, -4px, 0); }
+        }
+
         @media (max-width: 600px) {
-            #gameBox {
-                height: 380px;
-            }
-            .ui {
-                font-size: 15px;
-            }
-            #nailong {
-                width: 48px;
-                height: 52px;
-            }
-            #nailong::before {
-                width: 13px;
-                height: 18px;
-                top: -15px;
-                left: 17px;
-            }
-            #nailong::after {
-                font-size: 18px;
-                right: -10px;
-                top: 8px;
-            }
-            .light {
-                width: 26px;
-                height: 30px;
-                font-size: 26px;
-            }
-            .cloud {
-                width: 60px;
-                height: 34px;
-            }
-            #gameOverlay .overlay-title {
-                font-size: 28px;
-            }
-            #gameOverlay .overlay-score {
-                font-size: 18px;
-            }
-            #gameOverlay .overlay-btn {
-                font-size: 17px;
-                padding: 8px 28px;
-            }
-        }
-        @media (max-width: 400px) {
-            #gameBox {
-                height: 300px;
-            }
-            .tip {
-                font-size: 11px;
-            }
-            button {
-                font-size: 13px;
-                min-height: 32px;
-                min-width: 64px;
-                padding: 4px 12px;
-            }
+            #gameBox { height: 380px; }
+            .overlay-title { font-size: 32px; }
         }
     </style>
 </head>
 <body>
     <div class="ui">
-        <span>得分：<span id="score">0</span></span>
-        <span>最高分：<span id="maxScore">0</span></span>
+        <span id="score-box">⚡ 得分：<span id="score">0</span></span>
+        <span id="max-box">🏆 最高分：<span id="maxScore">0</span></span>
     </div>
     <div id="gameBox">
-        <div id="nailong"></div>
+        <div id="nailong"><div class="thunder-aura">⚡</div></div>
         <div class="ground"></div>
         <div id="gameOverlay">
-            <div class="overlay-title">⚡ 游戏结束</div>
-            <div class="overlay-score">本次得分：<span id="finalScore">0</span></div>
-            <div class="overlay-best">🏆 历史最高：<span id="finalBest">0</span></div>
-            <button class="overlay-btn" id="restartBtn">再来一局</button>
+            <div class="overlay-title">💥 冒险中止</div>
+            <div class="overlay-score">斩获雷霆：<span id="finalScore">0</span></div>
+            <div class="overlay-best">历史最高：<span id="finalBest">0</span></div>
+            <button id="restartBtn" style="font-size: 18px; padding: 12px 40px; border-radius: 25px;">重返大冒险</button>
         </div>
     </div>
     <div class="btn-box">
         <button id="restartTopBtn">重新开始</button>
     </div>
-    <div class="tip">键盘 ← → 左右移动｜手机点击屏幕移动</div>
+    <div class="tip">键盘 ← → 键移动，空格键/↑ 跳跃避险<br>手机端：左右滑动/点击控向，双击或点击上方跳跃</div>
 
     <script>
         (function() {
@@ -326,46 +273,104 @@
             const restartBtn = document.getElementById('restartBtn');
             const restartTopBtn = document.getElementById('restartTopBtn');
 
-            const GROUND_H = 80;
-            const NAILONG_W = 60;
-            const NAILONG_H = 65;
-            const LIGHT_W = 32;
-            const LIGHT_H = 36;
-            const CLOUD_W = 75;
-            const CLOUD_H = 42;
-            const SPEED_X = 7;
-            const BASE_GAME_SPEED = 3;
-            const LIGHT_INTERVAL_MS = 1100;
-            const CLOUD_INTERVAL_MS = 2200;
-            const MAX_SPEED = 9;
-            const SPEED_INCREASE_PER_SCORE = 0.04;
+            // 核心物理与间距配置
+            const GROUND_H = 60; 
+            const NAILONG_W = 55;
+            const NAILONG_H = 60;
+            
+            // Hitbox 边缘缩进（精准碰撞，避免空气墙暴毙）
+            const HITBOX_PADDING = 8;
 
-            let x = 80;
-            let y = GROUND_H;
+            let gameW = game.offsetWidth;
+            let gameH = game.offsetHeight;
+
+            // 动态状态变量
+            let posX = 80;
+            let posY = 0; // 基于地面的高度
+            let velocityY = 0; // 跳跃纵向速度
+            const GRAVITY = 0.6; // 重力加速度
+            const JUMP_FORCE = 12; // 跳跃初速度
+            let isGrounded = true;
+
             let score = 0;
-            let maxScore = parseInt(localStorage.getItem('nailongMax'), 10) || 0;
+            let maxScore = parseInt(localStorage.getItem('nailongMaxPro'), 10) || 0;
             let gameRun = false;
-            let gameSpeed = BASE_GAME_SPEED;
+            let gameSpeed = 4;
             let animId = null;
             let lastTimestamp = 0;
 
             let lightList = [];
             let cloudList = [];
-
             const key = { left: false, right: false };
 
             let lastLightTime = 0;
             let lastCloudTime = 0;
+            let lightInterval = 1000;
+            let cloudInterval = 1800;
 
-            let gameW = game.offsetWidth;
-            let gameH = game.offsetHeight;
+            // 视觉动效辅助变量
+            let targetTilt = 0; 
+            let currentTilt = 0; 
+            let stretchY = 1;
+            let stretchX = 1;
 
-            function setNailongPos(px, py) {
-                nailong.style.transform = 'translate3d(' + px + 'px, ' + (-py) + 'px, 0)';
+            function updateNailongDOM() {
+                // 物理惯性倾斜与拉伸动效
+                if (key.left) targetTilt = -8;
+                else if (key.right) targetTilt = 8;
+                else targetTilt = 0;
+
+                currentTilt += (targetTilt - currentTilt) * 0.2;
+
+                // 跳跃拉伸变形反馈
+                if (!isGrounded) {
+                    stretchY = velocityY > 0 ? 1.15 : 0.95;
+                    stretchX = velocityY > 0 ? 0.88 : 1.05;
+                } else {
+                    stretchY += (1 - stretchY) * 0.3;
+                    stretchX += (1 - stretchX) * 0.3;
+                }
+
+                // 实际渲染映射（注意：CSS底层是 bottom: GROUND_H px）
+                nailong.style.transform = `translate3d(${posX}px, ${-posY}px, 0) rotate(${currentTilt}deg) scale(${stretchX}, ${stretchY})`;
             }
 
-            function setElPos(el, px, py) {
-                el.style.transform = 'translate3d(' + px + 'px, ' + py + 'px, 0)';
+            function triggerExplosion(x, y) {
+                for (let i = 0; i < 8; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.style.left = x + 'px';
+                    p.style.top = y + 'px';
+                    game.appendChild(p);
+
+                    const speedX = (Math.random() - 0.5) * 8;
+                    const speedY = (Math.random() - 0.5) * 8;
+                    let pX = x;
+                    let pY = y;
+                    let pOpacity = 1;
+
+                    function pLoop() {
+                        if (!gameRun) { p.remove(); return; }
+                        speedY += 0.1; // 微量重力
+                        pX += speedX;
+                        pY += speedY;
+                        pOpacity -= 0.04;
+                        p.style.transform = `translate3d(${pX - x}px, ${pY - y}px, 0)`;
+                        p.style.opacity = pOpacity;
+
+                        if (pOpacity <= 0) {
+                            p.remove();
+                        } else {
+                            requestAnimationFrame(pLoop);
+                        }
+                    }
+                    requestAnimationFrame(pLoop);
+                }
+            }
+
+            function triggerScreenShake() {
+                game.classList.add('shake');
+                setTimeout(() => game.classList.remove('shake'), 300);
             }
 
             function showScorePopup(px, py) {
@@ -375,25 +380,18 @@
                 popup.style.left = px + 'px';
                 popup.style.top = py + 'px';
                 game.appendChild(popup);
-                setTimeout(function() {
-                    if (popup.parentNode) popup.remove();
-                }, 650);
+                setTimeout(() => popup.remove(), 500);
             }
 
+            // 精准碰撞核心算法
             function isCrash(objX, objY, objW, objH) {
-                const nx = x;
-                const ny = gameH - y - NAILONG_H;
-                return nx < objX + objW && nx + NAILONG_W > objX &&
-                    ny < objY + objH && ny + NAILONG_H > objY;
-            }
+                const nlLeft = posX + HITBOX_PADDING;
+                const nlRight = posX + NAILONG_W - HITBOX_PADDING;
+                const nlTop = gameH - GROUND_H - posY - NAILONG_H + HITBOX_PADDING;
+                const nlBottom = gameH - GROUND_H - posY - HITBOX_PADDING;
 
-            function updateScoreUI() {
-                scoreSpan.textContent = score;
-                if (score > maxScore) {
-                    maxScore = score;
-                    localStorage.setItem('nailongMax', maxScore);
-                    maxScoreSpan.textContent = maxScore;
-                }
+                return nlLeft < objX + objW && nlRight > objX &&
+                       nlTop < objY + objH && nlBottom > objY;
             }
 
             function createLight() {
@@ -401,32 +399,116 @@
                 const el = document.createElement('div');
                 el.className = 'light';
                 el.textContent = '⚡';
-                const top = Math.random() * 260 + 60;
-                el.style.left = '0px';
-                el.style.top = '0px';
-                setElPos(el, gameW, top);
+                const size = 32;
+                // 分布在低空、中空、高空
+                const top = Math.random() * (gameH - GROUND_H - 120) + 40;
+                el.style.left = '0px'; el.style.top = '0px';
+                el.style.transform = `translate3d(${gameW}px, ${top}px, 0)`;
                 game.appendChild(el);
-                lightList.push({ dom: el, x: gameW, top: top, w: LIGHT_W, h: LIGHT_H });
+                lightList.push({ dom: el, x: gameW, top: top, w: size, h: size });
             }
 
             function createCloud() {
                 if (!gameRun) return;
                 const el = document.createElement('div');
                 el.className = 'cloud';
-                const top = Math.random() * 220 + 40;
-                el.style.left = '0px';
-                el.style.top = '0px';
-                setElPos(el, gameW, top);
+                
+                const w = Math.random() * 30 + 60; // 尺寸随机化
+                const h = w * 0.55;
+                el.style.width = w + 'px';
+                el.style.height = h + 'px';
+
+                // 乌云有几率出现在地面形成滚动障碍物，强迫玩家跳跃
+                const onGround = Math.random() > 0.5;
+                const top = onGround ? (gameH - GROUND_H - h) : (Math.random() * 120 + 30);
+
+                el.style.left = '0px'; el.style.top = '0px';
+                el.style.transform = `translate3d(${gameW}px, ${top}px, 0)`;
                 game.appendChild(el);
-                cloudList.push({ dom: el, x: gameW, top: top, w: CLOUD_W, h: CLOUD_H });
+                cloudList.push({ dom: el, x: gameW, top: top, w: w, h: h });
+            }
+
+            function loop(timestamp) {
+                if (!gameRun) { animId = null; return; }
+
+                if (lastTimestamp === 0) {
+                    lastTimestamp = timestamp;
+                    lastLightTime = timestamp;
+                    lastCloudTime = timestamp;
+                }
+                const dt = Math.min(timestamp - lastTimestamp, 40);
+                lastTimestamp = timestamp;
+                const rFactor = dt / 16.667;
+
+                // 动态速度调节与动态生成率（随得分增加而变难）
+                gameSpeed = 4 + Math.min(score * 0.03, 7);
+                lightInterval = Math.max(1200 - score * 3, 600);
+                cloudInterval = Math.max(1800 - score * 5, 800);
+
+                // 生成逻辑
+                if (timestamp - lastLightTime >= lightInterval) { createLight(); lastLightTime = timestamp; }
+                if (timestamp - lastCloudTime >= cloudInterval) { createCloud(); lastCloudTime = timestamp; }
+
+                // 左右位置物理运算
+                const speedX = 7.5 * rFactor;
+                if (key.left && posX > 0) posX -= speedX;
+                if (key.right && posX < gameW - NAILONG_W) posX += speedX;
+
+                // 跳跃/重力物理运算
+                if (!isGrounded) {
+                    velocityY -= GRAVITY * rFactor;
+                    posY += velocityY * rFactor;
+                    if (posY <= 0) {
+                        posY = 0;
+                        velocityY = 0;
+                        isGrounded = true;
+                        stretchY = 0.8; // 落地压扁动效反馈
+                    }
+                }
+
+                updateNailongDOM();
+
+                // 渲染与清除闪电
+                const step = gameSpeed * rFactor;
+                for (let i = lightList.length - 1; i >= 0; i--) {
+                    const item = lightList[i];
+                    item.x -= step;
+                    item.dom.style.transform = `translate3d(${item.x}px, ${item.top}px, 0)`;
+
+                    if (isCrash(item.x, item.top, item.w, item.h)) {
+                        score += 10;
+                        scoreSpan.textContent = score;
+                        triggerExplosion(item.x + item.w/2, item.top + item.h/2);
+                        showScorePopup(item.x, item.top);
+                        item.dom.remove();
+                        lightList.splice(i, 1);
+                        continue;
+                    }
+                    if (item.x < -50) { item.dom.remove(); lightList.splice(i, 1); }
+                }
+
+                // 渲染与清除障碍乌云
+                for (let j = cloudList.length - 1; j >= 0; j--) {
+                    const c = cloudList[j];
+                    c.x -= step;
+                    c.dom.style.transform = `translate3d(${c.x}px, ${c.top}px, 0)`;
+
+                    if (isCrash(c.x, c.top, c.w, c.h)) {
+                        triggerScreenShake();
+                        gameOver();
+                        return;
+                    }
+                    if (c.x < -120) { c.dom.remove(); cloudList.splice(j, 1); }
+                }
+
+                animId = requestAnimationFrame(loop);
             }
 
             function gameOver() {
-                if (!gameRun) return;
                 gameRun = false;
                 if (score > maxScore) {
                     maxScore = score;
-                    localStorage.setItem('nailongMax', maxScore);
+                    localStorage.setItem('nailongMaxPro', maxScore);
                 }
                 maxScoreSpan.textContent = maxScore;
                 finalScoreSpan.textContent = score;
@@ -436,204 +518,94 @@
 
             function restartGame() {
                 overlay.classList.remove('show');
+                lightList.forEach(item => item.dom.remove());
+                cloudList.forEach(item => item.dom.remove());
+                lightList = []; cloudList = [];
 
-                for (let i = 0; i < lightList.length; i++) {
-                    if (lightList[i].dom.parentNode) lightList[i].dom.remove();
-                }
-                for (let i = 0; i < cloudList.length; i++) {
-                    if (cloudList[i].dom.parentNode) cloudList[i].dom.remove();
-                }
-                lightList = [];
-                cloudList = [];
-
-                x = 80;
-                y = GROUND_H;
-                score = 0;
-                gameSpeed = BASE_GAME_SPEED;
-                key.left = false;
-                key.right = false;
-                lastLightTime = 0;
-                lastCloudTime = 0;
+                posX = 80; posY = 0; velocityY = 0; isGrounded = true;
+                score = 0; scoreSpan.textContent = '0';
+                key.left = false; key.right = false;
                 lastTimestamp = 0;
 
-                setNailongPos(x, y);
-                updateScoreUI();
-                scoreSpan.textContent = '0';
+                updateNailongDOM();
 
                 if (!gameRun) {
                     gameRun = true;
                     if (animId) cancelAnimationFrame(animId);
                     animId = requestAnimationFrame(loop);
-                } else {
-                    gameRun = true;
                 }
             }
 
-            function loop(timestamp) {
-                if (!gameRun) {
-                    animId = null;
-                    return;
-                }
-
-                if (lastTimestamp === 0) {
-                    lastTimestamp = timestamp;
-                    lastLightTime = timestamp;
-                    lastCloudTime = timestamp;
-                }
-
-                var dt = Math.min(timestamp - lastTimestamp, 40);
-                lastTimestamp = timestamp;
-
-                var newW = game.offsetWidth;
-                var newH = game.offsetHeight;
-                if (newW !== gameW || newH !== gameH) {
-                    gameW = newW;
-                    gameH = newH;
-                }
-
-                var speedBoost = Math.min(score / 10 * SPEED_INCREASE_PER_SCORE, MAX_SPEED - BASE_GAME_SPEED);
-                gameSpeed = BASE_GAME_SPEED + speedBoost;
-
-                if (timestamp - lastLightTime >= LIGHT_INTERVAL_MS) {
-                    createLight();
-                    lastLightTime = timestamp;
-                }
-                if (timestamp - lastCloudTime >= CLOUD_INTERVAL_MS) {
-                    createCloud();
-                    lastCloudTime = timestamp;
-                }
-
-                if (key.left && x > 0) x -= SPEED_X;
-                if (key.right && x < gameW - NAILONG_W) x += SPEED_X;
-
-                setNailongPos(x, y);
-
-                var step = gameSpeed * (dt / 16.667);
-                for (var i = lightList.length - 1; i >= 0; i--) {
-                    var item = lightList[i];
-                    item.x -= step;
-                    setElPos(item.dom, item.x, item.top);
-
-                    if (isCrash(item.x, item.top, item.w, item.h)) {
-                        score += 10;
-                        updateScoreUI();
-                        var popX = item.x + 4;
-                        var popY = item.top - 10;
-                        showScorePopup(popX, popY);
-                        if (item.dom.parentNode) item.dom.remove();
-                        lightList.splice(i, 1);
-                        continue;
-                    }
-                    if (item.x < -40) {
-                        if (item.dom.parentNode) item.dom.remove();
-                        lightList.splice(i, 1);
-                    }
-                }
-
-                for (var j = cloudList.length - 1; j >= 0; j--) {
-                    var c = cloudList[j];
-                    c.x -= step;
-                    setElPos(c.dom, c.x, c.top);
-
-                    if (isCrash(c.x, c.top, c.w, c.h)) {
-                        gameOver();
-                        animId = null;
-                        return;
-                    }
-                    if (c.x < -80) {
-                        if (c.dom.parentNode) c.dom.remove();
-                        cloudList.splice(j, 1);
-                    }
-                }
-
-                animId = requestAnimationFrame(loop);
-            }
-
-            function onKeyDown(e) {
-                if (e.code === 'ArrowLeft') { key.left = true;
-                    e.preventDefault(); }
-                if (e.code === 'ArrowRight') { key.right = true;
-                    e.preventDefault(); }
-            }
-
-            function onKeyUp(e) {
-                if (e.code === 'ArrowLeft') { key.left = false;
-                    e.preventDefault(); }
-                if (e.code === 'ArrowRight') { key.right = false;
-                    e.preventDefault(); }
-            }
-
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-
-            function handleMove(e) {
-                if (e.target && (e.target.closest('#gameOverlay') || e.target.closest('.btn-box') || e.target.closest(
-                        '.overlay-btn') || e.target.id === 'restartTopBtn')) {
-                    return;
-                }
-                if (!gameRun) return;
-
-                const rect = game.getBoundingClientRect();
-                let clientX;
-                if (e.type === 'touchstart' || e.type === 'touchmove') {
-                    clientX = e.touches[0].clientX;
+            // 输入监听控制
+            window.addEventListener('keydown', e => {
+                if (e.code === 'ArrowLeft') { key.left = true; e.preventDefault(); }
+                if (e.code === 'ArrowRight') { key.right = true; e.preventDefault(); }
+                if ((e.code === 'Space' || e.code === 'ArrowUp') && isGrounded) {
+                    velocityY = JUMP_FORCE;
+                    isGrounded = false;
                     e.preventDefault();
-                } else {
-                    clientX = e.clientX;
                 }
-
-                const relativeX = clientX - rect.left;
-                const targetX = relativeX - NAILONG_W / 2;
-                x = Math.max(0, Math.min(gameW - NAILONG_W, targetX));
-                setNailongPos(x, y);
-            }
-
-            game.addEventListener('click', handleMove);
-            game.addEventListener('touchstart', handleMove, { passive: false });
-            game.addEventListener('touchmove', handleMove, { passive: false });
-
-            function onRestart() {
-                restartGame();
-            }
-            restartBtn.addEventListener('click', onRestart);
-            restartTopBtn.addEventListener('click', onRestart);
-
-            function onResize() {
-                gameW = game.offsetWidth;
-                gameH = game.offsetHeight;
-                if (x + NAILONG_W > gameW) {
-                    x = gameW - NAILONG_W;
-                    setNailongPos(x, y);
-                }
-            }
-            window.addEventListener('resize', onResize);
-
-            function onVisibilityChange() {
-                if (document.hidden && gameRun) {
-                    if (animId) {
-                        cancelAnimationFrame(animId);
-                        animId = null;
-                    }
-                } else if (!document.hidden && gameRun && !animId) {
-                    lastTimestamp = 0;
-                    animId = requestAnimationFrame(loop);
-                }
-            }
-            document.addEventListener('visibilitychange', onVisibilityChange);
-
-            maxScoreSpan.textContent = maxScore;
-            setNailongPos(x, y);
-            gameRun = true;
-            animId = requestAnimationFrame(loop);
-
-            window.restartGame = restartGame;
-
-            window.addEventListener('beforeunload', function() {
-                if (animId) cancelAnimationFrame(animId);
-                animId = null;
-                gameRun = false;
             });
 
+            window.addEventListener('keyup', e => {
+                if (e.code === 'ArrowLeft') key.left = false;
+                if (e.code === 'ArrowRight') key.right = false;
+            });
+
+            // 深度适配移动端：丝滑的视口点击/滑动流控
+            let touchStartX = 0;
+            game.addEventListener('touchstart', e => {
+                if (e.target.closest('#gameOverlay') || e.target.closest('.btn-box')) return;
+                if (!gameRun) return;
+
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                const rect = game.getBoundingClientRect();
+                const clickY = touch.clientY - rect.top;
+
+                // 触控上半屏幕或者短时间内双击触发跳跃
+                if (clickY < gameH * 0.55 && isGrounded) {
+                    velocityY = JUMP_FORCE;
+                    isGrounded = false;
+                }
+                handleTouchMove(touch, rect);
+                e.preventDefault();
+            }, { passive: false });
+
+            game.addEventListener('touchmove', e => {
+                if (!gameRun) return;
+                const rect = game.getBoundingClientRect();
+                handleTouchMove(e.touches[0], rect);
+                e.preventDefault();
+            }, { passive: false });
+
+            game.addEventListener('touchend', () => { key.left = false; key.right = false; });
+
+            function handleTouchMove(touch, rect) {
+                const relativeX = touch.clientX - rect.left;
+                // 让奶龙圆心迅速向手指方向靠拢
+                const targetX = relativeX - NAILONG_W / 2;
+                posX = Math.max(0, Math.min(gameW - NAILONG_W, targetX));
+            }
+
+            // 屏幕适配自适应
+            function handleResize() {
+                gameW = game.offsetWidth;
+                gameH = game.offsetHeight;
+                if (posX + NAILONG_W > gameW) { posX = gameW - NAILONG_W; }
+                updateNailongDOM();
+            }
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('orientationchange', () => setTimeout(handleResize, 200));
+
+            restartBtn.addEventListener('click', restartGame);
+            restartTopBtn.addEventListener('click', restartGame);
+
+            // 初始化启动
+            maxScoreSpan.textContent = maxScore;
+            gameW = game.offsetWidth; gameH = game.offsetHeight;
+            nailong.style.bottom = GROUND_H + 'px';
+            restartGame();
         })();
     </script>
 </body>
