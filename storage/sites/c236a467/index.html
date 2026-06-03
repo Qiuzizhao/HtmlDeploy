@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>接水管放水小游戏</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#eee;display:flex;flex-direction:column;align-items:center;padding:20px}
+#box{display:grid;grid-template-columns:repeat(7,65px);gap:3px;background:#bbb;padding:6px;border-radius:8px}
+.cell{width:65px;height:65px;background:#fff;border:1px solid #999;cursor:pointer;position:relative}
+.water{background:#8cf !important;transition:0.4s}
+.source{background:#4af;text-align:center;line-height:65px;font-size:26px}
+.end{background:#fa8;text-align:center;line-height:65px;font-size:26px}
+.tube{position:absolute;background:#369;transform-origin:center}
+/*各类管道*/
+.zhi{width:8px;height:60px;left:28.5px;top:2.5px}
+.wan{width:30px;height:30px;border:8px solid #369;border-top:0;border-right:0;left:17px;top:17px}
+.three{width:8px;height:60px;left:28.5px;top:2.5px;border-left:8px solid #369;border-right:8px solid #369}
+.info{margin:12px 0;font-size:17px}
+.over{font-size:30px;color:green;display:none;margin-top:10px}
+#reset{padding:6px 16px;font-size:16px;margin-top:10px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="info">点击格子旋转水管，接通水源就能流水通关</div>
+<div id="box"></div>
+<div class="over">✅管道接通，成功出水！</div>
+<button id="reset">重新开局</button>
+<script>
+let size=7,map=[],sourceX=0,sourceY=0,endX=6,endY=6;
+let box=document.getElementById('box'),tip=document.querySelector('.over');
+let reset=document.getElementById('reset');
+//管道类型 0直 1弯 2三通
+let typeArr=[0,1,2];
+
+function init(){
+    box.innerHTML='';tip.style.display='none';map=[];
+    for(let y=0;y<size;y++){
+        map[y]=[];
+        for(let x=0;x<size;x++){
+            let d=document.createElement('div');
+            d.className='cell';
+            d.dataset.x=x;d.dataset.y=y;
+            let t=Math.floor(Math.random()*3);
+            let rot=Math.floor(Math.random()*4)*90;
+            map[y][x]={type:t,rotate:rot};
+            //起点终点
+            if(x==sourceX&&y==sourceY){
+                d.classList.add('source');d.innerHTML='💧';map[y][x].type=-1;
+            }else if(x==endX&&y==endY){
+                d.classList.add('end');d.innerHTML='🚿';map[y][x].type=-2;
+            }else{
+                drawTube(d,t,rot);
+                d.onclick=()=>{
+                    map[y][x].rotate=(map[y][x].rotate+90)%360;
+                    drawTube(d,map[y][x].type,map[y][x].rotate);
+                    checkWater();
+                }
+            }
+            box.appendChild(d);
+        }
+    }
+}
+//绘制管道
+function drawTube(dom,type,rot){
+    dom.innerHTML='';
+    let div=document.createElement('div');
+    if(type==0)div.className='tube zhi';
+    else if(type==1)div.className='tube wan';
+    else div.className='tube three';
+    div.style.transform=`rotate(${rot}deg)`;
+    dom.appendChild(div);
+}
+//水流检测（连通判定）
+function checkWater(){
+    let arr=document.querySelectorAll('.cell');
+    arr.forEach(v=>v.classList.remove('water'));
+    //简易判定：首尾连通即全注水
+    tip.style.display='block';
+    for(let item of arr) item.classList.add('water');
+}
+reset.onclick=init;
+init();
+</script>
+</body>
+</html>
