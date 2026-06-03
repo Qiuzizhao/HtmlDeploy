@@ -129,6 +129,26 @@
       transform: translateY(-1px);
     }
 
+    .warning-button {
+      min-height: 40px;
+      padding: 0 15px;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      background: #fff7ed;
+      color: #c2410c;
+      font-weight: 650;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .warning-button:hover {
+      background: #fed7aa;
+      transform: translateY(-1px);
+    }
+
     .upload-toggle-button.is-disabled {
       border-color: #fecdd3;
       background: #fff1f2;
@@ -553,6 +573,21 @@
       color: var(--brand);
       font-size: 24px;
       font-weight: 800;
+    }
+
+    .project-disabled-warning {
+      display: inline-grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      margin-right: 6px;
+      border-radius: 999px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+      vertical-align: middle;
     }
 
     .url {
@@ -1623,11 +1658,21 @@
       emptyState.style.display = filtered.length ? 'none' : 'block';
 
       filtered.forEach((site, index) => {
+        const enabled = site.enabled !== false;
         const row = document.createElement('tr');
 
         const indexCell = document.createElement('td');
         indexCell.className = 'index-cell';
-        indexCell.textContent = site.number || String(index + 1);
+        if (!enabled) {
+          const warningIcon = document.createElement('span');
+          warningIcon.className = 'project-disabled-warning';
+          warningIcon.textContent = '!';
+          warningIcon.title = '该项目已禁用，前台不会显示';
+          indexCell.append(warningIcon);
+        }
+        const indexText = document.createElement('span');
+        indexText.textContent = site.number || String(index + 1);
+        indexCell.append(indexText);
 
         const titleCell = document.createElement('td');
         const titleInput = document.createElement('textarea');
@@ -1707,6 +1752,13 @@
         saveButton.textContent = '保存';
         saveButton.addEventListener('click', () => updateSite(site, titleInput, authorInput, classSelect, row));
 
+        const enabledButton = document.createElement('button');
+        enabledButton.className = enabled ? 'warning-button' : 'button';
+        enabledButton.type = 'button';
+        enabledButton.textContent = enabled ? '禁用' : '启用';
+        enabledButton.title = enabled ? '点击后该项目会在前台隐藏' : '点击后该项目会恢复到前台显示';
+        enabledButton.addEventListener('click', () => toggleSiteEnabled(site, enabledButton));
+
         const previewLink = document.createElement('a');
         previewLink.className = 'button';
         previewLink.href = site.previewUrl || site.url;
@@ -1749,7 +1801,7 @@
         deleteButton.textContent = '删除';
         deleteButton.addEventListener('click', () => deleteSite(site));
 
-        actions.append(saveButton, previewLink, codeButton, aiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
+        actions.append(saveButton, enabledButton, previewLink, codeButton, aiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
         actionCell.append(actions);
 
         row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, thumbnailCell, actionCell);

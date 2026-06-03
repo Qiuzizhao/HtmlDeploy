@@ -42,15 +42,20 @@
     </div>
     <div id="minimap"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js">
+    </script>
 
     <script>
         (function() {
             'use strict';
 
-            // 全局配置
+            /* ============================================================
+             *  配置
+             * ============================================================ */
             const CONFIG = {
                 mass: 150,
                 engineForce: 1500,
@@ -63,54 +68,84 @@
                 groundSize: 1000,
                 trackRadius: 80,
                 trackWidth: 5,
+                // 小地图每 N 帧更新一次 (优化性能)
+                minimapUpdateInterval: 2,
+                // 物理固定时间步长
+                physicsStep: 1 / 60,
+                // 最大物理累积时间，防止螺旋
+                maxPhysicsAccum: 0.1,
             };
 
+            /* ============================================================
+             *  状态 & 全局变量
+             * ============================================================ */
             let scene, renderer, world;
             let camera, miniMapCamera;
             let carVehicle, chassisBody;
             let wheelMeshes = [],
                 chassisMesh;
             const keys = { w: false, s: false, a: false, d: false };
+
             const loader = new THREE.GLTFLoader();
 
-            // 缓存 DOM 元素
+            // DOM 引用
             const speedEl = document.getElementById('speed');
             const gearEl = document.getElementById('gear');
 
-            // 临时向量池，减少垃圾回收
+            // ---- 复用临时对象，减少 GC ----
             const _v3 = new THREE.Vector3();
+            const _v3b = new THREE.Vector3();
             const _q = new THREE.Quaternion();
+            const _offset = new THREE.Vector3();
+            const _targetPos = new THREE.Vector3();
 
-            init();
+            // 小地图帧计数器
+            let minimapFrameCounter = 0;
 
+            // 物理累积时间
+            let physicsAccum = 0;
+
+            // 上一帧时间戳
+            let lastTime = 0;
+
+            // 模型加载标志
+            let modelLoaded = false;
+
+            /* ============================================================
+             *  初始化
+             * ============================================================ */
             function init() {
-                // 场景
+                // --- 场景 ---
                 scene = new THREE.Scene();
                 scene.background = new THREE.Color(0x333333);
 
-                // 渲染器
-                renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                // --- 渲染器 ---
+                renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    powerPreference: "high-performance"
+                });
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 document.body.appendChild(renderer.domElement);
 
-                // 主相机
+                // --- 主相机 ---
                 camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-                // 小地图相机（正交俯视）
+                // --- 小地图相机 (正交俯视) ---
                 miniMapCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 1, 500);
                 miniMapCamera.up.set(0, 0, -1);
 
-                // 物理世界
+                // --- 物理世界 ---
                 world = new CANNON.World();
                 world.gravity.set(0, -9.82, 0);
                 world.defaultContactMaterial.friction = 0.1;
 
-                // 灯光
+                // --- 灯光 ---
                 const ambient = new THREE.AmbientLight(0xffffff, 0.5);
                 scene.add(ambient);
+
                 const sun = new THREE.DirectionalLight(0xffffff, 1);
                 sun.position.set(50, 100, 50);
                 sun.castShadow = true;
@@ -125,43 +160,57 @@
                 sun.shadow.camera.far = 300;
                 scene.add(sun);
 
+                // --- 构建场景 ---
                 createLevel();
                 createPhysicsCar();
                 loadCarModel();
                 setupControls();
+
+                // 启动
+                lastTime = performance.now();
                 animate();
             }
 
+            /* ============================================================
+             *  赛道 & 地面
+             * ============================================================ */
             function createLevel() {
-                // 地面物理
+                // 物理地面
                 const groundMat = new CANNON.Material("ground");
                 const groundBody = new CANNON.Body({ mass: 0, material: groundMat });
                 groundBody.addShape(new CANNON.Plane());
                 groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
                 world.addBody(groundBody);
 
-                // 地面视觉 - 网格辅助
+                // 视觉网格
                 const grid = new THREE.GridHelper(CONFIG.groundSize, 100, 0x444444, 0x222222);
                 scene.add(grid);
 
-                // 简化赛道围栏 - 使用环状 Torus 作为视觉参考
+                // 赛道圆环 (视觉参考)
                 const trackGeo = new THREE.TorusGeometry(CONFIG.trackRadius, CONFIG.trackWidth, 16, 100);
-                const trackMat = new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.7, metalness: 0.2 });
+                const trackMat = new THREE.MeshStandardMaterial({
+                    color: 0xcc0000,
+                    roughness: 0.7,
+                    metalness: 0.2
+                });
                 const trackMesh = new THREE.Mesh(trackGeo, trackMat);
                 trackMesh.rotation.x = Math.PI / 2;
                 trackMesh.position.y = 0.1;
                 trackMesh.receiveShadow = true;
                 scene.add(trackMesh);
-
-                // 围栏缺乏物理碰撞，暂时忽略
             }
 
+            /* ============================================================
+             *  物理车辆
+             * ============================================================ */
             function createPhysicsCar() {
+                // 底盘
                 const chassisShape = new CANNON.Box(new CANNON.Vec3(1, 0.4, 2));
                 chassisBody = new CANNON.Body({ mass: CONFIG.mass });
                 chassisBody.addShape(chassisShape);
                 chassisBody.position.set(0, 4, 0);
 
+                // RaycastVehicle
                 carVehicle = new CANNON.RaycastVehicle({
                     chassisBody: chassisBody,
                     indexForwardAxis: 2,
@@ -190,19 +239,22 @@
                     new CANNON.Vec3(1, -0.2, -1.5)
                 ];
 
-                positions.forEach(p => {
+                positions.forEach(function(p) {
                     wheelOptions.chassisConnectionPointLocal.copy(p);
                     carVehicle.addWheel(wheelOptions);
                 });
 
                 carVehicle.addToWorld(world);
 
-                // 创建轮子的视觉占位几何体（导入模型后会隐藏）
+                // 轮子视觉 (圆柱体)
                 const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 20);
                 wheelGeo.rotateZ(Math.PI / 2);
-                const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-                for (let i = 0; i < 4; i++) {
-                    const w = new THREE.Mesh(wheelGeo, wheelMat);
+                const wheelMat = new THREE.MeshStandardMaterial({
+                    color: 0x111111,
+                    roughness: 0.8
+                });
+                for (var i = 0; i < 4; i++) {
+                    var w = new THREE.Mesh(wheelGeo, wheelMat);
                     w.castShadow = true;
                     w.receiveShadow = true;
                     scene.add(w);
@@ -210,38 +262,45 @@
                 }
             }
 
+            /* ============================================================
+             *  加载车身模型 (GLTF)
+             * ============================================================ */
             function loadCarModel() {
-                const modelUrl = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Ferrari.glb';
+                var modelUrl =
+                    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Ferrari.glb';
 
                 loader.load(modelUrl,
-                    (gltf) => {
+                    function(gltf) {
                         chassisMesh = gltf.scene;
                         chassisMesh.scale.set(0.022, 0.022, 0.022);
-                        chassisMesh.traverse(child => {
+                        chassisMesh.traverse(function(child) {
                             if (child.isMesh) {
                                 child.castShadow = true;
                                 child.receiveShadow = true;
                             }
                         });
                         scene.add(chassisMesh);
-                        // 隐藏默认轮子视觉，让模型自带轮子显现？或者保持原样（原代码未替换轮子视觉）
-                        // 为了视觉一致，我们隐藏物理轮子并让模型轮子跟随物理（这里简单处理：轮子仍为圆柱）
+                        modelLoaded = true;
                     },
                     undefined,
-                    (error) => {
+                    function(error) {
                         console.error('模型加载失败，使用后备几何体', error);
-                        const backupGeo = new THREE.BoxGeometry(2, 0.8, 4);
-                        const backupMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                        var backupGeo = new THREE.BoxGeometry(2, 0.8, 4);
+                        var backupMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
                         chassisMesh = new THREE.Mesh(backupGeo, backupMat);
                         chassisMesh.castShadow = true;
                         chassisMesh.receiveShadow = true;
                         scene.add(chassisMesh);
+                        modelLoaded = true;
                     }
                 );
             }
 
+            /* ============================================================
+             *  驾驶控制
+             * ============================================================ */
             function updateDrive() {
-                // 重置所有控制
+                // 先重置所有
                 carVehicle.applyEngineForce(0, 2);
                 carVehicle.applyEngineForce(0, 3);
                 carVehicle.setSteeringValue(0, 0);
@@ -251,13 +310,12 @@
                 carVehicle.setBrake(0, 2);
                 carVehicle.setBrake(0, 3);
 
-                // 根据按键输入驱动
+                // 根据按键施加
                 if (keys.w) {
                     carVehicle.applyEngineForce(-CONFIG.engineForce, 2);
                     carVehicle.applyEngineForce(-CONFIG.engineForce, 3);
                 }
                 if (keys.s) {
-                    // 倒车/反向推进
                     carVehicle.applyEngineForce(CONFIG.engineForce * 0.5, 2);
                     carVehicle.applyEngineForce(CONFIG.engineForce * 0.5, 3);
                 }
@@ -270,130 +328,216 @@
                     carVehicle.setSteeringValue(-CONFIG.steerValue, 1);
                 }
 
-                // 没有前进/后退时轻制动
+                // 无油门/刹车时轻制动
                 if (!keys.w && !keys.s) {
-                    const brake = CONFIG.brakeForce * 0.2;
+                    var brake = CONFIG.brakeForce * 0.2;
                     carVehicle.setBrake(brake, 0);
                     carVehicle.setBrake(brake, 1);
                 }
             }
 
+            /* ============================================================
+             *  动画主循环
+             * ============================================================ */
             function animate() {
                 requestAnimationFrame(animate);
 
-                world.step(1 / 60);
+                var now = performance.now();
+                var delta = (now - lastTime) / 1000;
+                lastTime = now;
 
+                // 限制 delta 防止物理爆炸
+                if (delta > 0.05) delta = 0.05;
+
+                // ---- 物理步进 (固定时间步长) ----
+                physicsAccum += delta;
+                if (physicsAccum > CONFIG.maxPhysicsAccum) {
+                    physicsAccum = CONFIG.maxPhysicsAccum;
+                }
+                while (physicsAccum >= CONFIG.physicsStep) {
+                    world.step(CONFIG.physicsStep);
+                    physicsAccum -= CONFIG.physicsStep;
+                }
+
+                // ---- 驱动逻辑 ----
                 updateDrive();
 
-                // 同步底盘视觉
+                // ---- 同步底盘视觉 ----
                 if (chassisMesh) {
                     chassisMesh.position.copy(chassisBody.position);
                     chassisMesh.quaternion.copy(chassisBody.quaternion);
                 }
 
-                // 同步轮子视觉
-                for (let i = 0; i < carVehicle.wheelInfos.length; i++) {
+                // ---- 同步轮子视觉 ----
+                var wheelInfos = carVehicle.wheelInfos;
+                for (var i = 0; i < wheelInfos.length; i++) {
                     carVehicle.updateWheelTransform(i);
-                    const t = carVehicle.wheelInfos[i].worldTransform;
+                    var t = wheelInfos[i].worldTransform;
                     wheelMeshes[i].position.copy(t.position);
                     wheelMeshes[i].quaternion.copy(t.quaternion);
                 }
 
-                // 更新主相机（跟随车辆）
-                const carPos = chassisBody.position;
-                const carQuat = chassisBody.quaternion;
-                const offset = CONFIG.cameraOffset.clone();
+                // ---- 主相机跟随 (复用临时对象) ----
+                var carPos = chassisBody.position;
+                var carQuat = chassisBody.quaternion;
 
+                _offset.copy(CONFIG.cameraOffset);
                 // 将偏移量转换到车辆局部方向
-                const offsetWorld = offset.clone().applyQuaternion(carQuat);
-                const targetPos = carPos.clone().add(offsetWorld);
+                _offset.applyQuaternion(carQuat);
+                _targetPos.copy(carPos).add(_offset);
 
-                camera.position.lerp(targetPos, CONFIG.cameraLerpFactor);
+                camera.position.lerp(_targetPos, CONFIG.cameraLerpFactor);
                 camera.lookAt(carPos);
 
-                // 更新小地图相机（正交俯视）
+                // ---- 小地图相机 ----
                 miniMapCamera.position.set(carPos.x, 100, carPos.z);
                 miniMapCamera.lookAt(carPos.x, 0, carPos.z);
 
-                // 渲染主场景
+                // ---- 渲染主场景 ----
                 renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
                 renderer.setScissorTest(false);
                 renderer.render(scene, camera);
 
-                // 渲染小地图（右上角圆形区域）
-                const mapSize = CONFIG.minimapSize;
-                const margin = CONFIG.minimapMargin;
-                const x = window.innerWidth - mapSize - margin;
-                const y = window.innerHeight - mapSize - margin;
+                // ---- 小地图 (降低更新频率) ----
+                minimapFrameCounter++;
+                if (minimapFrameCounter >= CONFIG.minimapUpdateInterval) {
+                    minimapFrameCounter = 0;
+                    renderMiniMap();
+                }
 
-                renderer.setScissorTest(true);
-                renderer.setScissor(x, y, mapSize, mapSize);
-                renderer.setViewport(x, y, mapSize, mapSize);
-                // 清除小地图区域背景
-                renderer.clear(true, true, true);
-                renderer.render(scene, miniMapCamera);
-                renderer.setScissorTest(false);
-
-                // 更新速度 UI
-                const speedKmh = (chassisBody.velocity.length() * 3.6).toFixed(0);
+                // ---- UI 更新 ----
+                var speedKmh = (chassisBody.velocity.length() * 3.6).toFixed(0);
                 speedEl.textContent = speedKmh;
                 gearEl.textContent = 'D';
             }
 
+            /* ============================================================
+             *  小地图渲染
+             * ============================================================ */
+            function renderMiniMap() {
+                var mapSize = CONFIG.minimapSize;
+                var margin = CONFIG.minimapMargin;
+                var x = window.innerWidth - mapSize - margin;
+                var y = window.innerHeight - mapSize - margin;
+
+                renderer.setScissorTest(true);
+                renderer.setScissor(x, y, mapSize, mapSize);
+                renderer.setViewport(x, y, mapSize, mapSize);
+                renderer.clear(true, true, true);
+                renderer.render(scene, miniMapCamera);
+                renderer.setScissorTest(false);
+            }
+
+            /* ============================================================
+             *  控制绑定
+             * ============================================================ */
             function setupControls() {
-                window.addEventListener('keydown', (e) => {
-                    const key = e.key.toLowerCase();
+                // ---- 键盘 ----
+                window.addEventListener('keydown', function(e) {
+                    var key = e.key.toLowerCase();
                     if (key in keys) keys[key] = true;
                 });
-                window.addEventListener('keyup', (e) => {
-                    const key = e.key.toLowerCase();
+                window.addEventListener('keyup', function(e) {
+                    var key = e.key.toLowerCase();
                     if (key in keys) keys[key] = false;
                 });
-                window.addEventListener('resize', () => {
-                    const w = window.innerWidth;
-                    const h = window.innerHeight;
+
+                // ---- 窗口失焦时重置按键 (防止"幽灵按键") ----
+                window.addEventListener('blur', function() {
+                    keys.w = false;
+                    keys.s = false;
+                    keys.a = false;
+                    keys.d = false;
+                });
+
+                // ---- 窗口缩放 ----
+                window.addEventListener('resize', function() {
+                    var w = window.innerWidth;
+                    var h = window.innerHeight;
                     camera.aspect = w / h;
                     camera.updateProjectionMatrix();
                     renderer.setSize(w, h);
                 });
 
-                // 移动端触摸控制（平滑体验）
-                // 简单补充：使用触摸事件模拟 WASD
-                let touchStartX = 0,
+                // ---- 触摸控制 ----
+                var touchStartX = 0,
                     touchStartY = 0;
-                window.addEventListener('touchstart', (e) => {
-                    const touch = e.touches[0];
+                var touchActive = false;
+
+                window.addEventListener('touchstart', function(e) {
+                    var touch = e.touches[0];
                     touchStartX = touch.clientX;
                     touchStartY = touch.clientY;
+                    touchActive = true;
                     // 默认前进
                     keys.w = true;
-                    keys.s = keys.a = keys.d = false;
-                });
-                window.addEventListener('touchmove', (e) => {
+                    keys.s = false;
+                    keys.a = false;
+                    keys.d = false;
+                }, { passive: true });
+
+                window.addEventListener('touchmove', function(e) {
                     e.preventDefault();
-                    const touch = e.touches[0];
-                    const dx = touch.clientX - touchStartX;
-                    const dy = touch.clientY - touchStartY;
-                    const threshold = 20;
-                    // 重置
-                    keys.w = keys.s = keys.a = keys.d = false;
+                    if (!touchActive) return;
+                    var touch = e.touches[0];
+                    var dx = touch.clientX - touchStartX;
+                    var dy = touch.clientY - touchStartY;
+                    var threshold = 20;
+
+                    keys.w = false;
+                    keys.s = false;
+                    keys.a = false;
+                    keys.d = false;
+
                     if (dy < -threshold) {
                         keys.w = true;
                     } else if (dy > threshold) {
                         keys.s = true;
                     } else {
-                        keys.w = true; // 默认前进
+                        keys.w = true;
                     }
                     if (dx < -threshold) {
                         keys.a = true;
                     } else if (dx > threshold) {
                         keys.d = true;
                     }
-                });
-                window.addEventListener('touchend', (e) => {
-                    keys.w = keys.s = keys.a = keys.d = false;
-                });
+                }, { passive: false });
+
+                window.addEventListener('touchend', function() {
+                    touchActive = false;
+                    keys.w = false;
+                    keys.s = false;
+                    keys.a = false;
+                    keys.d = false;
+                }, { passive: true });
+
+                window.addEventListener('touchcancel', function() {
+                    touchActive = false;
+                    keys.w = false;
+                    keys.s = false;
+                    keys.a = false;
+                    keys.d = false;
+                }, { passive: true });
             }
+
+            /* ============================================================
+             *  启动
+             * ============================================================ */
+            // 检查 WebGL 支持
+            try {
+                var testCanvas = document.createElement('canvas');
+                var gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+                if (!gl) {
+                    throw new Error('WebGL 不被支持');
+                }
+            } catch (e) {
+                document.body.innerHTML =
+                    '<div style="color:red;font-size:24px;text-align:center;margin-top:20%;">您的浏览器不支持 WebGL，请使用现代浏览器。</div>';
+                return;
+            }
+
+            init();
+
         })();
     </script>
 

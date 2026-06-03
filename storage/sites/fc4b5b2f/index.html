@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -33,66 +34,112 @@
             overflow: hidden;
             transition: background 2.5s ease;
         }
+
         /* 云朵飘动动画 */
         .cloud {
+            will-change: transform;
             animation: cloudMove 35s linear infinite;
         }
         @keyframes cloudMove {
-            0% {transform: translateX(-220px);}
-            100% {transform: translateX(calc(100vw + 220px));}
+            0% {
+                transform: translateX(-220px);
+            }
+            100% {
+                transform: translateX(calc(100vw + 220px));
+            }
         }
+
         /* 树苗生长动画 */
         .grow-anim {
             animation: treeGrow 1.8s ease-out forwards;
         }
         @keyframes treeGrow {
-            0% {transform: translateY(28px) scale(0.15); opacity:0;}
-            100% {transform: translateY(0) scale(1); opacity:1;}
+            0% {
+                transform: translateY(28px) scale(0.15);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
         }
+
         /* 树叶微风摇摆 */
         .leaf-sway {
             transform-origin: bottom center;
             animation: sway 4s ease-in-out infinite alternate;
         }
         @keyframes sway {
-            0% {transform: rotate(-5deg);}
-            100% {transform: rotate(5deg);}
+            0% {
+                transform: rotate(-5deg);
+            }
+            100% {
+                transform: rotate(5deg);
+            }
         }
-        /* 雨滴下落 */
+
+        /* 雨滴下落 - 使用 will-change 提升性能 */
         .rain-drop {
             position: absolute;
             width: 2px;
             height: 18px;
-            background: rgba(200,230,255,0.7);
-            animation: rainFall 0.7s linear infinite;
+            background: rgba(200, 230, 255, 0.7);
+            will-change: transform;
+            animation: rainFall 0.7s linear forwards;
         }
         @keyframes rainFall {
-            0% {transform: translateY(-30px);}
-            100% {transform: translateY(100vh);}
+            0% {
+                transform: translateY(-30px);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
         }
+
         /* 土地起伏微动效 */
         .land-cell {
             transition: all 0.3s ease;
+            will-change: transform;
         }
         .land-cell:hover {
             transform: translateY(-3px);
             filter: brightness(1.15);
         }
+
         /* 昼夜月亮星星动画 */
         .star {
+            will-change: opacity;
             animation: twinkle 2.2s ease-in-out infinite alternate;
         }
         @keyframes twinkle {
-            0% {opacity:0.2;}
-            100% {opacity:1;}
+            0% {
+                opacity: 0.2;
+            }
+            100% {
+                opacity: 1;
+            }
         }
+
         /* 种下弹窗弹跳 */
         .pop-text {
+            pointer-events: none;
             animation: popUp 1.2s ease-out forwards;
         }
         @keyframes popUp {
-            0% {transform: translateY(0); opacity:1;}
-            100% {transform: translateY(-65px); opacity:0;}
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-65px) scale(0.9);
+                opacity: 0;
+            }
+        }
+
+        /* 工具类：提升渲染性能 */
+        .gpu-layer {
+            transform: translateZ(0);
+            backface-visibility: hidden;
         }
     </style>
 </head>
@@ -112,13 +159,13 @@
     </div>
 
     <!-- 云朵容器 -->
-    <div id="cloudBox" class="absolute top-[8%] w-full h-[220px] overflow-hidden pointer-events-none"></div>
+    <div id="cloudBox" class="absolute top-[8%] w-full h-[220px] overflow-hidden pointer-events-none gpu-layer"></div>
     <!-- 星星（夜晚隐藏） -->
-    <div id="starBox" class="absolute inset-0 pointer-events-none hidden"></div>
+    <div id="starBox" class="absolute inset-0 pointer-events-none hidden gpu-layer"></div>
     <!-- 雨滴容器 -->
-    <div id="rainBox" class="absolute inset-0 pointer-events-none hidden"></div>
+    <div id="rainBox" class="absolute inset-0 pointer-events-none hidden gpu-layer"></div>
     <!-- 树木渲染容器 -->
-    <div id="treeBox" class="absolute bottom-[120px] w-full h-[320px] pointer-events-none"></div>
+    <div id="treeBox" class="absolute bottom-[120px] w-full h-[320px] pointer-events-none gpu-layer"></div>
 
     <!-- 地面区域 -->
     <div class="absolute bottom-0 w-full h-[120px] bg-gradient-to-t from-land to-[#a06b3b] flex px-[5%] gap-1 overflow-hidden" id="landWrap">
@@ -129,197 +176,358 @@
     <div class="fixed bottom-[130px] left-1/2 -translate-x-1/2 text-white/80 text-sm">点击褐色土地空位，随机种下不同品种小树🌱</div>
 
     <script>
-        // 树种配置：5种树木
-        const treeTypes = [
-            {
-                name:"阔叶绿树",
-                trunkColor:"#654321",
-                leafColor:"#49b849",
-                html:`<div class="w-[45px] h-[52px] rounded-full shadow-md" style="background:#49b849"></div>
-                <div class="w-[12px] h-[45px] rounded-sm" style="background:#654321"></div>`
-            },
-            {
-                name:"青松松树",
-                trunkColor:"#593c26",
-                leafColor:"#2c7a34",
-                html:`
-                <div style="width:0;height:0;border-left:28px solid transparent;border-right:28px solid transparent;border-bottom:40px solid #2c7a34;"></div>
-                <div style="width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:32px solid #35943e;margin-top:-12px"></div>
-                <div class="w-[10px] h-[38px] rounded-sm" style="background:#593c26"></div>
-                `
-            },
-            {
-                name:"红果果树",
-                trunkColor:"#70482c",
-                leafColor:"#63b95b",
-                html:`
-                <div class="w-[48px] h-[48px] rounded-full relative shadow-md" style="background:#63b95b">
-                    <span class="absolute w-[8px] h-[8px] rounded-full bg-red-500 top-[10px] left-[8px]"></span>
-                    <span class="absolute w-[8px] h-[8px] rounded-full bg-red-500 top-[22px] right-[7px]"></span>
-                </div>
-                <div class="w-[13px] h-[46px] rounded-sm" style="background:#70482c"></div>
-                `
-            },
-            {
-                name:"白干桦树",
-                trunkColor:"#e8e6e1",
-                leafColor:"#82c967",
-                html:`
-                <div class="w-[50px] h-[46px] rounded-full shadow-md" style="background:#82c967"></div>
-                <div class="w-[11px] h-[50px] rounded-sm border border-gray-400" style="background:#e8e6e1"></div>
-                `
-            },
-            {
-                name:"热带棕榈",
-                trunkColor:"#966b3e",
-                leafColor:"#239958",
-                html:`
-                <div class="relative h-[55px] w-[55px]">
-                    <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[6px] h-[32px] origin-bottom rotate-[-30deg]" style="background:#239958;border-radius:99px;"></div>
-                    <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[6px] h-[32px] origin-bottom rotate-[30deg]" style="background:#239958;border-radius:99px;"></div>
-                    <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[6px] h-[36px] origin-bottom rotate-[0deg]" style="background:#239958;border-radius:99px;"></div>
-                </div>
-                <div class="w-[9px] h-[42px] rounded-sm" style="background:#966b3e"></div>
-                `
+        (function() {
+            'use strict';
+
+            // ============================================================
+            // 1. 配置区
+            // ============================================================
+            const CONFIG = {
+                landTotal: 28, // 土地总格子数
+                cloudMax: 10, // 最大云朵数量
+                cloudInterval: 4200, // 云朵生成间隔(ms)
+                cloudLifetime: 35000, // 云朵存活时间(ms)
+                starCount: 40, // 星星数量
+                rainInterval: 35, // 雨滴生成间隔(ms)
+                rainLifetime: 700, // 雨滴存活时间(ms)
+                popDuration: 1200, // 弹出文字持续时间(ms)
+            };
+
+            // 树种配置：5种树木
+            const treeTypes = [{
+                name: "阔叶绿树",
+                trunkColor: "#654321",
+                leafColor: "#49b849",
+                html: `<div class="w-[45px] h-[52px] rounded-full shadow-md" style="background:#49b849"></div>
+                       <div class="w-[12px] h-[45px] rounded-sm" style="background:#654321"></div>`
+            }, {
+                name: "青松松树",
+                trunkColor: "#593c26",
+                leafColor: "#2c7a34",
+                html: `<div style="width:0;height:0;border-left:28px solid transparent;border-right:28px solid transparent;border-bottom:40px solid #2c7a34;"></div>
+                       <div style="width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:32px solid #35943e;margin-top:-12px"></div>
+                       <div class="w-[10px] h-[38px] rounded-sm" style="background:#593c26"></div>`
+            }, {
+                name: "红果果树",
+                trunkColor: "#70482c",
+                leafColor: "#63b95b",
+                html: `<div class="w-[48px] h-[48px] rounded-full relative shadow-md" style="background:#63b95b">
+                           <span class="absolute w-[8px] h-[8px] rounded-full bg-red-500 top-[10px] left-[8px]"></span>
+                           <span class="absolute w-[8px] h-[8px] rounded-full bg-red-500 top-[22px] right-[7px]"></span>
+                       </div>
+                       <div class="w-[13px] h-[46px] rounded-sm" style="background:#70482c"></div>`
+            }, {
+                name: "白干桦树",
+                trunkColor: "#e8e6e1",
+                leafColor: "#82c967",
+                html: `<div class="w-[50px] h-[46px] rounded-full shadow-md" style="background:#82c967"></div>
+                       <div class="w-[11px] h-[50px] rounded-sm border border-gray-400" style="background:#e8e6e1"></div>`
+            }, {
+                name: "热带棕榈",
+                trunkColor: "#966b3e",
+                leafColor: "#239958",
+                html: `<div class="relative h-[55px] w-[55px]">
+                           <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[6px] h-[32px] origin-bottom -rotate-[30deg]" style="background:#239958;border-radius:99px;"></div>
+                           <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[6px] h-[32px] origin-bottom rotate-[30deg]" style="background:#239958;border-radius:99px;"></div>
+                           <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[6px] h-[36px] origin-bottom rotate-[0deg]" style="background:#239958;border-radius:99px;"></div>
+                       </div>
+                       <div class="w-[9px] h-[42px] rounded-sm" style="background:#966b3e"></div>`
+            }];
+
+            // ============================================================
+            // 2. 状态管理
+            // ============================================================
+            const state = {
+                treeNum: 0,
+                isNight: false,
+                isRain: false,
+                landList: [], // true=有树 false=空地
+                cloudCount: 0,
+                rainEnabled: false,
+            };
+
+            // 定时器/动画ID集合（用于页面卸载时清理）
+            const timers = {
+                ids: [],
+                add: function(id) {
+                    if (id) this.ids.push(id);
+                },
+                clearAll: function() {
+                    this.ids.forEach(function(id) {
+                        if (typeof id === 'number') {
+                            clearInterval(id);
+                            clearTimeout(id);
+                        } else if (typeof id === 'number' && id > 0) {
+                            cancelAnimationFrame(id);
+                        }
+                    });
+                    this.ids = [];
+                }
+            };
+
+            // ============================================================
+            // 3. DOM 引用
+            // ============================================================
+            const dom = {
+                bgWrap: document.getElementById('bgWrap'),
+                landWrap: document.getElementById('landWrap'),
+                treeBox: document.getElementById('treeBox'),
+                cloudBox: document.getElementById('cloudBox'),
+                starBox: document.getElementById('starBox'),
+                rainBox: document.getElementById('rainBox'),
+                treeCount: document.getElementById('treeCount'),
+                weatherText: document.getElementById('weatherText'),
+                dayIcon: document.getElementById('dayIcon'),
+                dayNightBtn: document.getElementById('dayNightBtn'),
+                rainBtn: document.getElementById('rainBtn'),
+            };
+
+            // ============================================================
+            // 4. 土地初始化
+            // ============================================================
+            function initLand() {
+                var fragment = document.createDocumentFragment();
+                state.landList = [];
+
+                for (var i = 0; i < CONFIG.landTotal; i++) {
+                    state.landList[i] = false;
+                    var cell = document.createElement('div');
+                    cell.className = 'land-cell flex-1 h-full bg-land rounded-t-md cursor-pointer relative';
+                    cell.dataset.index = i;
+                    fragment.appendChild(cell);
+                }
+
+                dom.landWrap.innerHTML = '';
+                dom.landWrap.appendChild(fragment);
             }
-        ]
 
-        // 全局数据
-        const data = {
-            treeNum: 0,
-            isNight: false,
-            isRain: false,
-            landTotal: 28, //土地总格子数
-            landList: [] //土地状态：true有树 false空地
-        }
-        const bgWrap = document.getElementById('bgWrap');
-        const landWrap = document.getElementById('landWrap');
-        const treeBox = document.getElementById('treeBox');
-        const cloudBox = document.getElementById('cloudBox');
-        const starBox = document.getElementById('starBox');
-        const rainBox = document.getElementById('rainBox');
-        const treeCountDom = document.getElementById('treeCount');
-        const weatherText = document.getElementById('weatherText');
-        const dayIcon = document.getElementById('dayIcon');
-        const dayNightBtn = document.getElementById('dayNightBtn');
-        const rainBtn = document.getElementById('rainBtn');
+            // ============================================================
+            // 5. 种树逻辑（事件委托）
+            // ============================================================
+            function handlePlantClick(e) {
+                var target = e.target;
+                // 向上查找 .land-cell
+                while (target && !target.classList.contains('land-cell')) {
+                    target = target.parentElement;
+                }
+                if (!target) return;
 
-        // 1.生成土地格子
-        function initLand() {
-            landWrap.innerHTML = '';
-            for(let i=0; i<data.landTotal; i++){
-                data.landList[i] = false;
-                const cell = document.createElement('div');
-                cell.className = 'land-cell flex-1 h-full bg-land rounded-t-md cursor-pointer relative';
-                cell.dataset.index = i;
-                // 点击种树
-                cell.onclick = ()=>plantTree(i, cell);
-                landWrap.appendChild(cell);
+                var idx = parseInt(target.dataset.index);
+                if (isNaN(idx) || state.landList[idx]) return;
+
+                // 标记已种树
+                state.landList[idx] = true;
+                state.treeNum++;
+                dom.treeCount.innerText = state.treeNum;
+
+                // 随机树种
+                var randomIndex = Math.floor(Math.random() * treeTypes.length);
+                var treeInfo = treeTypes[randomIndex];
+
+                // 弹出文字
+                showPopText(target, treeInfo);
+
+                // 创建树木DOM
+                createTree(target, treeInfo);
             }
-        }
 
-        // 2.种树逻辑【随机树种】
-        function plantTree(idx, dom) {
-            if(data.landList[idx]) return;
-            data.landList[idx] = true;
-            data.treeNum++;
-            treeCountDom.innerText = data.treeNum;
+            // 弹出文字
+            function showPopText(cell, treeInfo) {
+                var rect = cell.getBoundingClientRect();
+                var pop = document.createElement('div');
+                pop.className = 'pop-text absolute z-40 whitespace-nowrap font-bold text-sm';
+                pop.style.color = treeInfo.leafColor;
+                pop.style.left = (rect.left + rect.width / 2) + 'px';
+                pop.style.top = (rect.top - 10) + 'px';
+                pop.style.position = 'fixed';
+                pop.innerText = '+1🌳' + treeInfo.name;
+                document.body.appendChild(pop);
 
-            // 随机选取一种树
-            const randomIndex = Math.floor(Math.random() * treeTypes.length);
-            const treeInfo = treeTypes[randomIndex];
-
-            // 弹出文字（+1 +树种名字）
-            const plus = document.createElement('div');
-            plus.className = 'pop-text absolute font-bold z-40 whitespace-nowrap';
-            plus.style.color = treeInfo.leafColor;
-            plus.innerText = `+1🌳${treeInfo.name}`;
-            plus.style.left = `${dom.offsetLeft + dom.offsetWidth/2}px`;
-            plus.style.bottom = '130px';
-            document.body.appendChild(plus);
-            setTimeout(()=>plus.remove(),1200);
+                setTimeout(function() {
+                    if (pop.parentNode) pop.remove();
+                }, CONFIG.popDuration);
+            }
 
             // 创建树木DOM
-            const tree = document.createElement('div');
-            tree.className = 'grow-anim leaf-sway absolute bottom-0 flex flex-col items-center';
-            tree.style.left = `${dom.offsetLeft + dom.offsetWidth/2 - 26}px`;
-            tree.innerHTML = treeInfo.html;
-            treeBox.appendChild(tree);
-        }
+            function createTree(cell, treeInfo) {
+                var rect = cell.getBoundingClientRect();
+                var treeBoxRect = dom.treeBox.getBoundingClientRect();
 
-        // 3.生成随机云朵
-        function createCloud() {
-            setInterval(()=>{
-                const cloud = document.createElement('div');
-                cloud.className = 'cloud absolute top-0';
-                const size = 30 + Math.random()*55;
-                cloud.style.top = `${Math.random()*120}px`;
-                cloud.innerHTML = `<div style="width:${size}px;height:${size/2.2}px;background:#fff;border-radius:999px;opacity:0.8;"></div>`;
-                cloudBox.appendChild(cloud);
-                setTimeout(()=>cloud.remove(),35000);
-            },4200);
-        }
-
-        // 4.昼夜切换
-        function toggleDayNight() {
-            data.isNight = !data.isNight;
-            if(data.isNight){
-                bgWrap.classList.remove('bg-skyDay');
-                bgWrap.classList.add('bg-skyNight');
-                dayIcon.className = 'fa fa-moon-o text-yellow-200 text-xl';
-                starBox.classList.remove('hidden');
-                createStar();
-            }else{
-                bgWrap.classList.add('bg-skyDay');
-                bgWrap.classList.remove('bg-skyNight');
-                dayIcon.className = 'fa fa-sun-o text-amber-500 text-xl';
-                starBox.classList.add('hidden');
-                starBox.innerHTML = '';
+                var tree = document.createElement('div');
+                tree.className = 'grow-anim leaf-sway absolute bottom-0 flex flex-col items-center';
+                tree.style.left = (rect.left - treeBoxRect.left + rect.width / 2 - 26) + 'px';
+                tree.innerHTML = treeInfo.html;
+                dom.treeBox.appendChild(tree);
             }
-        }
 
-        // 生成星星
-        function createStar() {
-            starBox.innerHTML = '';
-            for(let i=0;i<85;i++){
-                const star = document.createElement('div');
-                star.className = 'star absolute bg-white rounded-full';
-                const s = 1+Math.random()*2.5;
-                star.style.width = `${s}px`;
-                star.style.height = `${s}px`;
-                star.style.left = `${Math.random()*100}%`;
-                star.style.top = `${Math.random()*65}%`;
-                starBox.appendChild(star);
+            // ============================================================
+            // 6. 云朵管理
+            // ============================================================
+            function startCloudGenerator() {
+                var id = setInterval(function() {
+                    if (state.cloudCount >= CONFIG.cloudMax) return;
+
+                    var cloud = document.createElement('div');
+                    cloud.className = 'cloud absolute top-0';
+                    var size = 30 + Math.random() * 55;
+                    cloud.style.top = (Math.random() * 120) + 'px';
+                    cloud.innerHTML = '<div style="width:' + size + 'px;height:' + (size / 2.2) +
+                        'px;background:#fff;border-radius:999px;opacity:0.8;"></div>';
+
+                    state.cloudCount++;
+                    dom.cloudBox.appendChild(cloud);
+
+                    // 定时移除
+                    setTimeout(function() {
+                        if (cloud.parentNode) {
+                            cloud.remove();
+                            state.cloudCount--;
+                        }
+                    }, CONFIG.cloudLifetime);
+                }, CONFIG.cloudInterval);
+
+                timers.add(id);
             }
-        }
 
-        // 5.下雨特效
-        function toggleRain() {
-            data.isRain = !data.isRain;
-            rainBox.classList.toggle('hidden',!data.isRain);
-            weatherText.innerText = data.isRain ? '下雨天' : '晴天';
-            if(data.isRain) createRain();
-            else rainBox.innerHTML = '';
-        }
-        function createRain() {
-            rainBox.innerHTML = '';
-            setInterval(()=>{
-                if(!data.isRain) return;
-                const drop = document.createElement('div');
-                drop.className = 'rain-drop';
-                drop.style.left = `${Math.random()*100}%`;
-                rainBox.appendChild(drop);
-                setTimeout(()=>drop.remove(),700);
-            },35)
-        }
+            // ============================================================
+            // 7. 昼夜切换
+            // ============================================================
+            function toggleDayNight() {
+                state.isNight = !state.isNight;
 
-        // 绑定按钮事件
-        dayNightBtn.onclick = toggleDayNight;
-        rainBtn.onclick = toggleRain;
+                if (state.isNight) {
+                    dom.bgWrap.classList.remove('bg-skyDay');
+                    dom.bgWrap.classList.add('bg-skyNight');
+                    dom.dayIcon.className = 'fa fa-moon-o text-yellow-200 text-xl';
+                    dom.starBox.classList.remove('hidden');
+                    createStars();
+                } else {
+                    dom.bgWrap.classList.add('bg-skyDay');
+                    dom.bgWrap.classList.remove('bg-skyNight');
+                    dom.dayIcon.className = 'fa fa-sun-o text-amber-500 text-xl';
+                    dom.starBox.classList.add('hidden');
+                    dom.starBox.innerHTML = '';
+                }
+            }
 
-        // 初始化启动
-        initLand();
-        createCloud();
+            // 生成星星（使用文档片段优化）
+            function createStars() {
+                dom.starBox.innerHTML = '';
+                var fragment = document.createDocumentFragment();
+
+                for (var i = 0; i < CONFIG.starCount; i++) {
+                    var star = document.createElement('div');
+                    star.className = 'star absolute bg-white rounded-full';
+                    var s = 1 + Math.random() * 2.5;
+                    star.style.width = s + 'px';
+                    star.style.height = s + 'px';
+                    star.style.left = (Math.random() * 100) + '%';
+                    star.style.top = (Math.random() * 65) + '%';
+                    // 随机动画延迟，让星星不同步闪烁
+                    star.style.animationDelay = (Math.random() * 2) + 's';
+                    fragment.appendChild(star);
+                }
+
+                dom.starBox.appendChild(fragment);
+            }
+
+            // ============================================================
+            // 8. 下雨控制
+            // ============================================================
+            var rainIntervalId = null;
+
+            function toggleRain() {
+                state.isRain = !state.isRain;
+
+                if (state.isRain) {
+                    dom.rainBox.classList.remove('hidden');
+                    dom.weatherText.innerText = '下雨天';
+                    startRain();
+                } else {
+                    dom.rainBox.classList.add('hidden');
+                    dom.weatherText.innerText = '晴天';
+                    stopRain();
+                }
+            }
+
+            function startRain() {
+                if (rainIntervalId) return;
+
+                rainIntervalId = setInterval(function() {
+                    if (!state.isRain) return;
+                    var drop = document.createElement('div');
+                    drop.className = 'rain-drop';
+                    drop.style.left = (Math.random() * 100) + '%';
+                    dom.rainBox.appendChild(drop);
+
+                    // 动画结束后移除
+                    drop.addEventListener('animationend', function() {
+                        if (drop.parentNode) drop.remove();
+                    }, { once: true });
+                }, CONFIG.rainInterval);
+
+                timers.add(rainIntervalId);
+            }
+
+            function stopRain() {
+                if (rainIntervalId) {
+                    clearInterval(rainIntervalId);
+                    rainIntervalId = null;
+                }
+                dom.rainBox.innerHTML = '';
+            }
+
+            // ============================================================
+            // 9. 页面卸载清理
+            // ============================================================
+            function cleanup() {
+                timers.clearAll();
+                stopRain();
+
+                // 移除事件监听
+                if (dom.landWrap) {
+                    dom.landWrap.removeEventListener('click', handlePlantClick);
+                }
+                if (dom.dayNightBtn) {
+                    dom.dayNightBtn.removeEventListener('click', toggleDayNight);
+                }
+                if (dom.rainBtn) {
+                    dom.rainBtn.removeEventListener('click', toggleRain);
+                }
+                window.removeEventListener('beforeunload', cleanup);
+                window.removeEventListener('unload', cleanup);
+            }
+
+            // ============================================================
+            // 10. 启动
+            // ============================================================
+            function init() {
+                // 初始化土地
+                initLand();
+
+                // 事件委托：土地点击
+                dom.landWrap.addEventListener('click', handlePlantClick);
+
+                // 按钮事件
+                dom.dayNightBtn.addEventListener('click', toggleDayNight);
+                dom.rainBtn.addEventListener('click', toggleRain);
+
+                // 启动云朵生成器
+                startCloudGenerator();
+
+                // 页面卸载清理
+                window.addEventListener('beforeunload', cleanup);
+                window.addEventListener('unload', cleanup);
+            }
+
+            // DOM 就绪后启动
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+        })();
     </script>
 </body>
 </html>

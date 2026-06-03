@@ -274,8 +274,7 @@
     "title": "哦哦",
     "author": "哦哦",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:50:43.471Z",
-    "updatedAt": "2026-06-03T14:05:28.144Z"
+    "createdAt": "2026-06-03T06:50:43.471Z"
   },
   {
     "id": "fc4b5b2f",
@@ -283,7 +282,8 @@
     "title": "种树",
     "author": "邱老师",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:49:32.800Z"
+    "createdAt": "2026-06-03T06:49:32.800Z",
+    "updatedAt": "2026-06-03T14:06:03.137Z"
   },
   {
     "id": "0f86bb47",
