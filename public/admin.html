@@ -970,7 +970,14 @@
     const allPasswordForm = document.getElementById('allPasswordForm');
     const allPasswordInput = document.getElementById('allPasswordInput');
     const forbiddenWordsForm = document.getElementById('forbiddenWordsForm');
+    const forbiddenWordsSearchForm = document.getElementById('forbiddenWordsSearchForm');
+    const forbiddenWordsSearchInput = document.getElementById('forbiddenWordsSearchInput');
+    const clearForbiddenWordsSearch = document.getElementById('clearForbiddenWordsSearch');
     const forbiddenWordsInput = document.getElementById('forbiddenWordsInput');
+    const forbiddenWordsResults = document.getElementById('forbiddenWordsResults');
+    const prevForbiddenWordsPage = document.getElementById('prevForbiddenWordsPage');
+    const nextForbiddenWordsPage = document.getElementById('nextForbiddenWordsPage');
+    const forbiddenWordsPageInfo = document.getElementById('forbiddenWordsPageInfo');
     const classNameInput = document.getElementById('classNameInput');
     const classPasswordInput = document.getElementById('classPasswordInput');
     const classList = document.getElementById('classList');
@@ -1002,6 +1009,13 @@
     let classes = [];
     let settings = {};
     let currentCodeSite = null;
+    let forbiddenWordsState = {
+      query: '',
+      offset: 0,
+      limit: 100,
+      total: 0,
+      allTotal: 0
+    };
     const viewTitles = {
       projects: '项目管理',
       create: '新增项目',

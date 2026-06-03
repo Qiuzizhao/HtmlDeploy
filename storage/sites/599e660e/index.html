@@ -1,16 +1,15 @@
-```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>中国象棋</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", system-ui, sans-serif;
+            font-family: "Microsoft YaHei", system-ui, -apple-system, sans-serif;
         }
 
         body {
@@ -22,6 +21,7 @@
             background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
             padding: 16px;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .game-title {
@@ -70,6 +70,7 @@
             cursor: pointer;
             transition: background 0.25s, transform 0.15s;
             font-weight: 500;
+            touch-action: manipulation;
         }
 
         .restart-btn:hover {
@@ -80,7 +81,6 @@
             transform: scale(0.95);
         }
 
-        /* 棋盘容器 */
         .board-wrapper {
             position: relative;
             display: inline-block;
@@ -90,6 +90,14 @@
             background: #EAC187;
             line-height: 0;
             touch-action: manipulation;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
         }
 
         #boardCanvas {
@@ -98,19 +106,19 @@
             height: auto;
             background: #EAC187;
             border-radius: 2px;
+            touch-action: manipulation;
         }
 
-        /* 棋子容器 叠加在 canvas 之上 */
         #piecesLayer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
+            pointer-events: auto;
+            touch-action: manipulation;
         }
 
-        /* 棋子样式 */
         .chess-piece {
             position: absolute;
             border-radius: 50%;
@@ -121,7 +129,7 @@
             cursor: pointer;
             pointer-events: auto;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
-            transition: transform 0.15s, box-shadow 0.15s;
+            transition: transform 0.12s, box-shadow 0.12s;
             will-change: transform;
             touch-action: manipulation;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -130,6 +138,7 @@
             height: calc(var(--cell-size, 60) * 0.84px);
             line-height: calc(var(--cell-size, 60) * 0.84px);
             transform: translate(-50%, -50%);
+            -webkit-tap-highlight-color: transparent;
         }
 
         .chess-piece:hover {
@@ -164,7 +173,6 @@
             transform: translate(-50%, -50%) scale(1.06) !important;
         }
 
-        /* 合法移动标记 */
         .move-dot {
             position: absolute;
             border-radius: 50%;
@@ -178,12 +186,10 @@
             transition: opacity 0.2s;
         }
 
-        /* 吃掉标记 */
         .capture-target {
             box-shadow: 0 0 0 3px #f44336, 0 0 16px rgba(244, 67, 54, 0.4) !important;
         }
 
-        /* 胜利弹窗 */
         .win-modal {
             position: fixed;
             top: 0;
@@ -243,7 +249,6 @@
             background: #6b3210;
         }
 
-        /* 响应式 */
         @media (max-width: 640px) {
             body {
                 padding: 8px;
@@ -290,18 +295,6 @@
                 font-size: 16px;
             }
         }
-
-        /* 加载过渡 */
-        .board-wrapper {
-            opacity: 0;
-            animation: fadeIn 0.3s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-            }
-        }
     </style>
 </head>
 <body>
@@ -317,7 +310,6 @@
         <div id="piecesLayer"></div>
     </div>
 
-    <!-- 胜利弹窗 -->
     <div class="win-modal" id="winModal">
         <div class="modal-content">
             <div class="win-text" id="winText"></div>
@@ -329,11 +321,10 @@
         (function() {
             'use strict';
 
-            // ─── 常量与配置 ────────────────────────────────────────────────
+            // ─── 常量 ──────────────────────────────────────────────────────
             const ROWS = 10;
             const COLS = 9;
 
-            // 棋子编码: 1-7 红方, 8-14 黑方
             const PIECE = {
                 R_ROOK: 1,
                 R_KNIGHT: 2,
@@ -371,7 +362,6 @@
                 14: '炮'
             };
 
-            // 初始布局
             const INIT_BOARD = [
                 [8, 9, 10, 11, 12, 11, 10, 9, 8],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -385,7 +375,7 @@
                 [1, 2, 3, 4, 5, 4, 3, 2, 1]
             ];
 
-            // ─── DOM 引用 ──────────────────────────────────────────────────
+            // ─── DOM ───────────────────────────────────────────────────────
             const canvas = document.getElementById('boardCanvas');
             const ctx = canvas.getContext('2d');
             const piecesLayer = document.getElementById('piecesLayer');
@@ -395,45 +385,55 @@
 
             // ─── 状态 ──────────────────────────────────────────────────────
             let boardData = [];
-            let currentTurn = 'red'; // 'red' | 'black'
-            let selected = null; // { row, col } 或 null
-            let validMoves = []; // [{ row, col }, ...]
+            let currentTurn = 'red';
+            let selected = null;
+            let validMoves = [];
             let gameOver = false;
 
-            // 尺寸相关
             let cellSize = 60;
             let padding = 0;
             let boardPixelW = 0;
             let boardPixelH = 0;
-            let dpr = 1;
+            let resizeRAF = null;
 
-            // ─── 工具函数 ──────────────────────────────────────────────────
-            function isRed(piece) { return RED_SET.has(piece); }
+            // ─── 工具 ──────────────────────────────────────────────────────
+            function isRed(piece) {
+                return RED_SET.has(piece);
+            }
 
-            function isBlack(piece) { return BLACK_SET.has(piece); }
+            function isBlack(piece) {
+                return BLACK_SET.has(piece);
+            }
 
             function isSameSide(a, b) {
                 if (a === 0 || b === 0) return false;
                 return (isRed(a) && isRed(b)) || (isBlack(a) && isBlack(b));
             }
 
-            function inBoard(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+            function inBoard(r, c) {
+                return r >= 0 && r < ROWS && c >= 0 && c < COLS;
+            }
 
-            function inRedPalace(r, c) { return r >= 7 && r <= 9 && c >= 3 && c <= 5; }
+            function inRedPalace(r, c) {
+                return r >= 7 && r <= 9 && c >= 3 && c <= 5;
+            }
 
-            function inBlackPalace(r, c) { return r >= 0 && r <= 2 && c >= 3 && c <= 5; }
+            function inBlackPalace(r, c) {
+                return r >= 0 && r <= 2 && c >= 3 && c <= 5;
+            }
 
-            function inRedSide(r) { return r >= 5 && r <= 9; }
+            function inRedSide(r) {
+                return r >= 5 && r <= 9;
+            }
 
-            function inBlackSide(r) { return r >= 0 && r <= 4; }
+            function inBlackSide(r) {
+                return r >= 0 && r <= 4;
+            }
 
             // ─── 尺寸计算 ──────────────────────────────────────────────────
             function computeSize() {
-                const wrapper = document.getElementById('boardWrapper');
                 const maxW = Math.min(window.innerWidth - 32, 580);
                 const maxH = window.innerHeight - 160;
-                // 棋盘比例: 宽 = 8*cell, 高 = 9*cell, 加上 padding
-                const padRatio = 0.5;
                 const idealW = Math.min(maxW, (maxH - 12) * 8 / 9 + 12);
                 const rawCell = Math.floor((idealW - 12) / 8);
                 cellSize = Math.max(28, Math.min(rawCell, 70));
@@ -443,7 +443,7 @@
                 document.documentElement.style.setProperty('--cell-size', cellSize);
             }
 
-            // ─── 坐标转换 ──────────────────────────────────────────────────
+            // ─── 坐标 ──────────────────────────────────────────────────────
             function boardToPixel(row, col) {
                 return {
                     x: padding + col * cellSize,
@@ -461,6 +461,15 @@
                 return { row, col };
             }
 
+            function getClickPos(clientX, clientY) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = boardPixelW / rect.width;
+                const scaleY = boardPixelH / rect.height;
+                const px = (clientX - rect.left) * scaleX;
+                const py = (clientY - rect.top) * scaleY;
+                return pixelToBoard(px, py);
+            }
+
             // ─── 绘制棋盘 ──────────────────────────────────────────────────
             function drawBoard() {
                 const w = boardPixelW;
@@ -472,18 +481,14 @@
                 canvas.style.height = h + 'px';
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-                // 背景
                 ctx.fillStyle = '#EAC187';
                 ctx.fillRect(0, 0, w, h);
 
                 const lineColor = '#5a3a1a';
-                const lineWidth = 1.2;
-
                 ctx.strokeStyle = lineColor;
-                ctx.lineWidth = lineWidth;
+                ctx.lineWidth = 1.2;
                 ctx.lineCap = 'round';
 
-                // ── 横线 (10行, 9条横线) ──
                 for (let r = 0; r < ROWS; r++) {
                     const y = padding + r * cellSize;
                     ctx.beginPath();
@@ -492,28 +497,22 @@
                     ctx.stroke();
                 }
 
-                // ── 竖线 (9列) ──
                 for (let c = 0; c < COLS; c++) {
                     const x = padding + c * cellSize;
-                    // 上半段 (河界以上)
                     ctx.beginPath();
                     ctx.moveTo(x, padding);
                     ctx.lineTo(x, padding + 4 * cellSize);
                     ctx.stroke();
-                    // 下半段 (河界以下)
                     ctx.beginPath();
                     ctx.moveTo(x, padding + 5 * cellSize);
                     ctx.lineTo(x, padding + 9 * cellSize);
                     ctx.stroke();
                 }
 
-                // ── 边界加强 ──
                 ctx.lineWidth = 2.4;
                 ctx.strokeRect(padding, padding, 8 * cellSize, 9 * cellSize);
 
-                // ── 九宫格斜线 ──
                 ctx.lineWidth = 1.4;
-                // 上方九宫 (黑)
                 const p1 = boardToPixel(0, 3);
                 const p2 = boardToPixel(2, 5);
                 const p3 = boardToPixel(0, 5);
@@ -527,7 +526,6 @@
                 ctx.lineTo(p4.x, p4.y);
                 ctx.stroke();
 
-                // 下方九宫 (红)
                 const p5 = boardToPixel(7, 3);
                 const p6 = boardToPixel(9, 5);
                 const p7 = boardToPixel(7, 5);
@@ -541,21 +539,16 @@
                 ctx.lineTo(p8.x, p8.y);
                 ctx.stroke();
 
-                // ── 楚河汉界 ──
                 const riverY = padding + 4.5 * cellSize;
                 ctx.fillStyle = '#8B4513';
-                ctx.font = `bold ${Math.round(cellSize * 0.4)}px "Microsoft YaHei", system-ui, sans-serif`;
+                ctx.font = 'bold ' + Math.round(cellSize * 0.4) + 'px "Microsoft YaHei", system-ui, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const leftText = '楚 河';
-                const rightText = '汉 界';
-                const leftX = padding + 2 * cellSize;
-                const rightX = padding + 6 * cellSize;
-                ctx.fillText(leftText, leftX, riverY);
-                ctx.fillText(rightText, rightX, riverY);
+                ctx.fillText('楚 河', padding + 2 * cellSize, riverY);
+                ctx.fillText('汉 界', padding + 6 * cellSize, riverY);
             }
 
-            // ─── 棋子管理 ──────────────────────────────────────────────────
+            // ─── 棋子渲染 ──────────────────────────────────────────────────
             function clearPieces() {
                 piecesLayer.innerHTML = '';
             }
@@ -568,12 +561,10 @@
                     for (let c = 0; c < COLS; c++) {
                         const piece = boardData[r][c];
                         if (piece === 0) continue;
-                        const el = createPieceEl(r, c, piece);
-                        frag.appendChild(el);
+                        frag.appendChild(createPieceEl(r, c, piece));
                     }
                 }
 
-                // 合法移动标记
                 for (const m of validMoves) {
                     const dot = document.createElement('div');
                     dot.className = 'move-dot';
@@ -591,24 +582,20 @@
 
             function createPieceEl(row, col, piece) {
                 const el = document.createElement('div');
-                const isRedPiece = isRed(piece);
-                el.className = 'chess-piece ' + (isRedPiece ? 'red-piece' : 'black-piece');
+                el.className = 'chess-piece ' + (isRed(piece) ? 'red-piece' : 'black-piece');
                 el.textContent = PIECE_NAMES[piece] || '?';
-
                 const pos = boardToPixel(row, col);
                 el.style.left = pos.x + 'px';
                 el.style.top = pos.y + 'px';
-
                 if (selected && selected.row === row && selected.col === col) {
                     el.classList.add('piece-selected');
                 }
-
                 el.dataset.row = row;
                 el.dataset.col = col;
                 return el;
             }
 
-            // ─── 合法移动生成 ──────────────────────────────────────────────
+            // ─── 合法移动 ──────────────────────────────────────────────────
             function getValidMoves(row, col) {
                 const piece = boardData[row][col];
                 if (piece === 0) return [];
@@ -632,7 +619,6 @@
                                 moves.push({ row: nr, col: nc });
                             }
                         }
-                        // 将帅对面 (飞将)
                         const enemyKing = red ? PIECE.B_KING : PIECE.R_KING;
                         const step = red ? -1 : 1;
                         let r = row + step;
@@ -778,11 +764,10 @@
                     }
 
                     case PIECE.R_PAWN: {
-                        // 红兵: 向上
                         if (row - 1 >= 0 && !isSameSide(piece, boardData[row - 1][col])) {
                             moves.push({ row: row - 1, col: col });
                         }
-                        if (row <= 4) { // 过河后可以左右
+                        if (row <= 4) {
                             if (col - 1 >= 0 && !isSameSide(piece, boardData[row][col - 1])) {
                                 moves.push({ row: row, col: col - 1 });
                             }
@@ -794,11 +779,10 @@
                     }
 
                     case PIECE.B_PAWN: {
-                        // 黑卒: 向下
                         if (row + 1 < ROWS && !isSameSide(piece, boardData[row + 1][col])) {
                             moves.push({ row: row + 1, col: col });
                         }
-                        if (row >= 5) { // 过河后可以左右
+                        if (row >= 5) {
                             if (col - 1 >= 0 && !isSameSide(piece, boardData[row][col - 1])) {
                                 moves.push({ row: row, col: col - 1 });
                             }
@@ -809,7 +793,6 @@
                         break;
                     }
                 }
-
                 return moves;
             }
 
@@ -829,7 +812,6 @@
                 boardData[toR][toC] = boardData[fromR][fromC];
                 boardData[fromR][fromC] = 0;
 
-                // 检查是否吃掉将/帅
                 if (captured === PIECE.R_KING || captured === PIECE.B_KING) {
                     const winner = (captured === PIECE.R_KING) ? 'black' : 'red';
                     gameOver = true;
@@ -837,13 +819,16 @@
                     return true;
                 }
 
-                // 切换回合
                 currentTurn = (currentTurn === 'red') ? 'black' : 'red';
                 updateTurnDisplay();
                 return false;
             }
 
             function selectPiece(row, col) {
+                if (selected && selected.row === row && selected.col === col) {
+                    deselectPiece();
+                    return false;
+                }
                 const piece = boardData[row][col];
                 if (piece === 0) return false;
                 const isRedTurn = currentTurn === 'red';
@@ -862,33 +847,41 @@
                 renderPieces();
             }
 
-            function handleCellClick(row, col) {
+            function processClick(row, col) {
                 if (gameOver) return;
-                if (!selected) return;
-                const valid = validMoves.some(m => m.row === row && m.col === col);
-                if (!valid) {
-                    // 如果点击的是自己的另一个棋子，切换选择
-                    const piece = boardData[row][col];
+                if (!inBoard(row, col)) return;
+
+                const piece = boardData[row][col];
+
+                if (selected) {
+                    const isValid = validMoves.some(m => m.row === row && m.col === col);
+                    if (isValid) {
+                        makeMove(selected.row, selected.col, row, col);
+                        selected = null;
+                        validMoves = [];
+                        renderPieces();
+                        return;
+                    }
                     if (piece !== 0) {
                         const isRedTurn = currentTurn === 'red';
                         if ((isRedTurn && isRed(piece)) || (!isRedTurn && isBlack(piece))) {
                             selectPiece(row, col);
+                            return;
                         }
                     }
+                    deselectPiece();
                     return;
                 }
-                // 执行移动
-                const gameEnded = makeMove(selected.row, selected.col, row, col);
-                selected = null;
-                validMoves = [];
-                renderPieces();
-                if (!gameEnded) {
-                    // 检查是否被将死 (简单检测: 无合法走法)
-                    // 此处不实现完整的将死检测，保持与原有逻辑一致
+
+                if (piece !== 0) {
+                    const isRedTurn = currentTurn === 'red';
+                    if ((isRedTurn && isRed(piece)) || (!isRedTurn && isBlack(piece))) {
+                        selectPiece(row, col);
+                    }
                 }
             }
 
-            // ─── UI 更新 ──────────────────────────────────────────────────
+            // ─── UI ────────────────────────────────────────────────────────
             function updateTurnDisplay() {
                 if (currentTurn === 'red') {
                     turnDisplay.textContent = '红方回合';
@@ -900,8 +893,7 @@
             }
 
             function showWin(winner) {
-                const text = winner === 'red' ? '🎉 红方胜利！' : '🎉 黑方胜利！';
-                winText.textContent = text;
+                winText.textContent = (winner === 'red') ? '🎉 红方胜利！' : '🎉 黑方胜利！';
                 winModal.style.display = 'flex';
             }
 
@@ -909,7 +901,7 @@
                 winModal.style.display = 'none';
             }
 
-            // ─── 初始化与重置 ──────────────────────────────────────────────
+            // ─── 重置 ──────────────────────────────────────────────────────
             function resetGame() {
                 boardData = INIT_BOARD.map(row => [...row]);
                 currentTurn = 'red';
@@ -923,138 +915,70 @@
                 renderPieces();
             }
 
-            function initGame() {
-                computeSize();
-                resetGame();
-                // 确保 Canvas 尺寸正确
-                window.addEventListener('resize', handleResize);
-            }
-
-            let resizeTimer = null;
-
+            // ─── resize ────────────────────────────────────────────────────
             function handleResize() {
-                if (resizeTimer) clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(function() {
-                    const oldSelected = selected ? { ...selected } : null;
-                    const oldValid = validMoves.map(m => ({ ...m }));
+                if (resizeRAF) return;
+                resizeRAF = requestAnimationFrame(function() {
+                    resizeRAF = null;
                     computeSize();
                     drawBoard();
-                    // 重新渲染保持选择状态
                     renderPieces();
-                }, 120);
+                });
             }
 
             // ─── 事件处理 ──────────────────────────────────────────────────
-            function handleBoardClick(e) {
+            function handleClickEvent(e) {
                 if (gameOver) return;
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = boardPixelW / rect.width;
-                const scaleY = boardPixelH / rect.height;
-                const px = (e.clientX - rect.left) * scaleX;
-                const py = (e.clientY - rect.top) * scaleY;
-                const pos = pixelToBoard(px, py);
-                if (!pos) return;
-
-                const { row, col } = pos;
-                const piece = boardData[row][col];
-
-                // 如果有选中的棋子
-                if (selected) {
-                    // 如果点击的是合法目标
-                    const isValid = validMoves.some(m => m.row === row && m.col === col);
-                    if (isValid) {
-                        const gameEnded = makeMove(selected.row, selected.col, row, col);
-                        selected = null;
-                        validMoves = [];
-                        renderPieces();
+                const target = e.target;
+                const pieceEl = target.closest('.chess-piece');
+                if (pieceEl) {
+                    const row = parseInt(pieceEl.dataset.row, 10);
+                    const col = parseInt(pieceEl.dataset.col, 10);
+                    if (!isNaN(row) && !isNaN(col)) {
+                        processClick(row, col);
                         return;
                     }
-                    // 点击自己的棋子切换选择
-                    if (piece !== 0) {
-                        const isRedTurn = currentTurn === 'red';
-                        if ((isRedTurn && isRed(piece)) || (!isRedTurn && isBlack(piece))) {
-                            selectPiece(row, col);
-                            return;
-                        }
-                    }
-                    // 点击无效位置取消选择
-                    deselectPiece();
-                    return;
                 }
-
-                // 没有选中棋子，尝试选择
-                if (piece !== 0) {
-                    const isRedTurn = currentTurn === 'red';
-                    if ((isRedTurn && isRed(piece)) || (!isRedTurn && isBlack(piece))) {
-                        selectPiece(row, col);
-                    }
+                const pos = getClickPos(e.clientX, e.clientY);
+                if (pos) {
+                    processClick(pos.row, pos.col);
                 }
             }
 
-            // ─── 绑定事件 ──────────────────────────────────────────────────
+            function handleTouchStart(e) {
+                if (gameOver) return;
+                const touch = e.touches[0];
+                if (!touch) return;
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (target && target.closest('.chess-piece')) {
+                    return;
+                }
+                e.preventDefault();
+                const pos = getClickPos(touch.clientX, touch.clientY);
+                if (pos) {
+                    processClick(pos.row, pos.col);
+                }
+            }
+
             function bindEvents() {
-                // 棋盘点击 (事件委托)
-                piecesLayer.addEventListener('click', function(e) {
-                    // 如果点击的是棋子元素，从 dataset 获取坐标
-                    const pieceEl = e.target.closest('.chess-piece');
-                    if (pieceEl) {
-                        const row = parseInt(pieceEl.dataset.row, 10);
-                        const col = parseInt(pieceEl.dataset.col, 10);
-                        if (!isNaN(row) && !isNaN(col)) {
-                            // 模拟点击处理
-                            handleBoardClick({
-                                clientX: e.clientX,
-                                clientY: e.clientY
-                            });
-                            return;
-                        }
-                    }
-                    // 否则使用 canvas 坐标
-                    handleBoardClick(e);
-                });
+                piecesLayer.addEventListener('click', handleClickEvent);
+                piecesLayer.addEventListener('touchstart', handleTouchStart, { passive: false });
 
-                // 触摸支持
-                piecesLayer.addEventListener('touchstart', function(e) {
-                    const touch = e.touches[0];
-                    if (!touch) return;
-                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                    if (target && target.closest('.chess-piece')) {
-                        // 让 click 事件处理
-                        return;
-                    }
-                    e.preventDefault();
-                    const fakeEvent = {
-                        clientX: touch.clientX,
-                        clientY: touch.clientY
-                    };
-                    handleBoardClick(fakeEvent);
-                }, { passive: false });
-
-                // 重新开始按钮
                 document.getElementById('restartBtn').addEventListener('click', resetGame);
                 document.getElementById('modalRestartBtn').addEventListener('click', resetGame);
 
-                // 点击弹窗外部关闭 (优化体验)
-                winModal.addEventListener('click', function(e) {
-                    if (e.target === winModal) {
-                        // 不关闭，必须点击按钮
-                    }
-                });
+                window.addEventListener('resize', handleResize);
             }
 
             // ─── 启动 ──────────────────────────────────────────────────────
-            document.addEventListener('DOMContentLoaded', function() {
-                initGame();
+            function init() {
+                computeSize();
+                resetGame();
                 bindEvents();
-                // 确保初始绘制完成
-                setTimeout(function() {
-                    computeSize();
-                    drawBoard();
-                    renderPieces();
-                }, 30);
-            });
+                handleResize();
+            }
 
-            // 暴露 reset 给全局（兼容旧版调用）
+            document.addEventListener('DOMContentLoaded', init);
             window.restartGame = resetGame;
 
         })();
