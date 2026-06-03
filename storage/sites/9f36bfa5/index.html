@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高难躲避球大作战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366F1',
+                        secondary: '#EC4899',
+                        accent: '#8B5CF6',
+                        dark: '#1E1B4B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        game: ['Poppins', 'Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .text-shadow-glow {
+                text-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+            }
+            .game-shadow {
+                box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+            }
+            .animate-float {
+                animation: float 3s ease-in-out infinite;
+            }
+            .animate-pulse-slow {
+                animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .animate-bounce-slow {
+                animation: bounce 3s infinite;
+            }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        body {
+            overflow: hidden;
+            touch-action: none;
+            background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4F46E5 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #gameCanvas {
+            background: rgba(30, 27, 75, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: particle-animation 1s ease-out forwards;
+        }
+
+        @keyframes particle-animation {
+            0% {
+                transform: scale(0) translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) translate(var(--x), var(--y));
+                opacity: 0;
+            }
+        }
+
+        .btn-hover {
+            transition: all 0.3s ease;
+        }
+        .btn-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center font-game text-light">
+    <!-- 游戏标题 -->
+    <div class="mb-4 text-center">
+        <h1 class="text-[clamp(1.8rem,5vw,3.5rem)] font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary text-shadow-glow animate-float">
+            地狱难度·躲避球
+        </h1>
+        <p class="text-light/80 text-sm md:text-base mt-2 animate-pulse-slow">超高难度！海量高速彩球四面围攻！</p>
+    </div>
+
+    <!-- 游戏容器 -->
+    <div class="relative w-[90%] max-w-3xl aspect-[16/10] game-shadow rounded-2xl overflow-hidden">
+        <canvas id="gameCanvas" class="w-full h-full"></canvas>
+        
+        <!-- 游戏开始界面 -->
+        <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-dark/80 backdrop-blur-md rounded-2xl z-20">
+            <div class="animate-bounce-slow mb-6">
+                <i class="fa fa-exclamation-triangle text-6xl text-red-500"></i>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-light">地狱难度开启</h2>
+            <button id="startBtn" class="btn-hover bg-gradient-to-r from-red-500 to-accent text-white font-bold py-3 px-8 rounded-full text-lg transition-all">
+                开始挑战 <i class="fa fa-play ml-2"></i>
+            </button>
+            <p class="mt-6 text-light/60 text-sm max-w-md text-center px-4">
+                电脑：WASD/方向键｜手机：触屏移动<br>
+                提示：球速快、刷新极快、容错极低！
+            </p>
+        </div>
+
+        <!-- 游戏结束界面 -->
+        <div id="gameOverScreen" class="absolute inset-0 hidden flex-col items-center justify-center bg-dark/90 backdrop-blur-md rounded-2xl z-20">
+            <i class="fa fa-trophy text-5xl text-yellow-400 mb-4 animate-pulse-slow"></i>
+            <h2 class="text-3xl font-bold mb-2 text-light">挑战失败</h2>
+            <p id="finalScore" class="text-xl mb-6 text-light/80">最终分数: 0</p>
+            <button id="restartBtn" class="btn-hover bg-gradient-to-r from-red-500 to-accent text-white font-bold py-3 px-8 rounded-full text-lg transition-all">
+                再次挑战 <i class="fa fa-refresh ml-2"></i>
+            </button>
+        </div>
+
+        <!-- 分数和生命值显示 -->
+        <div class="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+            <div class="bg-dark/60 backdrop-blur-sm px-4 py-2 rounded-full text-light font-semibold">
+                <i class="fa fa-star text-yellow-400 mr-2"></i>
+                <span id="score">0</span>
+            </div>
+            <div class="bg-dark/60 backdrop-blur-sm px-4 py-2 rounded-full text-light font-semibold">
+                <i class="fa fa-heart text-red-500 mr-2"></i>
+                <span id="lives">3</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 难度提示 -->
+    <div class="mt-6 text-center max-w-lg px-6">
+        <p class="text-red-400/90 text-sm">
+            ⚠️地狱难度：球体刷新极快、移动高速、难度飙升飞快，新手慎入！
+        </p>
+    </div>
+
+    <!-- 音效 -->
+    <audio id="bgMusic" loop>
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-ethereal-fairy-win-sound-2019.mp3" type="audio/mpeg">
+    
+    <audio id="hitSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" type="audio/mpeg">
+    
+    <audio id="gameOverSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-player-losing-or-failing-2042.mp3" type="audio/mpeg">
+    
+    <audio id="powerUpSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
+    
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        
+        // 音效元素
+        const bgMusic = document.getElementById('bgMusic');
+        const hitSound = document.getElementById('hitSound');
+        const gameOverSound = document.getElementById('gameOverSound');
+        const powerUpSound = document.getElementById('powerUpSound');
+        
+        // 设置音量
+        bgMusic.volume = 0.3;
+        hitSound.volume = 0.5;
+        gameOverSound.volume = 0.6;
+        powerUpSound.volume = 0.5;
+        
+        // 画布尺寸适配
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        // 初始化画布
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 游戏变量【地狱难度参数】
+        let gameRunning = false;
+        let score = 0;
+        let lives = 3;
+        let difficulty = 1;
+        let lastDifficultyIncrease = 0;
+        
+        // 玩家对象
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 20,
+            color: '#6366F1',
+            speed: 8,
+            invincible: false,
+            trail: []
+        };
+        
+        // 控制变量
+        const keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            ArrowUp: false,
+            ArrowLeft: false,
+            ArrowDown: false,
+            ArrowRight: false
+        };
+        
+        // 躲避球数组【高难初始参数】
+        const balls = [];
+        let ballSpawnRate = 550;    // 原版1000 → 减半，刷新更快
+        let ballSpeed = 5;          // 原版3 → 初始提速
+        let perSpawnCount = 2;     // 每次同时生成2个球（原版1个）
+        
+        // 粒子效果
+        const particles = [];
+        
+        // 触摸控制
+        let touchX = 0;
+        let touchY = 0;
+        let isTouching = false;
+        
+        // 工具函数 - 获取随机数
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+        
+        // 工具函数 - 碰撞检测
+        function checkCollision(obj1, obj2) {
+            const dx = obj1.x - obj2.x;
+            const dy = obj1.y - obj2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < obj1.radius + obj2.radius;
+        }
+        
+        // 创建粒子效果
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x,
+                    y,
+                    color,
+                    angle: random(0, Math.PI * 2),
+                    speed: random(2, 6),
+                    life: 1,
+                    decay: random(0.01, 0.03)
+                });
+            }
+            
+            // 创建DOM粒子
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.backgroundColor = color;
+                particle.style.width = particle.style.height = `${random(3, 8)}px`;
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.setProperty('--x', `${random(-100, 100)}px`);
+                particle.style.setProperty('--y', `${random(-100, 100)}px`);
+                canvas.parentElement.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+        
+        // 批量生成球（高难：一次多个）
+        function spawnBall() {
+            if (!gameRunning) return;
+            // 单次生成 perSpawnCount 个球
+            for(let n=0;n<perSpawnCount;n++){
+                const side = Math.floor(random(0, 4));
+                let x, y, dx, dy;
+                switch(side) {
+                    case 0: x = random(0, canvas.width);y = -20;dx = random(-1,1);dy=random(0.6,1.2);break;
+                    case 1: x = canvas.width+20;y=random(0,canvas.height);dx=random(-1.2,-0.6);dy=random(-1,1);break;
+                    case 2: x=random(0,canvas.width);y=canvas.height+20;dx=random(-1,1);dy=random(-1.2,-0.6);break;
+                    case 3: x=-20;y=random(0,canvas.height);dx=random(0.6,1.2);dy=random(-1,1);break;
+                }
+                const length = Math.sqrt(dx*dx+dy*dy);
+                dx = dx/length * ballSpeed;
+                dy = dy/length * ballSpeed;
+                // 球体尺寸更大：原版8~16 → 7~22
+                balls.push({
+                    x,y,
+                    radius: random(7,22),
+                    dx,dy,
+                    color: `hsl(${random(0,360)},75%,62%)`
+                });
+            }
+            setTimeout(spawnBall, ballSpawnRate);
+        }
+        
+        // 移动玩家
+        function movePlayer() {
+            if (keys.w || keys.ArrowUp) player.y -= player.speed;
+            if (keys.s || keys.ArrowDown) player.y += player.speed;
+            if (keys.a || keys.ArrowLeft) player.x -= player.speed;
+            if (keys.d || keys.ArrowRight) player.x += player.speed;
+            
+            if (isTouching) {
+                const dx = touchX - player.x;
+                const dy = touchY - player.y;
+                const dist = Math.hypot(dx,dy);
+                if(dist>5){
+                    player.x += dx/dist*player.speed;
+                    player.y += dy/dist*player.speed;
+                }
+            }
+            player.x = Math.max(player.radius, Math.min(canvas.width-player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height-player.radius, player.y));
+            
+            player.trail.push({x:player.x,y:player.y,alpha:1});
+            if(player.trail.length>10) player.trail.shift();
+        }
+        
+        // 更新球
+        function updateBalls() {
+            for(let i=balls.length-1;i>=0;i--){
+                const b = balls[i];
+                b.x += b.dx;
+                b.y += b.dy;
+                if(b.x<-60||b.x>canvas.width+60||b.y<-60||b.y>canvas.height+60){
+                    balls.splice(i,1);score++;scoreElement.textContent=score;
+                }
+                if(!player.invincible && checkCollision(player,b)){
+                    createParticles(b.x,b.y,'#EC4899');
+                    hitSound.currentTime=0;hitSound.play();
+                    lives--;livesElement.textContent=lives;
+                    player.invincible=true;
+                    setTimeout(()=>player.invincible=false,700); // 无敌缩短：1000→700ms
+                    balls.splice(i,1);
+                    if(lives<=0) gameOver();
+                }
+            }
+        }
+        
+        // 更新粒子
+        function updateParticles() {
+            for(let i=particles.length-1;i>=0;i--){
+                const p=particles[i];
+                p.x+=Math.cos(p.angle)*p.speed;
+                p.y+=Math.sin(p.angle)*p.speed;
+                p.life-=p.decay;
+                if(p.life<=0) particles.splice(i,1);
+            }
+        }
+        
+        // 难度暴涨（原版50分升级→30分就升级）
+        function increaseDifficulty() {
+            if (!gameRunning) return;
+            if(score-lastDifficultyIncrease>=30){
+                lastDifficultyIncrease=score;
+                difficulty+=0.35; // 每次提升幅度变大
+                ballSpeed=5 + difficulty*0.65; // 提速更快
+                ballSpawnRate=Math.max(180,550 - difficulty*75); // 最低180ms刷新
+                if(difficulty>3) perSpawnCount=3; // 高难后一次刷3个球
+                createParticles(canvas.width/2,canvas.height/2,'#6366F1');
+                powerUpSound.currentTime=0;powerUpSound.play();
+            }
+            requestAnimationFrame(increaseDifficulty);
+        }
+        
+        // 绘制玩家
+        function drawPlayer() {
+            for(let i=0;i<player.trail.length;i++){
+                const t=player.trail[i];
+                ctx.beginPath();
+                ctx.arc(t.x,t.y,player.radius*(i/player.trail.length),0,Math.PI*2);
+                ctx.fillStyle=`rgba(99,102,241,${t.alpha*0.3})`;
+                ctx.fill();
+                t.alpha-=0.1;
+            }
+            ctx.beginPath();
+            ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);
+            if(player.invincible){
+                const a=0.5+Math.sin(Date.now()*0.01)*0.5;
+                ctx.fillStyle=`rgba(236,72,153,${a})`;
+            }else ctx.fillStyle=player.color;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(player.x,player.y,player.radius+10,0,Math.PI*2);
+            ctx.fillStyle='rgba(99,102,241,0.2)';ctx.fill();
+        }
+        
+        // 绘制球
+        function drawBalls() {
+            for(const b of balls){
+                ctx.beginPath();
+                ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);
+                ctx.fillStyle=b.color;ctx.fill();
+                ctx.beginPath();
+                ctx.arc(b.x-b.radius*0.3,b.y-b.radius*0.3,b.radius*0.5,0,Math.PI*2);
+                ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fill();
+            }
+        }
+        
+        // 绘制粒子
+        function drawParticles() {
+            for(const p of particles){
+                ctx.beginPath();
+                ctx.arc(p.x,p.y,3,0,Math.PI*2);
+                ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.fill();ctx.globalAlpha=1;
+            }
+        }
+        
+        // 主循环
+        function gameLoop() {
+            if(!gameRunning) return;
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            movePlayer();updateBalls();updateParticles();
+            drawBalls();drawParticles();drawPlayer();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 开局重置
+        function startGame() {
+            gameRunning=true;score=0;lives=3;difficulty=1;lastDifficultyIncrease=0;
+            ballSpeed=5;ballSpawnRate=550;perSpawnCount=2;
+            player.x=canvas.width/2;player.y=canvas.height/2;player.trail=[];player.invincible=false;
+            balls.length=0;particles.length=0;
+            scoreElement.textContent=score;livesElement.textContent=lives;
+            startScreen.style.display='none';
+            bgMusic.currentTime=0;bgMusic.play();
+            spawnBall();increaseDifficulty();gameLoop();
+        }
+        
+        // 结束
+        function gameOver() {
+            gameRunning=false;bgMusic.pause();gameOverSound.play();
+            document.getElementById('finalScore').textContent=`最终分数:${score}`;
+            gameOverScreen.style.display='flex';
+        }
+        
+        // 键盘
+        window.addEventListener('keydown',e=>{if(keys.hasOwnProperty(e.key))keys[e.key]=true;});
+        window.addEventListener('keyup',e=>{if(keys.hasOwnProperty(e.key))keys[e.key]=false;});
+        
+        // 触屏
+        canvas.addEventListener('touchstart',e=>{
+            e.preventDefault();isTouching=true;
+            const t=e.touches[0];const r=canvas.getBoundingClientRect();
+            touchX=t.clientX-r.left;touchY=t.clientY-r.top;
+        });
+        canvas.addEventListener('touchmove',e=>{
+            e.preventDefault();const t=e.touches[0];const r=canvas.getBoundingClientRect();
+            touchX=t.clientX-r.left;touchY=t.clientY-r.top;
+        });
+        canvas.addEventListener('touchend',e=>{e.preventDefault();isTouching=false;});
+        
+        startBtn.addEventListener('click',startGame);
+        restartBtn.addEventListener('click',()=>{gameOverScreen.style.display='none';startGame();});
+    </script>
+</body>
+</html>
