@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页射击游戏</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding-top: 20px;
+        }
+        #gameCanvas {
+            border: 3px solid #00ffcc;
+            background: #000;
+        }
+        #scoreBoard {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #00ffcc;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreBoard">分数: 0 | 生命值: 5</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        // 获取画布和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreBoard = document.getElementById('scoreBoard');
+
+        // ===================== 游戏核心配置 =====================
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 25,
+            speed: 5,
+            color: '#00ffcc',
+            hp: 5
+        };
+
+        let bullets = [];    // 子弹数组
+        let enemies = [];    // 敌人数组
+        let score = 0;       // 分数
+        let gameOver = false;
+        let gameWin = false;
+
+        // 键盘控制
+        const keys = {
+            w: false, a: false, s: false, d: false
+        };
+
+        // ===================== 键盘/鼠标事件监听 =====================
+        // 键盘按下
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'w': keys.w = true; break;
+                case 'a': keys.a = true; break;
+                case 's': keys.s = true; break;
+                case 'd': keys.d = true; break;
+            }
+        });
+
+        // 键盘松开
+        document.addEventListener('keyup', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'w': keys.w = false; break;
+                case 'a': keys.a = false; break;
+                case 's': keys.s = false; break;
+                case 'd': keys.d = false; break;
+            }
+        });
+
+        // 鼠标射击
+        canvas.addEventListener('click', shootBullet);
+
+        // ===================== 游戏核心函数 =====================
+        // 射击子弹
+        function shootBullet(e) {
+            if(gameOver || gameWin) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // 计算子弹方向
+            const dx = mouseX - player.x;
+            const dy = mouseY - player.y;
+            const angle = Math.atan2(dy, dx);
+
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                speed: 8,
+                size: 5,
+                color: '#ff0',
+                dx: Math.cos(angle) * 8,
+                dy: Math.sin(angle) * 8
+            });
+        }
+
+        // 生成敌人
+        function spawnEnemy() {
+            if(gameOver || gameWin) return;
+            
+            let x, y;
+            // 随机从屏幕边缘生成
+            if(Math.random() > 0.5) {
+                x = Math.random() > 0.5 ? 0 : canvas.width;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() > 0.5 ? 0 : canvas.height;
+            }
+
+            enemies.push({
+                x, y,
+                size: 20,
+                speed: 2,
+                color: '#ff3366'
+            });
+        }
+
+        // 碰撞检测
+        function checkCollision(obj1, obj2) {
+            const dx = obj1.x - obj2.x;
+            const dy = obj1.y - obj2.y;
+            return Math.sqrt(dx*dx + dy*dy) < obj1.size + obj2.size;
+        }
+
+        // 更新游戏数据
+        function update() {
+            if(gameOver || gameWin) return;
+
+            // 玩家移动
+            if(keys.w && player.y > player.size) player.y -= player.speed;
+            if(keys.s && player.y < canvas.height - player.size) player.y += player.speed;
+            if(keys.a && player.x > player.size) player.x -= player.speed;
+            if(keys.d && player.x < canvas.width - player.size) player.x += player.speed;
+
+            // 子弹移动
+            bullets.forEach((bullet, index) => {
+                bullet.x += bullet.dx;
+                bullet.y += bullet.dy;
+
+                // 超出屏幕删除子弹
+                if(bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(index, 1);
+                }
+            });
+
+            // 敌人移动 & 碰撞
+            enemies.forEach((enemy, eIndex) => {
+                // 敌人追踪玩家
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const angle = Math.atan2(dy, dx);
+                enemy.x += Math.cos(angle) * enemy.speed;
+                enemy.y += Math.sin(angle) * enemy.speed;
+
+                // 敌人碰到玩家
+                if(checkCollision(player, enemy)) {
+                    player.hp--;
+                    enemies.splice(eIndex, 1);
+                    
+                    if(player.hp <= 0) {
+                        gameOver = true;
+                    }
+                }
+
+                // 子弹击中敌人
+                bullets.forEach((bullet, bIndex) => {
+                    if(checkCollision(bullet, enemy)) {
+                        bullets.splice(bIndex, 1);
+                        enemies.splice(eIndex, 1);
+                        score += 10;
+                        
+                        // 100分胜利
+                        if(score >= 100) {
+                            gameWin = true;
+                        }
+                    }
+                });
+            });
+
+            // 更新分数面板
+            scoreBoard.textContent = `分数: ${score} | 生命值: ${player.hp}`;
+        }
+
+        // 绘制游戏画面
+        function render() {
+            // 清空画布
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制玩家
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+
+            // 绘制子弹
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fillStyle = bullet.color;
+                ctx.fill();
+            });
+
+            // 绘制敌人
+            enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.fillStyle = enemy.color;
+                ctx.fill();
+            });
+
+            // 游戏结束
+            if(gameOver) {
+                ctx.fillStyle = '#ff3366';
+                ctx.font = '50px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('游戏失败!', canvas.width/2, canvas.height/2);
+            }
+
+            // 游戏胜利
+            if(gameWin) {
+                ctx.fillStyle = '#00ffcc';
+                ctx.font = '50px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('你胜利了!', canvas.width/2, canvas.height/2);
+            }
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 每1秒生成一个敌人
+        setInterval(spawnEnemy, 1000);
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>
