@@ -18,6 +18,7 @@
             min-height: 100vh;
             font-family: Arial, sans-serif;
             overflow: hidden;
+            touch-action: none;
         }
 
         /* 游戏容器 */
@@ -26,12 +27,14 @@
             width: 1200px;
             height: 700px;
             border: 3px solid #333;
-            background: #7a9667; /* 草地底色 */
-            background-image: 
+            background: #7a9667;
+            background-image:
                 radial-gradient(circle, #8a2be2 1px, transparent 1px),
                 linear-gradient(#6b8a58 1px, transparent 1px),
                 linear-gradient(90deg, #6b8a58 1px, transparent 1px);
             background-size: 40px 40px;
+            touch-action: none;
+            cursor: crosshair;
         }
 
         /* 玩家 */
@@ -41,9 +44,10 @@
             height: 30px;
             background: #0066ff;
             border-radius: 50%;
-            transform: translate(-50%, -50%);
             box-shadow: 0 0 15px #0066ff;
             z-index: 10;
+            will-change: transform;
+            pointer-events: none;
         }
 
         /* 子弹 */
@@ -54,6 +58,8 @@
             background: #ff0;
             border-radius: 50%;
             z-index: 5;
+            will-change: transform;
+            pointer-events: none;
         }
 
         /* 敌人 */
@@ -63,9 +69,10 @@
             height: 28px;
             background: #ff3300;
             border-radius: 50%;
-            transform: translate(-50%, -50%);
             box-shadow: 0 0 12px #ff3300;
             z-index: 8;
+            will-change: transform;
+            pointer-events: none;
         }
 
         /* UI面板 */
@@ -78,6 +85,7 @@
             font-weight: bold;
             text-shadow: 1px 1px 3px #000;
             z-index: 999;
+            user-select: none;
         }
 
         #gameOver {
@@ -91,6 +99,8 @@
             text-shadow: 0 0 20px #000;
             display: none;
             z-index: 9999;
+            user-select: none;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -104,167 +114,308 @@
     </div>
 
     <script>
-        // ========== 游戏基础配置 ==========
+        'use strict';
+
+        // ========== 配置 ==========
+        const CONFIG = {
+            mapWidth: 1200,
+            mapHeight: 700,
+            moveSpeed: 5,
+            bulletSpeed: 12,
+            enemySpeed: 1.6,
+            enemySpawnInterval: 2000,
+            playerRadius: 15,
+            enemyRadius: 14,
+            bulletRadius: 3
+        };
+
+        // ========== DOM 引用 ==========
         const container = document.getElementById('gameContainer');
-        const player = document.getElementById('player');
+        const playerEl = document.getElementById('player');
         const hpText = document.getElementById('hp');
         const scoreText = document.getElementById('score');
-        const gameOver = document.getElementById('gameOver');
+        const gameOverEl = document.getElementById('gameOver');
 
-        // 地图尺寸
-        const MAP_WIDTH = 1200;
-        const MAP_HEIGHT = 700;
+        // ========== 游戏状态 ==========
+        const state = {
+            player: {
+                x: CONFIG.mapWidth / 2,
+                y: CONFIG.mapHeight / 2,
+                hp: 100
+            },
+            score: 0,
+            gameOver: false,
+            keys: {
+                w: false,
+                a: false,
+                s: false,
+                d: false
+            },
+            bullets: [],
+            enemies: []
+        };
 
-        // 玩家属性
-        let playerX = MAP_WIDTH / 2;
-        let playerY = MAP_HEIGHT / 2;
-        let playerHp = 100;
-        let score = 0;
-        const moveSpeed = 5;
+        // ========== 渲染函数 ==========
+        function renderPlayer() {
+            const px = state.player.x - CONFIG.playerRadius;
+            const py = state.player.y - CONFIG.playerRadius;
+            playerEl.style.transform = 'translate(' + px + 'px, ' + py + 'px)';
+        }
 
-        // 按键状态
-        const keys = { w: false, a: false, s: false, d: false };
+        function renderBullet(bullet) {
+            const px = bullet.x - CONFIG.bulletRadius;
+            const py = bullet.y - CONFIG.bulletRadius;
+            bullet.el.style.transform = 'translate(' + px + 'px, ' + py + 'px)';
+        }
 
-        // 子弹 & 敌人列表
-        let bullets = [];
-        let enemies = [];
+        function renderEnemy(enemy) {
+            const px = enemy.x - CONFIG.enemyRadius;
+            const py = enemy.y - CONFIG.enemyRadius;
+            enemy.el.style.transform = 'translate(' + px + 'px, ' + py + 'px)';
+        }
 
-        // ========== 玩家控制 ==========
-        document.addEventListener('keydown', e => {
-            if(e.key in keys) keys[e.key] = true;
-        });
+        function updateUI() {
+            hpText.textContent = state.player.hp;
+            scoreText.textContent = state.score;
+        }
 
-        document.addEventListener('keyup', e => {
-            if(e.key in keys) keys[e.key] = false;
-        });
+        // ========== 玩家输入 ==========
+        function handleKeyDown(e) {
+            if (e.key in state.keys) {
+                state.keys[e.key] = true;
+                e.preventDefault();
+            }
+        }
 
-        // 鼠标射击
-        container.addEventListener('click', shoot);
+        function handleKeyUp(e) {
+            if (e.key in state.keys) {
+                state.keys[e.key] = false;
+                e.preventDefault();
+            }
+        }
 
+        function handlePlayerMove() {
+            const s = CONFIG.moveSpeed;
+            const p = state.player;
+            const maxX = CONFIG.mapWidth - CONFIG.playerRadius;
+            const maxY = CONFIG.mapHeight - CONFIG.playerRadius;
+            const minX = CONFIG.playerRadius;
+            const minY = CONFIG.playerRadius;
+
+            if (state.keys.w && p.y > minY) p.y -= s;
+            if (state.keys.s && p.y < maxY) p.y += s;
+            if (state.keys.a && p.x > minX) p.x -= s;
+            if (state.keys.d && p.x < maxX) p.x += s;
+
+            renderPlayer();
+        }
+
+        // ========== 射击 ==========
         function shoot(e) {
-            if(playerHp <= 0) return;
+            if (state.gameOver) return;
+
+            // 转换触摸事件或鼠标事件
+            let clientX, clientY;
+            if (e.touches) {
+                if (e.touches.length === 0) return;
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+                e.preventDefault();
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
 
             const rect = container.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
 
-            // 计算射击角度
-            const dx = mouseX - playerX;
-            const dy = mouseY - playerY;
-            const dist = Math.hypot(dx, dy);
-            const speed = 12;
+            const dx = mouseX - state.player.x;
+            const dy = mouseY - state.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // 创建子弹
-            const bullet = document.createElement('div');
-            bullet.className = 'bullet';
-            bullet.style.left = playerX + 'px';
-            bullet.style.top = playerY + 'px';
-            container.appendChild(bullet);
+            if (dist < 1) return;
 
-            bullets.push({
-                el: bullet,
-                x: playerX,
-                y: playerY,
-                vx: (dx / dist) * speed,
-                vy: (dy / dist) * speed
-            });
+            const vx = (dx / dist) * CONFIG.bulletSpeed;
+            const vy = (dy / dist) * CONFIG.bulletSpeed;
+
+            const bulletEl = document.createElement('div');
+            bulletEl.className = 'bullet';
+            container.appendChild(bulletEl);
+
+            const bullet = {
+                el: bulletEl,
+                x: state.player.x,
+                y: state.player.y,
+                vx: vx,
+                vy: vy
+            };
+
+            state.bullets.push(bullet);
+            renderBullet(bullet);
         }
 
         // ========== 生成敌人 ==========
         function spawnEnemy() {
-            if(playerHp <= 0) return;
+            if (state.gameOver) return;
 
-            const enemy = document.createElement('div');
-            enemy.className = 'enemy';
-            container.appendChild(enemy);
+            const enemyEl = document.createElement('div');
+            enemyEl.className = 'enemy';
+            container.appendChild(enemyEl);
 
-            // 随机出生在边缘
             let x, y;
-            if(Math.random() > 0.5) {
-                x = Math.random() > 0.5 ? -20 : MAP_WIDTH + 20;
-                y = Math.random() * MAP_HEIGHT;
+            if (Math.random() > 0.5) {
+                x = Math.random() > 0.5 ? -CONFIG.enemyRadius * 2 : CONFIG.mapWidth + CONFIG.enemyRadius * 2;
+                y = Math.random() * CONFIG.mapHeight;
             } else {
-                x = Math.random() * MAP_WIDTH;
-                y = Math.random() > 0.5 ? -20 : MAP_HEIGHT + 20;
+                x = Math.random() * CONFIG.mapWidth;
+                y = Math.random() > 0.5 ? -CONFIG.enemyRadius * 2 : CONFIG.mapHeight + CONFIG.enemyRadius * 2;
             }
 
-            enemies.push({
-                el: enemy,
+            const enemy = {
+                el: enemyEl,
                 x: x,
                 y: y,
-                speed: 1.6
-            });
+                speed: CONFIG.enemySpeed
+            };
+
+            state.enemies.push(enemy);
+            renderEnemy(enemy);
         }
 
-        // 每2秒生成一个敌人
-        setInterval(spawnEnemy, 2000);
+        // ========== 更新逻辑 ==========
+        function updateEnemies() {
+            const p = state.player;
+            for (let i = 0; i < state.enemies.length; i++) {
+                const enemy = state.enemies[i];
+                const dx = p.x - enemy.x;
+                const dy = p.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 0.5) {
+                    enemy.x += (dx / dist) * enemy.speed;
+                    enemy.y += (dy / dist) * enemy.speed;
+                }
+                renderEnemy(enemy);
+
+                // 敌人碰到玩家（持续伤害）
+                if (dist < CONFIG.playerRadius + CONFIG.enemyRadius) {
+                    state.player.hp -= 1;
+                }
+            }
+        }
+
+        function updateBullets() {
+            const aliveBullets = [];
+            for (let i = 0; i < state.bullets.length; i++) {
+                const bullet = state.bullets[i];
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                renderBullet(bullet);
+
+                // 边界检测
+                if (bullet.x < -10 || bullet.x > CONFIG.mapWidth + 10 ||
+                    bullet.y < -10 || bullet.y > CONFIG.mapHeight + 10) {
+                    bullet.el.remove();
+                    continue;
+                }
+
+                // 子弹与敌人碰撞检测
+                let bulletHit = false;
+                for (let j = state.enemies.length - 1; j >= 0; j--) {
+                    const enemy = state.enemies[j];
+                    const dx = bullet.x - enemy.x;
+                    const dy = bullet.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < CONFIG.bulletRadius + CONFIG.enemyRadius) {
+                        // 消灭敌人
+                        enemy.el.remove();
+                        state.enemies.splice(j, 1);
+                        bulletHit = true;
+                        state.score++;
+                        break;
+                    }
+                }
+
+                if (bulletHit) {
+                    bullet.el.remove();
+                } else {
+                    aliveBullets.push(bullet);
+                }
+            }
+            state.bullets = aliveBullets;
+            updateUI();
+        }
+
+        function checkGameOver() {
+            if (state.player.hp <= 0) {
+                state.gameOver = true;
+                state.player.hp = 0;
+                updateUI();
+                gameOverEl.style.display = 'block';
+                return true;
+            }
+            return false;
+        }
 
         // ========== 游戏主循环 ==========
         function gameLoop() {
-            if(playerHp <= 0) {
-                gameOver.style.display = 'block';
+            if (state.gameOver) {
                 return;
             }
 
-            // 玩家移动
-            if(keys.w && playerY > 15) playerY -= moveSpeed;
-            if(keys.s && playerY < MAP_HEIGHT - 15) playerY += moveSpeed;
-            if(keys.a && playerX > 15) playerX -= moveSpeed;
-            if(keys.d && playerX < MAP_WIDTH - 15) playerX += moveSpeed;
+            // 1. 处理移动
+            handlePlayerMove();
 
-            player.style.left = playerX + 'px';
-            player.style.top = playerY + 'px';
+            // 2. 更新敌人
+            updateEnemies();
 
-            // 子弹移动 + 碰撞
-            bullets.forEach((bullet, bIdx) => {
-                bullet.x += bullet.vx;
-                bullet.y += bullet.vy;
-                bullet.el.style.left = bullet.x + 'px';
-                bullet.el.style.top = bullet.y + 'px';
+            // 3. 更新子弹
+            updateBullets();
 
-                // 超出地图删除
-                if(bullet.x < 0 || bullet.x > MAP_WIDTH || bullet.y < 0 || bullet.y > MAP_HEIGHT) {
-                    bullet.el.remove();
-                    bullets.splice(bIdx, 1);
-                }
-
-                // 敌人碰撞
-                enemies.forEach((enemy, eIdx) => {
-                    const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
-                    if(dist < 20) {
-                        enemy.el.remove();
-                        enemies.splice(eIdx, 1);
-                        bullet.el.remove();
-                        bullets.splice(bIdx, 1);
-                        score++;
-                        scoreText.textContent = score;
-                    }
-                });
-            });
-
-            // 敌人移动 + 攻击玩家
-            enemies.forEach(enemy => {
-                const dx = playerX - enemy.x;
-                const dy = playerY - enemy.y;
-                const dist = Math.hypot(dx, dy);
-
-                enemy.x += (dx / dist) * enemy.speed;
-                enemy.y += (dy / dist) * enemy.speed;
-                enemy.el.style.left = enemy.x + 'px';
-                enemy.el.style.top = enemy.y + 'px';
-
-                // 敌人碰到玩家
-                if(dist < 25) {
-                    playerHp -= 1;
-                    hpText.textContent = playerHp;
-                }
-            });
+            // 4. 检查游戏结束
+            checkGameOver();
 
             requestAnimationFrame(gameLoop);
         }
 
+        // ========== 事件绑定 ==========
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        container.addEventListener('click', shoot);
+        container.addEventListener('touchstart', shoot, { passive: false });
+
+        // ========== 初始化 ==========
+        function init() {
+            // 状态重置
+            state.player.x = CONFIG.mapWidth / 2;
+            state.player.y = CONFIG.mapHeight / 2;
+            state.player.hp = 100;
+            state.score = 0;
+            state.gameOver = false;
+            state.keys = { w: false, a: false, s: false, d: false };
+
+            // 清理旧的 DOM 元素
+            state.bullets.forEach(b => b.el.remove());
+            state.enemies.forEach(e => e.el.remove());
+            state.bullets = [];
+            state.enemies = [];
+
+            gameOverEl.style.display = 'none';
+
+            renderPlayer();
+            updateUI();
+
+            // 启动循环
+            requestAnimationFrame(gameLoop);
+        }
+
         // 启动游戏
-        gameLoop();
+        init();
+
+        // 每2秒生成一个敌人
+        setInterval(spawnEnemy, CONFIG.enemySpawnInterval);
     </script>
 </body>
 </html>

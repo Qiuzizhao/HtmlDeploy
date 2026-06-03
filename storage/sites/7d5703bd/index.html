@@ -1,43 +1,304 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>雷霆奶龙大冒险</title>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
-        body{background:#0a1028;display:flex;flex-direction:column;align-items:center;padding:10px}
-        #gameBox{
-            width:min(95vw,800px);height:500px;background:linear-gradient(#3474e6,#87cefa);
-            position:relative;overflow:hidden;border:3px solid #ffd100;border-radius:12px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+            user-select: none;
         }
-        /* 雷霆奶龙样式 */
-        #nailong{
-            width:60px;height:65px;position:absolute;bottom:80px;left:80px;
-            background:#ffdd22;border-radius:50% 50% 45% 45%;
-            border:3px solid #ffaa00;z-index:2;
-            box-shadow:0 0 12px #fff,0 0 22px #0cf,0 0 35px #0099ff;
+        body {
+            background: #0a1028;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            min-height: 100vh;
+            justify-content: center;
+            touch-action: manipulation;
         }
-        #nailong::before{
-            content:"";position:absolute;width:16px;height:22px;background:#0cf;top:-18px;left:22px;
-            clip-path:polygon(50% 0,0 100%,100% 100%);box-shadow:0 0 8px #0ff;
+        #gameBox {
+            width: min(95vw, 800px);
+            height: 500px;
+            background: linear-gradient(#3474e6, #87cefa);
+            position: relative;
+            overflow: hidden;
+            border: 3px solid #ffd100;
+            border-radius: 12px;
+            touch-action: none;
+            will-change: transform;
+            contain: layout style;
         }
-        #nailong::after{
-            content:"⚡";position:absolute;right:-14px;top:12px;font-size:24px;color:#0ff;
-            text-shadow:0 0 10px #0cf;animation:lightning 0.4s infinite alternate;
+        /* 雷霆奶龙 */
+        #nailong {
+            width: 60px;
+            height: 65px;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            background: #ffdd22;
+            border-radius: 50% 50% 45% 45%;
+            border: 3px solid #ffaa00;
+            z-index: 2;
+            box-shadow: 0 0 12px #fff, 0 0 22px #0cf, 0 0 35px #0099ff;
+            will-change: transform;
+            transform: translate3d(80px, -80px, 0);
+            contain: layout style;
+            pointer-events: none;
         }
-        @keyframes lightning{from{opacity:0.4}to{opacity:1}}
+        #nailong::before {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 22px;
+            background: #0cf;
+            top: -18px;
+            left: 22px;
+            clip-path: polygon(50% 0, 0 100%, 100% 100%);
+            box-shadow: 0 0 8px #0ff;
+        }
+        #nailong::after {
+            content: "⚡";
+            position: absolute;
+            right: -14px;
+            top: 12px;
+            font-size: 24px;
+            color: #0ff;
+            text-shadow: 0 0 10px #0cf;
+            animation: lightning 0.4s infinite alternate;
+        }
+        @keyframes lightning {
+            from {
+                opacity: 0.4;
+            }
+            to {
+                opacity: 1;
+            }
+        }
         /* 地面 */
-        .ground{width:100%;height:80px;background:#8b5a2b;position:absolute;bottom:0}
+        .ground {
+            width: 100%;
+            height: 80px;
+            background: #8b5a2b;
+            position: absolute;
+            bottom: 0;
+            pointer-events: none;
+        }
         /* 闪电道具 */
-        .light{width:32px;height:36px;position:absolute;color:#0ff;font-size:32px;text-shadow:0 0 10px cyan}
+        .light {
+            width: 32px;
+            height: 36px;
+            position: absolute;
+            color: #0ff;
+            font-size: 32px;
+            text-shadow: 0 0 10px cyan;
+            will-change: transform;
+            pointer-events: none;
+            z-index: 1;
+        }
         /* 乌云障碍 */
-        .cloud{width:75px;height:42px;background:#333;border-radius:50%;position:absolute;box-shadow:inset 0 0 10px #111}
+        .cloud {
+            width: 75px;
+            height: 42px;
+            background: #333;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: inset 0 0 10px #111, 0 4px 12px rgba(0, 0, 0, 0.3);
+            will-change: transform;
+            pointer-events: none;
+            z-index: 1;
+        }
         /* UI面板 */
-        .ui{width:min(95vw,800px);display:flex;justify-content:space-between;color:#fff;padding:8px 0;font-size:18px}
-        .btn-box{margin-top:8px;display:flex;gap:10px}
-        button{padding:6px 16px;border:none;border-radius:6px;background:#ffd100;color:#000;font-weight:bold;cursor:pointer}
-        .tip{color:#ccc;font-size:13px;margin-top:6px}
+        .ui {
+            width: min(95vw, 800px);
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            padding: 8px 0;
+            font-size: 18px;
+            font-weight: 500;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+        .btn-box {
+            margin-top: 8px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #ffd100;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+            transition: transform 0.1s, background 0.2s;
+            touch-action: manipulation;
+            min-height: 36px;
+            min-width: 80px;
+        }
+        button:active {
+            transform: scale(0.95);
+            background: #e6bc00;
+        }
+        button:hover {
+            background: #ffe44d;
+        }
+        .tip {
+            color: #ccc;
+            font-size: 13px;
+            margin-top: 6px;
+            text-align: center;
+            max-width: min(95vw, 800px);
+        }
+        /* 游戏结束覆盖层 */
+        #gameOverlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(10, 16, 40, 0.85);
+            backdrop-filter: blur(4px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 10px;
+            animation: fadeIn 0.35s ease;
+        }
+        #gameOverlay.show {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.92);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        #gameOverlay .overlay-title {
+            font-size: 38px;
+            color: #ffd100;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 209, 0, 0.4);
+            margin-bottom: 10px;
+        }
+        #gameOverlay .overlay-score {
+            font-size: 22px;
+            color: #fff;
+            margin: 6px 0;
+        }
+        #gameOverlay .overlay-best {
+            font-size: 18px;
+            color: #87cefa;
+            margin-bottom: 18px;
+        }
+        #gameOverlay .overlay-btn {
+            padding: 10px 36px;
+            border: none;
+            border-radius: 30px;
+            background: #ffd100;
+            color: #000;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(255, 209, 0, 0.3);
+            touch-action: manipulation;
+        }
+        #gameOverlay .overlay-btn:active {
+            transform: scale(0.94);
+        }
+        #gameOverlay .overlay-btn:hover {
+            box-shadow: 0 6px 28px rgba(255, 209, 0, 0.5);
+        }
+        /* 得分动画提示 */
+        .score-popup {
+            position: absolute;
+            color: #ffd100;
+            font-weight: bold;
+            font-size: 22px;
+            pointer-events: none;
+            z-index: 5;
+            animation: popUp 0.6s ease forwards;
+            text-shadow: 0 0 10px rgba(255, 209, 0, 0.5);
+        }
+        @keyframes popUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.3);
+            }
+        }
+        /* 响应式 */
+        @media (max-width: 600px) {
+            #gameBox {
+                height: 380px;
+            }
+            .ui {
+                font-size: 15px;
+            }
+            #nailong {
+                width: 48px;
+                height: 52px;
+            }
+            #nailong::before {
+                width: 13px;
+                height: 18px;
+                top: -15px;
+                left: 17px;
+            }
+            #nailong::after {
+                font-size: 18px;
+                right: -10px;
+                top: 8px;
+            }
+            .light {
+                width: 26px;
+                height: 30px;
+                font-size: 26px;
+            }
+            .cloud {
+                width: 60px;
+                height: 34px;
+            }
+            #gameOverlay .overlay-title {
+                font-size: 28px;
+            }
+            #gameOverlay .overlay-score {
+                font-size: 18px;
+            }
+            #gameOverlay .overlay-btn {
+                font-size: 17px;
+                padding: 8px 28px;
+            }
+        }
+        @media (max-width: 400px) {
+            #gameBox {
+                height: 300px;
+            }
+            .tip {
+                font-size: 11px;
+            }
+            button {
+                font-size: 13px;
+                min-height: 32px;
+                min-width: 64px;
+                padding: 4px 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -48,220 +309,398 @@
     <div id="gameBox">
         <div id="nailong"></div>
         <div class="ground"></div>
+        <!-- 游戏结束覆盖层 -->
+        <div id="gameOverlay">
+            <div class="overlay-title">⚡ 游戏结束</div>
+            <div class="overlay-score">本次得分：<span id="finalScore">0</span></div>
+            <div class="overlay-best">🏆 历史最高：<span id="finalBest">0</span></div>
+            <button class="overlay-btn" id="restartBtn">再来一局</button>
+        </div>
     </div>
     <div class="btn-box">
-        <button onclick="restartGame()">重新开始</button>
+        <button id="restartTopBtn">重新开始</button>
     </div>
     <div class="tip">键盘 ← → 左右移动｜空格跳跃｜手机点击屏幕跳跃</div>
 
     <script>
-        (function(){
-            const game = document.getElementById('gameBox')
-            const nailong = document.getElementById('nailong')
-            const scoreSpan = document.getElementById('score')
-            const maxScoreSpan = document.getElementById('maxScore')
+        (function() {
+            'use strict';
 
-            // 游戏状态
-            let x = 80
-            let y = 80
-            const speed = 7
-            const jumpPower = -16
-            const gravity = 0.7
-            let onGround = true
-            let vy = 0
-            let score = 0
-            let maxScore = parseInt(localStorage.getItem('nailongMax')) || 0
-            maxScoreSpan.innerText = maxScore
+            // --- DOM 缓存 ---
+            const game = document.getElementById('gameBox');
+            const nailong = document.getElementById('nailong');
+            const scoreSpan = document.getElementById('score');
+            const maxScoreSpan = document.getElementById('maxScore');
+            const overlay = document.getElementById('gameOverlay');
+            const finalScoreSpan = document.getElementById('finalScore');
+            const finalBestSpan = document.getElementById('finalBest');
+            const restartBtn = document.getElementById('restartBtn');
+            const restartTopBtn = document.getElementById('restartTopBtn');
 
-            let lightList = []
-            let cloudList = []
-            let gameRun = true
-            let gameSpeed = 3
+            // --- 常量 ---
+            const GROUND_H = 80;
+            const NAILONG_W = 60;
+            const NAILONG_H = 65;
+            const LIGHT_W = 32;
+            const LIGHT_H = 36;
+            const CLOUD_W = 75;
+            const CLOUD_H = 42;
+            const SPEED_X = 7;
+            const JUMP_POWER = -16;
+            const GRAVITY = 0.7;
+            const BASE_GAME_SPEED = 3;
+            const LIGHT_INTERVAL_MS = 1100;
+            const CLOUD_INTERVAL_MS = 2200;
+            const MAX_SPEED = 9;
+            const SPEED_INCREASE_PER_SCORE = 0.04; // 每得10分速度+0.04
 
-            const key = { left: false, right: false }
+            // --- 状态 ---
+            let x = 80;
+            let y = GROUND_H;
+            let vy = 0;
+            let onGround = true;
+            let score = 0;
+            let maxScore = parseInt(localStorage.getItem('nailongMax'), 10) || 0;
+            let gameRun = false;
+            let gameSpeed = BASE_GAME_SPEED;
+            let animId = null;
+            let lastTimestamp = 0;
 
-            // 缓存游戏区域尺寸
-            let gameWidth = game.offsetWidth
-            let gameHeight = game.offsetHeight
+            // 对象列表
+            let lightList = [];
+            let cloudList = [];
 
-            // 键盘监听
-            document.addEventListener('keydown', function(e){
-                if(e.code === 'ArrowLeft') key.left = true
-                if(e.code === 'ArrowRight') key.right = true
-                if(e.code === 'Space' && onGround && gameRun){
-                    vy = jumpPower
-                    onGround = false
-                }
-            })
-            document.addEventListener('keyup', function(e){
-                if(e.code === 'ArrowLeft') key.left = false
-                if(e.code === 'ArrowRight') key.right = false
-            })
-            // 手机点击跳跃
-            game.addEventListener('click', function(){
-                if(onGround && gameRun){
-                    vy = jumpPower
-                    onGround = false
-                }
-            })
+            // 键盘状态
+            const key = { left: false, right: false };
 
-            // 碰撞检测
-            function isCrash(objX, objY, objW, objH){
-                const nx = x
-                const ny = gameHeight - y - 65
-                const nw = 60
-                const nh = 65
-                return nx < objX + objW && nx + nw > objX && ny < objY + objH && ny + nh > objY
+            // 生成时间控制
+            let lastLightTime = 0;
+            let lastCloudTime = 0;
+
+            // 尺寸缓存
+            let gameW = game.offsetWidth;
+            let gameH = game.offsetHeight;
+
+            // --- DOM 更新辅助 ---
+            function setNailongPos(px, py) {
+                // px: left, py: bottom
+                nailong.style.transform = 'translate3d(' + px + 'px, ' + (-py) + 'px, 0)';
             }
 
-            // 更新分数显示
-            function updateScore(newScore){
-                score = newScore
-                scoreSpan.innerText = score
+            function setElPos(el, px, py) {
+                el.style.transform = 'translate3d(' + px + 'px, ' + py + 'px, 0)';
             }
 
-            // 创建闪电道具
-            function createLight(){
-                if(!gameRun) return
-                const el = document.createElement('div')
-                el.className = 'light'
-                el.innerText = '⚡'
-                const top = Math.random() * 260 + 60
-                el.style.left = gameWidth + 'px'
-                el.style.top = top + 'px'
-                game.appendChild(el)
-                lightList.push({ dom: el, x: gameWidth, top: top })
+            function showScorePopup(px, py) {
+                const popup = document.createElement('div');
+                popup.className = 'score-popup';
+                popup.textContent = '+10';
+                popup.style.left = px + 'px';
+                popup.style.top = py + 'px';
+                game.appendChild(popup);
+                setTimeout(function() {
+                    if (popup.parentNode) popup.remove();
+                }, 650);
             }
 
-            // 创建乌云障碍
-            function createCloud(){
-                if(!gameRun) return
-                const el = document.createElement('div')
-                el.className = 'cloud'
-                const top = Math.random() * 220 + 40
-                el.style.left = gameWidth + 'px'
-                el.style.top = top + 'px'
-                game.appendChild(el)
-                cloudList.push({ dom: el, x: gameWidth, top: top })
+            // --- 游戏逻辑 ---
+            function isCrash(objX, objY, objW, objH) {
+                const nx = x;
+                const ny = gameH - y - NAILONG_H;
+                return nx < objX + objW && nx + NAILONG_W > objX &&
+                    ny < objY + objH && ny + NAILONG_H > objY;
             }
 
-            // 游戏主循环
-            let lastLightTime = 0
-            let lastCloudTime = 0
-            const lightInterval = 1100
-            const cloudInterval = 2200
-
-            function loop(timestamp){
-                // 更新尺寸（窗口可能缩放）
-                gameWidth = game.offsetWidth
-                gameHeight = game.offsetHeight
-
-                // 生成道具（基于时间）
-                if(!lastLightTime) lastLightTime = timestamp
-                if(!lastCloudTime) lastCloudTime = timestamp
-                if(gameRun){
-                    if(timestamp - lastLightTime >= lightInterval){
-                        createLight()
-                        lastLightTime = timestamp
-                    }
-                    if(timestamp - lastCloudTime >= cloudInterval){
-                        createCloud()
-                        lastCloudTime = timestamp
-                    }
+            function updateScoreUI() {
+                scoreSpan.textContent = score;
+                if (score > maxScore) {
+                    maxScore = score;
+                    localStorage.setItem('nailongMax', maxScore);
+                    maxScoreSpan.textContent = maxScore;
                 }
-
-                // 左右移动
-                if(key.left && x > 0) x -= speed
-                if(key.right && x < gameWidth - 60) x += speed
-
-                // 跳跃与重力
-                y += vy
-                vy += gravity
-                const groundH = 80
-                if(y <= groundH){
-                    y = groundH
-                    onGround = true
-                    vy = 0
-                }
-                nailong.style.left = x + 'px'
-                nailong.style.bottom = y + 'px'
-
-                // 更新闪电道具
-                for(let i = lightList.length - 1; i >= 0; i--){
-                    const item = lightList[i]
-                    item.x -= gameSpeed
-                    item.dom.style.left = item.x + 'px'
-                    // 碰撞检测
-                    if(isCrash(item.x, item.top, 32, 36)){
-                        updateScore(score + 10)
-                        item.dom.remove()
-                        lightList.splice(i, 1)
-                        continue
-                    }
-                    if(item.x < -40){
-                        item.dom.remove()
-                        lightList.splice(i, 1)
-                    }
-                }
-
-                // 更新乌云障碍
-                for(let i = cloudList.length - 1; i >= 0; i--){
-                    const item = cloudList[i]
-                    item.x -= gameSpeed
-                    item.dom.style.left = item.x + 'px'
-                    // 碰撞检测
-                    if(isCrash(item.x, item.top, 75, 42)){
-                        gameOver()
-                        return // 停止循环
-                    }
-                    if(item.x < -80){
-                        item.dom.remove()
-                        cloudList.splice(i, 1)
-                    }
-                }
-
-                requestAnimationFrame(loop)
             }
 
-            // 游戏结束
-            function gameOver(){
-                if(!gameRun) return
-                gameRun = false
-                if(score > maxScore){
-                    maxScore = score
-                    localStorage.setItem('nailongMax', maxScore)
-                    maxScoreSpan.innerText = maxScore
-                }
-                alert('游戏结束！本次得分：' + score + '\n历史最高分：' + maxScore)
+            function createLight() {
+                if (!gameRun) return;
+                const el = document.createElement('div');
+                el.className = 'light';
+                el.textContent = '⚡';
+                const top = Math.random() * 260 + 60;
+                el.style.left = '0px';
+                el.style.top = '0px';
+                setElPos(el, gameW, top);
+                game.appendChild(el);
+                lightList.push({ dom: el, x: gameW, top: top, w: LIGHT_W, h: LIGHT_H });
             }
 
-            // 重新开局
-            window.restartGame = function(){
+            function createCloud() {
+                if (!gameRun) return;
+                const el = document.createElement('div');
+                el.className = 'cloud';
+                const top = Math.random() * 220 + 40;
+                el.style.left = '0px';
+                el.style.top = '0px';
+                setElPos(el, gameW, top);
+                game.appendChild(el);
+                cloudList.push({ dom: el, x: gameW, top: top, w: CLOUD_W, h: CLOUD_H });
+            }
+
+            // --- 游戏结束 ---
+            function gameOver() {
+                if (!gameRun) return;
+                gameRun = false;
+                if (score > maxScore) {
+                    maxScore = score;
+                    localStorage.setItem('nailongMax', maxScore);
+                }
+                maxScoreSpan.textContent = maxScore;
+                finalScoreSpan.textContent = score;
+                finalBestSpan.textContent = maxScore;
+                overlay.classList.add('show');
+            }
+
+            // --- 重置 ---
+            function restartGame() {
+                // 清除覆盖层
+                overlay.classList.remove('show');
+
                 // 清除所有道具
-                lightList.forEach(function(item){ item.dom.remove() })
-                cloudList.forEach(function(item){ item.dom.remove() })
-                lightList = []
-                cloudList = []
-                // 重置变量
-                x = 80
-                y = 80
-                vy = 0
-                score = 0
-                gameRun = true
-                onGround = true
-                key.left = false
-                key.right = false
-                updateScore(0)
-                // 重置时间标记，避免立即生成
-                lastLightTime = 0
-                lastCloudTime = 0
-                // 重新启动循环
-                requestAnimationFrame(loop)
+                for (let i = 0; i < lightList.length; i++) {
+                    if (lightList[i].dom.parentNode) lightList[i].dom.remove();
+                }
+                for (let i = 0; i < cloudList.length; i++) {
+                    if (cloudList[i].dom.parentNode) cloudList[i].dom.remove();
+                }
+                lightList = [];
+                cloudList = [];
+
+                // 重置状态
+                x = 80;
+                y = GROUND_H;
+                vy = 0;
+                score = 0;
+                gameSpeed = BASE_GAME_SPEED;
+                onGround = true;
+                key.left = false;
+                key.right = false;
+                lastLightTime = 0;
+                lastCloudTime = 0;
+                lastTimestamp = 0;
+
+                setNailongPos(x, y);
+                updateScoreUI();
+                scoreSpan.textContent = '0';
+
+                if (!gameRun) {
+                    gameRun = true;
+                    if (animId) cancelAnimationFrame(animId);
+                    animId = requestAnimationFrame(loop);
+                } else {
+                    gameRun = true;
+                }
             }
 
-            // 启动主循环
-            requestAnimationFrame(loop)
-        })()
+            // --- 主循环 (使用 delta time) ---
+            function loop(timestamp) {
+                if (!gameRun) {
+                    animId = null;
+                    return;
+                }
+
+                // 初始化时间
+                if (lastTimestamp === 0) {
+                    lastTimestamp = timestamp;
+                    lastLightTime = timestamp;
+                    lastCloudTime = timestamp;
+                }
+
+                // delta time (ms) 限制最大步长防止卡顿
+                var dt = Math.min(timestamp - lastTimestamp, 40);
+                lastTimestamp = timestamp;
+
+                // 更新尺寸
+                var newW = game.offsetWidth;
+                var newH = game.offsetHeight;
+                if (newW !== gameW || newH !== gameH) {
+                    gameW = newW;
+                    gameH = newH;
+                }
+
+                // 难度渐进 (基于得分)
+                var speedBoost = Math.min(score / 10 * SPEED_INCREASE_PER_SCORE, MAX_SPEED - BASE_GAME_SPEED);
+                gameSpeed = BASE_GAME_SPEED + speedBoost;
+
+                // --- 生成道具 (基于时间) ---
+                if (timestamp - lastLightTime >= LIGHT_INTERVAL_MS) {
+                    createLight();
+                    lastLightTime = timestamp;
+                }
+                if (timestamp - lastCloudTime >= CLOUD_INTERVAL_MS) {
+                    createCloud();
+                    lastCloudTime = timestamp;
+                }
+
+                // --- 移动 ---
+                if (key.left && x > 0) x -= SPEED_X;
+                if (key.right && x < gameW - NAILONG_W) x += SPEED_X;
+
+                // --- 跳跃 & 重力 ---
+                y += vy;
+                vy += GRAVITY;
+                if (y <= GROUND_H) {
+                    y = GROUND_H;
+                    onGround = true;
+                    vy = 0;
+                } else {
+                    onGround = false;
+                }
+
+                setNailongPos(x, y);
+
+                // --- 更新闪电 (delta time 缩放) ---
+                var step = gameSpeed * (dt / 16.667);
+                for (var i = lightList.length - 1; i >= 0; i--) {
+                    var item = lightList[i];
+                    item.x -= step;
+                    setElPos(item.dom, item.x, item.top);
+
+                    if (isCrash(item.x, item.top, item.w, item.h)) {
+                        // 得分
+                        score += 10;
+                        updateScoreUI();
+                        // 弹出 +10 动画
+                        var popX = item.x + 4;
+                        var popY = item.top - 10;
+                        showScorePopup(popX, popY);
+                        // 移除
+                        if (item.dom.parentNode) item.dom.remove();
+                        lightList.splice(i, 1);
+                        continue;
+                    }
+                    if (item.x < -40) {
+                        if (item.dom.parentNode) item.dom.remove();
+                        lightList.splice(i, 1);
+                    }
+                }
+
+                // --- 更新乌云 ---
+                for (var j = cloudList.length - 1; j >= 0; j--) {
+                    var c = cloudList[j];
+                    c.x -= step;
+                    setElPos(c.dom, c.x, c.top);
+
+                    if (isCrash(c.x, c.top, c.w, c.h)) {
+                        gameOver();
+                        animId = null;
+                        return;
+                    }
+                    if (c.x < -80) {
+                        if (c.dom.parentNode) c.dom.remove();
+                        cloudList.splice(j, 1);
+                    }
+                }
+
+                animId = requestAnimationFrame(loop);
+            }
+
+            // --- 事件绑定 ---
+            // 键盘
+            function onKeyDown(e) {
+                if (e.code === 'ArrowLeft') { key.left = true;
+                    e.preventDefault(); }
+                if (e.code === 'ArrowRight') { key.right = true;
+                    e.preventDefault(); }
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (onGround && gameRun) {
+                        vy = JUMP_POWER;
+                        onGround = false;
+                    }
+                }
+            }
+
+            function onKeyUp(e) {
+                if (e.code === 'ArrowLeft') { key.left = false;
+                    e.preventDefault(); }
+                if (e.code === 'ArrowRight') { key.right = false;
+                    e.preventDefault(); }
+                if (e.code === 'Space') { e.preventDefault(); }
+            }
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            // 游戏区域点击 / 触摸跳跃
+            function handleJump(e) {
+                // 阻止事件冒泡，避免与覆盖层按钮冲突
+                if (e.target && (e.target.closest('#gameOverlay') || e.target.closest('.btn-box') || e.target.closest(
+                        '.overlay-btn') || e.target.id === 'restartTopBtn')) {
+                    return;
+                }
+                if (onGround && gameRun) {
+                    vy = JUMP_POWER;
+                    onGround = false;
+                }
+                if (e.type === 'touchstart') {
+                    e.preventDefault();
+                }
+            }
+
+            game.addEventListener('click', handleJump);
+            game.addEventListener('touchstart', handleJump, { passive: false });
+
+            // 重新开始按钮
+            function onRestart() {
+                restartGame();
+            }
+            restartBtn.addEventListener('click', onRestart);
+            restartTopBtn.addEventListener('click', onRestart);
+
+            // 窗口缩放时更新尺寸缓存 (防止跳跃瞬间位置偏移)
+            function onResize() {
+                gameW = game.offsetWidth;
+                gameH = game.offsetHeight;
+                // 确保奶龙不超出右边界
+                if (x + NAILONG_W > gameW) {
+                    x = gameW - NAILONG_W;
+                    setNailongPos(x, y);
+                }
+            }
+            window.addEventListener('resize', onResize);
+
+            // 页面可见性变化时暂停/恢复 (优化性能)
+            function onVisibilityChange() {
+                if (document.hidden && gameRun) {
+                    // 暂停：取消动画循环，但保持状态
+                    if (animId) {
+                        cancelAnimationFrame(animId);
+                        animId = null;
+                    }
+                } else if (!document.hidden && gameRun && !animId) {
+                    // 恢复：重置时间戳，重新开始循环
+                    lastTimestamp = 0;
+                    animId = requestAnimationFrame(loop);
+                }
+            }
+            document.addEventListener('visibilitychange', onVisibilityChange);
+
+            // --- 初始化 ---
+            maxScoreSpan.textContent = maxScore;
+            setNailongPos(x, y);
+            gameRun = true;
+            animId = requestAnimationFrame(loop);
+
+            // 暴露 restartGame 给全局（方便调试，但不再依赖 onclick）
+            window.restartGame = restartGame;
+
+            // 清理：页面卸载时取消动画
+            window.addEventListener('beforeunload', function() {
+                if (animId) cancelAnimationFrame(animId);
+                animId = null;
+                gameRun = false;
+            });
+
+        })();
     </script>
 </body>
 </html>
