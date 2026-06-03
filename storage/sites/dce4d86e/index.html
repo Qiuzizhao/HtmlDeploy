@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>像素打砖块 · 终极版</title>
+    <title>像素打砖块 · 极速狂飙版</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: #11141a;
+            background: #090b0e;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -20,17 +20,17 @@
         }
         #gameContainer {
             position: relative;
-            background: #1a1f29;
+            background: #151922;
             padding: 10px;
             border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.05);
-            border: 2px solid #2c3e50;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,255,255,0.05);
+            border: 2px solid #1f2d3d;
         }
         canvas {
-            background: #0d1117;
+            background: #06090e;
             display: block;
             border-radius: 8px;
-            cursor: none; /* 在游戏区域隐藏鼠标指针 */
+            cursor: none;
         }
         .ui-layer {
             position: absolute;
@@ -41,7 +41,7 @@
             justify-content: space-between;
             font-size: 16px;
             font-weight: bold;
-            color: #8b9bb4;
+            color: #7284a1;
             pointer-events: none;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -55,8 +55,8 @@
             left: 10px;
             width: 480px;
             height: 600px;
-            background: rgba(13, 17, 23, 0.85);
-            backdrop-filter: blur(4px);
+            background: rgba(6, 9, 14, 0.9);
+            backdrop-filter: blur(6px);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -65,22 +65,22 @@
             z-index: 10;
         }
         h2 {
-            font-size: 32px;
+            font-size: 36px;
             margin: 0 0 10px 0;
             color: #fff;
-            text-shadow: 0 0 10px rgba(0,255,204,0.5);
+            text-shadow: 0 0 15px rgba(0,255,204,0.6);
         }
         p {
-            color: #8b9bb4;
+            color: #7284a1;
             margin: 0 0 20px 0;
             font-size: 14px;
         }
         button {
-            padding: 12px 30px;
-            font-size: 16px;
+            padding: 12px 35px;
+            font-size: 17px;
             font-weight: bold;
             background: linear-gradient(135deg, #00ffcc, #0099ff);
-            color: #0d1117;
+            color: #06090e;
             border: none;
             border-radius: 25px;
             cursor: pointer;
@@ -88,8 +88,8 @@
             transition: all 0.2s;
         }
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,255,204,0.6);
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(0,255,204,0.7);
         }
         #startScreen { display: flex; }
         #gameOverScreen { display: none; }
@@ -108,20 +108,20 @@
     <canvas id="gameCanvas" width="480" height="600"></canvas>
 
     <div id="startScreen" class="screen">
-        <h2>像素打砖块</h2>
-        <p>移动鼠标控制挡板，接住弹球并消灭所有砖块！</p>
-        <button onclick="startGame()">开始游戏</button>
+        <h2>像素打砖块 · 狂飙版</h2>
+        <p>接住弹球，消灭砖块！注意：每次反弹小球都会疯狂加速！</p>
+        <button onclick="startGame()">极速开战</button>
     </div>
 
     <div id="gameOverScreen" class="screen">
-        <h2 style="color: #ff4757; text-shadow: 0 0 10px rgba(255,71,87,0.5);">游戏结束</h2>
+        <h2 style="color: #ff4757; text-shadow: 0 0 15px rgba(255,71,87,0.6);">游戏结束</h2>
         <p>最终得分: <span id="finalScore" style="color: #fff; font-weight: bold;">0</span></p>
-        <button onclick="restartGame()">再试一次</button>
+        <button onclick="restartGame()">再来一局</button>
     </div>
 
     <div id="winScreen" class="screen">
-        <h2 style="color: #2ed573; text-shadow: 0 0 10px rgba(46,213,115,0.5);">完美通关！</h2>
-        <p>传奇诞生！你成功摧毁了所有维度的砖块！</p>
+        <h2 style="color: #2ed573; text-shadow: 0 0 15px rgba(46,213,115,0.6);">完美通关！</h2>
+        <p>传奇诞生！你征服了极限速度的维度！</p>
         <button onclick="restartGame()">重新挑战</button>
     </div>
 </div>
@@ -130,7 +130,6 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// UI 元素
 const scoreEl = document.getElementById("score");
 const levelEl = document.getElementById("level");
 const livesEl = document.getElementById("lives");
@@ -139,7 +138,6 @@ const gameOverScreen = document.getElementById("gameOverScreen");
 const winScreen = document.getElementById("winScreen");
 const finalScoreEl = document.getElementById("finalScore");
 
-// 8-Bit 算法音效系统 (Web Audio API)
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playSound(type) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -148,68 +146,66 @@ function playSound(type) {
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    if (type === 'hit') { // 撞击砖块
+    if (type === 'hit') {
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    } else if (type === 'paddle') { // 撞击挡板
-        osc.type = 'sine';
         osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
         gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
         osc.start(); osc.stop(audioCtx.currentTime + 0.08);
-    } else if (type === 'lose') { // 掉落丢命
+    } else if (type === 'paddle') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.06);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+    } else if (type === 'lose') {
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.4);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-    } else if (type === 'win') { // 胜利音效
+        osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.35);
+    } else if (type === 'win') {
         osc.type = 'square';
-        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
-        osc.frequency.setValueAtTime(900, audioCtx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(660, audioCtx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.16);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
     }
 }
 
-// 游戏核心配置
 let score = 0;
 let lives = 3;
 let currentLevel = 1;
 const maxLevels = 3;
-let gameState = "menu"; // menu, playing, gameover, win
+let gameState = "menu";
+let lastTime = 0;
 
-// 挡板配置
 const paddle = {
-    width: 90,
+    width: 85, // 略微收窄宽度以适应高难度
     height: 13,
-    x: (canvas.width - 90) / 2,
+    x: (canvas.width - 85) / 2,
     y: canvas.height - 40,
     color: "#00ffcc",
-    targetX: (canvas.width - 90) / 2 // 用于平滑鼠标跟随
+    targetX: (canvas.width - 85) / 2
 };
 
-// 弹球配置
 const ball = {
     x: canvas.width / 2,
     y: canvas.height - 60,
-    radius: 7,
-    speed: 5,
-    dx: 4,
-    dy: -4,
+    radius: 6.5,
+    // 【狂飙机制】引入独立的速度追踪器，允许无限增幅
+    currentSpeed: 7, 
+    dx: 5,
+    dy: -5,
     color: "#ffffff"
 };
 
-// 砖块矩阵配置
 const brickConfig = {
-    rowCounts: [3, 4, 5], // 不同关卡的行数
+    rowCounts: [3, 4, 5],
     colCount: 6,
     width: 65,
     height: 20,
@@ -218,25 +214,24 @@ const brickConfig = {
     offsetLeft: 23
 };
 let bricks = [];
-
-// 粒子特效系统 (消除砖块时的碎片)
 let particles = [];
+
 function createParticles(x, y, color) {
-    for (let i = 0; i < 8; i++) {
+    // 增加碎片数量，视觉震撼感拉满
+    for (let i = 0; i < 12; i++) {
         particles.push({
             x: x,
             y: y,
-            dx: (Math.random() - 0.5) * 6,
-            dy: (Math.random() - 0.5) * 6,
-            radius: Math.random() * 3 + 1,
+            dx: (Math.random() - 0.5) * 8,
+            dy: (Math.random() - 0.5) * 8,
+            radius: Math.random() * 3.5 + 1,
             color: color,
             alpha: 1,
-            decay: Math.random() * 0.03 + 0.02
+            decay: Math.random() * 0.04 + 0.03
         });
     }
 }
 
-// 关卡地图生成 (根据关卡返回不同的耐撞度和颜色)
 function initBricks() {
     bricks = [];
     const rows = brickConfig.rowCounts[currentLevel - 1];
@@ -245,7 +240,6 @@ function initBricks() {
     for (let r = 0; r < rows; r++) {
         bricks[r] = [];
         for (let c = 0; c < brickConfig.colCount; c++) {
-            // 关卡2和3加入不同血量的砖块逻辑（这里简单用颜色和分值区分）
             bricks[r][c] = { 
                 x: 0, 
                 y: 0, 
@@ -257,7 +251,6 @@ function initBricks() {
     }
 }
 
-// 监听鼠标控制挡板
 canvas.addEventListener("mousemove", (e) => {
     const relativeX = e.clientX - canvas.getBoundingClientRect().left;
     if (relativeX > 0 && relativeX < canvas.width) {
@@ -265,11 +258,11 @@ canvas.addEventListener("mousemove", (e) => {
     }
 });
 
-// 核心控制器
 function startGame() {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     startScreen.style.display = "none";
     gameState = "playing";
+    lastTime = performance.now();
     resetLevel(1);
 }
 
@@ -281,6 +274,7 @@ function restartGame() {
     scoreEl.innerText = score;
     updateLivesUI();
     gameState = "playing";
+    lastTime = performance.now();
     resetLevel(1);
 }
 
@@ -296,61 +290,71 @@ function resetBallAndPaddle() {
     paddle.targetX = paddle.x;
     ball.x = canvas.width / 2;
     ball.y = paddle.y - ball.radius - 5;
-    // 随关卡提高球的初始基础速度
-    const baseSpeed = 4 + currentLevel;
-    ball.dx = baseSpeed * (Math.random() > 0.5 ? 1 : -1) * 0.7;
-    ball.dy = -baseSpeed;
+    
+    // 【加速调优】大幅拉高初始速度：1关=7.5，2关=9，3关=10.5 (原版初始仅为 5)
+    ball.currentSpeed = 6 + currentLevel * 1.5;
+    
+    ball.dx = ball.currentSpeed * (Math.random() > 0.5 ? 1 : -1) * 0.6;
+    ball.dy = -Math.sqrt(ball.currentSpeed * ball.currentSpeed - ball.dx * ball.dx);
 }
 
 function updateLivesUI() {
     livesEl.innerText = "❤️".repeat(Math.max(0, lives)) || "无";
 }
 
-// 物理碰撞与状态更新
-function update() {
+// 核心物理与逻辑更新
+function update(dt) {
     if (gameState !== "playing") return;
 
-    // 1. 缓动平滑移动挡板，使其更有操作手感
-    paddle.x += (paddle.targetX - paddle.x) * 0.3;
+    // 1. 挡板平滑跟随（略微调高响应系数从 0.3 到 0.45，确保高流速下带得动）
+    paddle.x += (paddle.targetX - paddle.x) * 0.45;
     if (paddle.x < 0) paddle.x = 0;
     if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
 
-    // 2. 移动弹球
-    ball.x += ball.dx;
-    ball.y += ball.dy;
+    // 2. 根据 dt 移动弹球，抵消不同刷新率显示器的影响
+    const speedMultiplier = dt * 60; // 以 60FPS 为基准进行平滑缩放
+    ball.x += ball.dx * speedMultiplier;
+    ball.y += ball.dy * speedMultiplier;
 
-    // 3. 墙壁碰撞检测 (左右)
-    if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+    // 3. 墙壁碰撞
+    if (ball.x > canvas.width - ball.radius) {
+        ball.x = canvas.width - ball.radius;
+        ball.dx = -ball.dx;
+        playSound('paddle');
+    } else if (ball.x < ball.radius) {
+        ball.x = ball.radius;
         ball.dx = -ball.dx;
         playSound('paddle');
     }
-    // 墙壁碰撞检测 (上)
-    if (ball.y + ball.dy < ball.radius) {
+    
+    if (ball.y < ball.radius) {
+        ball.y = ball.radius;
         ball.dy = -ball.dy;
         playSound('paddle');
     }
 
-    // 4. 挡板碰撞检测
+    // 4. 挡板碰撞（加入动态折射与反弹加速）
     if (ball.y + ball.radius >= paddle.y && ball.y - ball.radius <= paddle.y + paddle.height) {
         if (ball.x >= paddle.x && ball.x <= paddle.x + paddle.width) {
-            // 根据球撞击挡板的位置，计算反弹角度（撞两边角度大，撞中间垂直弹）
+            
+            // 【狂飙机制】每被挡板成功接住一次，基础物理总速度就无上限地直接提升 5%！
+            ball.currentSpeed *= 1.05;
+
             let collidePoint = ball.x - (paddle.x + paddle.width / 2);
-            collidePoint = collidePoint / (paddle.width / 2); // 归一化为 -1 到 1
+            collidePoint = collidePoint / (paddle.width / 2); // -1 到 1
             
-            let angle = collidePoint * (Math.PI / 3); // 最大反弹角 60 度
-            const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+            let angle = collidePoint * (Math.PI / 2.8); // 稍微拓展一点最大反弹角
             
-            ball.dx = speed * Math.sin(angle);
-            ball.dy = -speed * Math.cos(angle);
+            ball.dx = ball.currentSpeed * Math.sin(angle);
+            ball.dy = -ball.currentSpeed * Math.cos(angle);
             
-            // 确保球在受到极大角度折射时也有向上的速度，避免贴地死循环
-            if(Math.abs(ball.dy) < 1.5) ball.dy = -1.5; 
+            if(Math.abs(ball.dy) < 2) ball.dy = -2; 
 
             playSound('paddle');
         }
     }
 
-    // 5. 落地检测 (丢命)
+    // 5. 落地检测
     if (ball.y + ball.radius > canvas.height) {
         lives--;
         updateLivesUI();
@@ -364,24 +368,40 @@ function update() {
         }
     }
 
-    // 6. 砖块碰撞检测
+    // 6. 砖块碰撞
     let allDestroyed = true;
     for (let r = 0; r < bricks.length; r++) {
         for (let c = 0; c < brickConfig.colCount; c++) {
             const b = bricks[r][c];
             if (b.status === 1) {
-                allDestroyed = false; // 只要还有一块就没赢
+                allDestroyed = false;
                 
-                // 简单的 AABB 碰撞检测
+                // AABB 碰撞
                 if (ball.x + ball.radius > b.x && ball.x - ball.radius < b.x + brickConfig.width &&
                     ball.y + ball.radius > b.y && ball.y - ball.radius < b.y + brickConfig.height) {
                     
-                    ball.dy = -ball.dy;
-                    b.status = 0; // 摧毁砖块
+                    // 【狂飙机制】每撞击一块砖块，速度额外增加 1.5%
+                    ball.currentSpeed *= 1.015;
+                    
+                    // 精确判断碰撞方向（上下撞还是左右撞），避免诡异穿透
+                    const overlapX = Math.min(ball.x + ball.radius - b.x, b.x + brickConfig.width - (ball.x - ball.radius));
+                    const overlapY = Math.min(ball.y + ball.radius - b.y, b.y + brickConfig.height - (ball.y - ball.radius));
+                    
+                    if (overlapX < overlapY) {
+                        ball.dx = ball.x < b.x + brickConfig.width / 2 ? -Math.abs(ball.dx) : Math.abs(ball.dx);
+                    } else {
+                        ball.dy = ball.y < b.y + brickConfig.height / 2 ? -Math.abs(ball.dy) : Math.abs(ball.dy);
+                    }
+                    
+                    // 动态重组分速度，应用新的狂飙总速
+                    const angle = Math.atan2(ball.dy, ball.dx);
+                    ball.dx = ball.currentSpeed * Math.cos(angle);
+                    ball.dy = ball.currentSpeed * Math.sin(angle);
+
+                    b.status = 0;
                     score += b.points;
                     scoreEl.innerText = score;
                     
-                    // 生成爆炸粒子
                     createParticles(b.x + brickConfig.width/2, b.y + brickConfig.height/2, b.color);
                     playSound('hit');
                 }
@@ -389,7 +409,7 @@ function update() {
         }
     }
 
-    // 7. 检查是否进入下一关或通关
+    // 7. 胜利判定
     if (allDestroyed) {
         if (currentLevel < maxLevels) {
             playSound('win');
@@ -401,21 +421,21 @@ function update() {
         }
     }
 
-    // 8. 更新粒子系统
+    // 8. 粒子衰变
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        p.x += p.dx;
-        p.y += p.dy;
-        p.alpha -= p.decay;
+        p.x += p.dx * speedMultiplier;
+        p.y += p.dy * speedMultiplier;
+        p.alpha -= p.decay * speedMultiplier;
         if (p.alpha <= 0) {
             particles.splice(i, 1);
         }
     }
 }
 
-// 渲染图形
+// 图形绘制
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // 清屏
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. 绘制砖块
     for (let r = 0; r < bricks.length; r++) {
@@ -426,29 +446,29 @@ function draw() {
                 bricks[r][c].x = brickX;
                 bricks[r][c].y = brickY;
                 
-                // 绘制带圆角的渐变砖块
                 ctx.fillStyle = bricks[r][c].color;
                 ctx.beginPath();
                 ctx.roundRect(brickX, brickY, brickConfig.width, brickConfig.height, 4);
                 ctx.fill();
-                // 砖块高光边框线
-                ctx.strokeStyle = "rgba(255,255,255,0.2)";
+                ctx.strokeStyle = "rgba(255,255,255,0.15)";
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
         }
     }
 
-    // 2. 绘制挡板
-    ctx.fillStyle = paddle.color;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = paddle.color; // 挡板霓虹霓虹发光特效
+    // 2. 绘制挡板（【性能优化】放弃卡顿的 shadowBlur，使用渐变模拟发光霓虹效果）
+    let paddleGradient = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.height);
+    paddleGradient.addColorStop(0, '#77ffeb');
+    paddleGradient.addColorStop(0.4, paddle.color);
+    paddleGradient.addColorStop(1, '#009977');
+    
+    ctx.fillStyle = paddleGradient;
     ctx.beginPath();
     ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 6);
     ctx.fill();
-    ctx.shadowBlur = 0; // 重置阴影，避免影响后续绘制
 
-    // 3. 绘制弹球
+    // 3. 绘制弹球（增加速度残留尾迹视觉效果）
     ctx.fillStyle = ball.color;
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
@@ -467,17 +487,22 @@ function draw() {
     });
 }
 
-// 游戏主循环
-function gameLoop() {
-    update();
+// 基于时间增量的平滑主循环
+function gameLoop(currentTime) {
+    if (!lastTime) lastTime = currentTime;
+    const dt = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
+
+    // 限制最大时间步长，防止标签页切换切回后发生物理穿透爆炸
+    const safeDt = Math.min(dt, 0.1); 
+
+    update(safeDt);
     draw();
     requestAnimationFrame(gameLoop);
 }
 
-// 初始化结构但先不运行物理，等待玩家点击
 initBricks();
-gameLoop();
+requestAnimationFrame(gameLoop);
 </script>
-
 </body>
 </html>
