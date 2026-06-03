@@ -501,6 +501,7 @@ function getThumbnailUrl(thumbnailDir, id) {
 function toPublicSite(site, classes, thumbnailDir) {
   return {
     ...attachClassName(site, classes),
+    enabled: site.enabled !== false,
     url: `/site/${site.id}`,
     previewUrl: `/preview/${site.id}`,
     thumbnailUrl: getThumbnailUrl(thumbnailDir, site.id)
@@ -833,8 +834,8 @@ function createApp(options = {}) {
       }
 
       const filteredSites = classId
-        ? sites.filter((site) => site.classId === classId)
-        : sites;
+        ? sites.filter((site) => site.classId === classId && site.enabled !== false)
+        : sites.filter((site) => site.enabled !== false);
       res.json(filteredSites.map((site) => toPublicSite(site, classes, thumbnailDir)));
     } catch (error) {
       next(error);
@@ -1274,6 +1275,7 @@ function createApp(options = {}) {
         title,
         author,
         classId,
+        enabled: true,
         createdAt: new Date().toISOString()
       };
       sites.unshift(site);
@@ -1339,6 +1341,32 @@ function createApp(options = {}) {
       }
 
       return res.json({ generated, failed });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch('/api/sites/:id/enabled', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const enabled = Boolean(req.body.enabled);
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((site) => site.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const site = {
+        ...sites[siteIndex],
+        enabled,
+        updatedAt: new Date().toISOString()
+      };
+      sites[siteIndex] = site;
+      await writeSites(dataFile, sites);
+
+      const classes = await readClasses(classesFile);
+      return res.json(toPublicSite(site, classes, thumbnailDir));
     } catch (error) {
       next(error);
     }
@@ -1604,6 +1632,10 @@ function createApp(options = {}) {
         return res.status(404).send('Not found');
       }
 
+      if (site.enabled === false && !hasAdminAccess(req)) {
+        return res.status(404).send('Not found');
+      }
+
       if (!(await canReadSite(req, id))) {
         return res.status(401).send('请输入班级密码');
       }
@@ -1618,8 +1650,14 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const projectDir = path.join(storageDir, id);
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
 
-      if (!fs.existsSync(projectDir)) {
+      if (!site || !fs.existsSync(projectDir)) {
+        return res.status(404).send('Not found');
+      }
+
+      if (site.enabled === false && !hasAdminAccess(req)) {
         return res.status(404).send('Not found');
       }
 
@@ -1632,8 +1670,6 @@ function createApp(options = {}) {
         return res.sendFile(indexPath);
       }
 
-      const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
       const html = await renderFileList({ id, title: site?.title, projectDir });
       return res.type('html').send(html);
     } catch (error) {
@@ -1645,8 +1681,14 @@ function createApp(options = {}) {
     const { id } = req.params;
     const requestedPath = req.params[0] || '';
     const projectDir = path.join(storageDir, id);
+    const sites = await readSites(dataFile);
+    const site = sites.find((item) => item.id === id);
 
-    if (!fs.existsSync(projectDir)) {
+    if (!site || !fs.existsSync(projectDir)) {
+      return res.status(404).send('Not found');
+    }
+
+    if (site.enabled === false && !hasAdminAccess(req)) {
       return res.status(404).send('Not found');
     }
 
