@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>霓虹钢琴小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background: #050018;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        h1 {
+            color: #fff;
+            text-shadow: 0 0 10px #f0f,0 0 20px #0ff,0 0 30px #ff0;
+            margin-bottom: 40px;
+            letter-spacing: 3px;
+        }
+        .piano-wrap {
+            display: flex;
+            position: relative;
+            padding: 20px;
+            background: #110022;
+            border-radius: 12px;
+            box-shadow: 0 0 40px #9900ff88;
+        }
+        /* 白键 */
+        .white-key {
+            width: 55px;
+            height: 220px;
+            background: linear-gradient(#f8f8f8,#fff);
+            border:1px solid #ddd;
+            border-radius:0 0 8px 8px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            position: relative;
+            z-index:1;
+        }
+        .white-key.active {
+            background: linear-gradient(#0ff,#f0f);
+            box-shadow: 0 0 25px #0ff,inset 0 0 20px #ff0;
+            transform: translateY(6px);
+        }
+        /* 黑键 */
+        .black-key {
+            width:32px;
+            height:135px;
+            background: linear-gradient(#111,#333);
+            border-radius:0 0 6px 6px;
+            position:absolute;
+            z-index:2;
+            cursor: pointer;
+            transition: all 0.12s ease;
+        }
+        .black-key.active {
+            background: linear-gradient(#f0f,#f50);
+            box-shadow:0 0 22px #f0f,inset 0 0 15px #ff0;
+            transform: translateY(4px);
+        }
+        .tips{
+            color:#ccccff;
+            margin-top:30px;
+            text-shadow:0 0 6px #88f;
+        }
+    </style>
+</head>
+<body>
+    <h1>✨ 霓虹霓虹琴键钢琴 ✨</h1>
+    <div class="piano-wrap" id="pianoBox"></div>
+    <div class="tips">按键：A S D F G H J K L | 鼠标点击琴键弹奏</div>
+
+    <script>
+        // 音符配置：按键、音高、黑白键、位置
+        const keyData = [
+            {key:'A',note:'C4',type:'white',left:0},
+            {key:'W',note:'C#4',type:'black',left:38},
+            {key:'S',note:'D4',type:'white',left:55},
+            {key:'E',note:'D#4',type:'black',left:93},
+            {key:'D',note:'E4',type:'white',left:110},
+            {key:'F',note:'F4',type:'white',left:165},
+            {key:'T',note:'F#4',type:'black',left:203},
+            {key:'G',note:'G4',type:'white',left:220},
+            {key:'Y',note:'G#4',type:'black',left:258},
+            {key:'H',note:'A4',type:'white',left:275},
+            {key:'U',note:'A#4',type:'black',left:313},
+            {key:'J',note:'B4',type:'white',left:330},
+            {key:'K',note:'C5',type:'white',left:385},
+            {key:'O',note:'C#5',type:'black',left:423},
+            {key:'L',note:'D5',type:'white',left:440},
+        ];
+        const pianoBox = document.getElementById('pianoBox');
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext);
+
+        // 生成琴键DOM
+        keyData.forEach(item=>{
+            const div = document.createElement('div');
+            div.className = item.type === 'white' ? 'white-key' : 'black-key';
+            div.dataset.key = item.key;
+            div.dataset.note = item.note;
+            if(item.type==='black') div.style.left = item.left+'px';
+            pianoBox.appendChild(div);
+
+            // 鼠标按下
+            div.addEventListener('mousedown',()=>{
+                playNote(item.note);
+                div.classList.add('active');
+            })
+            // 鼠标松开
+            div.addEventListener('mouseup',()=>div.classList.remove('active'));
+            div.addEventListener('mouseleave',()=>div.classList.remove('active'));
+        })
+
+        // 键盘按下
+        document.addEventListener('keydown',e=>{
+            const k = e.key.toUpperCase();
+            const find = document.querySelector(`[data-key="${k}"]`);
+            if(!find || find.classList.contains('active')) return;
+            const info = keyData.find(d=>d.key===k);
+            playNote(info.note);
+            find.classList.add('active');
+        })
+        document.addEventListener('keyup',e=>{
+            const k = e.key.toUpperCase();
+            const find = document.querySelector(`[data-key="${k}"]`);
+            if(find) find.classList.remove('active');
+        })
+
+        // 简易发声振荡器
+        function playNote(noteName){
+            const freqMap = {
+                C4:261.63,C#4:277.18,D4:293.66,D#4:311.13,E4:329.63,
+                F4:349.23,F#4:369.99,G4:392.00,G#4:415.30,A4:440,A#4:466.16,
+                B4:493.88,C5:523.25,C#5:554.37,D5:587.33
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freqMap[noteName];
+            gain.gain.setValueAtTime(0.35,audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.4);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime+0.4);
+        }
+    </script>
+</body>
+</html>
