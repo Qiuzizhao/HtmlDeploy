@@ -326,8 +326,10 @@
       display: grid;
       grid-template-columns: minmax(260px, 1fr) auto;
       gap: 12px;
-      padding: 16px 20px 0;
+      padding: 16px 20px 20px;
       align-items: end;
+      border-top: 1px solid var(--line);
+      background: var(--panel-soft);
     }
 
     .forbidden-search-form {
@@ -339,34 +341,59 @@
     }
 
     .forbidden-words-form textarea {
-      min-height: 96px;
+      min-height: 84px;
+      resize: vertical;
     }
 
     .forbidden-results {
       display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
       gap: 8px;
-      padding: 16px 20px 0;
+      max-height: min(52vh, 520px);
+      margin: 16px 20px 0;
+      padding: 12px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
     }
 
     .forbidden-word-row {
-      min-height: 36px;
+      min-height: 34px;
       display: flex;
       align-items: center;
-      padding: 8px 12px;
+      padding: 7px 10px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
-      font-size: 14px;
+      color: #1e293b;
+      font-size: 13px;
+      line-height: 1.35;
       overflow-wrap: anywhere;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
     }
 
     .forbidden-pagination {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 10px;
-      padding: 12px 20px 0;
+      padding: 12px 20px 16px;
       color: var(--muted);
       font-size: 13px;
+    }
+
+    .forbidden-pagination span {
+      min-width: 220px;
+      text-align: center;
+    }
+
+    .forbidden-results .empty-state {
+      grid-column: 1 / -1;
+      padding: 28px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fff;
     }
 
     .class-list {
@@ -732,6 +759,15 @@
       .forbidden-words-form,
       .class-form {
         grid-template-columns: 1fr;
+      }
+
+      .forbidden-pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .forbidden-pagination span {
+        min-width: 0;
       }
 
       .class-row {
