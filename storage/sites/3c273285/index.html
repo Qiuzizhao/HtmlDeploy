@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⚔️ 石头剪刀布 - 豪华版</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #4158D0, #C850C0);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  background: #fff;
+  max-width: 600px;
+  width: 100%;
+  border-radius: 24px;
+  padding: 40px 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top:0; left:0; right:0;
+  height: 6px;
+  background: linear-gradient(90deg,#4158D0,#C850C0);
+}
+
+h1 {
+  font-size: 32px;
+  color: #222;
+  margin-bottom: 10px;
+}
+
+.desc {
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 15px;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.score-box {
+  background: #f5f7ff;
+  padding: 16px 20px;
+  border-radius: 16px;
+  min-width: 120px;
+}
+
+.score-box h3 {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.score-box .num {
+  font-size: 28px;
+  font-weight: bold;
+  color: #4158D0;
+}
+
+.streak {
+  margin: 10px 0 25px;
+  font-size: 16px;
+  color: #C850C0;
+  font-weight: 500;
+}
+
+.choices {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.choice-btn {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  font-size: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.choice-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(65,88,208,0.3);
+}
+
+.choice-btn:active {
+  transform: scale(0.95);
+}
+
+.result {
+  min-height: 70px;
+  font-size: 18px;
+  line-height: 1.6;
+  padding: 16px;
+  border-radius: 12px;
+  margin: 20px 0;
+  transition: 0.3s;
+}
+
+.win {
+  background: #e6f7ef;
+  color: #0c9655;
+  animation: flash 0.5s;
+}
+
+.lose {
+  background: #fdecea;
+  color: #d32f2f;
+  animation: flash 0.5s;
+}
+
+.tie {
+  background: #f0f0f0;
+  color: #444;
+}
+
+.history {
+  text-align: left;
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 12px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 14px;
+  color: #333;
+  margin-top: 10px;
+}
+
+.btm-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-reset {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.btn-restart {
+  background: #4158D0;
+  color: #fff;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.total-10 {
+  margin-top: 12px;
+  font-size: 15px;
+  color: #555;
+}
+
+@keyframes flash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 500px) {
+  .choices {
+    gap:10px;
+  }
+  .choice-btn {
+    width:75px; height:75px;
+    font-size:30px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>⚔️ 猜拳大作战</h1>
+  <div class="desc">与电脑对战，看看谁更胜一筹！</div>
+
+  <div class="score-row">
+    <div class="score-box">
+      <h3>你的分数</h3>
+      <div class="num" id="userScore">0</div>
+    </div>
+    <div class="score-box">
+      <h3>电脑分数</h3>
+      <div class="num" id="cpuScore">0</div>
+    </div>
+  </div>
+
+  <div class="streak" id="streak">当前连胜：0 🚀</div>
+
+  <div class="choices">
+    <button class="choice-btn" onclick="go(0)">✊</button>
+    <button class="choice-btn" onclick="go(1)">✌️</button>
+    <button class="choice-btn" onclick="go(2)">🖐️</button>
+  </div>
+
+  <div class="result" id="result">请出拳开始游戏！</div>
+
+  <div class="total-10" id="total10"></div>
+
+  <div class="history" id="history"></div>
+
+  <div class="btm-btns">
+    <button class="btn btn-restart" onclick="restart()">重新开局</button>
+    <button class="btn btn-reset" onclick="resetAll()">清空全部</button>
+  </div>
+</div>
+
+<script>
+const names = ['✊ 石头','✌️ 剪刀','🖐️ 布'];
+let user = 0, cpu = 0;
+let winStreak = 0;
+let totalRound = 0;
+let history = [];
+
+function go(me){
+  const ai = Math.floor(Math.random()*3);
+  totalRound++;
+  let resTxt = '';
+  let resClass = '';
+
+  if(me === ai){
+    resTxt = `平局！你：${names[me]}｜电脑：${names[ai]}`;
+    resClass = 'tie';
+  }else if(
+    (me===0&&ai===1)||
+    (me===1&&ai===2)||
+    (me===2&&ai===0)
+  ){
+    user++;
+    winStreak++;
+    resTxt = `🎉 你赢了！你：${names[me]}｜电脑：${names[ai]}`;
+    resClass = 'win';
+  }else{
+    cpu++;
+    winStreak = 0;
+    resTxt = `😥 你输了！你：${names[me]}｜电脑：${names[ai]}`;
+    resClass = 'lose';
+  }
+
+  // 更新界面
+  document.getElementById('userScore').innerText = user;
+  document.getElementById('cpuScore').innerText = cpu;
+  document.getElementById('streak').innerText = `当前连胜：${winStreak} 🚀`;
+
+  const rDom = document.getElementById('result');
+  rDom.className = 'result '+resClass;
+  rDom.innerHTML = resTxt;
+
+  // 历史记录
+  history.unshift(resTxt);
+  if(history.length>8) history.pop();
+  document.getElementById('history').innerHTML = 
+    '<strong>最近对战：</strong><br>'+history.join('<br>');
+
+  // 10局总结
+  if(totalRound>=10){
+    let final = '';
+    if(user>cpu) final='✅ 总评：你赢了！';
+    else if(user<cpu) final='❌ 总评：电脑赢了！';
+    else final='⚖️ 总评：平局！';
+    document.getElementById('total10').innerText = 
+      `已玩10局 | 你：${user} 电脑：${cpu} | ${final}`;
+  }
+}
+
+function restart(){
+  user=0; cpu=0; winStreak=0; totalRound=0;
+  document.getElementById('userScore').innerText=0;
+  document.getElementById('cpuScore').innerText=0;
+  document.getElementById('streak').innerText='当前连胜：0 🚀';
+  document.getElementById('result').innerText='请出拳开始游戏！';
+  document.getElementById('result').className='result';
+  document.getElementById('total10').innerText='';
+}
+
+function resetAll(){
+  restart();
+  history=[];
+  document.getElementById('history').innerHTML='';
+}
+</script>
+</body>
+</html>
