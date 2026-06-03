@@ -636,8 +636,9 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:55:23.262Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.518Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:19:23.823Z",
+    "forbiddenWhitelist": true
   },
   {
     "id": "dddf5777",
