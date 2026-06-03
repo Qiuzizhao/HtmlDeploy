@@ -225,9 +225,9 @@ h1 {
   <div class="streak" id="streak">当前连胜：0 🚀</div>
 
   <div class="choices">
-    <button class="choice-btn" onclick="go(0)">✊</button>
-    <button class="choice-btn" onclick="go(1)">✌️</button>
-    <button class="choice-btn" onclick="go(2)">🖐️</button>
+    <button class="choice-btn" data-choice="0">✊</button>
+    <button class="choice-btn" data-choice="1">✌️</button>
+    <button class="choice-btn" data-choice="2">🖐️</button>
   </div>
 
   <div class="result" id="result">请出拳开始游戏！</div>
@@ -237,84 +237,149 @@ h1 {
   <div class="history" id="history"></div>
 
   <div class="btm-btns">
-    <button class="btn btn-restart" onclick="restart()">重新开局</button>
-    <button class="btn btn-reset" onclick="resetAll()">清空全部</button>
+    <button class="btn btn-restart" id="restartBtn">重新开局</button>
+    <button class="btn btn-reset" id="resetAllBtn">清空全部</button>
   </div>
 </div>
 
 <script>
-const names = ['✊ 石头','✌️ 剪刀','🖐️ 布'];
-let user = 0, cpu = 0;
-let winStreak = 0;
-let totalRound = 0;
-let history = [];
+(function() {
+  const NAMES = ['✊ 石头','✌️ 剪刀','🖐️ 布'];
+  const MAX_HISTORY = 8;
 
-function go(me){
-  const ai = Math.floor(Math.random()*3);
-  totalRound++;
-  let resTxt = '';
-  let resClass = '';
+  // DOM 缓存
+  const userScoreEl = document.getElementById('userScore');
+  const cpuScoreEl = document.getElementById('cpuScore');
+  const streakEl = document.getElementById('streak');
+  const resultEl = document.getElementById('result');
+  const historyEl = document.getElementById('history');
+  const total10El = document.getElementById('total10');
+  const choiceBtns = document.querySelectorAll('.choice-btn');
+  const restartBtn = document.getElementById('restartBtn');
+  const resetAllBtn = document.getElementById('resetAllBtn');
 
-  if(me === ai){
-    resTxt = `平局！你：${names[me]}｜电脑：${names[ai]}`;
-    resClass = 'tie';
-  }else if(
-    (me===0&&ai===1)||
-    (me===1&&ai===2)||
-    (me===2&&ai===0)
-  ){
-    user++;
-    winStreak++;
-    resTxt = `🎉 你赢了！你：${names[me]}｜电脑：${names[ai]}`;
-    resClass = 'win';
-  }else{
-    cpu++;
+  // 游戏状态
+  let userScore = 0;
+  let cpuScore = 0;
+  let winStreak = 0;
+  let totalRound = 0;
+  let historyArr = [];
+
+  // 判断胜负：基于规则映射表（0=石头, 1=剪刀, 2=布）
+  function determineWinner(player, ai) {
+    if (player === ai) return 'tie';
+    const winMap = { 0: 1, 1: 2, 2: 0 };
+    if (winMap[player] === ai) return 'win';
+    return 'lose';
+  }
+
+  // 更新 UI
+  function updateUI(resultText, resultClass) {
+    userScoreEl.textContent = userScore;
+    cpuScoreEl.textContent = cpuScore;
+    streakEl.textContent = '当前连胜：' + winStreak + ' 🚀';
+    resultEl.textContent = resultText;
+    resultEl.className = 'result ' + resultClass;
+  }
+
+  // 添加历史记录
+  function addHistory(text) {
+    historyArr.unshift(text);
+    if (historyArr.length > MAX_HISTORY) {
+      historyArr.pop();
+    }
+    historyEl.innerHTML = '<strong>最近对战：</strong><br>' + historyArr.join('<br>');
+  }
+
+  // 10局总结检测
+  function checkTotal() {
+    if (totalRound >= 10) {
+      let final = '';
+      if (userScore > cpuScore) final = '✅ 总评：你赢了！';
+      else if (userScore < cpuScore) final = '❌ 总评：电脑赢了！';
+      else final = '⚖️ 总评：平局！';
+      total10El.textContent = '已玩10局 | 你：' + userScore + ' 电脑：' + cpuScore + ' | ' + final;
+    } else {
+      total10El.textContent = '';
+    }
+  }
+
+  // 核心玩法
+  function play(playerChoice) {
+    const aiChoice = Math.floor(Math.random() * 3);
+    totalRound++;
+
+    const result = determineWinner(playerChoice, aiChoice);
+    let resultText = '';
+    let resultClass = '';
+
+    switch (result) {
+      case 'tie':
+        resultText = '平局！你：' + NAMES[playerChoice] + '｜电脑：' + NAMES[aiChoice];
+        resultClass = 'tie';
+        break;
+      case 'win':
+        userScore++;
+        winStreak++;
+        resultText = '🎉 你赢了！你：' + NAMES[playerChoice] + '｜电脑：' + NAMES[aiChoice];
+        resultClass = 'win';
+        break;
+      case 'lose':
+        cpuScore++;
+        winStreak = 0;
+        resultText = '😥 你输了！你：' + NAMES[playerChoice] + '｜电脑：' + NAMES[aiChoice];
+        resultClass = 'lose';
+        break;
+    }
+
+    updateUI(resultText, resultClass);
+    addHistory(resultText);
+    checkTotal();
+  }
+
+  // 重新开局（保留历史）
+  function restart() {
+    userScore = 0;
+    cpuScore = 0;
     winStreak = 0;
-    resTxt = `😥 你输了！你：${names[me]}｜电脑：${names[ai]}`;
-    resClass = 'lose';
+    totalRound = 0;
+    userScoreEl.textContent = 0;
+    cpuScoreEl.textContent = 0;
+    streakEl.textContent = '当前连胜：0 🚀';
+    resultEl.textContent = '请出拳开始游戏！';
+    resultEl.className = 'result';
+    total10El.textContent = '';
   }
 
-  // 更新界面
-  document.getElementById('userScore').innerText = user;
-  document.getElementById('cpuScore').innerText = cpu;
-  document.getElementById('streak').innerText = `当前连胜：${winStreak} 🚀`;
-
-  const rDom = document.getElementById('result');
-  rDom.className = 'result '+resClass;
-  rDom.innerHTML = resTxt;
-
-  // 历史记录
-  history.unshift(resTxt);
-  if(history.length>8) history.pop();
-  document.getElementById('history').innerHTML = 
-    '<strong>最近对战：</strong><br>'+history.join('<br>');
-
-  // 10局总结
-  if(totalRound>=10){
-    let final = '';
-    if(user>cpu) final='✅ 总评：你赢了！';
-    else if(user<cpu) final='❌ 总评：电脑赢了！';
-    else final='⚖️ 总评：平局！';
-    document.getElementById('total10').innerText = 
-      `已玩10局 | 你：${user} 电脑：${cpu} | ${final}`;
+  // 清空全部（含历史）
+  function resetAll() {
+    restart();
+    historyArr = [];
+    historyEl.innerHTML = '';
   }
-}
 
-function restart(){
-  user=0; cpu=0; winStreak=0; totalRound=0;
-  document.getElementById('userScore').innerText=0;
-  document.getElementById('cpuScore').innerText=0;
-  document.getElementById('streak').innerText='当前连胜：0 🚀';
-  document.getElementById('result').innerText='请出拳开始游戏！';
-  document.getElementById('result').className='result';
-  document.getElementById('total10').innerText='';
-}
+  // 绑定事件（取代 onclock 以提升可维护性）
+  function bindEvents() {
+    choiceBtns.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        var choice = parseInt(e.currentTarget.getAttribute('data-choice'), 10);
+        if (choice >= 0 && choice <= 2) {
+          play(choice);
+        }
+      });
+    });
 
-function resetAll(){
-  restart();
-  history=[];
-  document.getElementById('history').innerHTML='';
-}
+    restartBtn.addEventListener('click', restart);
+    resetAllBtn.addEventListener('click', resetAll);
+  }
+
+  // 入口：等待 DOM 就绪
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindEvents);
+  } else {
+    bindEvents();
+  }
+})();
 </script>
 </body>
 </html>

@@ -12,6 +12,7 @@ const DEFAULT_ADMIN_PASSWORD = 'qqqyyy';
 const ADMIN_COOKIE_NAME = 'html_deploy_admin';
 const CLASS_COOKIE_PREFIX = 'html_deploy_class_';
 const ALL_COOKIE_NAME = 'html_deploy_all';
+const MAX_FORBIDDEN_WORDS = 100000;
 
 function escapeHtml(value) {
   return String(value)
@@ -56,7 +57,7 @@ function normalizeForbiddenWords(value) {
     words.push(word);
   });
 
-  return words.slice(0, 200);
+  return words.slice(0, MAX_FORBIDDEN_WORDS);
 }
 
 function findForbiddenWordMatch({ title, author }, forbiddenWords) {

@@ -279,6 +279,23 @@ test('admin can set the all-projects password and visitors must unlock all proje
   await visitor.get('/site/site-a').expect(200);
 });
 
+test('admin settings keeps large forbidden word lists', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const forbiddenWords = Array.from({ length: 250 }, (_, index) => `word-${index}`);
+  const response = await agent
+    .put('/api/admin/settings')
+    .send({ allPassword: '111111', forbiddenWords })
+    .expect(200);
+
+  assert.equal(response.body.forbiddenWords.length, 250);
+
+  const rules = await request(app).get('/api/upload-rules').expect(200);
+  assert.equal(rules.body.forbiddenWords.length, 250);
+});
+
 test('admin can create classes and public APIs expose class buttons', async () => {
   const { app } = await makeTestApp({
     idGenerator: () => 'classone'
