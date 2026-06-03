@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>无限子弹连发枪战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background:#121212;
+            display:flex;justify-content:center;align-items:center;
+            min-height:100vh;overflow:hidden;
+            font-family:Microsoft Yahei,sans-serif;
+        }
+        .game-box{position:relative;border:2px solid #39ff14;border-radius:6px;box-shadow:0 0 30px #39ff1444;}
+        #gameCanvas{background:#0c0c0c;display:block;cursor:none;}
+        .ui{position:absolute;top:12px;left:12px;color:#39ff14;font-size:17px;font-weight:bold;z-index:9;}
+        .tip{position:absolute;top:12px;right:12px;color:#aaa;font-size:13px;text-align:right;z-index:9;}
+        .gameover{
+            position:absolute;inset:0;background:rgba(0,0,0,0.88);
+            display:none;flex-direction:column;justify-content:center;align-items:center;
+            color:#f33;z-index:20;
+        }
+        .gameover h1{font-size:52px;margin-bottom:15px;text-shadow:0 0 12px #f33;}
+        .gameover p{font-size:22px;color:#fff;margin:8px 0;}
+        #restart{
+            margin-top:25px;padding:13px 36px;font-size:20px;font-weight:bold;
+            background:#39ff14;border:none;border-radius:4px;cursor:pointer;
+        }
+        #restart:hover{background:#2bc70f;transform:scale(1.05);}
+    </style>
+</head>
+<body>
+<div class="game-box">
+    <canvas id="gameCanvas" width="900" height="650"></canvas>
+    <div class="ui">
+        HP:<span id="hp">100</span>｜分数:<span id="score">0</span>｜弹药:∞无限
+    </div>
+    <div class="tip">
+        WASD移动｜按住左键无限连发｜无需换弹<br>难度等级:<span id="level">1</span>
+    </div>
+    <div class="gameover" id="overBox">
+        <h1>游戏结束</h1>
+        <p>最终得分：<span id="finalScore">0</span></p>
+        <p>存活等级：<span id="finalLv">1</span></p>
+        <button id="restart">重新开局</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const $ = s=>document.querySelector(s);
+const hpDom = $('#hp'),scoreDom=$('#score'),levelDom=$('#level');
+const overBox=$('#overBox'),finalScore=$('#finalScore'),finalLv=$('#finalLv'),restartBtn=$('#restart');
+
+const Game={
+    w:canvas.width,h:canvas.height,over:false,score:0,level:1,
+    shootCD:80,
+    lastShoot:0,
+    spawnGap:750,spawnTimer:null,diffTimer:null
+}
+
+const player={
+    x:Game.w/2,y:Game.h/2,r:26,speed:5.2,hp:100,maxHp:100,color:'#39ff14'
+}
+const key={w:0,a:0,s:0,d:0};
+let mouse={x:Game.w/2,y:Game.h/2};
+let isMouseDown = false;
+let bullets=[],enemies=[],muzzleFlash=[],blood=[],boss=null;
+
+function dist(x1,y1,x2,y2){return Math.hypot(x1-x2,y1-y2)}
+function hit(a,b){return dist(a.x,a.y,b.x,b.y)<a.r+b.r}
+function updateUI(){
+    hpDom.textContent=player.hp;
+    scoreDom.textContent=Game.score;
+    levelDom.textContent=Game.level;
+}
+function gameOver(){
+    Game.over=true;
+    finalScore.textContent=Game.score;
+    finalLv.textContent=Game.level;
+    overBox.style.display='flex';
+    clearInterval(Game.spawnTimer);
+    clearInterval(Game.diffTimer);
+}
+function resetGame(){
+    Game.over=false;Game.score=0;Game.level=1;
+    Game.spawnGap=750;
+    player.x=Game.w/2;player.y=Game.h/2;player.hp=player.maxHp;
+    bullets=[];enemies=[];muzzleFlash=[];blood=[];boss=null;
+    overBox.style.display='none';updateUI();
+    startSpawn();startDiffUp();
+}
+
+function spawnEnemy(){
+    if(Game.over)return;
+    let r=16+Math.random()*9,speed=1.1+Game.level*0.22+Math.random()*0.6;
+    let hp=Math.floor(2+Game.level*0.35);
+    let x,y,side=Math.floor(Math.random()*4);
+    if(side===0){x=-30;y=Math.random()*Game.h}
+    else if(side===1){x=Game.w+30;y=Math.random()*Game.h}
+    else if(side===2){x=Math.random()*Game.w;y=-30}
+    else{x=Math.random()*Game.w;y=Game.h+30}
+    enemies.push({x,y,r,speed,hp,maxHp:hp,color:'#ff4545'});
+    if(Math.random()<0.018+Game.level*0.004&&!boss){
+        boss={x:side===0?-60:side===1?Game.w+60:Math.random()*Game.w,
+               y:side===2?-60:side===3?Game.h+60:Math.random()*Game.h,
+               r:55,speed:0.75,hp:80+Game.level*22,maxHp:80+Game.level*22,color:'#9922ff'}
+    }
+}
+//无限子弹，不再消耗弹药、无需换弹
+function fire(){
+    if(Game.over)return;
+    let now=Date.now();
+    if(now-Game.lastShoot<Game.shootCD)return;
+    Game.lastShoot=now;
+    let d=dist(player.x,player.y,mouse.x,mouse.y);
+    let dx=(mouse.x-player.x)/d,dy=(mouse.y-player.y)/d;
+    bullets.push({
+        x:player.x+dx*32,y:player.y+dy*32,r:4.5,speed:13,dx,dy,color:'#fffd70'
+    })
+    muzzleFlash.push({x:player.x+dx*32,y:player.y+dy*32,life:7})
+}
+function upDiff(){
+    if(Game.over)return;
+    Game.level++;
+    Game.spawnGap=Math.max(280,Game.spawnGap-35);
+    clearInterval(Game.spawnTimer);startSpawn();
+}
+function startSpawn(){Game.spawnTimer=setInterval(spawnEnemy,Game.spawnGap)}
+function startDiffUp(){Game.diffTimer=setInterval(upDiff,14000)}
+
+function drawBg(){
+    ctx.fillStyle='#0c0c0c';ctx.fillRect(0,0,Game.w,Game.h);
+    ctx.strokeStyle='#222';ctx.lineWidth=1;
+    for(let i=0;i<Game.w;i+=45){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,Game.h);ctx.stroke()}
+    for(let i=0;i<Game.h;i+=45){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(Game.w,i);ctx.stroke()}
+}
+function drawPlayer(){
+    ctx.strokeStyle='#39ff1466';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(player.x,player.y);ctx.lineTo(mouse.x,mouse.y);ctx.stroke();
+    ctx.fillStyle=player.color;
+    ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,Math.PI*2);ctx.fill();
+    let barW=player.r*1.6,barH=5;
+    ctx.fillStyle='#333';ctx.fillRect(player.x-barW/2,player.y-player.r-12,barW,barH);
+    ctx.fillStyle='#39ff14';ctx.fillRect(player.x-barW/2,player.y-player.r-12,barW*(player.hp/player.maxHp),barH);
+}
+function updateBullets(){
+    for(let i=bullets.length-1;i>=0;i--){
+        let b=bullets[i];
+        b.x+=b.dx*b.speed;b.y+=b.dy*b.speed;
+        if(b.x<0||b.x>Game.w||b.y<0||b.y>Game.h){bullets.splice(i,1);continue}
+        for(let j=enemies.length-1;j>=0;j--){
+            let e=enemies[j];
+            if(hit(b,e)){
+                e.hp--;bullets.splice(i,1);
+                blood.push({x:b.x,y:b.y,life:12});
+                if(e.hp<=0){
+                    Game.score+=12*Game.level;enemies.splice(j,1);
+                }break;
+            }
+        }
+        if(boss&&hit(b,boss)){
+            boss.hp--;bullets.splice(i,1);
+            blood.push({x:b.x,y:b.y,life:12});
+            if(boss.hp<=0){
+                Game.score+=220*Game.level;boss=null;
+            }
+        }
+        ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();
+    }
+}
+function updateEnemy(){
+    for(let i=enemies.length-1;i>=0;i--){
+        let e=enemies[i];
+        let d=dist(e.x,e.y,player.x,player.y);
+        e.x+=(player.x-e.x)/d*e.speed;
+        e.y+=(player.y-e.y)/d*e.speed;
+        if(hit(e,player)){
+            player.hp-=1.2;enemies.splice(i,1);
+            if(player.hp<=0)gameOver();updateUI();continue;
+        }
+        ctx.fillStyle=e.color;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+        let bw=e.r*1.4,bh=3.5;
+        ctx.fillStyle='#222';ctx.fillRect(e.x-bw/2,e.y-e.r-8,bw,bh);
+        ctx.fillStyle='#f44';ctx.fillRect(e.x-bw/2,e.y-e.r-8,bw*(e.hp/e.maxHp),bh);
+    }
+    if(boss){
+        let d=dist(boss.x,boss.y,player.x,player.y);
+        boss.x+=(player.x-boss.x)/d*boss.speed;
+        boss.y+=(player.y-boss.y)/d*boss.speed;
+        if(hit(boss,player)){
+            player.hp-=3;updateUI();
+            if(player.hp<=0)gameOver();
+        }
+        ctx.fillStyle=boss.color;ctx.beginPath();ctx.arc(boss.x,boss.y,boss.r,0,Math.PI*2);ctx.fill();
+        let bw=boss.r*1.8,bh=6;
+        ctx.fillStyle='#222';ctx.fillRect(boss.x-bw/2,boss.y-boss.r-14,bw,bh);
+        ctx.fillStyle='#a44aff';ctx.fillRect(boss.x-bw/2,boss.y-boss.r-14,bw*(boss.hp/boss.maxHp),bh);
+    }
+}
+function drawEffect(){
+    for(let i=muzzleFlash.length-1;i>=0;i--){
+        let f=muzzleFlash[i];f.life--;
+        ctx.fillStyle=`rgba(255,220,50,${f.life/7})`;
+        ctx.beginPath();ctx.arc(f.x,f.y,7+f.life/2,0,Math.PI*2);ctx.fill();
+        if(f.life<=0)muzzleFlash.splice(i,1);
+    }
+    for(let i=blood.length-1;i>=0;i--){
+        let bl=blood[i];bl.life--;
+        ctx.fillStyle=`rgba(220,30,30,${bl.life/12})`;
+        ctx.beginPath();ctx.arc(bl.x,bl.y,4,0,Math.PI*2);ctx.fill();
+        if(bl.life<=0)blood.splice(i,1);
+    }
+}
+function drawCross(){
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;
+    let s=12;
+    ctx.beginPath();
+    ctx.moveTo(mouse.x-s,mouse.y);ctx.lineTo(mouse.x+s,mouse.y);
+    ctx.moveTo(mouse.x,mouse.y-s);ctx.lineTo(mouse.x,mouse.y+s);
+    ctx.stroke();
+    ctx.beginPath();ctx.arc(mouse.x,mouse.y,3,0,Math.PI*2);ctx.stroke();
+}
+
+function loop(){
+    if(Game.over)return;
+    drawBg();
+    if(key.w&&player.y>player.r)player.y-=player.speed;
+    if(key.s&&player.y<Game.h-player.r)player.y+=player.speed;
+    if(key.a&&player.x>player.r)player.x-=player.speed;
+    if(key.d&&player.x<Game.w-player.r)player.x+=player.speed;
+
+    if(isMouseDown) fire();
+
+    drawPlayer();
+    updateBullets();
+    updateEnemy();
+    drawEffect();
+    drawCross();
+    requestAnimationFrame(loop);
+}
+
+document.addEventListener('keydown',e=>{
+    let k=e.key.toLowerCase();
+    if(k==='w')key.w=1;if(k==='s')key.s=1;
+    if(k==='a')key.a=1;if(k==='d')key.d=1;
+})
+document.addEventListener('keyup',e=>{
+    let k=e.key.toLowerCase();
+    if(k==='w')key.w=0;if(k==='s')key.s=0;
+    if(k==='a')key.a=0;if(k==='d')key.d=0;
+})
+canvas.addEventListener('mousemove',e=>{
+    let rect=canvas.getBoundingClientRect();
+    mouse.x=e.clientX-rect.left;mouse.y=e.clientY-rect.top;
+})
+canvas.addEventListener('mousedown',e=>{
+    if(e.button===0) isMouseDown = true;
+})
+canvas.addEventListener('mouseup',()=>{isMouseDown = false})
+canvas.addEventListener('mouseleave',()=>{isMouseDown = false})
+
+restartBtn.onclick=resetGame;
+
+startSpawn();startDiffUp();loop();updateUI();
+</script>
+</body>
+</html>
