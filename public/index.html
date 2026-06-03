@@ -1210,9 +1210,16 @@
     }
 
     function copyCodeWithSelectionFallback() {
-      codeViewer.focus();
-      codeViewer.select();
-      return document.execCommand('copy');
+      const wasReadonly = codeViewer.readOnly;
+      codeViewer.readOnly = false;
+      try {
+        codeViewer.focus();
+        codeViewer.select();
+        codeViewer.setSelectionRange(0, codeViewer.value.length);
+        return document.execCommand('copy');
+      } finally {
+        codeViewer.readOnly = wasReadonly;
+      }
     }
 
     async function copyProjectCode() {
