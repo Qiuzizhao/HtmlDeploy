@@ -206,8 +206,8 @@
     "author": "赖泽",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:07.255Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T15:32:49.642Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:08.997Z"
   },
   {
     "id": "d2368459",
@@ -216,8 +216,8 @@
     "author": "1",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:04.601Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T15:33:03.388Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:11.185Z"
   },
   {
     "id": "bdc2e637",
