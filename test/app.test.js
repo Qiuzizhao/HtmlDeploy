@@ -52,6 +52,8 @@ test('public index loads class buttons and uploads to the selected class', async
   assert.match(html, /id="refreshClassSites"[^>]*>刷新<\/button>/);
   assert.match(html, /function refreshCurrentClassSites/);
   assert.match(html, /refreshClassSitesButton\.addEventListener\('click', refreshCurrentClassSites\)/);
+  assert.match(html, /function hasCurrentClassAccess/);
+  assert.match(html, /currentClass\.passwordEnabled === false/);
   assert.doesNotMatch(html, /id="classPasswordOverlay"/);
   assert.match(html, /function renderClassPasswordPrompt/);
   assert.match(html, /className = 'unlock-panel'/);
@@ -158,6 +160,9 @@ test('public admin class passwords are hidden by default with one show-hide togg
   assert.match(html, /id="toggleClassPassword"[^>]*>显示<\/button>/);
   assert.doesNotMatch(html, /id="showClassPassword"/);
   assert.doesNotMatch(html, /id="hideClassPassword"/);
+  assert.match(html, /密码已启用/);
+  assert.match(html, /密码已解除/);
+  assert.match(html, /\/api\/classes\/\$\{encodeURIComponent\(classItem\.id\)\}\/password-enabled/);
   assert.ok(html.indexOf('id="toggleClassPassword"') < html.indexOf('id="generateClassPassword"'));
   assert.match(html, /togglePasswordVisibility\(classPasswordInput, toggleClassPassword\)/);
 
@@ -467,6 +472,39 @@ test('GET /api/sites can filter projects by class', async () => {
 
   const response = await visitor.get('/api/sites?classId=class-a').expect(200);
   assert.deepEqual(response.body.map((site) => site.title), ['一班作品']);
+});
+
+test('admin can disable a class password so visitors can read it without unlocking', async () => {
+  const ids = ['class-a', 'site-a'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const admin = request.agent(app);
+  const visitor = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '免密码项目')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>免密码项目</title>')
+    .expect(201);
+
+  await visitor.get('/api/sites?classId=class-a').expect(401);
+
+  const toggle = await admin
+    .patch('/api/classes/class-a/password-enabled')
+    .send({ passwordEnabled: false })
+    .expect(200);
+  assert.equal(toggle.body.passwordEnabled, false);
+
+  const classes = await request(app).get('/api/classes').expect(200);
+  assert.equal(classes.body[0].passwordEnabled, false);
+
+  const response = await visitor.get('/api/sites?classId=class-a').expect(200);
+  assert.deepEqual(response.body.map((site) => site.title), ['免密码项目']);
+  await visitor.get('/site/site-a').expect(200);
 });
 
 test('admin login does not unlock public class project lists', async () => {
