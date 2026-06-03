@@ -388,8 +388,9 @@ async function readClasses(classesFile) {
     const normalizedClasses = classes.map((classItem) => {
       const passwordIsValid = isValidClassPassword(String(classItem.password || ''));
       const hasUploadEnabled = typeof classItem.uploadEnabled === 'boolean';
+      const hasPasswordEnabled = typeof classItem.passwordEnabled === 'boolean';
 
-      if (passwordIsValid && hasUploadEnabled) {
+      if (passwordIsValid && hasUploadEnabled && hasPasswordEnabled) {
         return classItem;
       }
 
@@ -397,7 +398,8 @@ async function readClasses(classesFile) {
       return {
         ...classItem,
         password: passwordIsValid ? classItem.password : createClassPassword(),
-        uploadEnabled: classItem.uploadEnabled !== false
+        uploadEnabled: classItem.uploadEnabled !== false,
+        passwordEnabled: classItem.passwordEnabled !== false
       };
     });
 
@@ -476,6 +478,7 @@ function toPublicClass(classItem) {
     id: classItem.id,
     name: classItem.name,
     uploadEnabled: classItem.uploadEnabled !== false,
+    passwordEnabled: classItem.passwordEnabled !== false,
     createdAt: classItem.createdAt,
     updatedAt: classItem.updatedAt
   };
@@ -727,6 +730,10 @@ function createApp(options = {}) {
   }
 
   function hasClassAccess(req, classItem) {
+    if (classItem.passwordEnabled === false) {
+      return true;
+    }
+
     const cookies = parseCookies(req.headers.cookie);
     return cookies[getClassCookieName(classItem.id)] === createClassToken(classItem);
   }
@@ -992,6 +999,7 @@ function createApp(options = {}) {
         name,
         password,
         uploadEnabled: true,
+        passwordEnabled: true,
         createdAt: new Date().toISOString()
       };
       classes.push(classItem);
@@ -1062,6 +1070,7 @@ function createApp(options = {}) {
         name,
         password: password || classes[classIndex].password || createClassPassword(),
         uploadEnabled: classes[classIndex].uploadEnabled !== false,
+        passwordEnabled: classes[classIndex].passwordEnabled !== false,
         updatedAt: new Date().toISOString()
       };
       await writeClasses(classesFile, classes);
@@ -1096,6 +1105,30 @@ function createApp(options = {}) {
     }
   });
 
+  app.patch('/api/classes/:id/password-enabled', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const passwordEnabled = Boolean(req.body.passwordEnabled);
+      const classes = await readClasses(classesFile);
+      const classIndex = classes.findIndex((item) => item.id === id);
+
+      if (classIndex === -1) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+
+      classes[classIndex] = {
+        ...classes[classIndex],
+        passwordEnabled,
+        updatedAt: new Date().toISOString()
+      };
+      await writeClasses(classesFile, classes);
+
+      return res.json(classes[classIndex]);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post('/api/classes/:id/unlock', async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -1105,6 +1138,10 @@ function createApp(options = {}) {
 
       if (!classItem) {
         return res.status(404).json({ error: '班级不存在' });
+      }
+
+      if (classItem.passwordEnabled === false) {
+        return res.json({ ok: true });
       }
 
       if (password !== classItem.password) {

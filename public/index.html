@@ -848,9 +848,14 @@
       return classes.find((item) => item.id === currentClassId);
     }
 
+    function hasCurrentClassAccess() {
+      const currentClass = getCurrentClass();
+      return Boolean(currentClassId && currentClass && (currentClass.passwordEnabled === false || unlockedClassIds.has(currentClassId)));
+    }
+
     function canUploadCurrentClass() {
       const currentClass = getCurrentClass();
-      return Boolean(currentClassId && unlockedClassIds.has(currentClassId) && currentClass && currentClass.uploadEnabled !== false);
+      return Boolean(hasCurrentClassAccess() && currentClass.uploadEnabled !== false);
     }
 
     function findForbiddenWordMatch(title, author) {
@@ -875,7 +880,7 @@
     function updateUploadButtonState() {
       const currentClass = getCurrentClass();
       const uploadDisabledByClass = Boolean(currentClassId && currentClass && currentClass.uploadEnabled === false);
-      openUploadButton.disabled = !classes.length || !currentClassId || !unlockedClassIds.has(currentClassId) || uploadDisabledByClass;
+      openUploadButton.disabled = !classes.length || !currentClassId || !hasCurrentClassAccess() || uploadDisabledByClass;
       openUploadButton.title = uploadDisabledByClass ? '当前班级已禁用上传网页' : '';
     }
 

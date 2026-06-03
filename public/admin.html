@@ -135,6 +135,12 @@
       color: var(--danger);
     }
 
+    .password-toggle-button.is-disabled {
+      border-color: #fecdd3;
+      background: #fff1f2;
+      color: var(--danger);
+    }
+
     .admin-shell {
       min-height: 100vh;
       display: grid;
@@ -404,7 +410,7 @@
 
     .class-row {
       display: grid;
-      grid-template-columns: 24px minmax(180px, 1fr) minmax(130px, 0.5fr) minmax(110px, auto) auto;
+      grid-template-columns: 24px minmax(180px, 1fr) minmax(130px, 0.5fr) minmax(110px, auto) minmax(110px, auto) auto;
       gap: 10px;
       align-items: center;
       padding: 12px;
@@ -1357,6 +1363,7 @@
 
       classes.forEach((classItem) => {
         const uploadEnabled = classItem.uploadEnabled !== false;
+        const passwordEnabled = classItem.passwordEnabled !== false;
         const row = document.createElement('div');
         row.className = 'class-row';
         row.classList.toggle('is-upload-disabled', !uploadEnabled);
@@ -1407,6 +1414,13 @@
         uploadToggleButton.title = uploadEnabled ? '点击禁用该班级上传网页' : '点击启用该班级上传网页';
         uploadToggleButton.addEventListener('click', () => toggleClassUpload(classItem, uploadToggleButton, row));
 
+        const passwordToggleButton = document.createElement('button');
+        passwordToggleButton.className = `button password-toggle-button${passwordEnabled ? '' : ' is-disabled'}`;
+        passwordToggleButton.type = 'button';
+        passwordToggleButton.textContent = passwordEnabled ? '密码已启用' : '密码已解除';
+        passwordToggleButton.title = passwordEnabled ? '点击解除该班级查看密码' : '点击启用该班级查看密码';
+        passwordToggleButton.addEventListener('click', () => toggleClassPasswordEnabled(classItem, passwordToggleButton));
+
         const actions = document.createElement('div');
         actions.className = 'row-actions';
 
@@ -1439,7 +1453,7 @@
         deleteButton.addEventListener('click', () => deleteClass(classItem));
 
         actions.append(toggleButton, generateButton, saveButton, deleteButton);
-        row.append(dragHandle, input, passwordInput, uploadToggleButton, actions);
+        row.append(dragHandle, input, passwordInput, uploadToggleButton, passwordToggleButton, actions);
         classList.append(row);
       });
     }
@@ -1984,6 +1998,38 @@
       button.textContent = uploadEnabled ? '上传已启用' : '上传已禁用';
       button.title = uploadEnabled ? '点击禁用该班级上传网页' : '点击启用该班级上传网页';
       setMessage(classMessage, uploadEnabled ? '已启用该班级上传' : '已禁用该班级上传');
+    }
+
+    async function toggleClassPasswordEnabled(classItem, button) {
+      const nextPasswordEnabled = classItem.passwordEnabled === false;
+      button.disabled = true;
+
+      const response = await fetch(`/api/classes/${encodeURIComponent(classItem.id)}/password-enabled`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passwordEnabled: nextPasswordEnabled })
+      });
+
+      button.disabled = false;
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存密码状态失败' }));
+        setMessage(classMessage, result.error || '保存密码状态失败', true);
+        return;
+      }
+
+      const updatedClass = await response.json();
+      const index = classes.findIndex(c => c.id === classItem.id);
+      if (index !== -1) {
+        classes[index] = updatedClass;
+      }
+      classItem.passwordEnabled = updatedClass.passwordEnabled !== false;
+
+      const passwordEnabled = classItem.passwordEnabled !== false;
+      button.classList.toggle('is-disabled', !passwordEnabled);
+      button.textContent = passwordEnabled ? '密码已启用' : '密码已解除';
+      button.title = passwordEnabled ? '点击解除该班级查看密码' : '点击启用该班级查看密码';
+      setMessage(classMessage, passwordEnabled ? '已启用该班级密码' : '已解除该班级密码');
     }
 
     async function updateClass(classItem, input, passwordInput, row) {
