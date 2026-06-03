@@ -3,383 +3,199 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>⚔️ 石头剪刀布 - 豪华版</title>
+<title>⚔️ 石头剪刀布 - 赛博至尊版</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
+:root {
+  --primary: #6366f1;
+  --primary-glow: rgba(99, 102, 241, 0.5);
+  --accent: #ff007f;
+  --win-color: #10b981;
+  --lose-color: #ef4444;
+  --tie-color: #64748b;
+  --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+  font-family: 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
 }
 
 body {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: var(--bg-gradient);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow-x: hidden;
+  color: #f8fafc;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .container {
-  background: #fff;
-  max-width: 600px;
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  max-width: 650px;
   width: 100%;
-  border-radius: 24px;
-  padding: 40px 30px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  border-radius: 28px;
+  padding: 35px 25px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+              inset 0 1px 0px 0px rgba(255, 255, 255, 0.1);
   text-align: center;
   position: relative;
-  overflow: hidden;
-}
-
-.container::before {
-  content: '';
-  position: absolute;
-  top:0; left:0; right:0;
-  height: 6px;
-  background: linear-gradient(90deg,#4158D0,#C850C0);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 h1 {
-  font-size: 32px;
-  color: #222;
-  margin-bottom: 10px;
+  font-size: 36px;
+  background: linear-gradient(to right, #fff, #a5b4fc, #ff007f);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
 .desc {
-  color: #666;
-  margin-bottom: 30px;
-  font-size: 15px;
+  color: #94a3b8;
+  margin-bottom: 25px;
+  font-size: 14px;
 }
 
+/* 计分板美化 */
 .score-row {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 15px;
   margin-bottom: 20px;
 }
 
 .score-box {
-  background: #f5f7ff;
-  padding: 16px 20px;
-  border-radius: 16px;
-  min-width: 120px;
+  flex: 1;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 15px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
 }
 
+.score-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; width: 100%; height: 3px;
+}
+.score-box.user-box::after { background: var(--primary); }
+.score-box.cpu-box::after { background: var(--accent); }
+
 .score-box h3 {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
 }
 
 .score-box .num {
-  font-size: 28px;
-  font-weight: bold;
-  color: #4158D0;
-}
-
-.streak {
-  margin: 10px 0 25px;
-  font-size: 16px;
-  color: #C850C0;
-  font-weight: 500;
-}
-
-.choices {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  margin: 20px 0;
-}
-
-.choice-btn {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  border: none;
-  background: #fff;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   font-size: 36px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 800;
+  font-family: 'Courier New', Courier, monospace;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.user-box .num { color: #818cf8; }
+.cpu-box .num { color: #f43f5e; }
+
+.num.bump {
+  transform: scale(1.4);
 }
 
-.choice-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(65,88,208,0.3);
-}
-
-.choice-btn:active {
-  transform: scale(0.95);
-}
-
-.result {
-  min-height: 70px;
-  font-size: 18px;
-  line-height: 1.6;
-  padding: 16px;
-  border-radius: 12px;
-  margin: 20px 0;
-  transition: 0.3s;
-}
-
-.win {
-  background: #e6f7ef;
-  color: #0c9655;
-  animation: flash 0.5s;
-}
-
-.lose {
-  background: #fdecea;
-  color: #d32f2f;
-  animation: flash 0.5s;
-}
-
-.tie {
-  background: #f0f0f0;
-  color: #444;
-}
-
-.history {
-  text-align: left;
-  background: #f9f9f9;
-  padding: 16px;
-  border-radius: 12px;
-  max-height: 140px;
-  overflow-y: auto;
+/* 连胜特效 */
+.streak {
+  display: inline-block;
+  margin: 5px 0 20px;
   font-size: 14px;
-  color: #333;
-  margin-top: 10px;
-}
-
-.btm-btns {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.btn {
-  padding: 12px 24px;
-  border-radius: 12px;
-  border: none;
-  font-size: 15px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.btn-reset {
-  background: #ff4d4f;
   color: #fff;
+  background: rgba(244, 63, 94, 0.2);
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.streak.high {
+  background: linear-gradient(90deg, #ff007f, #ff7300);
+  box-shadow: 0 0 15px #ff007f;
+  animation: pulse 1s infinite alternate;
 }
 
-.btn-restart {
-  background: #4158D0;
-  color: #fff;
-}
-
-.btn:hover {
-  opacity: 0.9;
-}
-
-.total-10 {
-  margin-top: 12px;
-  font-size: 15px;
-  color: #555;
-}
-
-@keyframes flash {
+@keyframes pulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.03); }
-  100% { transform: scale(1); }
+  100% { transform: scale(1.05); box-shadow: 0 0 25px #ff007f; }
 }
 
-@media (max-width: 500px) {
-  .choices {
-    gap:10px;
-  }
-  .choice-btn {
-    width:75px; height:75px;
-    font-size:30px;
-  }
+/* 核心PK舞台 */
+.stage {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 20px;
+  border-radius: 20px;
+  margin-bottom: 25px;
+  border: 1px dashed rgba(255,255,255,0.1);
 }
-</style>
-</head>
-<body>
 
-<div class="container">
-  <h1>⚔️ 猜拳大作战</h1>
-  <div class="desc">与电脑对战，看看谁更胜一筹！</div>
+.stage-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100px;
+}
 
-  <div class="score-row">
-    <div class="score-box">
-      <h3>你的分数</h3>
-      <div class="num" id="userScore">0</div>
-    </div>
-    <div class="score-box">
-      <h3>电脑分数</h3>
-      <div class="num" id="cpuScore">0</div>
-    </div>
-  </div>
+.stage-card .icon {
+  font-size: 48px;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));
+}
 
-  <div class="streak" id="streak">当前连胜：0 🚀</div>
+.stage-card .label {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 8px;
+}
 
-  <div class="choices">
-    <button class="choice-btn" data-choice="0">✊</button>
-    <button class="choice-btn" data-choice="1">✌️</button>
-    <button class="choice-btn" data-choice="2">🖐️</button>
-  </div>
+.vs-text {
+  font-size: 24px;
+  font-weight: 900;
+  font-style: italic;
+  color: #475569;
+  animation: flashVS 2s infinite;
+}
 
-  <div class="result" id="result">请出拳开始游戏！</div>
+@keyframes flashVS {
+  0%, 100% { color: #475569; text-shadow: none; }
+  50% { color: #38bdf8; text-shadow: 0 0 10px #38bdf8; }
+}
 
-  <div class="total-10" id="total10"></div>
+/* 动效关键帧 */
+.animate-user { animation: shakeLeft 0.4s ease-in-out 2; }
+.animate-cpu { animation: shakeRight 0.4s ease-in-out 2; }
 
-  <div class="history" id="history"></div>
-
-  <div class="btm-btns">
-    <button class="btn btn-restart" id="restartBtn">重新开局</button>
-    <button class="btn btn-reset" id="resetAllBtn">清空全部</button>
-  </div>
-</div>
-
-<script>
-(function() {
-  const NAMES = ['✊ 石头','✌️ 剪刀','🖐️ 布'];
-  const MAX_HISTORY = 8;
-
-  // DOM 缓存
-  const userScoreEl = document.getElementById('userScore');
-  const cpuScoreEl = document.getElementById('cpuScore');
-  const streakEl = document.getElementById('streak');
-  const resultEl = document.getElementById('result');
-  const historyEl = document.getElementById('history');
-  const total10El = document.getElementById('total10');
-  const choiceBtns = document.querySelectorAll('.choice-btn');
-  const restartBtn = document.getElementById('restartBtn');
-  const resetAllBtn = document.getElementById('resetAllBtn');
-
-  // 游戏状态
-  let userScore = 0;
-  let cpuScore = 0;
-  let winStreak = 0;
-  let totalRound = 0;
-  let historyArr = [];
-
-  // 判断胜负：基于规则映射表（0=石头, 1=剪刀, 2=布）
-  function determineWinner(player, ai) {
-    if (player === ai) return 'tie';
-    const winMap = { 0: 1, 1: 2, 2: 0 };
-    if (winMap[player] === ai) return 'win';
-    return 'lose';
-  }
-
-  // 更新 UI
-  function updateUI(resultText, resultClass) {
-    userScoreEl.textContent = userScore;
-    cpuScoreEl.textContent = cpuScore;
-    streakEl.textContent = '当前连胜：' + winStreak + ' 🚀';
-    resultEl.textContent = resultText;
-    resultEl.className = 'result ' + resultClass;
-  }
-
-  // 添加历史记录
-  function addHistory(text) {
-    historyArr.unshift(text);
-    if (historyArr.length > MAX_HISTORY) {
-      historyArr.pop();
-    }
-    historyEl.innerHTML = '<strong>最近对战：</strong><br>' + historyArr.join('<br>');
-  }
-
-  // 10局总结检测
-  function checkTotal() {
-    if (totalRound >= 10) {
-      let final = '';
-      if (userScore > cpuScore) final = '✅ 总评：你赢了！';
-      else if (userScore < cpuScore) final = '❌ 总评：电脑赢了！';
-      else final = '⚖️ 总评：平局！';
-      total10El.textContent = '已玩10局 | 你：' + userScore + ' 电脑：' + cpuScore + ' | ' + final;
-    } else {
-      total10El.textContent = '';
-    }
-  }
-
-  // 核心玩法
-  function play(playerChoice) {
-    const aiChoice = Math.floor(Math.random() * 3);
-    totalRound++;
-
-    const result = determineWinner(playerChoice, aiChoice);
-    let resultText = '';
-    let resultClass = '';
-
-    switch (result) {
-      case 'tie':
-        resultText = '平局！你：' + NAMES[playerChoice] + '｜电脑：' + NAMES[aiChoice];
-        resultClass = 'tie';
-        break;
-      case 'win':
-        userScore++;
-        winStreak++;
-        resultText = '🎉 你赢了！你：' + NAMES[playerChoice] + '｜电脑：' + NAMES[aiChoice];
-        resultClass = 'win';
-        break;
-      case 'lose':
-        cpuScore++;
-        winStreak = 0;
-        resultText = '😥 你输了！你：' + NAMES[playerChoice] + '｜电脑：' + NAMES[aiChoice];
-        resultClass = 'lose';
-        break;
-    }
-
-    updateUI(resultText, resultClass);
-    addHistory(resultText);
-    checkTotal();
-  }
-
-  // 重新开局（保留历史）
-  function restart() {
-    userScore = 0;
-    cpuScore = 0;
-    winStreak = 0;
-    totalRound = 0;
-    userScoreEl.textContent = 0;
-    cpuScoreEl.textContent = 0;
-    streakEl.textContent = '当前连胜：0 🚀';
-    resultEl.textContent = '请出拳开始游戏！';
-    resultEl.className = 'result';
-    total10El.textContent = '';
-  }
-
-  // 清空全部（含历史）
-  function resetAll() {
-    restart();
-    historyArr = [];
-    historyEl.innerHTML = '';
-  }
-
-  // 绑定事件（取代 onclock 以提升可维护性）
-  function bindEvents() {
-    choiceBtns.forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        var choice = parseInt(e.currentTarget.getAttribute('data-choice'), 10);
-        if (choice >= 0 && choice <= 2) {
-          play(choice);
-        }
-      });
-    });
-
-    restartBtn.addEventListener('click', restart);
-    resetAllBtn.addEventListener('click', resetAll);
-  }
-
-  // 入口：等待 DOM 就绪
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindEvents);
-  } else {
-    bindEvents();
-  }
-})();
-</script>
-</body>
-</html>
+@keyframes shakeLeft {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(-25deg) scale(1.15); }
+}
+@keyframes shakeRight {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate
