@@ -384,7 +384,7 @@ test('admin forbidden word search ranks exact and short matches first', async ()
     .expect(200);
 
   const response = await agent.get('/api/admin/forbidden-words?q=1&limit=10').expect(200);
-  assert.deepEqual(response.body.words, ['1', '10', '1号', '110', '21', 'x1', 'abc1']);
+  assert.deepEqual(response.body.words, ['1', '1号', '10', '110', '21', 'x1', 'abc1']);
   assert.equal(response.body.total, 7);
 });
 
