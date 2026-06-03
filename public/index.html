@@ -189,11 +189,23 @@
       box-shadow: var(--soft-shadow);
     }
 
+    .class-filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .class-tabs {
+      flex: 1 1 auto;
+      min-width: 0;
       display: flex;
       gap: 10px;
       padding: 2px;
       overflow-x: auto;
+    }
+
+    .class-refresh-button {
+      flex: 0 0 auto;
     }
 
     .class-tab {
@@ -740,7 +752,10 @@
 
   <main>
     <section class="class-filter-bar">
-      <nav class="class-tabs" id="classTabs" aria-label="班级"></nav>
+      <div class="class-filter-row">
+        <nav class="class-tabs" id="classTabs" aria-label="班级"></nav>
+        <button class="secondary-button class-refresh-button" id="refreshClassSites" type="button">刷新</button>
+      </div>
       <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
     </section>
     <section class="grid" id="siteGrid" aria-live="polite"></section>
@@ -818,6 +833,7 @@
     const openPreviewExternal = document.getElementById('openPreviewExternal');
     const refreshPreview = document.getElementById('refreshPreview');
     const openUploadButton = document.getElementById('openUpload');
+    const refreshClassSitesButton = document.getElementById('refreshClassSites');
     const classProjectCount = document.getElementById('classProjectCount');
     const currentClassLabel = document.getElementById('currentClassLabel');
 
@@ -1237,6 +1253,20 @@
       renderSites(sites);
     }
 
+    async function refreshCurrentClassSites() {
+      refreshClassSitesButton.disabled = true;
+      refreshClassSitesButton.textContent = '刷新中...';
+      try {
+        await loadSites();
+      } catch (error) {
+        emptyState.textContent = error.message || '刷新项目失败';
+        emptyState.style.display = 'block';
+      } finally {
+        refreshClassSitesButton.disabled = false;
+        refreshClassSitesButton.textContent = '刷新';
+      }
+    }
+
     uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       uploadMessage.textContent = '';
@@ -1287,6 +1317,7 @@
     });
 
     openUploadButton.addEventListener('click', openUpload);
+    refreshClassSitesButton.addEventListener('click', refreshCurrentClassSites);
     document.getElementById('closeUpload').addEventListener('click', closeUpload);
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
     document.getElementById('closePreview').addEventListener('click', closePreview);

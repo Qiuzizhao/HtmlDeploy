@@ -49,6 +49,9 @@ test('public index loads class buttons and uploads to the selected class', async
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
   assert.match(html, /id="classTabs"/);
+  assert.match(html, /id="refreshClassSites"[^>]*>刷新<\/button>/);
+  assert.match(html, /function refreshCurrentClassSites/);
+  assert.match(html, /refreshClassSitesButton\.addEventListener\('click', refreshCurrentClassSites\)/);
   assert.doesNotMatch(html, /id="classPasswordOverlay"/);
   assert.match(html, /function renderClassPasswordPrompt/);
   assert.match(html, /className = 'unlock-panel'/);
