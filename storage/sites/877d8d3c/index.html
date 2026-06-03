@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>3D建房模拟器</title>
+<style>
+*{margin:0;padding:0}
+body{overflow:hidden;background:#87CEEB}
+#ui{
+    position:absolute;top:10px;left:10px;z-index:99;
+    background:rgba(255,255,255,0.85);padding:12px;border-radius:8px
+}
+button{padding:6px 10px;margin:3px;border:none;border-radius:4px;cursor:pointer}
+#wood{background:#deb887}
+#stone{background:#999}
+#brick{background:#cd7840;color:#fff}
+#clear{background:#f55;color:#fff}
+</style>
+</head>
+<body>
+<div id="ui">
+    <h4>3D建房｜WASD移动 鼠标拖拽旋转视角</h4>
+    <button id="wood">木头</button>
+    <button id="stone">石头</button>
+    <button id="brick">砖块</button>
+    <button id="clear">清空建筑</button>
+</div>
+
+<!-- 引入Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ========== 初始化3D场景 ==========
+let scene,camera,renderer,controls;
+let blockList = [];
+let selectMat = "wood";
+let player;
+const BLOCK_SIZE = 2;
+
+init();
+animate();
+
+function init(){
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    //相机
+    camera = new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1000);
+    camera.position.set(15,12,18);
+
+    //渲染
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    //轨道控制器（鼠标拖动旋转、滚轮缩放）
+    controls = new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping = true;
+
+    //灯光
+    const dirLight = new THREE.DirectionalLight(0xffffff,1);
+    dirLight.position.set(20,30,20);
+    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff,0.4));
+
+    //地面
+    const groundGeo = new THREE.PlaneGeometry(50,50);
+    const groundMat = new THREE.MeshLambertMaterial({color:0x7ccd7c});
+    const ground = new THREE.Mesh(groundGeo,groundMat);
+    ground.rotation.x = -Math.PI/2;
+    ground.position.y = 0;
+    scene.add(ground);
+
+    //玩家角色方块小人
+    const pGeo = new THREE.BoxGeometry(1.2,1.8,1);
+    const pMat = new THREE.MeshLambertMaterial({color:0x4285F4});
+    player = new THREE.Mesh(pGeo,pMat);
+    player.position.set(0,0.9,0);
+    scene.add(player);
+
+    //键盘移动
+    const key = {};
+    document.addEventListener('keydown',e=>key[e.code]=true);
+    document.addEventListener('keyup',e=>key[e.code]=false);
+
+    //切换建材按钮
+    document.getElementById('wood').onclick=()=>selectMat='wood';
+    document.getElementById('stone').onclick=()=>selectMat='stone';
+    document.getElementById('brick').onclick=()=>selectMat='brick';
+
+    //点击地面生成3D方块
+    const raycaster = new THREE.Raycaster();
+    renderer.domElement.onclick=(e)=>{
+        const mouse = new THREE.Vector2();
+        mouse.x = (e.clientX/window.innerWidth)*2-1;
+        mouse.y = -(e.clientY/window.innerHeight)*2+1;
+        raycaster.setFromCamera(mouse,camera);
+        const intersect = raycaster.intersectObjects([ground,...blockList]);
+        if(intersect.length>0){
+            let pos = intersect[0].point.clone();
+            pos.x = Math.round(pos.x/BLOCK_SIZE)*BLOCK_SIZE;
+            pos.z = Math.round(pos.z/BLOCK_SIZE)*BLOCK_SIZE;
+            pos.y += BLOCK_SIZE/2;
+
+            //材质颜色
+            let color;
+            if(selectMat==='wood') color=0xdeb887;
+            else if(selectMat==='stone') color=0x999999;
+            else color=0xcd7840;
+
+            const bGeo = new THREE.BoxGeometry(BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE);
+            const bMat = new THREE.MeshLambertMaterial({color});
+            const block = new THREE.Mesh(bGeo,bMat);
+            block.position.copy(pos);
+            scene.add(block);
+            blockList.push(block);
+        }
+    }
+
+    //清空所有建筑
+    document.getElementById('clear').onclick=()=>{
+        blockList.forEach(b=>scene.remove(b));
+        blockList=[];
+    }
+
+    //窗口自适应
+    window.onresize=()=>{
+        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth,window.innerHeight);
+    }
+}
+
+//WASD控制玩家移动
+function movePlayer(){
+    const speed = 0.15;
+    if(key['KeyW']) player.position.z -= speed;
+    if(key['KeyS']) player.position.z += speed;
+    if(key['KeyA']) player.position.x -= speed;
+    if(key['KeyD']) player.position.x += speed;
+}
+
+function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    movePlayer();
+    renderer.render(scene,camera);
+}
+</script>
+</body>
+</html>
