@@ -1,0 +1,85 @@
+import random
+import time
+
+def ice_cream_shop_game():
+    # 游戏初始数据
+    money = 50  # 初始资金
+    level = 1   # 店铺等级
+    customers_served = 0
+    flavors = ["香草", "巧克力", "草莓", "芒果", "抹茶"]
+    toppings = ["彩糖针", "奥利奥碎", "坚果", "巧克力酱", "樱桃"]
+    
+    print("🍦 欢迎来到你的冰淇淋小店！")
+    print("=" * 40)
+    print(f"初始资金：{money}元 | 店铺等级：{level}级")
+    print("=" * 40)
+
+    while True:
+        # 主菜单
+        print("\n===== 菜单 =====")
+        print("1. 接待顾客，制作冰淇淋")
+        print("2. 查看店铺信息")
+        print("3. 升级店铺（赚更多钱）")
+        print("4. 退出游戏")
+        choice = input("请选择操作（1-4）：")
+
+        if choice == "1":
+            # 接待顾客
+            print("\n🎧 有顾客来啦！正在准备冰淇淋...")
+            time.sleep(1)
+            
+            # 随机口味 + 配料
+            fav_flavor = random.choice(flavors)
+            fav_topping = random.choice(toppings)
+            price = random.randint(8, 15) + (level * 2)  # 等级越高越贵
+            
+            print(f"顾客想要：【{fav_flavor}冰淇淋 + {fav_topping}】")
+            print(f"售价：{price}元")
+            
+            make = input("确认制作吗？(y/n)：")
+            if make.lower() == "y":
+                print("\n🥄 正在制作冰淇淋...")
+                time.sleep(1.5)
+                print("✅ 冰淇淋完成！顾客很满意～")
+                money += price
+                customers_served += 1
+                print(f"收入 +{price}元 | 当前余额：{money}元")
+            else:
+                print("❌ 顾客失望地离开了...")
+
+        elif choice == "2":
+            # 查看店铺信息
+            print("\n===== 店铺信息 =====")
+            print(f"店铺等级：Lv.{level}")
+            print(f"总资金：{money}元")
+            print(f"已接待顾客：{customers_served} 位")
+            print(f"可做口味：{', '.join(flavors)}")
+
+        elif choice == "3":
+            # 升级店铺
+            upgrade_cost = 100 + (level * 50)
+            print(f"\� 升级到 Lv.{level+1} 需要 {upgrade_cost} 元")
+            print(f"你的资金：{money}元")
+            
+            if money >= upgrade_cost:
+                confirm = input("确认升级？(y/n)：")
+                if confirm.lower() == "y":
+                    money -= upgrade_cost
+                    level += 1
+                    print(f"\n🎉 恭喜！店铺升级到 Lv.{level} 啦！")
+                    print("顾客愿意付更多钱啦～")
+            else:
+                print("\n❌ 钱不够哦，多接待几位顾客吧！")
+
+        elif choice == "4":
+            # 退出游戏
+            print("\n感谢游玩冰淇淋小店！")
+            print(f"你最终赚到了 {money} 元，接待了 {customers_served} 位顾客！")
+            break
+        
+        else:
+            print("\n⚠️ 输入无效，请选择 1-4")
+
+# 启动游戏
+if __name__ == "__main__":
+    ice_cream_shop_game()
