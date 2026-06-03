@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>三角洲特种部队 - 网页版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* 游戏容器 */
+        #gameContainer {
+            position: relative;
+            width: 1200px;
+            height: 700px;
+            border: 3px solid #333;
+            background: #7a9667; /* 草地底色 */
+            background-image: 
+                radial-gradient(circle, #8a2be2 1px, transparent 1px),
+                linear-gradient(#6b8a58 1px, transparent 1px),
+                linear-gradient(90deg, #6b8a58 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* 玩家 */
+        #player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #0066ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px #0066ff;
+            z-index: 10;
+        }
+
+        /* 子弹 */
+        .bullet {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #ff0;
+            border-radius: 50%;
+            z-index: 5;
+        }
+
+        /* 敌人 */
+        .enemy {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: #ff3300;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 12px #ff3300;
+            z-index: 8;
+        }
+
+        /* UI面板 */
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px #000;
+            z-index: 999;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff3300;
+            font-size: 60px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #000;
+            display: none;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            血量: <span id="hp">100</span> | 杀敌: <span id="score">0</span>
+        </div>
+        <div id="player"></div>
+        <div id="gameOver">任务失败！</div>
+    </div>
+
+    <script>
+        // ========== 游戏基础配置 ==========
+        const container = document.getElementById('gameContainer');
+        const player = document.getElementById('player');
+        const hpText = document.getElementById('hp');
+        const scoreText = document.getElementById('score');
+        const gameOver = document.getElementById('gameOver');
+
+        // 地图尺寸
+        const MAP_WIDTH = 1200;
+        const MAP_HEIGHT = 700;
+
+        // 玩家属性
+        let playerX = MAP_WIDTH / 2;
+        let playerY = MAP_HEIGHT / 2;
+        let playerHp = 100;
+        let score = 0;
+        const moveSpeed = 5;
+
+        // 按键状态
+        const keys = { w: false, a: false, s: false, d: false };
+
+        // 子弹 & 敌人列表
+        let bullets = [];
+        let enemies = [];
+
+        // ========== 玩家控制 ==========
+        document.addEventListener('keydown', e => {
+            if(e.key in keys) keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', e => {
+            if(e.key in keys) keys[e.key] = false;
+        });
+
+        // 鼠标射击
+        container.addEventListener('click', shoot);
+
+        function shoot(e) {
+            if(playerHp <= 0) return;
+
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // 计算射击角度
+            const dx = mouseX - playerX;
+            const dy = mouseY - playerY;
+            const dist = Math.hypot(dx, dy);
+            const speed = 12;
+
+            // 创建子弹
+            const bullet = document.createElement('div');
+            bullet.className = 'bullet';
+            bullet.style.left = playerX + 'px';
+            bullet.style.top = playerY + 'px';
+            container.appendChild(bullet);
+
+            bullets.push({
+                el: bullet,
+                x: playerX,
+                y: playerY,
+                vx: (dx / dist) * speed,
+                vy: (dy / dist) * speed
+            });
+        }
+
+        // ========== 生成敌人 ==========
+        function spawnEnemy() {
+            if(playerHp <= 0) return;
+
+            const enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            container.appendChild(enemy);
+
+            // 随机出生在边缘
+            let x, y;
+            if(Math.random() > 0.5) {
+                x = Math.random() > 0.5 ? -20 : MAP_WIDTH + 20;
+                y = Math.random() * MAP_HEIGHT;
+            } else {
+                x = Math.random() * MAP_WIDTH;
+                y = Math.random() > 0.5 ? -20 : MAP_HEIGHT + 20;
+            }
+
+            enemies.push({
+                el: enemy,
+                x: x,
+                y: y,
+                speed: 1.6
+            });
+        }
+
+        // 每2秒生成一个敌人
+        setInterval(spawnEnemy, 2000);
+
+        // ========== 游戏主循环 ==========
+        function gameLoop() {
+            if(playerHp <= 0) {
+                gameOver.style.display = 'block';
+                return;
+            }
+
+            // 玩家移动
+            if(keys.w && playerY > 15) playerY -= moveSpeed;
+            if(keys.s && playerY < MAP_HEIGHT - 15) playerY += moveSpeed;
+            if(keys.a && playerX > 15) playerX -= moveSpeed;
+            if(keys.d && playerX < MAP_WIDTH - 15) playerX += moveSpeed;
+
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+
+            // 子弹移动 + 碰撞
+            bullets.forEach((bullet, bIdx) => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                bullet.el.style.left = bullet.x + 'px';
+                bullet.el.style.top = bullet.y + 'px';
+
+                // 超出地图删除
+                if(bullet.x < 0 || bullet.x > MAP_WIDTH || bullet.y < 0 || bullet.y > MAP_HEIGHT) {
+                    bullet.el.remove();
+                    bullets.splice(bIdx, 1);
+                }
+
+                // 敌人碰撞
+                enemies.forEach((enemy, eIdx) => {
+                    const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+                    if(dist < 20) {
+                        enemy.el.remove();
+                        enemies.splice(eIdx, 1);
+                        bullet.el.remove();
+                        bullets.splice(bIdx, 1);
+                        score++;
+                        scoreText.textContent = score;
+                    }
+                });
+            });
+
+            // 敌人移动 + 攻击玩家
+            enemies.forEach(enemy => {
+                const dx = playerX - enemy.x;
+                const dy = playerY - enemy.y;
+                const dist = Math.hypot(dx, dy);
+
+                enemy.x += (dx / dist) * enemy.speed;
+                enemy.y += (dy / dist) * enemy.speed;
+                enemy.el.style.left = enemy.x + 'px';
+                enemy.el.style.top = enemy.y + 'px';
+
+                // 敌人碰到玩家
+                if(dist < 25) {
+                    playerHp -= 1;
+                    hpText.textContent = playerHp;
+                }
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>
