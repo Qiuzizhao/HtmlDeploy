@@ -892,7 +892,7 @@
             </div>
             <div class="toolbar-right">
               <button class="warning-button" id="auditForbiddenSitesButton" type="button">违禁词审查</button>
-              <button class="button" id="generateThumbnailsButton" type="button">生成全部封面</button>
+              <button class="button" id="generateThumbnailsButton" type="button">刷新全部封面</button>
               <button class="button" id="reloadButton" type="button">刷新列表</button>
             </div>
           </div>
@@ -1855,7 +1855,7 @@
     async function generateAllThumbnails() {
       generateThumbnailsButton.disabled = true;
       generateThumbnailsButton.textContent = '生成中...';
-      setMessage(listMessage, '正在生成全部封面，项目较多时需要等待...');
+      setMessage(listMessage, '正在刷新全部封面，项目较多时需要等待...');
 
       const response = await fetch('/api/admin/thumbnails', {
         method: 'POST',
@@ -1864,11 +1864,11 @@
       });
 
       generateThumbnailsButton.disabled = false;
-      generateThumbnailsButton.textContent = '生成全部封面';
+      generateThumbnailsButton.textContent = '刷新全部封面';
 
       if (!response.ok) {
-        const result = await response.json().catch(() => ({ error: '生成全部封面失败' }));
-        setMessage(listMessage, result.error || '生成全部封面失败', true);
+        const result = await response.json().catch(() => ({ error: '刷新全部封面失败' }));
+        setMessage(listMessage, result.error || '刷新全部封面失败', true);
         return;
       }
 
