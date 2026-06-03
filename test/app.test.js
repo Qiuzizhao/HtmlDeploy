@@ -108,15 +108,27 @@ test('public index only shows the new-page button in the preview header', async 
   assert.doesNotMatch(html, /id="openExternal"/);
   assert.match(html, /id="openPreviewExternal"[^>]*>新页面打开<\/button>/);
   assert.match(html, /let currentPreviewUrl = ''/);
-  assert.match(html, /window\.open\(currentPreviewUrl, '_blank', 'noopener'\)/);
-  assert.match(html, /actions\.append\(previewButton\)/);
+  assert.match(html, /window\.open\(currentPreviewExternalUrl, '_blank', 'noopener'\)/);
+  assert.match(html, /actions\.append\(previewButton, codeButton\)/);
 });
 
 test('public index opens preview only from the preview button', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
-  assert.match(html, /previewButton\.addEventListener\('click', \(\) => openPreview\(site\)\)/);
+  assert.match(html, /previewButton\.addEventListener\('click', \(\) => openProjectWindow\(site\)\)/);
   assert.doesNotMatch(html, /card\.addEventListener\('click'/);
+});
+
+test('public index exposes a read-only project code viewer', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /id="codeOverlay"/);
+  assert.match(html, /id="codeViewer"[^>]+readonly/);
+  assert.match(html, /codeButton\.textContent = '查看代码'/);
+  assert.match(html, /codeButton\.addEventListener\('click', \(\) => openCodeWindow\(site\)\)/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/public-code/);
+  assert.match(html, /navigator\.clipboard\?\.writeText/);
+  assert.doesNotMatch(html, /id="saveCodeButton"/);
 });
 
 test('public admin page exposes project CRUD controls', async () => {
@@ -958,6 +970,106 @@ test('admin can download a project HTML file', async () => {
   assert.match(response.headers['content-disposition'], /attachment/);
   assert.match(response.headers['content-disposition'], /html/);
   assert.equal(response.text, '<!doctype html><h1>Download</h1>');
+});
+
+test('public project code endpoint returns read-only files with class access', async () => {
+  const { app, storageDir, dataDir } = await makeTestApp();
+  await fsp.writeFile(path.join(dataDir, 'classes.json'), JSON.stringify([
+    {
+      id: 'class-a',
+      name: '一班',
+      password: '123456',
+      uploadEnabled: true,
+      passwordEnabled: false,
+      createdAt: '2026-06-03T00:00:00.000Z'
+    }
+  ], null, 2));
+  await fsp.writeFile(path.join(dataDir, 'settings.json'), JSON.stringify({
+    allPassword: '111111',
+    allPasswordEnabled: true,
+    forbiddenWords: [],
+    lastUsedSiteNumber: 1
+  }, null, 2));
+  await fsp.writeFile(path.join(dataDir, 'sites.json'), JSON.stringify([
+    {
+      id: 'code-site',
+      number: '001',
+      title: '代码作品',
+      author: '测试作者',
+      classId: 'class-a',
+      enabled: true,
+      createdAt: '2026-06-03T00:00:00.000Z'
+    }
+  ], null, 2));
+  await fsp.mkdir(path.join(storageDir, 'code-site', 'scripts'), { recursive: true });
+  await fsp.writeFile(path.join(storageDir, 'code-site', 'index.html'), '<!doctype html><h1>Code</h1>');
+  await fsp.writeFile(path.join(storageDir, 'code-site', 'scripts', 'app.js'), 'console.log("ok");');
+
+  const response = await request(app).get('/api/sites/code-site/public-code').expect(200);
+  assert.equal(response.body.id, 'code-site');
+  assert.deepEqual(
+    response.body.files.map((file) => file.path),
+    ['index.html', 'scripts/app.js']
+  );
+  assert.match(response.body.combinedText, /===== index\.html =====/);
+  assert.match(response.body.combinedText, /<!doctype html><h1>Code<\/h1>/);
+  assert.match(response.body.combinedText, /===== scripts\/app\.js =====/);
+  assert.match(response.body.combinedText, /console\.log\("ok"\);/);
+});
+
+test('public project code endpoint respects passwords and disabled projects', async () => {
+  const { app, storageDir, dataDir } = await makeTestApp();
+  await fsp.writeFile(path.join(dataDir, 'classes.json'), JSON.stringify([
+    {
+      id: 'class-a',
+      name: '一班',
+      password: '123456',
+      uploadEnabled: true,
+      passwordEnabled: true,
+      createdAt: '2026-06-03T00:00:00.000Z'
+    },
+    {
+      id: 'class-b',
+      name: '二班',
+      password: '654321',
+      uploadEnabled: true,
+      passwordEnabled: false,
+      createdAt: '2026-06-03T00:00:00.000Z'
+    }
+  ], null, 2));
+  await fsp.writeFile(path.join(dataDir, 'settings.json'), JSON.stringify({
+    allPassword: '111111',
+    allPasswordEnabled: true,
+    forbiddenWords: [],
+    lastUsedSiteNumber: 2
+  }, null, 2));
+  await fsp.writeFile(path.join(dataDir, 'sites.json'), JSON.stringify([
+    {
+      id: 'locked-code',
+      number: '001',
+      title: '锁定作品',
+      author: '测试作者',
+      classId: 'class-a',
+      enabled: true,
+      createdAt: '2026-06-03T00:00:00.000Z'
+    },
+    {
+      id: 'disabled-code',
+      number: '002',
+      title: '禁用作品',
+      author: '测试作者',
+      classId: 'class-b',
+      enabled: false,
+      createdAt: '2026-06-03T00:00:00.000Z'
+    }
+  ], null, 2));
+  await fsp.mkdir(path.join(storageDir, 'locked-code'), { recursive: true });
+  await fsp.mkdir(path.join(storageDir, 'disabled-code'), { recursive: true });
+  await fsp.writeFile(path.join(storageDir, 'locked-code', 'index.html'), '<!doctype html><h1>Locked</h1>');
+  await fsp.writeFile(path.join(storageDir, 'disabled-code', 'index.html'), '<!doctype html><h1>Disabled</h1>');
+
+  await request(app).get('/api/sites/locked-code/public-code').expect(401);
+  await request(app).get('/api/sites/disabled-code/public-code').expect(404);
 });
 
 test('admin cannot delete a class that still has projects', async () => {

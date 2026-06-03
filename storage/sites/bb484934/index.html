@@ -38,7 +38,6 @@
     </div>
 
     <script>
-        // ========== 音效资源（在线免费音效，无需本地文件） ==========
         const audioSrc = {
             bgm:"https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-loop-1248.mp3",
             punch:"https://assets.mixkit.co/sfx/preview/mixkit-arcade-mechanical-bling-210.mp3",
@@ -47,65 +46,85 @@
             ultimate:"https://assets.mixkit.co/sfx/preview/mixkit-large-explosion-impact-958.mp3",
             hurt:"https://assets.mixkit.co/sfx/preview/mixkit-player-hurt-2773.mp3",
             fall:"https://assets.mixkit.co/sfx/preview/mixkit-body-fall-into-water-2176.mp3"
-        }
+        };
         const AudioManager = {
-            bgmAudio:new Audio(audioSrc.bgm),
+            bgmAudio:null,
             init(){
+                this.bgmAudio = new Audio(audioSrc.bgm);
                 this.bgmAudio.loop = true;
                 this.bgmAudio.volume = 0.3;
             },
-            playBGM(){this.bgmAudio.play().catch(e=>{})},
-            stopBGM(){this.bgmAudio.pause()},
-            play(type){
-                let au;
-                switch(type){
-                    case 'punch':au=new Audio(audioSrc.punch);break;
-                    case 'heavy':au=new Audio(audioSrc.heavy);break;
-                    case 'kick':au=new Audio(audioSrc.kick);break;
-                    case 'ult':au=new Audio(audioSrc.ultimate);break;
-                    case 'hurt':au=new Audio(audioSrc.hurt);break;
-                    case 'fall':au=new Audio(audioSrc.fall);break;
+            playBGM(){
+                if(this.bgmAudio && this.bgmAudio.paused){
+                    this.bgmAudio.play().catch(()=>{});
                 }
-                if(au){au.volume=0.4;au.play().catch(e=>{})}
+            },
+            stopBGM(){
+                if(this.bgmAudio){
+                    this.bgmAudio.pause();
+                    this.bgmAudio.currentTime = 0;
+                }
+            },
+            play(type){
+                const srcMap = {
+                    punch:audioSrc.punch,
+                    heavy:audioSrc.heavy,
+                    kick:audioSrc.kick,
+                    ult:audioSrc.ultimate,
+                    hurt:audioSrc.hurt,
+                    fall:audioSrc.fall
+                };
+                const src = srcMap[type];
+                if(src){
+                    const au = new Audio(src);
+                    au.volume = 0.4;
+                    au.play().catch(()=>{});
+                }
             }
-        }
+        };
         AudioManager.init();
-        // 点击页面开启BGM（浏览器策略限制）
-        document.body.onclick = ()=>AudioManager.playBGM();
+        let bgmStarted = false;
+        document.body.addEventListener('click',()=>{
+            if(!bgmStarted){
+                AudioManager.playBGM();
+                bgmStarted = true;
+            }
+        },{once:true});
 
-        // 游戏配置
         const GAME = {
             width:900,height:500,gravity:0.6,floorY:420,
             p1:{x:120,y:0,w:36,h:72,speed:5,jumpPower:-16,hp:100},
             p2:{x:720,y:0,w:36,h:72,speed:5,jumpPower:-16,hp:100}
-        }
+        };
         const keys = {};
         const box = document.getElementById('gameBox');
         const hpDom1 = document.getElementById('hp1');
         const hpDom2 = document.getElementById('hp2');
 
-        // 火柴人类【新增：倒地、浮空、必杀、起身】
         class StickMan{
             constructor(opt,isLeft){
-                this.x = opt.x; this.y = opt.y;
-                this.w = opt.w; this.h = opt.h;
-                this.vx = 0; this.vy = 0;
+                this.x = opt.x;
+                this.y = opt.y;
+                this.w = opt.w;
+                this.h = opt.h;
+                this.vx = 0;
+                this.vy = 0;
                 this.speed = opt.speed;
                 this.jumpPower = opt.jumpPower;
                 this.hp = opt.hp;
                 this.maxHp = opt.hp;
                 this.isLeft = isLeft;
                 this.onGround = false;
-                this.attackType = 0; //0待机1轻拳2重拳3踢4必杀
+                this.attackType = 0;
                 this.attackCd = 0;
                 this.hurtCd = 0;
-                this.downCd = 0; //倒地倒计时
-                this.getUpCd = 0; //起身CD
-                this.isDown = false; //是否倒地
-                this.isFloat = false; //是否浮空
-                this.floatCd = 0; //浮空硬直
+                this.downCd = 0;
+                this.getUpCd = 0;
+                this.isDown = false;
+                this.isFloat = false;
+                this.floatCd = 0;
                 this.attackRange = {w:55,h:42};
-                this.ultRange = {w:110,h:70}; //必杀超大范围
+                this.ultRange = {w:110,h:70};
                 this.dom = document.createElement('div');
                 this.drawInit();
                 box.appendChild(this.dom);
@@ -126,97 +145,95 @@
                     <line x1="18" y1="42" x2="8" y2="62" stroke="#fff" stroke-width="3" class="legL"/>
                     <line x1="18" y1="42" x2="28" y2="62" stroke="#fff" stroke-width="3" class="legR"/>
                 </svg>
-                `
+                `;
             }
-            //受伤
             hurt(dmg,isKnockFloat=false,isDownKnock=false){
-                if(this.hurtCd>0 && !isKnockFloat)return;
+                if(this.hurtCd>0 && !isKnockFloat) return;
                 AudioManager.play('hurt');
                 this.hp = Math.max(0,this.hp-dmg);
                 this.hurtCd = isKnockFloat ? 28 : 18;
-                //浮空击飞
                 if(isKnockFloat){
                     this.isFloat = true;
                     this.floatCd = 35;
                     this.vy = -11;
                     this.vx = this.isLeft ? 7 : -7;
                 }
-                //倒地重击击飞
                 if(isDownKnock){
                     this.isDown = true;
-                    this.downCd = 90; //倒地等待起身
+                    this.downCd = 90;
                     AudioManager.play('fall');
                     this.vy = -14;
                     this.vx = this.isLeft ? 12 : -12;
                 }else{
                     this.vx = dmg>12 ? (this.isLeft?8:-8):(this.isLeft?4:-4);
                 }
-                //血条
                 const hpDom = this.isLeft ? hpDom2 : hpDom1;
                 hpDom.style.width = (this.hp/this.maxHp*100)+'%';
                 this.dom.style.opacity = '0.35';
-                setTimeout(()=>this.dom.style.opacity='1',120)
+                setTimeout(()=>this.dom.style.opacity='1',120);
             }
-            //普通打击特效
             createHit(x,y){
                 const eff = document.createElement('div');
                 eff.className = 'hitEffect';
-                eff.style.left = x+'px';eff.style.top = y+'px';
+                eff.style.left = x+'px';
+                eff.style.top = y+'px';
                 box.appendChild(eff);
                 let op=1,sc=1;
                 const ani = setInterval(()=>{
-                    op-=0.09;sc+=0.12;
-                    eff.style.opacity=op;eff.style.transform=`scale(${sc})`;
-                    if(op<=0){clearInterval(ani);eff.remove()}
-                },20)
+                    op-=0.09;
+                    sc+=0.12;
+                    eff.style.opacity=op;
+                    eff.style.transform=`scale(${sc})`;
+                    if(op<=0){clearInterval(ani);eff.remove();}
+                },20);
             }
-            //必杀爆炸特效
             createUltHit(x,y){
                 const eff = document.createElement('div');
                 eff.className = 'killEffect';
-                eff.style.left = x+'px';eff.style.top = y+'px';
+                eff.style.left = x+'px';
+                eff.style.top = y+'px';
                 box.appendChild(eff);
                 let op=1,sc=1;
                 const ani = setInterval(()=>{
-                    op-=0.05;sc+=0.15;
-                    eff.style.opacity=op;eff.style.transform=`scale(${sc})`;
-                    if(op<=0){clearInterval(ani);eff.remove()}
-                },22)
+                    op-=0.05;
+                    sc+=0.15;
+                    eff.style.opacity=op;
+                    eff.style.transform=`scale(${sc})`;
+                    if(op<=0){clearInterval(ani);eff.remove();}
+                },22);
             }
-            //攻击碰撞
             checkHit(target){
-                if(this.attackCd>0||this.attackType===0)return;
+                if(this.attackCd>0||this.attackType===0) return;
                 let atkX,atkY,atkW,atkH,isFloat=false,isDown=false,dmg=0;
-                //必杀超大攻击框
                 if(this.attackType===4){
-                    atkW=this.ultRange.w;atkH=this.ultRange.h;
+                    atkW=this.ultRange.w;
+                    atkH=this.ultRange.h;
                     atkX=this.isLeft?this.x-atkW:this.x+this.w;
                     atkY=this.y-10;
-                    dmg=28;isDown=true;
+                    dmg=28;
+                    isDown=true;
                     AudioManager.play('ult');
                 }else{
-                    atkW=this.attackRange.w;atkH=this.attackRange.h;
+                    atkW=this.attackRange.w;
+                    atkH=this.attackRange.h;
                     atkX=this.isLeft?this.x-atkW:this.x+this.w;
                     atkY=this.y+12;
-                    if(this.attackType===1){dmg=6;AudioManager.play('punch')}
-                    if(this.attackType===2){dmg=15;isFloat=true;AudioManager.play('heavy')}
-                    if(this.attackType===3){dmg=11;isFloat=true;AudioManager.play('kick')}
+                    if(this.attackType===1){dmg=6;AudioManager.play('punch');}
+                    if(this.attackType===2){dmg=15;isFloat=true;AudioManager.play('heavy');}
+                    if(this.attackType===3){dmg=11;isFloat=true;AudioManager.play('kick');}
                 }
                 const tarX=target.x,tarY=target.y,tarW=target.w,tarH=target.h;
                 const hit = !(atkX+atkW<tarX||atkX>tarX+tarW||atkY+atkH<tarY||atkY>tarY+tarH);
                 if(hit){
                     target.hurt(dmg,isFloat,isDown);
-                    if(this.attackType===4)this.createUltHit((atkX+tarX)/2,(atkY+tarY)/2);
+                    if(this.attackType===4) this.createUltHit((atkX+tarX)/2,(atkY+tarY)/2);
                     else this.createHit((atkX+tarX)/2,(atkY+tarY)/2);
                 }
             }
-            //更新逻辑
             update(ctrl,enemy){
-                //冷却递减
-                if(this.attackCd>0)this.attackCd--;
-                if(this.hurtCd>0)this.hurtCd--;
+                if(this.attackCd>0) this.attackCd--;
+                if(this.hurtCd>0) this.hurtCd--;
                 if(this.floatCd>0){this.floatCd--;this.isFloat=true;}else this.isFloat=false;
-                //倒地计时&起身
                 if(this.downCd>0){
                     this.downCd--;
                     this.dom.style.transform = `scaleX(${this.isLeft?-1:1}) rotate(90deg)`;
@@ -228,21 +245,17 @@
                 if(this.getUpCd>0){
                     this.getUpCd--;
                     this.dom.style.transform = `scaleX(${this.isLeft?-1:1}) rotate(30deg)`;
-                    if(this.getUpCd<=0)this.dom.style.transform=`scaleX(${this.isLeft?-1:1}) rotate(0deg)`;
+                    if(this.getUpCd<=0) this.dom.style.transform=`scaleX(${this.isLeft?-1:1}) rotate(0deg)`;
                 }
-
-                //倒地/浮空无法操控
                 const canCtrl = !this.isDown && !this.isFloat && this.hurtCd<=0 && this.getUpCd<=0;
                 if(canCtrl){
-                    //移动
-                    if(ctrl.left){this.vx=-this.speed;this.isLeft=true}
-                    else if(ctrl.right){this.vx=this.speed;this.isLeft=false}
+                    if(ctrl.left){this.vx=-this.speed;this.isLeft=true;}
+                    else if(ctrl.right){this.vx=this.speed;this.isLeft=false;}
                     else this.vx*=0.86;
-                    //跳跃
                     if(ctrl.jump&&this.onGround){
-                        this.vy=this.jumpPower;this.onGround=false;
+                        this.vy=this.jumpPower;
+                        this.onGround=false;
                     }
-                    //招式
                     if(ctrl.atk1&&this.attackCd<=0){this.attackType=1;this.attackCd=22;}
                     else if(ctrl.atk2&&this.attackCd<=0){this.attackType=2;this.attackCd=38;}
                     else if(ctrl.atk3&&this.attackCd<=0){this.attackType=3;this.attackCd=32;}
@@ -251,46 +264,50 @@
                 }else{
                     this.vx *=0.72;
                 }
-                //重力
                 this.vy += GAME.gravity;
                 this.x += this.vx;
                 this.y += this.vy;
-                //落地检测
                 if(this.y>=GAME.floorY){
-                    this.y=GAME.floorY;this.vy=0;this.onGround=true;
-                    //浮空落地取消浮空
+                    this.y=GAME.floorY;
+                    this.vy=0;
+                    this.onGround=true;
                     if(this.isFloat){this.isFloat=false;this.floatCd=0;}
                 }else this.onGround=false;
-                //边界
                 this.x=Math.max(0,Math.min(GAME.width-this.w,this.x));
                 this.checkHit(enemy);
-                //DOM位置
-                if(!this.isDown&&this.getUpCd<=0)this.dom.style.left=this.x+'px',this.dom.style.top=this.y+'px',this.dom.style.transform=`scaleX(${this.isLeft?-1:1})`;
-                else{this.dom.style.left=this.x+'px',this.dom.style.top=this.y+'px'}
+                if(!this.isDown&&this.getUpCd<=0){
+                    this.dom.style.left=this.x+'px';
+                    this.dom.style.top=this.y+'px';
+                    this.dom.style.transform=`scaleX(${this.isLeft?-1:1})`;
+                }else{
+                    this.dom.style.left=this.x+'px';
+                    this.dom.style.top=this.y+'px';
+                }
                 this.setAniPose();
             }
-            //肢体动画
             setAniPose(){
                 const svg = this.dom.querySelector('svg');
+                if(!svg) return;
                 const armL = svg.querySelector('.armL');
                 const armR = svg.querySelector('.armR');
                 const legL = svg.querySelector('.legL');
                 const legR = svg.querySelector('.legR');
-                if(this.isDown)return;
-                if(this.attackType===1){//轻拳
+                if(!armL||!armR||!legL||!legR) return;
+                if(this.isDown) return;
+                if(this.attackType===1){
                     armR.setAttribute('x2','42');armR.setAttribute('y2','22');
-                }else if(this.attackType===2){//重拳浮空
+                }else if(this.attackType===2){
                     armR.setAttribute('x2','52');armR.setAttribute('y2','12');
                     armL.setAttribute('x2','-8');armL.setAttribute('y2','40');
-                }else if(this.attackType===3){//踢腿浮空
+                }else if(this.attackType===3){
                     legR.setAttribute('x2','44');legR.setAttribute('y2','45');
                     armL.setAttribute('x2','-4');armL.setAttribute('y2','32');
-                }else if(this.attackType===4){//必杀
+                }else if(this.attackType===4){
                     armR.setAttribute('x2','60');armR.setAttribute('y2','5');
                     armL.setAttribute('x2','-12');armL.setAttribute('y2','45');
                     legL.setAttribute('x2','-10');legL.setAttribute('y2','68');
                     legR.setAttribute('x2','46');legR.setAttribute('y2','58');
-                }else{//待机
+                }else{
                     armL.setAttribute('x2','6');armL.setAttribute('y2','36');
                     armR.setAttribute('x2','30');armR.setAttribute('y2','36');
                     legL.setAttribute('x2','8');legL.setAttribute('y2','62');
@@ -299,16 +316,13 @@
             }
         }
 
-        //控制
         const p1Ctrl = {left:false,right:false,jump:false,atk1:false,atk2:false,atk3:false,atk4:false};
         const p2Ctrl = {left:false,right:false,jump:false,atk1:false,atk2:false,atk3:false,atk4:false};
         const p1 = new StickMan(GAME.p1,false);
         const p2 = new StickMan(GAME.p2,true);
 
-        //键盘
         document.addEventListener('keydown',e=>{
             keys[e.code]=true;
-            //P1
             if(e.code==='KeyA')p1Ctrl.left=true;
             if(e.code==='KeyD')p1Ctrl.right=true;
             if(e.code==='KeyW')p1Ctrl.jump=true;
@@ -316,7 +330,6 @@
             if(e.code==='KeyK')p1Ctrl.atk2=true;
             if(e.code==='KeyL')p1Ctrl.atk3=true;
             if(e.code==='KeyU')p1Ctrl.atk4=true;
-            //P2
             if(e.code==='ArrowLeft')p2Ctrl.left=true;
             if(e.code==='ArrowRight')p2Ctrl.right=true;
             if(e.code==='ArrowUp')p2Ctrl.jump=true;
@@ -324,7 +337,7 @@
             if(e.code==='Numpad2')p2Ctrl.atk2=true;
             if(e.code==='Numpad3')p2Ctrl.atk3=true;
             if(e.code==='Numpad0')p2Ctrl.atk4=true;
-        })
+        });
         document.addEventListener('keyup',e=>{
             keys[e.code]=false;
             if(e.code==='KeyA')p1Ctrl.left=false;
@@ -334,7 +347,6 @@
             if(e.code==='KeyK')p1Ctrl.atk2=false;
             if(e.code==='KeyL')p1Ctrl.atk3=false;
             if(e.code==='KeyU')p1Ctrl.atk4=false;
-
             if(e.code==='ArrowLeft')p2Ctrl.left=false;
             if(e.code==='ArrowRight')p2Ctrl.right=false;
             if(e.code==='ArrowUp')p2Ctrl.jump=false;
@@ -342,9 +354,8 @@
             if(e.code==='Numpad2')p2Ctrl.atk2=false;
             if(e.code==='Numpad3')p2Ctrl.atk3=false;
             if(e.code==='Numpad0')p2Ctrl.atk4=false;
-        })
+        });
 
-        //主循环
         function gameLoop(){
             p1.update(p1Ctrl,p2);
             p2.update(p2Ctrl,p1);
