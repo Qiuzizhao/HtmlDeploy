@@ -1,0 +1,63 @@
+import random
+import time
+
+# 玩家数据
+player_pos = 0
+money = 100
+print("=====【倒霉打工人闯关】=====")
+print("目标：走到20格下班通关，初始工资100元，没钱就被开除！")
+print("===========================\n")
+
+# 事件库
+good_event = [
+    ("老板发下午茶补贴", 30),
+    ("摸鱼被老板夸奖效率高", 50),
+    ("同事请喝奶茶白嫖", 20)
+]
+bad_event = [
+    ("工位漏水泡坏电脑", -30, "原地学鸭子叫三声"),
+    ("强制加班做无用报表", -40, "夹子音说：老板最英明"),
+    ("外卖被偷吃", -20, "挨个夸在场所有人颜值爆表"),
+    ("迟到被扣全勤", -50, "模仿招财猫摆手10次"),
+    ("被迫帮同事背锅罚款", -25, "做五个鬼脸")
+]
+rand_event = ["抢别人30工资", "替别人扛一次倒霉", "向前跳5格"]
+
+while True:
+    input("\n按回车摇骰子！")
+    dice = random.randint(1,6)
+    player_pos += dice
+    print(f"\n摇出点数：{dice}，当前位置：{player_pos}｜现有工资：{money}元")
+
+    # 通关判定
+    if player_pos >= 20:
+        print("\n🎉恭喜！成功下班通关，成为幸运打工人！游戏胜利！")
+        break
+
+    # 随机触发事件
+    ran = random.random()
+    if ran < 0.3:
+        # 好运
+        name, add = random.choice(good_event)
+        money += add
+        print(f"✨好运：{name}，+{add}元！")
+    elif ran < 0.65:
+        # 倒霉
+        name, sub, punish = random.choice(bad_event)
+        money += sub
+        print(f"💥倒霉：{name}，{sub}元！惩罚：{punish}")
+    else:
+        # 特殊随机
+        ev = random.choice(rand_event)
+        print(f"🎲特殊事件：{ev}")
+        if ev == "抢别人30工资":
+            money += 30
+        elif ev == "向前跳5格":
+            player_pos +=5
+            print(f"跳跃后位置：{player_pos}")
+
+    # 破产淘汰
+    if money <= 0:
+        print("\n💀工资归零，被老板开除！游戏失败！")
+        break
+    time.sleep(0.3)
