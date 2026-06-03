@@ -72,20 +72,29 @@ button:nth-child(3){background:#359}
 
 <script>
 // 画布初始化
-const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d');
-const nextC=document.getElementById('next');
-const nextCtx=nextC.getContext('2d');
-const holdC=document.getElementById('hold');
-const holdCtx=holdC.getContext('2d');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const nextC = document.getElementById('next');
+const nextCtx = nextC.getContext('2d');
+const holdC = document.getElementById('hold');
+const holdCtx = holdC.getContext('2d');
+
+// DOM 缓存
+const scoreSpan = document.getElementById('score');
+const linesSpan = document.getElementById('lines');
+const lvSpan = document.getElementById('lv');
+const pauseBtn = document.getElementById('pause');
+const restartBtn = document.getElementById('restart');
+const holdBtn = document.getElementById('holdBtn');
 
 // 配置
-const COLS=10,ROWS=20,SIZE=24;
-const COLORS=[
-    null,'#0cf','#0c0','#f90','#c0c','#f33','#09f','#ff0'
-]
+const COLS = 10;
+const ROWS = 20;
+const SIZE = 24;
+const COLORS = [null, '#0cf', '#0c0', '#f90', '#c0c', '#f33', '#09f', '#ff0'];
+
 // 7种方块形状 I O T L J S Z
-const SHAPES=[
+const SHAPES = [
     [[0,1],[1,1],[2,1],[3,1]],
     [[1,0],[2,0],[1,1],[2,1]],
     [[1,0],[0,1],[1,1],[2,1]],
@@ -93,80 +102,92 @@ const SHAPES=[
     [[0,0],[0,1],[1,1],[2,1]],
     [[1,0],[2,0],[0,1],[1,1]],
     [[0,0],[1,0],[1,1],[2,1]]
-]
+];
 
-let map=Array(ROWS).fill().map(()=>Array(COLS).fill(0));
-let score=0,lines=0,lv=1,speed=800;
-let cur={shape:[],x:3,y:0,type:0};
-let next={shape:[],type:0};
-let hold=null;
-let isHoldUsed=false;
-let pause=false;
-let timer=null;
+let map = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+let score = 0;
+let lines = 0;
+let lv = 1;
+let speed = 800;
+let cur = {shape: [], x: 3, y: 0, type: 0};
+let next = null;
+let hold = null;
+let isHoldUsed = false;
+let pause = false;
+let gameOverFlag = false;
+let timer = null;
 
-// DOM
-const $=s=>document.querySelector(s);
-const updateData=()=>{
-    $('#score').textContent=score;
-    $('#lines').textContent=lines;
-    $('#lv').textContent=lv;
+// 更新数据显示
+function updateData() {
+    scoreSpan.textContent = score;
+    linesSpan.textContent = lines;
+    lvSpan.textContent = lv;
 }
 
 // 随机方块
-function randomShape(){
-    let t=Math.floor(Math.random()*7);
-    return {shape:SHAPES[t],type:t+1}
+function randomShape() {
+    const t = Math.floor(Math.random() * 7);
+    return {shape: SHAPES[t], type: t + 1};
 }
-function createNew(){
-    cur=next||randomShape();
-    cur.x=Math.floor((COLS-4)/2);cur.y=0;
-    next=randomShape();
-    isHoldUsed=false;
+
+// 生成下一个（首次或创建新方块时调用）
+function createNew() {
+    // 如果没有下一个，先生成一个
+    if (!next) {
+        next = randomShape();
+    }
+    cur = next;
+    cur.x = Math.floor((COLS - 4) / 2);
+    cur.y = 0;
+    next = randomShape();
+    isHoldUsed = false;
     drawNext();
-    if(checkCrash(cur.x,cur.y,cur.shape)){
+    if (checkCrash(cur.x, cur.y, cur.shape)) {
         gameOver();
     }
 }
 
 // 碰撞检测
-function checkCrash(x,y,arr){
-    for(let [dx,dy] of arr){
-        let nx=x+dx,ny=y+dy;
-        if(nx<0||nx>=COLS||ny>=ROWS)return true;
-        if(ny>=0&&map[ny][nx])return true;
+function checkCrash(x, y, arr) {
+    for (const [dx, dy] of arr) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+        if (ny >= 0 && map[ny][nx]) return true;
     }
     return false;
 }
 
 // 落地固定
-function lock(){
-    for(let [dx,dy] of cur.shape){
-        let x=cur.x+dx,y=cur.y+dy;
-        if(y>=0)map[y][x]=cur.type;
+function lock() {
+    for (const [dx, dy] of cur.shape) {
+        const x = cur.x + dx;
+        const y = cur.y + dy;
+        if (y >= 0) map[y][x] = cur.type;
     }
     clearLine();
     createNew();
 }
 
 // 消行
-function clearLine(){
-    let cl=0;
-    for(let y=ROWS-1;y>=0;y--){
-        if(map[y].every(v=>v!==0)){
-            map.splice(y,1);
+function clearLine() {
+    let cleared = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+        if (map[y].every(v => v !== 0)) {
+            map.splice(y, 1);
             map.unshift(Array(COLS).fill(0));
-            cl++;y++;
+            cleared++;
+            y++; // 继续检查同一行（新移下来的行）
         }
     }
-    if(cl>0){
-        let add=[0,100,300,500,800][cl];
-        score+=add*lv;
-        lines+=cl;
-        //升级
-        let newLv=Math.floor(lines/10)+1;
-        if(newLv>lv){
-            lv=newLv;
-            speed=Math.max(150,800-(lv-1)*70);
+    if (cleared > 0) {
+        const add = [0, 100, 300, 500, 800][cleared];
+        score += add * lv;
+        lines += cleared;
+        const newLv = Math.floor(lines / 10) + 1;
+        if (newLv > lv) {
+            lv = newLv;
+            speed = Math.max(150, 800 - (lv - 1) * 70);
             restartTimer();
         }
         updateData();
@@ -174,141 +195,225 @@ function clearLine(){
 }
 
 // 下落一格
-function drop(){
-    if(!checkCrash(cur.x,cur.y+1,cur.shape))cur.y++;
-    else lock();
+function drop() {
+    if (gameOverFlag) return;
+    if (pause) return;
+    if (!checkCrash(cur.x, cur.y + 1, cur.shape)) {
+        cur.y++;
+    } else {
+        lock();
+    }
     render();
 }
 
 // 硬降落
-function hardDrop(){
-    while(!checkCrash(cur.x,cur.y+1,cur.shape))cur.y++;
-    lock();render();
+function hardDrop() {
+    if (gameOverFlag) return;
+    if (pause) return;
+    while (!checkCrash(cur.x, cur.y + 1, cur.shape)) {
+        cur.y++;
+    }
+    lock();
+    render();
 }
 
 // 旋转
-function rotate(){
-    let nd=cur.shape.map(([x,y])=>[-y,x]);
-    if(!checkCrash(cur.x,cur.y,nd))cur.shape=nd;
+function rotate() {
+    if (gameOverFlag) return;
+    if (pause) return;
+    const nd = cur.shape.map(([x, y]) => [-y, x]);
+    if (!checkCrash(cur.x, cur.y, nd)) {
+        cur.shape = nd;
+    }
     render();
 }
 
 // 暂存
-function swapHold(){
-    if(isHoldUsed)return;
-    isHoldUsed=true;
-    let temp=hold;
-    hold={...cur};
-    if(temp)cur=temp;
-    else createNew();
-    drawHold();render();
+function swapHold() {
+    if (gameOverFlag) return;
+    if (pause) return;
+    if (isHoldUsed) return;
+    isHoldUsed = true;
+    const temp = hold;
+    hold = {shape: cur.shape.slice(), type: cur.type, x: cur.x, y: cur.y};
+    if (temp) {
+        cur = temp;
+        cur.x = Math.floor((COLS - 4) / 2);
+        cur.y = 0;
+    } else {
+        createNew(); // 会重新生成 cur 和 next，但 hold 已存
+    }
+    drawHold();
+    render();
 }
 
-// 绘制单个方块
-function drawBlock(ct,px,py,size=SIZE){
-    ctx.fillStyle=COLORS[ct];
-    ctx.fillRect(px,py,size-1,size-1);
+// 绘制单个方块（用于主画布）
+function drawBlock(px, py, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(px, py, SIZE - 1, SIZE - 1);
 }
 
 // 影子落点
-function drawShadow(){
-    let sy=cur.y;
-    while(!checkCrash(cur.x,sy+1,cur.shape))sy++;
-    ctx.globalAlpha=0.3;
-    for(let [dx,dy] of cur.shape){
-        drawBlock(cur.type, (cur.x+dx)*SIZE,(sy+dy)*SIZE);
+function drawShadow() {
+    let sy = cur.y;
+    while (!checkCrash(cur.x, sy + 1, cur.shape)) sy++;
+    ctx.globalAlpha = 0.3;
+    for (const [dx, dy] of cur.shape) {
+        drawBlock((cur.x + dx) * SIZE, (sy + dy) * SIZE, COLORS[cur.type]);
     }
-    ctx.globalAlpha=1;
+    ctx.globalAlpha = 1;
 }
 
 // 主渲染
-function render(){
-    ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);
-    //地图
-    for(let y=0;y<ROWS;y++)
-        for(let x=0;x<COLS;x++)
-            if(map[y][x])drawBlock(map[y][x],x*SIZE,y*SIZE);
-    //影子
+function render() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 地图
+    for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+            if (map[y][x]) {
+                drawBlock(x * SIZE, y * SIZE, COLORS[map[y][x]]);
+            }
+        }
+    }
+
+    // 影子
     drawShadow();
-    //当前方块
-    for(let [dx,dy] of cur.shape){
-        drawBlock(cur.type,(cur.x+dx)*SIZE,(cur.y+dy)*SIZE);
+
+    // 当前方块
+    for (const [dx, dy] of cur.shape) {
+        drawBlock((cur.x + dx) * SIZE, (cur.y + dy) * SIZE, COLORS[cur.type]);
     }
 }
 
-//预览下一个
-function drawNext(){
-    nextCtx.fillStyle='#111';nextCtx.fillRect(0,0,90,90);
-    const s=18,ox=20,oy=20;
-    nextCtx.fillStyle=COLORS[next.type];
-    next.shape.forEach(([x,y])=>{
-        nextCtx.fillRect(ox+x*s,oy+y*s,s-1,s-1);
-    })
-}
-//暂存画布
-function drawHold(){
-    holdCtx.fillStyle='#111';holdCtx.fillRect(0,0,90,90);
-    if(!hold)return;
-    const s=18,ox=20,oy=20;
-    holdCtx.fillStyle=COLORS[hold.type];
-    hold.shape.forEach(([x,y])=>{
-        holdCtx.fillRect(ox+x*s,oy+y*s,s-1,s-1);
-    })
+// 预览下一个
+function drawNext() {
+    nextCtx.fillStyle = '#111';
+    nextCtx.fillRect(0, 0, 90, 90);
+    if (!next) return;
+    const s = 18;
+    const ox = 20;
+    const oy = 20;
+    nextCtx.fillStyle = COLORS[next.type];
+    next.shape.forEach(([x, y]) => {
+        nextCtx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
+    });
 }
 
-//定时器
-function restartTimer(){
-    clearInterval(timer);
-    timer=setInterval(()=>{if(!pause)drop()},speed);
+// 暂存画布
+function drawHold() {
+    holdCtx.fillStyle = '#111';
+    holdCtx.fillRect(0, 0, 90, 90);
+    if (!hold) return;
+    const s = 18;
+    const ox = 20;
+    const oy = 20;
+    holdCtx.fillStyle = COLORS[hold.type];
+    hold.shape.forEach(([x, y]) => {
+        holdCtx.fillRect(ox + x * s, oy + y * s, s - 1, s - 1);
+    });
 }
 
-//游戏结束
-function gameOver(){
-    pause=true;
+// 定时器重启
+function restartTimer() {
     clearInterval(timer);
-    ctx.fillStyle='#f33';ctx.font='26px Arial';
-    ctx.textAlign='center';
-    ctx.fillText('游戏结束',canvas.width/2,canvas.height/2);
+    timer = setInterval(() => {
+        if (!pause && !gameOverFlag) {
+            drop();
+        }
+    }, speed);
 }
-//重启
-function resetGame(){
-    map=Array(ROWS).fill().map(()=>Array(COLS).fill(0));
-    score=lines=0;lv=1;speed=800;hold=null;pause=false;
+
+// 游戏结束
+function gameOver() {
+    gameOverFlag = true;
+    pause = true;
+    clearInterval(timer);
+    ctx.fillStyle = '#f33';
+    ctx.font = '26px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2);
+}
+
+// 重启游戏
+function resetGame() {
+    gameOverFlag = false;
+    pause = false;
+    clearInterval(timer);
+    map = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    score = 0;
+    lines = 0;
+    lv = 1;
+    speed = 800;
+    hold = null;
+    isHoldUsed = false;
+    next = randomShape();
+    createNew();
+    drawHold();
     updateData();
-    next=randomShape();
-    createNew();drawHold();restartTimer();render();
-}
-
-//键盘绑定
-document.addEventListener('keydown',e=>{
-    if(pause&&e.key!==' ')return;
-    switch(e.key){
-        case 'ArrowLeft':if(!checkCrash(cur.x-1,cur.y,cur.shape))cur.x--;break;
-        case 'ArrowRight':if(!checkCrash(cur.x+1,cur.y,cur.shape))cur.x++;break;
-        case 'ArrowDown':drop();break;
-        case 'ArrowUp':rotate();break;
-        case ' ':hardDrop();break;
-        case 'h':case 'H':swapHold();break;
-    }
+    restartTimer();
     render();
-})
-
-//按钮
-$('#pause').onclick=()=>{
-    pause=!pause;
-    if(pause){
-        ctx.fillStyle='#fff';ctx.font='22px Arial';
-        ctx.textAlign='center';ctx.fillText('已暂停',canvas.width/2,canvas.height/2);
-    }else render();
+    pauseBtn.textContent = '暂停';
 }
-$('#restart').onclick=resetGame;
-$('#holdBtn').onclick=swapHold;
 
-//启动
-createNew();
-restartTimer();
-render();
-drawHold();
+// 键盘事件
+document.addEventListener('keydown', e => {
+    // 阻止默认行为（如方向键滚动页面）
+    e.preventDefault();
+
+    if (gameOverFlag) return;
+    if (pause) return;
+
+    switch (e.key) {
+        case 'ArrowLeft':
+            if (!checkCrash(cur.x - 1, cur.y, cur.shape)) cur.x--;
+            render();
+            break;
+        case 'ArrowRight':
+            if (!checkCrash(cur.x + 1, cur.y, cur.shape)) cur.x++;
+            render();
+            break;
+        case 'ArrowDown':
+            drop();
+            break;
+        case 'ArrowUp':
+            rotate();
+            break;
+        case ' ':
+            hardDrop();
+            break;
+        case 'h':
+        case 'H':
+            swapHold();
+            break;
+        default:
+            // 不处理其他键
+            break;
+    }
+});
+
+// 按钮事件
+pauseBtn.onclick = () => {
+    if (gameOverFlag) return;
+    pause = !pause;
+    if (pause) {
+        pauseBtn.textContent = '继续';
+        ctx.fillStyle = '#fff';
+        ctx.font = '22px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('已暂停', canvas.width / 2, canvas.height / 2);
+    } else {
+        pauseBtn.textContent = '暂停';
+        render();
+    }
+};
+
+restartBtn.onclick = resetGame;
+holdBtn.onclick = swapHold;
+
+// 启动游戏
+resetGame(); // 使用 resetGame 统一初始化
 </script>
 </body>
 </html>
