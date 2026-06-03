@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>2D城市建造模拟器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft YaHei}
+body{background:#222;overflow:hidden}
+#gameBox{
+    position:absolute;left:10px;top:60px;
+    border:3px solid #666;background:#59b859;
+}
+#info{
+    color:#fff;position:absolute;top:10px;left:12px;
+}
+#status{
+    color:#fff;position:absolute;top:10px;left:320px;
+}
+#minimap{
+    position:absolute;top:10px;right:10px;border:2px solid #fff;
+    background:#225522;
+}
+#toolbar{
+    position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+}
+button{padding:6px 10px;margin:0 3px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="info">
+左键放置建筑｜滚轮缩放地图｜右键拖动画面
+</div>
+<div id="status">
+资金：<span id="money">5000</span>￥ | 人口：<span id="pop">0</span> | <span id="day">白天</span>
+</div>
+<canvas id="minimap" width="120" height="120"></canvas>
+<canvas id="gameBox" width="800" height="550"></canvas>
+<div id="toolbar">
+<button onclick="setBuild('house')">居民楼800￥+60人</button>
+<button onclick="setBuild('shop')">商场2200￥+20/秒</button>
+<button onclick="setBuild('factory')">工厂3500￥-15人+45/秒</button>
+<button onclick="setBuild('road')">道路120￥</button>
+<button onclick="setBuild('tree')">树木30￥</button>
+<button onclick="clearAll()">清空城市</button>
+</div>
+
+<script>
+//配置
+const grid = 40; //格子像素大小
+let money = 5000, pop = 0;
+let buildType = 'house';
+const moneyDom = document.getElementById('money');
+const popDom = document.getElementById('pop');
+const dayDom = document.getElementById('day');
+
+//画布
+const cvs = document.getElementById('gameBox');
+const ctx = cvs.getContext('2d');
+const miniCvs = document.getElementById('minimap');
+const miniCtx = miniCvs.getContext('2d');
+
+//镜头偏移（拖拽平移）
+let camX = 0, camY = 0;
+let zoom = 1;
+let drag = false, dragStartX, dragStartY;
+
+//建筑数据
+const buildCfg = {
+    house:{cost:800,pop:60,earn:0,color:'#ffdd99'},
+    shop:{cost:2200,pop:20,earn:20,color:'#99ccff'},
+    factory:{cost:3500,pop:-15,earn:45,color:'#bbbbbb'},
+    road:{cost:120,pop:0,earn:0,color:'#444444'},
+    tree:{cost:30,pop:0,earn:0,color:'#339933'}
+};
+
+//格子数据 {x,z,type}
+let mapData = [];
+let carList = []; //小车数组
+let dayTime = 0;
+let darkRate = 0; //夜晚变暗系数
+
+//切换建造类型
+function setBuild(t){buildType = t;}
+
+//格子取整吸附
+function snap(val){
+    return Math.round(val/grid)*grid;
+}
+
+//鼠标转世界坐标
+function getWorldPos(e){
+    const rect = cvs.getBoundingClientRect();
+    const mx = (e.clientX - rect.left - camX)/zoom;
+    const my = (e.clientY - rect.top - camY)/zoom;
+    return {x:snap(mx),y:snap(my)};
+}
+
+//点击建造
+cvs.onmousedown = e=>{
+    if(e.button === 2){//右键拖拽
+        drag = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        return;
+    }
+    if(e.button!==0)return;
+    const p = getWorldPos(e);
+    const cfg = buildCfg[buildType];
+    if(money < cfg.cost){alert('资金不足！');return;}
+    //扣除费用
+    money -= cfg.cost;
+    pop += cfg.pop;
+    pop = Math.max(0,pop);
+    mapData.push({x:p.x,y:p.y,type:buildType});
+    updateUI();
+}
+
+//右键拖动画面
+document.onmousemove = e=>{
+    if(!drag)return;
+    camX += e.clientX - dragStartX;
+    camY += e.clientY - dragStartY;
+    dragStartX = e.clientX;dragStartY = e.clientY;
+}
+document.onmouseup = ()=>drag=false;
+
+//滚轮缩放
+cvs.onwheel = e=>{
+    e.preventDefault();
+    if(e.deltaY<0)zoom+=0.1;
+    else zoom-=0.1;
+    zoom=Math.max(0.4,Math.min(zoom,2));
+}
+
+//清空地图
+function clearAll(){
+    mapData = [];
+    carList = [];
+    money=5000;pop=0;
+    updateUI();
+}
+
+//更新资金人口UI
+function updateUI(){
+    moneyDom.textContent = money;
+    popDom.textContent = pop;
+}
+
+//每秒收益
+setInterval(()=>{
+    let earn = 0;
+    mapData.forEach(item=>{
+        earn += buildCfg[item.type].earn;
+    })
+    money += earn;
+    updateUI();
+},1000);
+
+//生成小车
+function addCar(){
+    //随机找道路
+    let roadArr = mapData.filter(d=>d.type==='road');
+    if(roadArr.length===0){setTimeout(addCar,3000);return;}
+    let rd = roadArr[Math.floor(Math.random()*roadArr.length)];
+    carList.push({
+        x:rd.x,y:rd.y,
+        spd:1+Math.random(),
+        dir:[[1,0],[0,1],[-1,0],[0,-1]][Math.floor(Math.random()*4)]
+    })
+    setTimeout(addCar,5000);
+}
+addCar();
+
+//昼夜更新
+function updateDay(){
+    dayTime += 0.001;
+    let ratio = (Math.sin(dayTime)+1)/2;
+    darkRate = 1-ratio;
+    dayDom.textContent = ratio>0.45?'白天':'夜晚';
+}
+
+//小车移动
+function moveCar(){
+    carList.forEach(c=>{
+        c.x += c.dir[0]*c.spd;
+        c.y += c.dir[1]*c.spd;
+        //不在道路就随机换方向
+        let onRoad = mapData.some(d=>d.x===snap(c.x)&&d.y===snap(c.y)&&d.type==='road');
+        if(!onRoad||Math.random()<0.008){
+            c.dir = [[1,0],[0,1],[-1,0],[0,-1]][Math.floor(Math.random()*4)];
+        }
+    })
+}
+
+//主渲染
+function render(){
+    updateDay();
+    moveCar();
+    //底色草地
+    ctx.fillStyle = `rgba(89,184,89,${1-darkRate*0.6})`;
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+
+    ctx.save();
+    ctx.translate(camX,camY);
+    ctx.scale(zoom,zoom);
+
+    //画格子建筑
+    mapData.forEach(item=>{
+        const cfg = buildCfg[item.type];
+        ctx.fillStyle = cfg.color;
+        ctx.fillRect(item.x,item.y,grid-2,grid-2);
+        //树木额外画小圆树冠
+        if(item.type==='tree'){
+            ctx.fillStyle='#227722';
+            ctx.beginPath();
+            ctx.arc(item.x+grid/2,item.y+grid/3,grid/3,0,Math.PI*2);
+            ctx.fill();
+        }
+    })
+
+    //画小车
+    ctx.fillStyle='#ff2222';
+    carList.forEach(c=>{
+        ctx.fillRect(c.x+6,c.y+6,grid/3,grid/3);
+    })
+
+    ctx.restore();
+
+    //绘制右上角小地图
+    drawMini();
+    requestAnimationFrame(render);
+}
+
+//缩略小地图
+function drawMini(){
+    miniCtx.fillStyle='#225522';
+    miniCtx.fillRect(0,0,120,120);
+    const s = 120/(grid*25);
+    mapData.forEach(d=>{
+        let c = buildCfg[d.type].color;
+        miniCtx.fillStyle=c;
+        miniCtx.fillRect(60+d.x*s,60+d.y*s,3,3);
+    })
+    miniCtx.fillStyle='#ff0000';
+    carList.forEach(c=>{
+        miniCtx.fillRect(60+c.x*s,60+c.y*s,3,3);
+    })
+}
+
+updateUI();
+render();
+</script>
+</body>
+</html>
