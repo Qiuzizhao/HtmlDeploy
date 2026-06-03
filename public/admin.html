@@ -388,6 +388,8 @@
       min-height: 34px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       padding: 7px 10px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -397,6 +399,23 @@
       line-height: 1.35;
       overflow-wrap: anywhere;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    .forbidden-word-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .forbidden-word-delete {
+      flex: 0 0 auto;
+      min-height: 28px;
+      padding: 0 9px;
+      border: 1px solid #fecdd3;
+      border-radius: 6px;
+      background: #fff1f2;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .forbidden-pagination {
@@ -1654,7 +1673,18 @@
       words.forEach((word) => {
         const row = document.createElement('div');
         row.className = 'forbidden-word-row';
-        row.textContent = word;
+
+        const text = document.createElement('span');
+        text.className = 'forbidden-word-text';
+        text.textContent = word;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'forbidden-word-delete';
+        deleteButton.type = 'button';
+        deleteButton.textContent = '删除';
+        deleteButton.addEventListener('click', () => deleteForbiddenWord(word, deleteButton));
+
+        row.append(text, deleteButton);
         forbiddenWordsResults.append(row);
       });
     }
@@ -1799,6 +1829,37 @@
       setMessage(forbiddenWordsMessage, result.added
         ? `已追加 ${result.added} 个违禁词，总计 ${result.total} 个`
         : `没有新增词条，总计 ${result.total} 个`);
+    }
+
+    async function deleteForbiddenWord(word, button) {
+      if (!confirm(`确定删除违禁词「${word}」吗？`)) {
+        return;
+      }
+
+      button.disabled = true;
+      setMessage(forbiddenWordsMessage, `正在删除「${word}」...`);
+
+      const response = await fetch('/api/admin/forbidden-words', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word })
+      });
+
+      if (!response.ok) {
+        button.disabled = false;
+        const result = await response.json().catch(() => ({ error: '删除违禁词失败' }));
+        setMessage(forbiddenWordsMessage, result.error || '删除违禁词失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      forbiddenWordsState.allTotal = result.total;
+      forbiddenWordsState.total = Math.max(0, forbiddenWordsState.total - result.removed);
+      const nextOffset = forbiddenWordsState.offset >= forbiddenWordsState.total
+        ? Math.max(0, forbiddenWordsState.offset - forbiddenWordsState.limit)
+        : forbiddenWordsState.offset;
+      await loadForbiddenWords({ query: forbiddenWordsState.query, offset: nextOffset });
+      setMessage(forbiddenWordsMessage, `已删除「${word}」，总计 ${result.total} 个`);
     }
 
     async function loadClasses() {

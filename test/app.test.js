@@ -206,6 +206,8 @@ test('public admin can edit the all-projects password in class management', asyn
   assert.match(html, /function toggleAllProjectsPasswordEnabled/);
   assert.match(html, /fetch\('\/api\/admin\/settings\?includeForbiddenWords=false'\)/);
   assert.match(html, /\/api\/admin\/forbidden-words\?\$\{params\.toString\(\)\}/);
+  assert.match(html, /method: 'DELETE'/);
+  assert.match(html, /function deleteForbiddenWord/);
   assert.match(html, /id="forbiddenWordsSearchInput"/);
   assert.match(html, /id="forbiddenWordsResults"/);
   assert.match(html, /method: 'PUT'/);
@@ -360,6 +362,43 @@ test('admin can query forbidden words without loading the full list', async () =
   assert.deepEqual(filtered.body.words, ['special-target']);
   assert.equal(filtered.body.total, 1);
   assert.equal(filtered.body.allTotal, 251);
+});
+
+test('admin can delete forbidden words', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await agent
+    .put('/api/admin/settings')
+    .send({ allPassword: '111111', forbiddenWords: ['保留词', '删除词', '另一个词'] })
+    .expect(200);
+
+  await request(app)
+    .delete('/api/admin/forbidden-words')
+    .send({ word: '删除词' })
+    .expect(401);
+
+  const response = await agent
+    .delete('/api/admin/forbidden-words')
+    .send({ word: '删除词' })
+    .expect(200);
+
+  assert.equal(response.body.removed, 1);
+  assert.equal(response.body.total, 2);
+
+  const page = await agent.get('/api/admin/forbidden-words?limit=10').expect(200);
+  assert.deepEqual(page.body.words, ['保留词', '另一个词']);
+  assert.equal(page.body.total, 2);
+  assert.equal(page.body.allTotal, 2);
+
+  const rules = await request(app).get('/api/upload-rules').expect(200);
+  assert.deepEqual(rules.body.forbiddenWords, ['保留词', '另一个词']);
+
+  await agent
+    .delete('/api/admin/forbidden-words')
+    .send({ word: '不存在' })
+    .expect(404);
 });
 
 test('admin can create classes and public APIs expose class buttons', async () => {

@@ -988,6 +988,39 @@ function createApp(options = {}) {
     }
   });
 
+  app.delete('/api/admin/forbidden-words', requireAdmin, async (req, res, next) => {
+    try {
+      const word = String(req.body.word || '').trim();
+      if (!word) {
+        return res.status(400).json({ error: '请选择要删除的违禁词' });
+      }
+
+      const previousSettings = await readSettings(settingsFile);
+      const previousWords = Array.isArray(previousSettings.forbiddenWords) ? previousSettings.forbiddenWords : [];
+      const normalizedWord = word.toLocaleLowerCase();
+      const forbiddenWords = previousWords.filter((item) => String(item).toLocaleLowerCase() !== normalizedWord);
+      const removed = previousWords.length - forbiddenWords.length;
+
+      if (!removed) {
+        return res.status(404).json({ error: '违禁词不存在' });
+      }
+
+      const settings = {
+        ...previousSettings,
+        forbiddenWords,
+        updatedAt: new Date().toISOString()
+      };
+
+      await writeSettings(settingsFile, settings);
+      return res.json({
+        removed,
+        total: forbiddenWords.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get('/api/upload-rules', async (req, res, next) => {
     try {
       const settings = await readSettings(settingsFile);
