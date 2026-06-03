@@ -198,4 +198,426 @@ h1 {
 }
 @keyframes shakeRight {
   0%, 100% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate
+  50% { transform: rotate(25deg) scale(1.15); }
+}
+
+/* 动作按钮 */
+.choices {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.choice-btn {
+  width: 85px;
+  height: 85px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  font-size: 38px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.choice-btn::before {
+  content: '';
+  position: absolute;
+  top:0; left:0; width: 100%; height: 100%;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0;
+  z-index: -1;
+  transition: all 0.3s;
+  transform: scale(0.8);
+}
+
+.choice-btn:hover {
+  transform: translateY(-8px) scale(1.1);
+  border-color: var(--primary);
+  box-shadow: 0 15px 25px -5px var(--primary-glow);
+}
+
+.choice-btn:hover::before {
+  opacity: 0.15;
+  transform: scale(1);
+}
+
+.choice-btn:active {
+  transform: translateY(-2px) scale(0.95);
+}
+
+/* 结果横幅 */
+.result {
+  min-height: 65px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+  transition: all 0.3s;
+}
+
+.result.win {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+.result.lose {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.result.tie {
+  background: rgba(100, 116, 139, 0.15);
+  color: #cbd5e1;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+/* 总结 */
+.total-10 {
+  font-size: 14px;
+  color: #38bdf8;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+/* 历史对战记录 */
+.history {
+  text-align: left;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 15px;
+  border-radius: 16px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.02);
+}
+
+.history Strong { color: #cbd5e1; }
+.history-item {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 滚动条自定义 */
+.history::-webkit-scrollbar { width: 6px; }
+.history::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+/* 底部操作按钮 */
+.btm-btns {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 25px;
+}
+
+.btn {
+  padding: 12px 28px;
+  border-radius: 14px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-restart {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+}
+
+.btn-reset {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+.btn-restart:hover { box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6); }
+.btn-reset:hover { background: rgba(255,255,255,0.05); color: #fff;}
+
+@media (max-width: 500px) {
+  .choices { gap: 12px; }
+  .choice-btn { width: 72px; height: 72px; font-size: 32px; }
+  .stage-card .icon { font-size: 38px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>⚔️ 猜拳天梯赛</h1>
+  <div class="desc">瞬息万变的对决！你能打破最高的连胜纪录吗？</div>
+
+  <div class="score-row">
+    <div class="score-box user-box">
+      <h3>PLAYER (你)</h3>
+      <div class="num" id="userScore">0</div>
+    </div>
+    <div class="score-box cpu-box">
+      <h3>COMPUTER (电脑)</h3>
+      <div class="num" id="cpuScore">0</div>
+    </div>
+  </div>
+
+  <div class="streak" id="streak">当前连胜：0 🔥</div>
+
+  <div class="stage">
+    <div class="stage-card">
+      <div class="icon" id="userStageIcon">❓</div>
+      <div class="label">你的选择</div>
+    </div>
+    <div class="vs-text">VS</div>
+    <div class="stage-card">
+      <div class="icon" id="cpuStageIcon">❓</div>
+      <div class="label">电脑选择</div>
+    </div>
+  </div>
+
+  <div class="choices">
+    <button class="choice-btn" data-choice="0">✊</button>
+    <button class="choice-btn" data-choice="1">✌️</button>
+    <button class="choice-btn" data-choice="2">🖐️</button>
+  </div>
+
+  <div class="result" id="result">请选择手势，开启博弈！</div>
+  <div class="total-10" id="total10"></div>
+  <div class="history" id="history"><strong>最近对战：</strong><div id="historyList">暂无对战记录</div></div>
+
+  <div class="btm-btns">
+    <button class="btn btn-restart" id="restartBtn">新一轮开局</button>
+    <button class="btn btn-reset" id="resetAllBtn">数据全清空</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ICONS = ['✊', '✌️', '🖐️'];
+  const NAMES = ['✊ 石头','✌️ 剪刀','🖐️ 布'];
+  const MAX_HISTORY = 5;
+
+  // DOM 缓存
+  const userScoreEl = document.getElementById('userScore');
+  const cpuScoreEl = document.getElementById('cpuScore');
+  const streakEl = document.getElementById('streak');
+  const resultEl = document.getElementById('result');
+  const historyList = document.getElementById('historyList');
+  const total10El = document.getElementById('total10');
+  const choiceBtns = document.querySelectorAll('.choice-btn');
+  const restartBtn = document.getElementById('restartBtn');
+  const resetAllBtn = document.getElementById('resetAllBtn');
+  
+  // 新增 PK 舞台 DOM
+  const userStageIcon = document.getElementById('userStageIcon');
+  const cpuStageIcon = document.getElementById('cpuStageIcon');
+
+  // 游戏状态
+  let userScore = 0;
+  let cpuScore = 0;
+  let winStreak = 0;
+  let totalRound = 0;
+  let historyArr = [];
+  let isPlaying = false; // 防止动画期间连点
+
+  function determineWinner(player, ai) {
+    if (player === ai) return 'tie';
+    const winMap = { 0: 1, 1: 2, 2: 0 };
+    return winMap[player] === ai ? 'win' : 'lose';
+  }
+
+  // 炫酷的数字变动特效
+  function animateScore(element, newValue) {
+    element.textContent = newValue;
+    element.classList.add('bump');
+    setTimeout(() => element.classList.remove('bump'), 200);
+  }
+
+  // 粒子烟花特效
+  function triggerCelebration() {
+    confetti({
+      particleCount: 80,
+      spread: 60,
+      origin: { y: 0.75 },
+      colors: ['#6366f1', '#ff007f', '#10b981']
+    });
+  }
+
+  function triggerStreakCelebration() {
+    let duration = 1 * 1000;
+    let end = Date.now() + duration;
+
+    (function frame() {
+      confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 } });
+      confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 } });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    }());
+  }
+
+  function updateUI(resultText, resultClass) {
+    // 处理连胜样式
+    streakEl.textContent = winStreak >= 3 ? `火力全开：${winStreak} 🚀🔥` : `当前连胜：${winStreak} 🔥`;
+    if (winStreak >= 3) {
+      streakEl.classList.add('high');
+    } else {
+      streakEl.classList.remove('high');
+    }
+
+    resultEl.textContent = resultText;
+    resultEl.className = 'result ' + resultClass;
+  }
+
+  function addHistory(resultText, resultClass) {
+    let colorStyle = '';
+    if(resultClass === 'win') colorStyle = 'color:#34d399;';
+    if(resultClass === 'lose') colorStyle = 'color:#f87171;';
+    
+    const itemHtml = `<div class="history-item" style="${colorStyle}">• ${resultText}</div>`;
+    historyArr.unshift(itemHtml);
+    
+    if (historyArr.length > MAX_HISTORY) historyArr.pop();
+    historyList.innerHTML = historyArr.join('');
+  }
+
+  function checkTotal() {
+    if (totalRound >= 10) {
+      let final = '';
+      if (userScore > cpuScore) {
+        final = '🏆 天秀！你击败了人工智能！';
+        triggerStreakCelebration();
+      } else if (userScore < cpuScore) {
+        final = '🤖 绝望！人类被电脑无情碾压！';
+      } else {
+        final = '⚖️ 势均力敌，竟然平分秋色！';
+      }
+      total10El.innerHTML = `已满 10 局总结 ｜ ${final}`;
+    } else {
+      total10El.textContent = '';
+    }
+  }
+
+  function play(playerChoice) {
+    if (isPlaying) return;
+    isPlaying = true;
+
+    // 1. 产生对决动画：先把舞台重置为“预备石头”摇晃
+    userStageIcon.textContent = '✊';
+    cpuStageIcon.textContent = '✊';
+    userStageIcon.classList.add('animate-user');
+    cpuStageIcon.classList.add('animate-cpu');
+    resultEl.textContent = ' 意念博弈中...';
+    resultEl.className = 'result';
+
+    // 2. 动画结束后（800ms）公布真正结果
+    setTimeout(() => {
+      userStageIcon.classList.remove('animate-user');
+      cpuStageIcon.classList.remove('animate-cpu');
+
+      const aiChoice = Math.floor(Math.random() * 3);
+      totalRound++;
+
+      // 更换成最终出的拳
+      userStageIcon.textContent = ICONS[playerChoice];
+      cpuStageIcon.textContent = ICONS[aiChoice];
+
+      const result = determineWinner(playerChoice, aiChoice);
+      let resultText = '';
+      let resultClass = '';
+
+      switch (result) {
+        case 'tie':
+          resultText = `平局！双方都出了 ${NAMES[playerChoice]}`;
+          resultClass = 'tie';
+          break;
+        case 'win':
+          userScore++;
+          winStreak++;
+          resultText = `🎉 胜利！你的 ${NAMES[playerChoice]} 击碎了 电脑的 ${NAMES[aiChoice]}`;
+          resultClass = 'win';
+          animateScore(userScoreEl, userScore);
+          // 触发获胜特效
+          if (winStreak >= 3) {
+            triggerStreakCelebration();
+          } else {
+            triggerCelebration();
+          }
+          break;
+        case 'lose':
+          cpuScore++;
+          winStreak = 0;
+          resultText = `😥 惜败！电脑的 ${NAMES[aiChoice]} 拿捏了 你的 ${NAMES[playerChoice]}`;
+          resultClass = 'lose';
+          animateScore(cpuScoreEl, cpuScore);
+          break;
+      }
+
+      updateUI(resultText, resultClass);
+      addHistory(resultText, resultClass);
+      checkTotal();
+      
+      isPlaying = false;
+    }, 800);
+  }
+
+  function restart() {
+    userScore = 0;
+    cpuScore = 0;
+    winStreak = 0;
+    totalRound = 0;
+    userScoreEl.textContent = 0;
+    cpuScoreEl.textContent = 0;
+    streakEl.textContent = '当前连胜：0 🔥';
+    streakEl.classList.remove('high');
+    resultEl.textContent = '请选择手势，开启博弈！';
+    resultEl.className = 'result';
+    total10El.textContent = '';
+    userStageIcon.textContent = '❓';
+    cpuStageIcon.textContent = '❓';
+  }
+
+  function resetAll() {
+    restart();
+    historyArr = [];
+    historyList.innerHTML = '暂无对战记录';
+  }
+
+  function bindEvents() {
+    choiceBtns.forEach(btn => {
+      btn.addEventListener('click', e => {
+        const choice = parseInt(e.currentTarget.getAttribute('data-choice'), 10);
+        if (choice >= 0 && choice <= 2) play(choice);
+      });
+    });
+    restartBtn.addEventListener('click', restart);
+    resetAllBtn.addEventListener('click', resetAll);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindEvents);
+  } else {
+    bindEvents();
+  }
+})();
+</script>
+</body>
+</html>
