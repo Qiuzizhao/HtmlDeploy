@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>森林鼠标瞄准对战</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{overflow:hidden;font-family:Arial}
+        #game{
+            width:100vw;height:100vh;
+            position:relative;
+            overflow:hidden;
+            cursor:none;
+        }
+        /*森林地面*/
+        .forest{
+            width:100%;height:75%;
+            background:linear-gradient(#87CEEB 0%,#90EE90 65%,#228B22 100%);
+            position:absolute;bottom:0;
+        }
+        .tree{
+            position:absolute;bottom:20%;
+            width:40px;height:120px;
+            background:#654321;border-radius:5px;
+        }
+        .tree::after{
+            content:"";position:absolute;top:-60px;left:-30px;
+            width:100px;height:80px;background:#006400;border-radius:50%;
+        }
+        /*小人样式*/
+        .player{
+            width:36px;height:36px;background:#32CD32;border-radius:50%;
+            position:absolute;z-index:9;
+            border:2px solid #006400;
+        }
+        .enemy{
+            width:36px;height:36px;background:#ff4444;border-radius:50%;
+            position:absolute;z-index:9;
+            border:2px solid #990000;
+        }
+        /*白色子弹*/
+        .bullet{
+            width:12px;height:12px;background:#fff;border-radius:50%;
+            box-shadow:0 0 6px #ffffff;
+            position:absolute;
+        }
+        /*天气层*/
+        .weather{
+            width:100%;height:100%;position:absolute;top:0;left:0;pointer-events:none;z-index:100;
+        }
+        .rain{
+            position:absolute;background:#aaddff;width:2px;height:20px;opacity:0.6;
+        }
+        .snow{
+            position:absolute;background:#fff;width:6px;height:6px;border-radius:50%;opacity:0.9;
+        }
+        /*UI文字*/
+        .ui{
+            position:absolute;top:20px;left:20px;font-size:22px;color:#222;
+            background:rgba(255,255,255,0.7);padding:8px 16px;border-radius:8px;z-index:999;
+        }
+    </style>
+</head>
+<body>
+<div id="game">
+    <div class="ui">敌人血量：<span id="hpNum">20</span>/20｜WASD移动｜O键发射(瞄准鼠标位置)</div>
+    <div class="forest" id="forest"></div>
+    <div class="weather" id="weatherBox"></div>
+    <div class="player" id="player"></div>
+</div>
+
+<script>
+// 全局配置
+const game = document.getElementById('game')
+const player = document.getElementById('player')
+const forest = document.getElementById('forest')
+const weatherBox = document.getElementById('weatherBox')
+const hpText = document.getElementById('hpNum')
+let enemyMaxHp = 20
+let enemyHp = enemyMaxHp
+
+let playerX = 100, playerY = innerHeight*0.6
+let speed = 5
+let bullets = []
+let enemy = null
+let enemyX = 0, enemyY = 0, enemySpeed = 2
+let key = {}
+let weatherType = ['sun','rain','cloud','snow']
+let nowWeather = ''
+// 鼠标坐标
+let mouseX = 0, mouseY = 0
+
+// 生成森林树木
+for(let i=0;i<12;i++){
+    let tree = document.createElement('div')
+    tree.className = 'tree'
+    tree.style.left = Math.random()*95 + '%'
+    forest.appendChild(tree)
+}
+
+// 玩家初始化位置
+player.style.left = playerX+'px'
+player.style.top = playerY+'px'
+
+// 鼠标监听
+document.addEventListener('mousemove',e=>{
+    mouseX = e.clientX
+    mouseY = e.clientY
+})
+
+// 随机切换天气
+function changeWeather(){
+    weatherBox.innerHTML = ''
+    nowWeather = weatherType[Math.floor(Math.random()*weatherType.length)]
+    if(nowWeather === 'rain'){
+        for(let i=0;i<220;i++) createRain()
+    }else if(nowWeather === 'snow'){
+        for(let i=0;i<160;i++) createSnow()
+    }else if(nowWeather === 'cloud'){
+        game.style.background = '#b8c8d8'
+    }else{
+        game.style.background = ''
+    }
+}
+// 创建雨滴
+function createRain(){
+    let r = document.createElement('div')
+    r.className = 'rain'
+    r.style.left = Math.random()*100+'%'
+    r.style.top = Math.random()*100+'%'
+    weatherBox.appendChild(r)
+    function drop(){
+        let top = parseFloat(r.style.top)
+        top+=3
+        if(top>100) top=-5
+        r.style.top = top+'%'
+        requestAnimationFrame(drop)
+    }
+    drop()
+}
+// 创建雪花
+function createSnow(){
+    let s = document.createElement('div')
+    s.className = 'snow'
+    s.style.left = Math.random()*100+'%'
+    s.style.top = Math.random()*-20+'%'
+    weatherBox.appendChild(s)
+    function fall(){
+        let top = parseFloat(s.style.top)
+        let left = parseFloat(s.style.left)
+        top+=1.2
+        left += (Math.random()-0.5)*0.3
+        if(top>100){top=-5;left=Math.random()*100}
+        s.style.top = top+'%'
+        s.style.left = left+'%'
+        requestAnimationFrame(fall)
+    }
+    fall()
+}
+// 定时随机换天气
+setInterval(changeWeather,12000)
+changeWeather()
+
+// 生成敌人
+function createEnemy(){
+    if(enemy) enemy.remove()
+    enemy = document.createElement('div')
+    enemy.className = 'enemy'
+    enemyX = Math.random()*(innerWidth-80)+40
+    enemyY = Math.random()*(innerHeight*0.5)+innerHeight*0.3
+    enemyHp = enemyMaxHp
+    hpText.innerText = enemyHp
+    enemy.style.left = enemyX+'px'
+    enemy.style.top = enemyY+'px'
+    game.appendChild(enemy)
+}
+createEnemy()
+
+// 键盘监听
+window.addEventListener('keydown',e=>{
+    key[e.code]=true
+    // O键发射子弹，瞄准鼠标位置
+    if(e.code==='KeyO') shootBullet()
+})
+window.addEventListener('keyup',e=>key[e.code]=false)
+
+// 发射子弹：飞向鼠标坐标
+function shootBullet(){
+    let b = document.createElement('div')
+    b.className = 'bullet'
+    let startX = playerX+18
+    let startY = playerY+18
+    b.style.left = startX+'px'
+    b.style.top = startY+'px'
+    game.appendChild(b)
+    // 子弹朝向鼠标
+    let dx = mouseX - startX
+    let dy = mouseY - startY
+    let len = Math.sqrt(dx*dx+dy*dy)
+    if(len === 0) return
+    let vx = dx/len*8
+    let vy = dy/len*8
+    bullets.push({dom:b,x:startX,y:startY,vx,vy})
+}
+
+// 游戏主循环
+function loop(){
+    // 玩家移动WASD
+    if(key['KeyW']&&playerY>0) playerY -= speed
+    if(key['KeyS']&&playerY<innerHeight-50) playerY += speed
+    if(key['KeyA']&&playerX>0) playerX -= speed
+    if(key['KeyD']&&playerX<innerWidth-50) playerX += speed
+    player.style.left = playerX+'px'
+    player.style.top = playerY+'px'
+
+    // 敌人AI随机移动
+    let ran = Math.random()
+    if(ran<0.02){
+        enemyX += (Math.random()-0.5)*enemySpeed*25
+        enemyY += (Math.random()-0.5)*enemySpeed*25
+        enemyX = Math.max(10,Math.min(innerWidth-50,enemyX))
+        enemyY = Math.max(innerHeight*0.2,Math.min(innerHeight-60,enemyY))
+    }
+    enemy.style.left = enemyX+'px'
+    enemy.style.top = enemyY+'px'
+
+    // 子弹更新+碰撞检测
+    for(let i=bullets.length-1;i>=0;i--){
+        let bl = bullets[i]
+        bl.x += bl.vx
+        bl.y += bl.vy
+        bl.dom.style.left = bl.x+'px'
+        bl.dom.style.top = bl.y+'px'
+        // 出屏幕删除子弹
+        if(bl.x<0||bl.x>innerWidth||bl.y<0||bl.y>innerHeight){
+            bl.dom.remove()
+            bullets.splice(i,1)
+            continue
+        }
+        // 命中敌人判定
+        let dis = Math.hypot(bl.x-enemyX-18,bl.y-enemyY-18)
+        if(dis<28){
+            bl.dom.remove()
+            bullets.splice(i,1)
+            enemyHp -= 1
+            hpText.innerText = enemyHp
+            // 血量归零，击倒，生成新敌人
+            if(enemyHp <= 0){
+                createEnemy()
+            }
+        }
+    }
+
+    requestAnimationFrame(loop)
+}
+loop()
+</script>
+</body>
+</html>
