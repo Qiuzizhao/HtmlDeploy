@@ -686,8 +686,8 @@ function createApp(options = {}) {
     }, 0);
   }
 
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json({ limit: maxTotalBytes }));
+  app.use(express.urlencoded({ extended: false, limit: maxTotalBytes }));
 
   app.get('/admin.html', (req, res) => {
     if (!hasAdminAccess(req)) {
@@ -1176,6 +1176,69 @@ function createApp(options = {}) {
           next(error);
         }
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/sites/:id/code', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+      if (!site) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const indexPath = path.join(storageDir, id, 'index.html');
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).json({ error: '项目文件不存在' });
+      }
+
+      const htmlContent = await fsp.readFile(indexPath, 'utf8');
+      return res.json({
+        ...toPublicSite(site, await readClasses(classesFile), thumbnailDir),
+        htmlContent
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/sites/:id/code', requireAdmin, upload.single('file'), async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+      const htmlContent = String(req.body.htmlContent || '');
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((site) => site.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      if (file && !isHtmlFile(file)) {
+        return res.status(400).json({ error: '当前版本只支持替换 HTML 文件' });
+      }
+
+      if (!file && !htmlContent.trim()) {
+        return res.status(400).json({ error: '代码不能为空' });
+      }
+
+      const projectDir = path.join(storageDir, id);
+      await fsp.mkdir(projectDir, { recursive: true });
+      await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
+
+      const site = {
+        ...sites[siteIndex],
+        updatedAt: new Date().toISOString()
+      };
+      sites[siteIndex] = site;
+      await writeSites(dataFile, sites);
+      generateThumbnailLater(id, getRequestOrigin(req));
+
+      const classes = await readClasses(classesFile);
+      return res.json(toPublicSite(site, classes, thumbnailDir));
     } catch (error) {
       next(error);
     }

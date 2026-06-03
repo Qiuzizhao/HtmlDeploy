@@ -516,6 +516,114 @@
       color: var(--brand-dark);
     }
 
+    .code-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.58);
+    }
+
+    .code-overlay.is-open {
+      display: flex;
+    }
+
+    .code-window {
+      width: min(1120px, calc(100vw - 32px));
+      height: min(84vh, 860px);
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+      overflow: hidden;
+    }
+
+    .code-window-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    .code-title-wrap {
+      min-width: 0;
+    }
+
+    .code-title {
+      margin: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .code-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 12px;
+    }
+
+    .code-message {
+      min-height: 34px;
+      padding: 8px 18px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .code-message.is-error {
+      color: var(--danger);
+    }
+
+    .code-editor {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      resize: none;
+    }
+
+    .code-editor:focus {
+      border-color: transparent;
+      outline-offset: -3px;
+    }
+
+    .code-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+      border-top: 1px solid var(--line);
+      background: #fbfdff;
+    }
+
+    .code-actions-left,
+    .code-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     @media (max-width: 860px) {
       .admin-shell {
         grid-template-columns: 1fr;
@@ -577,6 +685,21 @@
       .toolbar-left input,
       .toolbar-left select {
         width: 100%;
+      }
+
+      .code-overlay {
+        padding: 10px;
+      }
+
+      .code-window {
+        width: calc(100vw - 20px);
+        height: calc(100vh - 20px);
+      }
+
+      .code-window-head,
+      .code-actions {
+        align-items: stretch;
+        flex-direction: column;
       }
     }
   </style>
@@ -726,6 +849,29 @@
     </main>
   </div>
 
+  <div class="code-overlay" id="codeOverlay" aria-hidden="true">
+    <section class="code-window" role="dialog" aria-modal="true" aria-labelledby="codeWindowTitle">
+      <header class="code-window-head">
+        <div class="code-title-wrap">
+          <h2 class="code-title" id="codeWindowTitle">项目代码</h2>
+          <div class="code-meta" id="codeWindowMeta"></div>
+        </div>
+        <button class="button" id="closeCodeWindow" type="button">关闭</button>
+      </header>
+      <div class="code-message" id="codeMessage"></div>
+      <textarea class="code-editor" id="codeEditor" spellcheck="false" aria-label="项目 HTML 代码"></textarea>
+      <footer class="code-actions">
+        <div class="code-actions-left">
+          <input id="codeFileInput" type="file" accept=".html,text/html">
+          <button class="button" id="reloadCodeButton" type="button">重新加载</button>
+        </div>
+        <div class="code-actions-right">
+          <button class="primary-button" id="saveCodeButton" type="button">保存代码</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
   <script>
     const createForm = document.getElementById('createForm');
     const createTitle = document.getElementById('createTitle');
@@ -754,10 +900,19 @@
     const activeViewTitle = document.getElementById('activeViewTitle');
     const projectCount = document.getElementById('projectCount');
     const classCount = document.getElementById('classCount');
+    const codeOverlay = document.getElementById('codeOverlay');
+    const codeWindowTitle = document.getElementById('codeWindowTitle');
+    const codeWindowMeta = document.getElementById('codeWindowMeta');
+    const codeMessage = document.getElementById('codeMessage');
+    const codeEditor = document.getElementById('codeEditor');
+    const codeFileInput = document.getElementById('codeFileInput');
+    const reloadCodeButton = document.getElementById('reloadCodeButton');
+    const saveCodeButton = document.getElementById('saveCodeButton');
 
     let sites = [];
     let classes = [];
     let settings = {};
+    let currentCodeSite = null;
     const viewTitles = {
       projects: '项目管理',
       create: '新增项目',
@@ -898,6 +1053,96 @@
       opened.opener = null;
       opened.focus();
       return true;
+    }
+
+    function setCodeMessage(text, isError = false) {
+      codeMessage.textContent = text;
+      codeMessage.classList.toggle('is-error', isError);
+    }
+
+    function setCodeBusy(isBusy) {
+      codeEditor.disabled = isBusy;
+      saveCodeButton.disabled = isBusy;
+      reloadCodeButton.disabled = isBusy;
+      codeFileInput.disabled = isBusy;
+    }
+
+    function closeCodeWindow() {
+      codeOverlay.classList.remove('is-open');
+      codeOverlay.setAttribute('aria-hidden', 'true');
+      currentCodeSite = null;
+      codeEditor.value = '';
+      codeFileInput.value = '';
+      setCodeMessage('');
+    }
+
+    async function loadSiteCode(site) {
+      setCodeBusy(true);
+      setCodeMessage('正在加载代码...');
+      codeEditor.value = '';
+      codeFileInput.value = '';
+
+      const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/code`);
+      setCodeBusy(false);
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '加载代码失败' }));
+        setCodeMessage(result.error || '加载代码失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      codeEditor.value = result.htmlContent || '';
+      setCodeMessage('代码已加载，可以直接编辑后保存。');
+      codeEditor.focus();
+    }
+
+    async function openCodeWindow(site) {
+      currentCodeSite = site;
+      codeWindowTitle.textContent = `代码：${site.title}`;
+      codeWindowMeta.textContent = `${site.number || site.id} · ${site.url}`;
+      codeOverlay.classList.add('is-open');
+      codeOverlay.setAttribute('aria-hidden', 'false');
+      await loadSiteCode(site);
+    }
+
+    async function saveCurrentCode() {
+      if (!currentCodeSite) {
+        return;
+      }
+
+      const htmlContent = codeEditor.value;
+      if (!htmlContent.trim()) {
+        setCodeMessage('代码不能为空', true);
+        return;
+      }
+
+      setCodeBusy(true);
+      setCodeMessage('正在保存代码...');
+      const formData = new FormData();
+      formData.append('htmlContent', htmlContent);
+
+      const response = await fetch(`/api/sites/${encodeURIComponent(currentCodeSite.id)}/code`, {
+        method: 'PUT',
+        body: formData
+      });
+      setCodeBusy(false);
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存代码失败' }));
+        setCodeMessage(result.error || '保存代码失败', true);
+        return;
+      }
+
+      const updatedSite = await response.json();
+      const index = sites.findIndex((site) => site.id === updatedSite.id);
+      if (index !== -1) {
+        sites[index] = updatedSite;
+        currentCodeSite = updatedSite;
+      }
+      renderRows();
+      setCodeMessage('代码已保存，封面会在后台自动刷新。');
+      setMessage(listMessage, `「${updatedSite.title}」代码已保存`);
     }
 
     function renderClassList() {
@@ -1170,6 +1415,12 @@
           }
         });
 
+        const codeButton = document.createElement('button');
+        codeButton.className = 'button';
+        codeButton.type = 'button';
+        codeButton.textContent = '代码';
+        codeButton.addEventListener('click', () => openCodeWindow(site));
+
         const downloadLink = document.createElement('a');
         downloadLink.className = 'button';
         downloadLink.href = `/api/sites/${encodeURIComponent(site.id)}/download`;
@@ -1188,7 +1439,7 @@
         deleteButton.textContent = '删除';
         deleteButton.addEventListener('click', () => deleteSite(site));
 
-        actions.append(saveButton, previewLink, downloadLink, thumbnailButton, deleteButton);
+        actions.append(saveButton, previewLink, codeButton, downloadLink, thumbnailButton, deleteButton);
         actionCell.append(actions);
 
         row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, fileCell, actionCell);
@@ -1616,6 +1867,34 @@
       await loadSites();
     });
     generateThumbnailsButton.addEventListener('click', generateAllThumbnails);
+    document.getElementById('closeCodeWindow').addEventListener('click', closeCodeWindow);
+    reloadCodeButton.addEventListener('click', () => {
+      if (currentCodeSite) {
+        loadSiteCode(currentCodeSite);
+      }
+    });
+    saveCodeButton.addEventListener('click', saveCurrentCode);
+    codeFileInput.addEventListener('change', async () => {
+      const file = codeFileInput.files && codeFileInput.files[0];
+      if (!file) {
+        return;
+      }
+
+      if (!isHtmlFile(file)) {
+        setCodeMessage('请选择 HTML 文件', true);
+        codeFileInput.value = '';
+        return;
+      }
+
+      codeEditor.value = await file.text();
+      setCodeMessage(`已读取「${file.name}」，保存后会替换当前项目代码。`);
+      codeEditor.focus();
+    });
+    codeOverlay.addEventListener('click', (event) => {
+      if (event.target === codeOverlay) {
+        closeCodeWindow();
+      }
+    });
 
     async function boot() {
       await loadSettings();
