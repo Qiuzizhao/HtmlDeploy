@@ -1,15 +1,16 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>节奏音游</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
         }
 
         body {
@@ -21,17 +22,23 @@
             justify-content: center;
             min-height: 100vh;
             gap: 16px;
+            padding: 16px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .title {
             font-size: 26px;
             font-weight: 600;
             color: #e5d9f6;
+            user-select: none;
         }
 
         .score {
             font-size: 18px;
             color: #c4b5fd;
+            user-select: none;
+            min-height: 28px;
         }
 
         .game {
@@ -42,6 +49,7 @@
             position: relative;
             overflow: hidden;
             border: 2px solid #7c3aed;
+            flex-shrink: 0;
         }
 
         .line {
@@ -52,6 +60,7 @@
             height: 3px;
             background: linear-gradient(90deg, #7c3aed, #ec4899);
             z-index: 10;
+            pointer-events: none;
         }
 
         .lanes {
@@ -66,6 +75,8 @@
         .lane {
             flex: 1;
             border-top: 1px solid #3f3f74;
+            cursor: pointer;
+            position: relative;
         }
 
         .note {
@@ -76,6 +87,7 @@
             border-radius: 9px;
             left: 15%;
             will-change: transform;
+            pointer-events: none;
         }
 
         .effect {
@@ -83,14 +95,23 @@
             font-size: 20px;
             font-weight: bold;
             color: white;
+            left: 50%;
+            top: 50%;
             transform: translate(-50%, -50%);
-            animation: fly 0.5s forwards;
             pointer-events: none;
+            z-index: 20;
+            animation: effectFly 0.5s ease-out forwards;
         }
 
-        @keyframes fly {
-            0% { opacity: 1; transform: translate(-50%, -50%); }
-            100% { opacity: 0; transform: translate(-50%, -80px); }
+        @keyframes effectFly {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -80px);
+            }
         }
 
         #start {
@@ -101,10 +122,19 @@
             color: white;
             font-size: 16px;
             cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s, background 0.2s;
+            touch-action: manipulation;
         }
 
         #start:active {
             transform: scale(0.96);
+        }
+
+        #start:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
     </style>
 </head>
@@ -112,116 +142,272 @@
     <div class="title">🎵 节奏音游</div>
     <div class="score">分数: <span id="score">0</span></div>
 
-    <div class="game">
+    <div class="game" id="gameContainer">
         <div class="line"></div>
         <div class="lanes">
-            <div class="lane"></div>
-            <div class="lane"></div>
-            <div class="lane"></div>
-            <div class="lane"></div>
+            <div class="lane" data-lane="0"></div>
+            <div class="lane" data-lane="1"></div>
+            <div class="lane" data-lane="2"></div>
+            <div class="lane" data-lane="3"></div>
         </div>
     </div>
 
     <button id="start">开始游戏</button>
 
     <script>
-        const scoreEl = document.getElementById('score');
-        const game = document.querySelector('.game');
-        const lanes = document.querySelectorAll('.lane');
-        const startBtn = document.getElementById('start');
+        (function() {
+            "use strict";
 
-        let score = 0;
-        let running = false;
-        const notes = [];
-        const speed = 6;
+            // ---------- DOM 引用 ----------
+            const scoreEl = document.getElementById('score');
+            const gameEl = document.getElementById('gameContainer');
+            const laneEls = document.querySelectorAll('.lane');
+            const startBtn = document.getElementById('start');
 
-        // 谱面
-        const map = [
-            { lane:0, t:500 }, { lane:2, t:800 },
-            { lane:1, t:1100 }, { lane:3, t:1400 },
-            { lane:0, t:1700 }, { lane:1, t:2000 },
-            { lane:2, t:2300 }, { lane:3, t:2600 },
-            { lane:0, t:2900 }, { lane:1, t:3200 },
-            { lane:2, t:3500 }, { lane:3, t:3800 },
-        ];
+            // ---------- 常量 ----------
+            const SPEED = 360; // 像素/秒 (原 6px/帧 ≈ 360px/s @60fps)
+            const LANE_COUNT = 4;
+            const GAME_DURATION_MS = 5000;
+            const JUDGE_MIN = 350;
+            const JUDGE_MAX = 420;
+            const REMOVE_Y = 400;
+            const NOTE_INIT_Y = -20;
+            const SCORE_PER_HIT = 100;
+            const MAX_DELTA_MS = 50; // 最大 delta 限制，防止卡顿跳跃
 
-        // 主循环
-        function loop() {
-            if (!running) return;
-            updateNotes();
-            requestAnimationFrame(loop);
-        }
+            // ---------- 状态 ----------
+            let score = 0;
+            let running = false;
+            let rafId = null;
+            let timers = [];
+            const notes = [];
 
-        // 创建音符
-        function spawn(laneIndex) {
-            const note = document.createElement('div');
-            note.classList.add('note');
-            lanes[laneIndex].appendChild(note);
-            notes.push({ dom: note, lane: laneIndex, y: -20 });
-        }
+            // ---------- 谱面 ----------
+            const MAP = [
+                { lane: 0, t: 500 },
+                { lane: 2, t: 800 },
+                { lane: 1, t: 1100 },
+                { lane: 3, t: 1400 },
+                { lane: 0, t: 1700 },
+                { lane: 1, t: 2000 },
+                { lane: 2, t: 2300 },
+                { lane: 3, t: 2600 },
+                { lane: 0, t: 2900 },
+                { lane: 1, t: 3200 },
+                { lane: 2, t: 3500 },
+                { lane: 3, t: 3800 },
+            ];
 
-        // 更新所有音符
-        function updateNotes() {
-            for (let i = notes.length - 1; i >= 0; i--) {
-                const n = notes[i];
-                n.y += speed;
-                n.dom.style.transform = `translateY(${n.y}px)`;
-
-                if (n.y > 400) {
-                    n.dom.remove();
-                    notes.splice(i, 1);
+            // ---------- 工具函数 ----------
+            function safeSplice(arr, item) {
+                var idx = arr.indexOf(item);
+                if (idx !== -1) {
+                    arr.splice(idx, 1);
                 }
             }
-        }
 
-        // 点击判定
-        lanes.forEach((lane, i) => {
-            lane.addEventListener('click', () => {
+            function clearTimers() {
+                timers.forEach(function(t) { clearTimeout(t); });
+                timers = [];
+            }
+
+            // ---------- 特效 ----------
+            function showEffect(text, laneIndex, color) {
+                var e = document.createElement('div');
+                e.className = 'effect';
+                e.textContent = text;
+                e.style.color = color;
+
+                // 计算轨道中心相对于 game 容器的百分比位置
+                var laneWidth = 100 / LANE_COUNT;
+                var leftPercent = laneIndex * laneWidth + laneWidth / 2;
+                e.style.left = leftPercent + '%';
+                e.style.top = '380px'; // 轨道上方约 40px (420 - 40)
+
+                gameEl.appendChild(e);
+                var timer = setTimeout(function() {
+                    if (e.parentNode) e.remove();
+                }, 500);
+                timers.push(timer);
+            }
+
+            // ---------- 音符管理 ----------
+            function spawn(laneIndex) {
+                var lane = laneEls[laneIndex];
+                if (!lane) return;
+                var note = document.createElement('div');
+                note.className = 'note';
+                lane.appendChild(note);
+                notes.push({
+                    dom: note,
+                    lane: laneIndex,
+                    y: NOTE_INIT_Y
+                });
+            }
+
+            function removeNote(noteObj) {
+                if (noteObj.dom && noteObj.dom.parentNode) {
+                    noteObj.dom.remove();
+                }
+                safeSplice(notes, noteObj);
+            }
+
+            function clearAllNotes() {
+                for (var i = notes.length - 1; i >= 0; i--) {
+                    var n = notes[i];
+                    if (n.dom && n.dom.parentNode) n.dom.remove();
+                }
+                notes.length = 0;
+            }
+
+            // ---------- 更新逻辑 ----------
+            function updateNotes(deltaSec) {
+                var move = SPEED * deltaSec;
+                for (var i = notes.length - 1; i >= 0; i--) {
+                    var n = notes[i];
+                    n.y += move;
+                    n.dom.style.transform = 'translateY(' + n.y + 'px)';
+
+                    if (n.y > REMOVE_Y) {
+                        removeNote(n);
+                    }
+                }
+            }
+
+            // ---------- 判定 ----------
+            function judge(laneIndex) {
                 if (!running) return;
 
-                const hit = notes.find(n => 
-                    n.lane === i && n.y > 350 && n.y < 420
-                );
+                var hit = null;
+                // 找该轨道上最接近判定区间的音符
+                for (var i = 0; i < notes.length; i++) {
+                    var n = notes[i];
+                    if (n.lane === laneIndex && n.y > JUDGE_MIN && n.y < JUDGE_MAX) {
+                        if (!hit || n.y < hit.y) {
+                            hit = n;
+                        }
+                    }
+                }
 
                 if (hit) {
-                    score += 100;
-                    hit.dom.remove();
-                    notes.splice(notes.indexOf(hit), 1);
-                    showEffect("完美", i, "#fcd34d");
+                    score += SCORE_PER_HIT;
+                    removeNote(hit);
+                    showEffect('完美', laneIndex, '#fcd34d');
                 } else {
-                    showEffect("失误", i, "#ef4444");
+                    showEffect('失误', laneIndex, '#ef4444');
                 }
                 scoreEl.textContent = score;
-            });
-        });
+            }
 
-        // 特效
-        function showEffect(text, lane, color) {
-            const e = document.createElement('div');
-            e.classList.add('effect');
-            e.textContent = text;
-            e.style.color = color;
-            const box = lanes[lane].getBoundingClientRect();
-            e.style.left = box.left + box.width / 2 + 'px';
-            e.style.top = box.top + 40 + 'px';
-            document.body.appendChild(e);
-            setTimeout(() => e.remove(), 500);
-        }
+            // ---------- 游戏循环 ----------
+            var lastTime = 0;
 
-        // 开始
-        startBtn.onclick = () => {
-            if (running) return;
-            running = true;
-            score = 0;
-            scoreEl.textContent = 0;
-            requestAnimationFrame(loop);
+            function gameLoop(timestamp) {
+                if (!running) return;
+                if (lastTime === 0) {
+                    lastTime = timestamp;
+                    rafId = requestAnimationFrame(gameLoop);
+                    return;
+                }
+                var delta = timestamp - lastTime;
+                lastTime = timestamp;
+                if (delta > MAX_DELTA_MS) delta = MAX_DELTA_MS;
+                var deltaSec = delta / 1000;
 
-            map.forEach(n => setTimeout(() => spawn(n.lane), n.t));
-            setTimeout(() => {
+                updateNotes(deltaSec);
+                rafId = requestAnimationFrame(gameLoop);
+            }
+
+            // ---------- 重置游戏 ----------
+            function resetGame() {
                 running = false;
-                alert(`游戏结束！分数：${score}`);
-            }, 5000);
-        };
+                if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                clearTimers();
+                clearAllNotes();
+                score = 0;
+                scoreEl.textContent = '0';
+                lastTime = 0;
+                startBtn.disabled = false;
+                startBtn.textContent = '开始游戏';
+            }
+
+            // ---------- 结束游戏 ----------
+            function endGame() {
+                if (!running) return;
+                running = false;
+                if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                clearTimers();
+                clearAllNotes();
+                startBtn.disabled = false;
+                startBtn.textContent = '开始游戏';
+                alert('游戏结束！分数：' + score);
+            }
+
+            // ---------- 开始游戏 ----------
+            function startGame() {
+                if (running) return;
+                resetGame();
+
+                running = true;
+                startBtn.disabled = true;
+                startBtn.textContent = '进行中...';
+                score = 0;
+                scoreEl.textContent = '0';
+                lastTime = 0;
+
+                // 启动循环
+                rafId = requestAnimationFrame(gameLoop);
+
+                // 生成音符
+                MAP.forEach(function(item) {
+                    var timer = setTimeout(function() {
+                        if (running) spawn(item.lane);
+                    }, item.t);
+                    timers.push(timer);
+                });
+
+                // 定时结束
+                var endTimer = setTimeout(function() {
+                    endGame();
+                }, GAME_DURATION_MS);
+                timers.push(endTimer);
+            }
+
+            // ---------- 事件绑定 ----------
+            // 轨道点击/触摸 (使用 pointerdown 统一处理)
+            function onLanePointer(e) {
+                e.preventDefault();
+                var laneEl = e.currentTarget;
+                var idx = parseInt(laneEl.getAttribute('data-lane'), 10);
+                if (!isNaN(idx)) {
+                    judge(idx);
+                }
+            }
+
+            for (var i = 0; i < laneEls.length; i++) {
+                var lane = laneEls[i];
+                lane.setAttribute('data-lane', i);
+                lane.addEventListener('pointerdown', onLanePointer);
+            }
+
+            // 开始按钮
+            startBtn.addEventListener('click', startGame);
+
+            // ---------- 页面卸载时清理 ----------
+            window.addEventListener('beforeunload', function() {
+                running = false;
+                if (rafId) cancelAnimationFrame(rafId);
+                clearTimers();
+                clearAllNotes();
+            });
+
+        })();
     </script>
 </body>
 </html>
