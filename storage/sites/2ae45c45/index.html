@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D枪战网页游戏</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; }
+        canvas { display: block; }
+        
+        /* UI */
+        .ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 20px;
+            font-family: Arial, sans-serif;
+            text-shadow: 0 0 5px #000;
+            z-index: 999;
+        }
+        .crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            transform: translate(-50%, -50%);
+            background: red;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .tips {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">分数: <span id="score">0</span></div>
+    <div class="crosshair"></div>
+    <div class="tips">WASD移动 - 鼠标控制视角 - 左键射击</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script>
+        // 基础场景
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x87ceeb, 20, 100);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // 鼠标锁定
+        document.addEventListener('click', () => {
+            document.body.requestPointerLock();
+        });
+
+        // 变量
+        let score = 0;
+        const scoreElement = document.getElementById('score');
+        const movement = { forward: false, back: false, left: false, right: false };
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let mouseX = 0, mouseY = 0;
+        let playerY = 1.8;
+
+        // 灯光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(50, 100, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        // 地面
+        const groundGeometry = new THREE.PlaneGeometry(200, 200);
+        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x228b22 });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // 墙体
+        function createWall(x, z, w, h) {
+            const geo = new THREE.BoxGeometry(w, h, 0.5);
+            const mat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+            const wall = new THREE.Mesh(geo, mat);
+            wall.position.set(x, h/2, z);
+            wall.castShadow = true;
+            wall.receiveShadow = true;
+            scene.add(wall);
+        }
+        createWall(0, -30, 60, 4);
+        createWall(0, 30, 60, 4);
+        createWall(-30, 0, 60, 4);
+        createWall(30, 0, 60, 4);
+
+        // 敌人组
+        const enemies = [];
+        const enemySpeed = 0.08;
+
+        // 创建敌人
+        function createEnemy(x, z) {
+            const geo = new THREE.SphereGeometry(0.8, 16, 16);
+            const mat = new THREE.MeshLambertMaterial({ color: 0xff2222 });
+            const enemy = new THREE.Mesh(geo, mat);
+            enemy.position.set(x, 1, z);
+            enemy.castShadow = true;
+            scene.add(enemy);
+            enemies.push(enemy);
+        }
+
+        // 生成10个敌人
+        for (let i = 0; i < 10; i++) {
+            createEnemy((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50);
+        }
+
+        // 子弹
+        const bullets = [];
+        function shoot() {
+            const bulletGeo = new THREE.SphereGeometry(0.1, 8, 8);
+            const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+            bullet.position.copy(camera.position);
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            bullet.userData.velocity = dir.multiplyScalar(1);
+            scene.add(bullet);
+            bullets.push(bullet);
+        }
+
+        // 鼠标视角
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === document.body) {
+                mouseX += e.movementX * 0.002;
+                mouseY += e.movementY * 0.002;
+                mouseY = Math.max(-Math.PI/2, Math.min(Math.PI/2, mouseY));
+                camera.rotation.order = 'YXZ';
+                camera.rotation.y = -mouseX;
+                camera.rotation.x = -mouseY;
+            }
+        });
+
+        // 射击
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 0) shoot();
+        });
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'KeyW': movement.forward = true; break;
+                case 'KeyS': movement.back = true; break;
+                case 'KeyA': movement.left = true; break;
+                case 'KeyD': movement.right = true; break;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'KeyW': movement.forward = false; break;
+                case 'KeyS': movement.back = false; break;
+                case 'KeyA': movement.left = false; break;
+                case 'KeyD': movement.right = false; break;
+            }
+        });
+
+        // 游戏循环
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 玩家移动
+            velocity.z = Number(movement.forward) - Number(movement.back);
+            velocity.x = Number(movement.right) - Number(movement.left);
+            velocity.normalize();
+
+            direction.set(0, 0, velocity.z).applyQuaternion(camera.quaternion);
+            camera.position.addScaledVector(direction, 0.2);
+            direction.set(velocity.x, 0, 0).applyQuaternion(camera.quaternion);
+            camera.position.addScaledVector(direction, 0.2);
+            camera.position.y = playerY;
+
+            // 敌人AI追击
+            enemies.forEach(enemy => {
+                const dir = new THREE.Vector3();
+                dir.subVectors(camera.position, enemy.position).normalize();
+                enemy.position.addScaledVector(dir, enemySpeed);
+            });
+
+            // 子弹移动 + 碰撞
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.position.add(b.userData.velocity);
+
+                // 超出距离删除
+                if (b.position.distanceTo(camera.position) > 50) {
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // 击中敌人
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    if (b.position.distanceTo(e.position) < 1.2) {
+                        scene.remove(e);
+                        enemies.splice(j, 1);
+                        scene.remove(b);
+                        bullets.splice(i, 1);
+                        score += 10;
+                        scoreElement.textContent = score;
+                        break;
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // 窗口自适应
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
