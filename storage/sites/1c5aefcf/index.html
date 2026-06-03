@@ -2,233 +2,325 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>双人迷宫追逃升级版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>牢羊练习图 · 双人迷宫追逃</title>
     <style>
-        * {margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",system-ui}
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft Yahei", system-ui; }
         body {
-            background: linear-gradient(135deg,#232946,#192038);
-            display:flex;flex-direction:column;align-items:center;padding:24px;color:#fff;
+            background: linear-gradient(135deg, #232946, #192038);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            color: #fff;
         }
-        .info-bar{
-            display:flex;gap:40px;margin-bottom:16px;font-size:18px;
-            background:rgba(255,255,255,0.1);
-            padding:10px 30px;border-radius:12px;
-            border:1px solid rgba(255,255,255,0.2);
+        .info-bar {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 16px;
+            font-size: 18px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-wrap: wrap;
+            justify-content: center;
         }
-        .tip-text{margin-bottom:12px;font-size:15px;opacity:0.9;line-height:1.7;text-align:center}
+        .info-bar > div {
+            white-space: nowrap;
+        }
+        .tip-text {
+            margin-bottom: 12px;
+            font-size: 15px;
+            opacity: 0.9;
+            line-height: 1.7;
+            text-align: center;
+            max-width: 700px;
+        }
         #gameBox {
-            width:700px;height:550px;
-            background:#f6f6f8;
-            border:6px solid #333955;
-            border-radius:8px;position:relative;
-            overflow:hidden;box-shadow:0 0 25px #0003;
+            width: 700px;
+            height: 550px;
+            background: #f6f6f8;
+            border: 6px solid #333955;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(0,0,0,0.2);
         }
         .player {
-            width:32px;height:32px;border-radius:8px;
-            position:absolute;box-shadow:0 2px 8px #0004;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            position: absolute;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            will-change: left, top;
         }
         #runner {
-            background:linear-gradient(145deg,#3498ff,#0066cc);
+            background: linear-gradient(145deg, #3498ff, #0066cc);
         }
         #chaser {
-            background:linear-gradient(145deg,#ff4757,#c02030);
+            background: linear-gradient(145deg, #ff4757, #c02030);
         }
         .wall {
-            background:linear-gradient(145deg,#444966,#2d314c);
-            position:absolute;border-radius:3px;
+            background: linear-gradient(145deg, #444966, #2d314c);
+            position: absolute;
+            border-radius: 3px;
         }
-        .cool-tip{font-size:13px;opacity:0.8}
+        .cool-tip {
+            font-size: 13px;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
     <div class="info-bar">
         <div>剩余时间：<span id="timeText" style="color:#ffdd55;font-size:22px;font-weight:bold">90</span> s</div>
-        <div>🔵逃生：WASD｜穿梭冷却3秒 <span class="cool-tip" id="runCool">就绪</span></div>
-        <div>🔴追捕：方向键｜穿梭冷却1秒 <span class="cool-tip" id="chasCool">就绪</span></div>
+        <div>🔵 逃生：WASD ｜ 穿梭冷却 3秒 <span class="cool-tip" id="runCool">就绪</span></div>
+        <div>🔴 追捕：方向键 ｜ 穿梭冷却 1秒 <span class="cool-tip" id="chasCool">就绪</span></div>
     </div>
     <div class="tip-text">
-        逃出地图边缘可穿梭到对面（冷却期间无法穿梭）<br>倒计时结束→逃生胜利｜红色碰到蓝色→追捕胜利
+        逃出地图边缘可穿梭到对面（冷却期间无法穿梭）<br>
+        倒计时结束→逃生胜利｜红色碰到蓝色→追捕胜利
     </div>
     <div id="gameBox">
-        <!-- 密集迷宫墙体 -->
-        <div class="wall" style="width:220px;height:22px;top:70px;left:50px"></div>
-        <div class="wall" style="width:22px;height:160px;top:70px;left:270px"></div>
-        <div class="wall" style="width:260px;height:22px;top:220px;left:220px"></div>
-        <div class="wall" style="width:22px;height:200px;top:120px;left:500px"></div>
-        <div class="wall" style="width:180px;height:22px;top:360px;left:40px"></div>
-        <div class="wall" style="width:22px;height:130px;top:360px;left:220px"></div>
-        <div class="wall" style="width:200px;height:22px;top:450px;left:300px"></div>
-        <div class="wall" style="width:22px;height:150px;top:280px;left:380px"></div>
-        <div class="wall" style="width:150px;height:22px;top:160px;left:450px"></div>
-        <div class="wall" style="width:22px;height:120px;top:60px;left:120px"></div>
-        <div class="wall" style="width:180px;height:22px;top:300px;left:520px"></div>
+        <!-- 预制墙体（坐标固定） -->
+        <div class="wall" style="left:50px; top:70px; width:220px; height:22px;"></div>
+        <div class="wall" style="left:270px; top:70px; width:22px; height:160px;"></div>
+        <div class="wall" style="left:220px; top:220px; width:260px; height:22px;"></div>
+        <div class="wall" style="left:500px; top:120px; width:22px; height:200px;"></div>
+        <div class="wall" style="left:40px; top:360px; width:180px; height:22px;"></div>
+        <div class="wall" style="left:220px; top:360px; width:22px; height:130px;"></div>
+        <div class="wall" style="left:300px; top:450px; width:200px; height:22px;"></div>
+        <div class="wall" style="left:380px; top:280px; width:22px; height:150px;"></div>
+        <div class="wall" style="left:450px; top:160px; width:150px; height:22px;"></div>
+        <div class="wall" style="left:120px; top:60px; width:22px; height:120px;"></div>
+        <div class="wall" style="left:520px; top:300px; width:180px; height:22px;"></div>
         <!-- 玩家 -->
         <div id="runner" class="player"></div>
         <div id="chaser" class="player"></div>
     </div>
 
     <script>
-        // 游戏配置
-        const game = {
-            width:700,height:550,size:32,speed:5,
-            totalTime:90,remainTime:90,
-            runner:{x:40,y:40},
-            chaser:{x:620,y:480},
-            key:{},
-            walls:[],
-            // 穿梭冷却
-            runCd:3000,runLast:0,
-            chasCd:1000,chasLast:0,
-            timer:null
-        }
-        const runnerDom = document.getElementById('runner')
-        const chaserDom = document.getElementById('chaser')
-        const gameBox = document.getElementById('gameBox')
-        const timeText = document.getElementById('timeText')
-        const runCoolTip = document.getElementById('runCool')
-        const chasCoolTip = document.getElementById('chasCool')
-        const nowTime = ()=>Date.now()
+        (function() {
+            'use strict';
 
-        // 加载墙体
-        document.querySelectorAll('.wall').forEach(el=>{
-            const p = gameBox.getBoundingClientRect()
-            const r = el.getBoundingClientRect()
-            game.walls.push({
-                x:r.left-p.left,y:r.top-p.top,
-                w:el.offsetWidth,h:el.offsetHeight
-            })
-        })
+            // ---------- 配置常量 ----------
+            const CONFIG = {
+                WIDTH: 700,
+                HEIGHT: 550,
+                PLAYER_SIZE: 32,
+                SPEED: 5,
+                TOTAL_TIME: 90,
+                RUNNER_CD: 3000,
+                CHASER_CD: 1000
+            };
 
-        // 键盘监听
-        document.addEventListener('keydown',e=>game.key[e.code]=true)
-        document.addEventListener('keyup',e=>game.key[e.code]=false)
+            // ---------- DOM 引用 ----------
+            const runnerEl = document.getElementById('runner');
+            const chaserEl = document.getElementById('chaser');
+            const gameBox = document.getElementById('gameBox');
+            const timeText = document.getElementById('timeText');
+            const runCoolTip = document.getElementById('runCool');
+            const chasCoolTip = document.getElementById('chasCool');
 
-        // 碰撞检测
-        function isHit(ax,ay,bx,by,bw,bh){
-            return ax < bx+bw && ax+game.size > bx && ay < by+bh && ay+game.size > by
-        }
-        function hitWall(x,y){
-            for(let w of game.walls)
-                if(isHit(x,y,w.x,w.y,w.w,w.h)) return true
-            return false
-        }
+            // ---------- 游戏状态 ----------
+            const state = {
+                runner: { x: 40, y: 40 },
+                chaser: { x: 620, y: 480 },
+                runnerCoolUntil: 0,   // 时间戳，冷却结束时刻
+                chaserCoolUntil: 0,
+                remainTime: CONFIG.TOTAL_TIME,
+                keys: {},
+                walls: [],
+                timerId: null,
+                gameOver: false
+            };
 
-        // 重置位置
-        function resetPos(){
-            game.runner={x:40,y:40}
-            game.chaser={x:620,y:480}
-            game.remainTime = game.totalTime
-            timeText.textContent = game.remainTime
-        }
+            // ---------- 墙体坐标提取 ----------
+            const wallElements = document.querySelectorAll('.wall');
+            wallElements.forEach(el => {
+                const left = parseFloat(el.style.left) || 0;
+                const top  = parseFloat(el.style.top)  || 0;
+                const width  = parseFloat(el.style.width)  || 0;
+                const height = parseFloat(el.style.height) || 0;
+                state.walls.push({ x: left, y: top, w: width, h: height });
+            });
 
-        // 倒计时启动
-        function startCountDown(){
-            clearInterval(game.timer)
-            game.timer = setInterval(()=>{
-                game.remainTime--
-                timeText.textContent = game.remainTime
-                if(game.remainTime<=0){
-                    clearInterval(game.timer)
-                    alert('⏰时间耗尽！逃生方胜利！')
-                    resetPos()
-                    startCountDown()
+            // ---------- 键盘监听 ----------
+            document.addEventListener('keydown', e => { state.keys[e.code] = true; });
+            document.addEventListener('keyup', e => { state.keys[e.code] = false; });
+
+            // ---------- 碰撞检测 ----------
+            function rectHit(ax, ay, aw, ah, bx, by, bw, bh) {
+                return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+            }
+
+            function hitWall(x, y, size) {
+                for (let w of state.walls) {
+                    if (rectHit(x, y, size, size, w.x, w.y, w.w, w.h)) return true;
                 }
-            },1000)
-        }
-
-        // 游戏主循环
-        function loop(){
-            let rx=game.runner.x,ry=game.runner.y
-            let cx=game.chaser.x,cy=game.chaser.y
-            const spd=game.speed
-            const cur = nowTime()
-
-            // 更新冷却文字
-            runCoolTip.textContent = (cur-game.runLast>=game.runCd)?"就绪":"冷却中"
-            chasCoolTip.textContent = (cur-game.chasLast>=game.chasCd)?"就绪":"冷却中"
-
-            // 逃生者 WASD
-            if(game.key['KeyW']&&!hitWall(rx,ry-spd)) ry-=spd
-            if(game.key['KeyS']&&!hitWall(rx,ry+spd)) ry+=spd
-            if(game.key['KeyA']&&!hitWall(rx-spd,ry)) rx-=spd
-            if(game.key['KeyD']&&!hitWall(rx+spd,ry)) rx+=spd
-
-            // 追捕者 方向键
-            if(game.key['ArrowUp']&&!hitWall(cx,cy-spd)) cy-=spd
-            if(game.key['ArrowDown']&&!hitWall(cx,cy+spd)) cy+=spd
-            if(game.key['ArrowLeft']&&!hitWall(cx-spd,cy)) cx-=spd
-            if(game.key['ArrowRight']&&!hitWall(cx+spd,cy)) cx+=spd
-
-            // =====边界穿梭逻辑=====
-            // 逃生者穿梭 冷却3秒
-            if(rx+game.size<0){
-                if(cur-game.runLast>=game.runCd){
-                    rx = game.width-game.size
-                    game.runLast = cur
-                }else rx=0
-            }else if(rx>game.width){
-                if(cur-game.runLast>=game.runCd){
-                    rx=0
-                    game.runLast = cur
-                }else rx=game.width-game.size
-            }
-            if(ry+game.size<0){
-                if(cur-game.runLast>=game.runCd){
-                    ry = game.height-game.size
-                    game.runLast = cur
-                }else ry=0
-            }else if(ry>game.height){
-                if(cur-game.runLast>=game.runCd){
-                    ry=0
-                    game.runLast = cur
-                }else ry=game.height-game.size
+                return false;
             }
 
-            // 追捕者穿梭 冷却1秒
-            if(cx+game.size<0){
-                if(cur-game.chasLast>=game.chasCd){
-                    cx = game.width-game.size
-                    game.chasLast = cur
-                }else cx=0
-            }else if(cx>game.width){
-                if(cur-game.chasLast>=game.chasCd){
-                    cx=0
-                    game.chasLast = cur
-                }else cx=game.width-game.size
+            // ---------- 玩家与墙体碰撞（玩家尺寸固定） ----------
+            const PLAYER_SIZE = CONFIG.PLAYER_SIZE;
+            function runHitWall(x, y) { return hitWall(x, y, PLAYER_SIZE); }
+            function chaseHitWall(x, y) { return hitWall(x, y, PLAYER_SIZE); }
+
+            // ---------- 边界穿梭逻辑 ----------
+            function handleTeleport(x, y, size, cdUntil, cdDuration, now, axis) {
+                const margin = 2; // 允许一定溢出量
+                // 水平
+                if (axis === 'x' || axis === 'both') {
+                    if (x + size < -margin) {
+                        if (now >= cdUntil) {
+                            x = CONFIG.WIDTH - size;
+                            cdUntil = now + cdDuration;
+                        } else {
+                            x = 0;
+                        }
+                    } else if (x > CONFIG.WIDTH + margin) {
+                        if (now >= cdUntil) {
+                            x = 0;
+                            cdUntil = now + cdDuration;
+                        } else {
+                            x = CONFIG.WIDTH - size;
+                        }
+                    }
+                }
+                // 垂直
+                if (axis === 'y' || axis === 'both') {
+                    if (y + size < -margin) {
+                        if (now >= cdUntil) {
+                            y = CONFIG.HEIGHT - size;
+                            cdUntil = now + cdDuration;
+                        } else {
+                            y = 0;
+                        }
+                    } else if (y > CONFIG.HEIGHT + margin) {
+                        if (now >= cdUntil) {
+                            y = 0;
+                            cdUntil = now + cdDuration;
+                        } else {
+                            y = CONFIG.HEIGHT - size;
+                        }
+                    }
+                }
+                return { x, y, cdUntil };
             }
-            if(cy+game.size<0){
-                if(cur-game.chasLast>=game.chasCd){
-                    cy = game.height-game.size
-                    game.chasLast = cur
-                }else cy=0
-            }else if(cy>game.height){
-                if(cur-game.chasLast>=game.chasCd){
-                    cy=0
-                    game.chasLast = cur
-                }else cy=game.height-game.size
+
+            // ---------- 更新冷却文字 ----------
+            function updateCoolTips(now) {
+                runCoolTip.textContent = (now >= state.runnerCoolUntil) ? '就绪' : '冷却中';
+                chasCoolTip.textContent = (now >= state.chaserCoolUntil) ? '就绪' : '冷却中';
             }
 
-            game.runner.x=rx;game.runner.y=ry
-            game.chaser.x=cx;game.chaser.y=cy
-
-            // 渲染坐标
-            runnerDom.style.left=rx+'px'
-            runnerDom.style.top=ry+'px'
-            chaserDom.style.left=cx+'px'
-            chaserDom.style.top=cy+'px'
-
-            // 抓到判定
-            if(isHit(rx,ry,cx,cy,game.size,game.size)){
-                alert('🔴追捕成功！红方获胜，重新开局')
-                resetPos()
+            // ---------- 重置位置（不重置冷却、不计时器） ----------
+            function resetPositions() {
+                state.runner.x = 40;
+                state.runner.y = 40;
+                state.chaser.x = 620;
+                state.chaser.y = 480;
+                state.remainTime = CONFIG.TOTAL_TIME;
+                timeText.textContent = state.remainTime;
+                // 冷却不加锁，立即可用
+                state.runnerCoolUntil = 0;
+                state.chaserCoolUntil = 0;
+                state.gameOver = false;
             }
 
-            requestAnimationFrame(loop)
-        }
+            // ---------- 倒计时管理 ----------
+            function startCountdown() {
+                if (state.timerId) {
+                    clearInterval(state.timerId);
+                    state.timerId = null;
+                }
+                state.timerId = setInterval(() => {
+                    if (state.gameOver) return;
+                    state.remainTime--;
+                    timeText.textContent = state.remainTime;
+                    if (state.remainTime <= 0) {
+                        clearInterval(state.timerId);
+                        state.timerId = null;
+                        state.gameOver = true;
+                        alert('⏰ 时间耗尽！逃生方胜利！');
+                        resetPositions();
+                        startCountdown();  // 重新开始倒计时
+                    }
+                }, 1000);
+            }
 
-        resetPos()
-        startCountDown()
-        loop()
+            // ---------- 游戏主循环 ----------
+            function gameLoop(now) {
+                if (state.gameOver) {
+                    requestAnimationFrame(gameLoop);
+                    return;
+                }
+
+                const spd = CONFIG.SPEED;
+                let rx = state.runner.x;
+                let ry = state.runner.y;
+                let cx = state.chaser.x;
+                let cy = state.chaser.y;
+
+                // 更新冷却 UI
+                updateCoolTips(now);
+
+                // ---- 逃生者移动 ----
+                if (state.keys['KeyW'] && !runHitWall(rx, ry - spd)) ry -= spd;
+                if (state.keys['KeyS'] && !runHitWall(rx, ry + spd)) ry += spd;
+                if (state.keys['KeyA'] && !runHitWall(rx - spd, ry)) rx -= spd;
+                if (state.keys['KeyD'] && !runHitWall(rx + spd, ry)) rx += spd;
+
+                // ---- 追捕者移动 ----
+                if (state.keys['ArrowUp'] && !chaseHitWall(cx, cy - spd)) cy -= spd;
+                if (state.keys['ArrowDown'] && !chaseHitWall(cx, cy + spd)) cy += spd;
+                if (state.keys['ArrowLeft'] && !chaseHitWall(cx - spd, cy)) cx -= spd;
+                if (state.keys['ArrowRight'] && !chaseHitWall(cx + spd, cy)) cy += spd;
+
+                // ---- 边界穿梭 ----
+                let runnerResult = handleTeleport(rx, ry, PLAYER_SIZE, state.runnerCoolUntil, CONFIG.RUNNER_CD, now, 'both');
+                rx = runnerResult.x;
+                ry = runnerResult.y;
+                state.runnerCoolUntil = runnerResult.cdUntil;
+
+                let chaserResult = handleTeleport(cx, cy, PLAYER_SIZE, state.chaserCoolUntil, CONFIG.CHASER_CD, now, 'both');
+                cx = chaserResult.x;
+                cy = chaserResult.y;
+                state.chaserCoolUntil = chaserResult.cdUntil;
+
+                // ---- 保存坐标 ----
+                state.runner.x = rx;
+                state.runner.y = ry;
+                state.chaser.x = cx;
+                state.chaser.y = cy;
+
+                // ---- 渲染 ----
+                runnerEl.style.left = rx + 'px';
+                runnerEl.style.top  = ry + 'px';
+                chaserEl.style.left = cx + 'px';
+                chaserEl.style.top  = cy + 'px';
+
+                // ---- 追捕碰撞判定 ----
+                if (rectHit(rx, ry, PLAYER_SIZE, PLAYER_SIZE, cx, cy, PLAYER_SIZE, PLAYER_SIZE)) {
+                    state.gameOver = true;
+                    if (state.timerId) {
+                        clearInterval(state.timerId);
+                        state.timerId = null;
+                    }
+                    alert('🔴 追捕成功！红方获胜，重新开局');
+                    resetPositions();
+                    startCountdown();  // 重新开始倒计时和游戏
+                }
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            // ---------- 启动 ----------
+            resetPositions();
+            startCountdown();
+            requestAnimationFrame(gameLoop);
+        })();
     </script>
 </body>
 </html>
