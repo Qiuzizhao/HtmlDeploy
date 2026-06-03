@@ -156,7 +156,10 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
-  assert.match(html, /textContent = 'AI优化'/);
+  assert.match(html, /textContent = aiOptimizeButton\.disabled \? '优化中\.\.\.' : 'AI优化'/);
+  assert.match(html, /textContent = directedAiOptimizeButton\.disabled \? '优化中\.\.\.' : '定向AI优化'/);
+  assert.match(html, /id="directedAiOverlay"/);
+  assert.match(html, /function openDirectedAiWindow/);
   assert.match(html, /textContent = aiNameButton\.disabled \? '命名中\.\.\.' : 'AI命名'/);
   assert.match(html, /function nameSiteWithAi/);
   assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
@@ -365,6 +368,24 @@ test('admin can query forbidden words without loading the full list', async () =
   assert.deepEqual(filtered.body.words, ['special-target']);
   assert.equal(filtered.body.total, 1);
   assert.equal(filtered.body.allTotal, 251);
+});
+
+test('admin forbidden word search ranks exact and short matches first', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await agent
+    .put('/api/admin/settings')
+    .send({
+      allPassword: '111111',
+      forbiddenWords: ['abc1', '110', '21', '1号', '1', 'x1', '10']
+    })
+    .expect(200);
+
+  const response = await agent.get('/api/admin/forbidden-words?q=1&limit=10').expect(200);
+  assert.deepEqual(response.body.words, ['1', '1号', '10', '110', '21', 'x1', 'abc1']);
+  assert.equal(response.body.total, 7);
 });
 
 test('admin can delete forbidden words', async () => {
@@ -1042,7 +1063,10 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
       .attach('file', Buffer.from('<!doctype html><h1>Original</h1>'), { filename: 'old.html' })
       .expect(201);
 
-    const response = await agent.post('/api/sites/ai-save/ai-optimize-save').send({}).expect(200);
+    const response = await agent
+      .post('/api/sites/ai-save/ai-optimize-save')
+      .send({ instruction: '重点优化移动端性能，减少动画掉帧。' })
+      .expect(200);
 
     assert.equal(response.body.site.id, 'ai-save');
     assert.equal(response.body.site.title, 'AI 项目');
@@ -1057,6 +1081,7 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
     assert.equal(requestPayload.model, 'fake-model');
     assert.equal(requestPayload.stream, false);
     assert.match(requestPayload.messages[1].content, /Original/);
+    assert.match(requestPayload.messages[1].content, /重点优化移动端性能，减少动画掉帧。/);
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));

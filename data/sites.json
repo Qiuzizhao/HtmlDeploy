@@ -2,41 +2,41 @@
   {
     "id": "42b2ae5a",
     "number": "00081",
-    "title": "1",
+    "title": "崩坏星穹铁道网页版",
     "author": "1",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:57:59.047Z",
-    "updatedAt": "2026-06-03T14:44:16.315Z",
-    "enabled": false
+    "updatedAt": "2026-06-03T15:29:23.218Z",
+    "enabled": true
   },
   {
     "id": "fecedab7",
     "number": "00080",
-    "title": "雷霆射击小游戏发射O键",
+    "title": "雷霆射击小游戏",
     "author": "lzk",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:58.333Z",
-    "updatedAt": "2026-06-03T14:26:36.606Z"
+    "updatedAt": "2026-06-03T15:13:35.872Z"
   },
   {
     "id": "90cc94a8",
     "number": "00079",
-    "title": "射几把",
-    "author": "赖泽的87",
+    "title": "打靶射击小游戏",
+    "author": "赖泽",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:54.082Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:07.620Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:35:23.629Z"
   },
   {
     "id": "104a8681",
     "number": "00078",
-    "title": "7891",
-    "author": "77",
+    "title": "种树小游戏",
+    "author": "无",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:44.968Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.282Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:30:57.598Z"
   },
   {
     "id": "b10fa9ee",
@@ -50,11 +50,11 @@
   {
     "id": "51095b1a",
     "number": "00076",
-    "title": "搞笑",
+    "title": "倒霉打工人闯关",
     "author": "LTE",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:59.511Z",
-    "updatedAt": "2026-06-03T13:23:26.620Z"
+    "updatedAt": "2026-06-03T15:13:41.513Z"
   },
   {
     "id": "694b05b6",
@@ -84,12 +84,12 @@
   {
     "id": "ee25f642",
     "number": "00072",
-    "title": "陈浚铭nb 6799",
+    "title": "精致俄罗斯方块",
     "author": "玉",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:26.928Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:31:08.908Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:22:03.478Z"
   },
   {
     "id": "bb484934",
@@ -112,10 +112,11 @@
   {
     "id": "48bf777d",
     "number": "00069",
-    "title": "冰淇淋",
+    "title": "冰淇淋小店经营游戏",
     "author": "哈哈",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:55:16.848Z"
+    "createdAt": "2026-06-03T06:55:16.848Z",
+    "updatedAt": "2026-06-03T15:14:04.034Z"
   },
   {
     "id": "a022bf39",
@@ -129,12 +130,12 @@
   {
     "id": "0440a27c",
     "number": "00067",
-    "title": "i哦就会收到货缝纫机",
+    "title": "精灵回合对战",
     "author": "法人股科技开发",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:54:52.161Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.325Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:31:44.228Z"
   },
   {
     "id": "9f36bfa5",
@@ -155,12 +156,12 @@
   {
     "id": "68672ac2",
     "number": "00064",
-    "title": "子弹导管",
+    "title": "写实射击生存",
     "author": "123456y7",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:55.247Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.333Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:31:14.921Z"
   },
   {
     "id": "2cb5cec3",
@@ -173,22 +174,22 @@
   {
     "id": "c5458428",
     "number": "00062",
-    "title": "110928",
+    "title": "星梦轨迹乙女游戏",
     "author": "小白",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:31.773Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.339Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:31:55.976Z"
   },
   {
     "id": "b75517d1",
     "number": "00061",
-    "title": "俄罗斯方块",
+    "title": "经典俄罗斯方块",
     "author": "雨",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:18.932Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.341Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:31:55.038Z"
   },
   {
     "id": "93c7d3ae",
@@ -201,22 +202,22 @@
   {
     "id": "c236a467",
     "number": "00059",
-    "title": "导管",
-    "author": "赖泽的87",
+    "title": "接水管放水小游戏",
+    "author": "赖泽",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:07.255Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.347Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:08.997Z"
   },
   {
     "id": "d2368459",
     "number": "00058",
-    "title": "宝宝",
-    "author": "爸爸",
+    "title": "恐怖村庄探险",
+    "author": "1",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:04.601Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.349Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:11.185Z"
   },
   {
     "id": "bdc2e637",
@@ -229,12 +230,12 @@
   {
     "id": "2dd02888",
     "number": "00056",
-    "title": "雷霆射击7891",
+    "title": "雷霆射击",
     "author": "朱东",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:52:51.493Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.355Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:32:22.709Z"
   },
   {
     "id": "7cc9835a",
@@ -267,18 +268,18 @@
     "author": "2026届学姐",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:52:00.238Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.370Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:18.240Z"
   },
   {
     "id": "a7f50335",
     "number": "00051",
     "title": "神秘小游戏",
-    "author": "789191",
+    "author": "无",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:51:47.327Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.374Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:42.277Z"
   },
   {
     "id": "dc340e1d",
@@ -332,38 +333,40 @@
   {
     "id": "bd7db19d",
     "number": "00044",
-    "title": "陈曦7878789113",
-    "author": "78",
+    "title": "无限连发枪战",
+    "author": "无",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:16:00.620Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.401Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:33:55.531Z"
   },
   {
     "id": "33e43c09",
     "number": "00043",
-    "title": "奶龙",
+    "title": "奶龙左右移动",
     "author": "吴泽坤",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:59.638Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.402Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:02.868Z"
   },
   {
     "id": "faab8286",
     "number": "00042",
-    "title": "最终完整版（全部功能 +【重开按钮 + R 键一键重开】）",
+    "title": "终极枪战",
     "author": "陈洋威ooo",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:15:44.559Z"
+    "createdAt": "2026-06-03T03:15:44.559Z",
+    "updatedAt": "2026-06-03T15:34:06.473Z"
   },
   {
     "id": "302dea0c",
     "number": "00041",
-    "title": "最终完整版（全部功能 +【重开按钮 + R 键一键重开】）",
+    "title": "终极枪战",
     "author": "陈洋威ooo",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:15:44.142Z"
+    "createdAt": "2026-06-03T03:15:44.142Z",
+    "updatedAt": "2026-06-03T15:34:07.393Z"
   },
   {
     "id": "0dd91148",
@@ -372,8 +375,8 @@
     "author": "孤寡老人",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:14:49.774Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.411Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:11.592Z"
   },
   {
     "id": "7a60d012",
@@ -389,7 +392,8 @@
     "title": "城市",
     "author": "林宸骏",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:14:08.387Z"
+    "createdAt": "2026-06-03T03:14:08.387Z",
+    "updatedAt": "2026-06-03T15:36:48.140Z"
   },
   {
     "id": "f65ec769",
@@ -422,8 +426,8 @@
     "author": "鸡贼",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:13:07.526Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.435Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:35:48.114Z"
   },
   {
     "id": "7709ded1",
@@ -444,12 +448,12 @@
   {
     "id": "bb717eb7",
     "number": "00031",
-    "title": "添望nb",
+    "title": "趣味猜拳小游戏",
     "author": "taiaw",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:12:28.879Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.445Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:35:11.732Z"
   },
   {
     "id": "df0a5e52",
@@ -462,32 +466,32 @@
   {
     "id": "cc95fdb4",
     "number": "00029",
-    "title": "陈曦78787891",
-    "author": "78",
+    "title": "枪战小游戏",
+    "author": "1",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:12:19.381Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.451Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:24.741Z"
   },
   {
     "id": "2ae45c45",
     "number": "00028",
-    "title": "7878787从生小孩",
+    "title": "3D枪战射击",
     "author": "张景前辈",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:52.926Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.454Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:32.603Z"
   },
   {
     "id": "4da24e57",
     "number": "00027",
-    "title": "弱智游戏",
+    "title": "躺平发育",
     "author": "庄杰鹏",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:48.198Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.455Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:38.572Z"
   },
   {
     "id": "244f3456",
@@ -500,22 +504,22 @@
   {
     "id": "4adc8e0f",
     "number": "00025",
-    "title": "陈曦787878",
-    "author": "78",
+    "title": "四键音游",
+    "author": "1",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:07.906Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.462Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:34:52.497Z"
   },
   {
     "id": "7d5703bd",
     "number": "00024",
-    "title": "雷霆奶龙跑酷小游戏",
+    "title": "雷霆奶龙跑酷",
     "author": "孤寡老人",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:03.330Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.462Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:38:21.378Z"
   },
   {
     "id": "848ad2a3",
@@ -528,12 +532,12 @@
   {
     "id": "4891a2f7",
     "number": "00022",
-    "title": "XIAOZI7891",
+    "title": "三角洲行动射击游戏",
     "author": "SKY",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:40.909Z",
-    "updatedAt": "2026-06-03T14:12:18.469Z",
-    "enabled": false
+    "updatedAt": "2026-06-03T15:35:01.947Z",
+    "enabled": true
   },
   {
     "id": "877d8d3c",
@@ -635,8 +639,9 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:55:23.262Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:18.518Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:19:23.823Z",
+    "forbiddenWhitelist": true
   },
   {
     "id": "dddf5777",

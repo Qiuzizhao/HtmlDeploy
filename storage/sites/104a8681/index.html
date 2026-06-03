@@ -23,7 +23,6 @@
             overflow-x: hidden;
         }
 
-        /* 星空背景 */
         .stars {
             position: fixed;
             top: 0;
@@ -68,7 +67,6 @@
             backdrop-filter: blur(10px);
         }
 
-        /* 种树区域 */
         .garden {
             width: 320px;
             height: 450px;
@@ -80,7 +78,7 @@
             justify-content: flex-end;
             padding-bottom: 30px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: background 0.3s;
             position: relative;
             overflow: hidden;
             margin-bottom: 20px;
@@ -90,7 +88,6 @@
             background: rgba(255,255,255,0.08);
         }
 
-        /* 树苗样式：三档成长 */
         .tree {
             transition: all 0.8s ease;
             display: flex;
@@ -98,7 +95,6 @@
             align-items: center;
         }
 
-        /* 1级 小苗 */
         .tree-1 .trunk {
             width: 6px;
             height: 30px;
@@ -113,7 +109,6 @@
             margin-bottom: -5px;
         }
 
-        /* 2级 小树 */
         .tree-2 .trunk {
             width: 8px;
             height: 60px;
@@ -128,7 +123,6 @@
             margin-bottom: -8px;
         }
 
-        /* 3级 大树 */
         .tree-3 .trunk {
             width: 12px;
             height: 100px;
@@ -144,7 +138,6 @@
             box-shadow: 0 0 20px rgba(60, 173, 60, 0.4);
         }
 
-        /* 点击特效 */
         .effect {
             position: absolute;
             width: 40px;
@@ -196,47 +189,52 @@
     <div class="copyright">简单治愈 · 随心种植</div>
 
     <script>
-        let score = 0;
-        let level = 1;
-        const maxLevel = 3;
-        const tree = document.getElementById('tree');
-        const garden = document.getElementById('garden');
-        const scoreText = document.getElementById('score');
+        (function() {
+            let score = 0;
+            let level = 1;
+            const maxLevel = 3;
+            const tree = document.getElementById('tree');
+            const garden = document.getElementById('garden');
+            const scoreText = document.getElementById('score');
 
-        // 点击种树
-        garden.addEventListener('click', (e) => {
-            // 加分
-            score++;
-            scoreText.innerText = score;
-
-            // 升级树木
-            if (level < maxLevel) {
-                level++;
-                updateTree();
-            } else {
-                // 满级后重置，继续种新树
-                level = 1;
-                updateTree();
+            function updateTree() {
+                tree.className = 'tree tree-' + level;
             }
 
-            // 点击特效
-            createEffect(e.clientX, e.clientY);
-        });
+            function createEffect(x, y) {
+                const eff = document.createElement('div');
+                eff.className = 'effect';
+                eff.style.left = (x - 20) + 'px';
+                eff.style.top = (y - 20) + 'px';
+                document.body.appendChild(eff);
+                requestAnimationFrame(function() {
+                    setTimeout(function() {
+                        if (eff.parentNode) {
+                            eff.parentNode.removeChild(eff);
+                        }
+                    }, 600);
+                });
+            }
 
-        // 更新树木样式
-        function updateTree() {
-            tree.className = `tree tree-${level}`;
-        }
+            garden.addEventListener('click', function(e) {
+                score++;
+                scoreText.textContent = score;
 
-        // 点击光圈特效
-        function createEffect(x, y) {
-            const eff = document.createElement('div');
-            eff.classList.add('effect');
-            eff.style.left = x - 20 + 'px';
-            eff.style.top = y - 20 + 'px';
-            document.body.appendChild(eff);
-            setTimeout(() => eff.remove(), 600);
-        }
+                if (level < maxLevel) {
+                    level++;
+                } else {
+                    level = 1;
+                }
+                updateTree();
+
+                var rect = garden.getBoundingClientRect();
+                var x = e.clientX;
+                var y = e.clientY;
+                createEffect(x, y);
+            });
+
+            updateTree();
+        })();
     </script>
 </body>
 </html>
