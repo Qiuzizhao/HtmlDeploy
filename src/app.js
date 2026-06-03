@@ -92,7 +92,9 @@ function getLlmConfig(options = {}) {
   return {
     apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
     baseUrl: options.llmApiBaseUrl || process.env.LLM_API_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-    model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini'
+    model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || '',
+    reasoningEffort: options.llmReasoningEffort || process.env.LLM_REASONING_EFFORT || ''
   };
 }
 
@@ -108,36 +110,47 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
     throw new Error('请先在服务器环境变量中配置 LLM_API_KEY 或 OPENAI_API_KEY');
   }
 
+  const requestBody = {
+    model: llmConfig.model,
+    temperature: 0.2,
+    stream: false,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是资深前端工程师，负责优化单个 HTML 项目的代码。',
+          '目标是提升性能、稳定性、可读性和兼容性，同时保留原有玩法、视觉风格、交互和页面文案。',
+          '不要添加新的外部网络依赖；除非原代码已经依赖，否则保持单文件 HTML 可运行。',
+          '只返回完整 HTML 源码，不要解释，不要 Markdown，不要代码块包裹。'
+        ].join('\n')
+      },
+      {
+        role: 'user',
+        content: [
+          `项目名称：${siteTitle || '未命名项目'}`,
+          instruction ? `额外要求：${instruction}` : '',
+          '请优化下面的 HTML 代码，并返回完整可运行 HTML：',
+          htmlContent
+        ].filter(Boolean).join('\n\n')
+      }
+    ]
+  };
+
+  if (llmConfig.thinkingType) {
+    requestBody.thinking = { type: llmConfig.thinkingType };
+  }
+
+  if (llmConfig.reasoningEffort) {
+    requestBody.reasoning_effort = llmConfig.reasoningEffort;
+  }
+
   const response = await fetch(getChatCompletionsUrl(llmConfig.baseUrl), {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${llmConfig.apiKey}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model: llmConfig.model,
-      temperature: 0.2,
-      messages: [
-        {
-          role: 'system',
-          content: [
-            '你是资深前端工程师，负责优化单个 HTML 项目的代码。',
-            '目标是提升性能、稳定性、可读性和兼容性，同时保留原有玩法、视觉风格、交互和页面文案。',
-            '不要添加新的外部网络依赖；除非原代码已经依赖，否则保持单文件 HTML 可运行。',
-            '只返回完整 HTML 源码，不要解释，不要 Markdown，不要代码块包裹。'
-          ].join('\n')
-        },
-        {
-          role: 'user',
-          content: [
-            `项目名称：${siteTitle || '未命名项目'}`,
-            instruction ? `额外要求：${instruction}` : '',
-            '请优化下面的 HTML 代码，并返回完整可运行 HTML：',
-            htmlContent
-          ].filter(Boolean).join('\n\n')
-        }
-      ]
-    })
+    body: JSON.stringify(requestBody)
   });
 
   const result = await response.json().catch(() => ({}));
