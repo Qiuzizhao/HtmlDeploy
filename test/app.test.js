@@ -846,6 +846,7 @@ test('PUT /api/sites/:id updates project title and optionally replaces HTML', as
   const response = await agent
     .put('/api/sites/editable')
     .field('title', '新名字')
+    .field('author', '测试作者')
     .field('classId', 'class-b')
     .attach('file', Buffer.from('<!doctype html><h1>New</h1>'), { filename: 'new.html' })
     .expect(200);
