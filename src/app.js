@@ -956,6 +956,14 @@ function createApp(options = {}) {
         updatedAt: new Date().toISOString()
       };
       await writeSettings(settingsFile, settings);
+      if (req.query.includeForbiddenWords === 'false') {
+        const { forbiddenWords, ...summarySettings } = settings;
+        return res.json({
+          ...summarySettings,
+          forbiddenWordsCount: forbiddenWords?.length || 0
+        });
+      }
+
       return res.json(settings);
     } catch (error) {
       next(error);

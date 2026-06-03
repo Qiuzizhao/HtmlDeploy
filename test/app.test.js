@@ -172,7 +172,10 @@ test('public admin can edit the all-projects password in class management', asyn
   assert.match(html, /id="toggleAllPassword"[^>]*>显示<\/button>/);
   assert.match(html, /id="generateAllPassword"[^>]*>随机生成<\/button>/);
   assert.match(html, /id="saveAllPassword"[^>]*>保存全部密码<\/button>/);
-  assert.match(html, /fetch\('\/api\/admin\/settings'\)/);
+  assert.match(html, /fetch\('\/api\/admin\/settings\?includeForbiddenWords=false'\)/);
+  assert.match(html, /\/api\/admin\/forbidden-words\?\$\{params\.toString\(\)\}/);
+  assert.match(html, /id="forbiddenWordsSearchInput"/);
+  assert.match(html, /id="forbiddenWordsResults"/);
   assert.match(html, /method: 'PUT'/);
   assert.match(html, /body: JSON\.stringify\(\{ allPassword \}\)/);
 });
@@ -294,6 +297,34 @@ test('admin settings keeps large forbidden word lists', async () => {
 
   const rules = await request(app).get('/api/upload-rules').expect(200);
   assert.equal(rules.body.forbiddenWords.length, 250);
+});
+
+test('admin can query forbidden words without loading the full list', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const forbiddenWords = Array.from({ length: 250 }, (_, index) => `blocked-${index}`);
+  forbiddenWords.push('special-target');
+  await agent
+    .put('/api/admin/settings')
+    .send({ allPassword: '111111', forbiddenWords })
+    .expect(200);
+
+  const summary = await agent.get('/api/admin/settings?includeForbiddenWords=false').expect(200);
+  assert.equal(summary.body.forbiddenWords, undefined);
+  assert.equal(summary.body.forbiddenWordsCount, 251);
+
+  const page = await agent.get('/api/admin/forbidden-words?offset=100&limit=25').expect(200);
+  assert.equal(page.body.words.length, 25);
+  assert.equal(page.body.total, 251);
+  assert.equal(page.body.allTotal, 251);
+  assert.equal(page.body.words[0], 'blocked-100');
+
+  const filtered = await agent.get('/api/admin/forbidden-words?q=target&limit=10').expect(200);
+  assert.deepEqual(filtered.body.words, ['special-target']);
+  assert.equal(filtered.body.total, 1);
+  assert.equal(filtered.body.allTotal, 251);
 });
 
 test('admin can create classes and public APIs expose class buttons', async () => {

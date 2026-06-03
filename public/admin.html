@@ -1408,8 +1408,70 @@
       });
     }
 
+    function renderForbiddenWords(words) {
+      forbiddenWordsResults.innerHTML = '';
+      if (!words.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = forbiddenWordsState.query ? '没有匹配的违禁词' : '暂无违禁词';
+        forbiddenWordsResults.append(empty);
+        return;
+      }
+
+      words.forEach((word) => {
+        const row = document.createElement('div');
+        row.className = 'forbidden-word-row';
+        row.textContent = word;
+        forbiddenWordsResults.append(row);
+      });
+    }
+
+    function updateForbiddenWordsPagination() {
+      const { offset, limit, total, allTotal, query } = forbiddenWordsState;
+      const start = total ? offset + 1 : 0;
+      const end = Math.min(offset + limit, total);
+      forbiddenWordsPageInfo.textContent = query
+        ? `匹配 ${total} 条 / 全部 ${allTotal} 条，当前 ${start}-${end}`
+        : `全部 ${allTotal} 条，当前 ${start}-${end}`;
+      prevForbiddenWordsPage.disabled = offset <= 0;
+      nextForbiddenWordsPage.disabled = offset + limit >= total;
+    }
+
+    async function loadForbiddenWords({ query = forbiddenWordsState.query, offset = forbiddenWordsState.offset } = {}) {
+      forbiddenWordsState.query = query;
+      forbiddenWordsState.offset = Math.max(0, offset);
+      setMessage(forbiddenWordsMessage, '正在查询违禁词...');
+
+      const params = new URLSearchParams({
+        q: forbiddenWordsState.query,
+        offset: String(forbiddenWordsState.offset),
+        limit: String(forbiddenWordsState.limit)
+      });
+      const response = await fetch(`/api/admin/forbidden-words?${params.toString()}`);
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '查询违禁词失败' }));
+        setMessage(forbiddenWordsMessage, result.error || '查询违禁词失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      forbiddenWordsState = {
+        ...forbiddenWordsState,
+        query: result.query || '',
+        offset: result.offset || 0,
+        limit: result.limit || forbiddenWordsState.limit,
+        total: result.total || 0,
+        allTotal: result.allTotal || 0
+      };
+      renderForbiddenWords(result.words || []);
+      updateForbiddenWordsPagination();
+      setMessage(forbiddenWordsMessage, forbiddenWordsState.query
+        ? `查询到 ${forbiddenWordsState.total} 条匹配词`
+        : `${forbiddenWordsState.allTotal} 个违禁词`);
+    }
+
     async function loadSettings() {
-      const response = await fetch('/api/admin/settings');
+      const response = await fetch('/api/admin/settings?includeForbiddenWords=false');
       if (!response.ok) {
         setMessage(classMessage, '加载全部密码失败', true);
         setMessage(forbiddenWordsMessage, '加载违禁词失败', true);
@@ -1418,8 +1480,11 @@
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
-      forbiddenWordsInput.value = formatForbiddenWords(settings.forbiddenWords);
-      setMessage(forbiddenWordsMessage, `${settings.forbiddenWords?.length || 0} 个违禁词`);
+      forbiddenWordsInput.value = '';
+      forbiddenWordsState.allTotal = settings.forbiddenWordsCount || 0;
+      forbiddenWordsState.total = settings.forbiddenWordsCount || 0;
+      updateForbiddenWordsPagination();
+      setMessage(forbiddenWordsMessage, `${settings.forbiddenWordsCount || 0} 个违禁词`);
     }
 
     async function saveAllPassword(event) {
@@ -1431,7 +1496,7 @@
         return;
       }
 
-      const response = await fetch('/api/admin/settings', {
+      const response = await fetch('/api/admin/settings?includeForbiddenWords=false', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ allPassword })
@@ -1451,22 +1516,30 @@
     async function saveForbiddenWords(event) {
       event.preventDefault();
       const forbiddenWords = parseForbiddenWords(forbiddenWordsInput.value);
+      if (!forbiddenWords.length) {
+        setMessage(forbiddenWordsMessage, '请输入要追加的违禁词', true);
+        return;
+      }
 
-      const response = await fetch('/api/admin/settings', {
-        method: 'PUT',
+      const response = await fetch('/api/admin/forbidden-words', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ forbiddenWords })
       });
 
       if (!response.ok) {
-        const result = await response.json().catch(() => ({ error: '保存违禁词失败' }));
-        setMessage(forbiddenWordsMessage, result.error || '保存违禁词失败', true);
+        const result = await response.json().catch(() => ({ error: '追加违禁词失败' }));
+        setMessage(forbiddenWordsMessage, result.error || '追加违禁词失败', true);
         return;
       }
 
-      settings = await response.json();
-      forbiddenWordsInput.value = formatForbiddenWords(settings.forbiddenWords);
-      setMessage(forbiddenWordsMessage, forbiddenWords.length ? `已保存 ${forbiddenWords.length} 个违禁词` : '已清空违禁词');
+      const result = await response.json();
+      forbiddenWordsInput.value = '';
+      forbiddenWordsState.offset = 0;
+      await loadForbiddenWords({ offset: 0 });
+      setMessage(forbiddenWordsMessage, result.added
+        ? `已追加 ${result.added} 个违禁词，总计 ${result.total} 个`
+        : `没有新增词条，总计 ${result.total} 个`);
     }
 
     async function loadClasses() {
@@ -2018,6 +2091,24 @@
 
     allPasswordForm.addEventListener('submit', saveAllPassword);
     forbiddenWordsForm.addEventListener('submit', saveForbiddenWords);
+    forbiddenWordsSearchForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await loadForbiddenWords({ query: forbiddenWordsSearchInput.value.trim(), offset: 0 });
+    });
+    clearForbiddenWordsSearch.addEventListener('click', async () => {
+      forbiddenWordsSearchInput.value = '';
+      await loadForbiddenWords({ query: '', offset: 0 });
+    });
+    prevForbiddenWordsPage.addEventListener('click', async () => {
+      await loadForbiddenWords({
+        offset: Math.max(0, forbiddenWordsState.offset - forbiddenWordsState.limit)
+      });
+    });
+    nextForbiddenWordsPage.addEventListener('click', async () => {
+      await loadForbiddenWords({
+        offset: forbiddenWordsState.offset + forbiddenWordsState.limit
+      });
+    });
     const toggleAllPassword = document.getElementById('toggleAllPassword');
     toggleAllPassword.addEventListener('click', () => {
       togglePasswordVisibility(allPasswordInput, toggleAllPassword);
@@ -2082,6 +2173,7 @@
 
     async function boot() {
       await loadSettings();
+      await loadForbiddenWords({ offset: 0 });
       await loadClasses();
       await loadSites();
     }
