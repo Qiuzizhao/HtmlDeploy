@@ -298,6 +298,7 @@ test('admin can set the all-projects password and visitors must unlock all proje
   await admin
     .post('/api/sites')
     .field('title', '项目一')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .field('htmlContent', '<!doctype html><title>项目一</title>')
     .expect(201);
@@ -413,6 +414,7 @@ test('POST /api/sites saves one HTML file as index.html and records metadata', a
   const response = await request(app)
     .post('/api/sites')
     .field('title', '我的小游戏')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Game</h1>'), { filename: 'game.html' })
     .expect(201);
@@ -449,6 +451,7 @@ test('POST /api/sites can create a project from pasted HTML code', async () => {
   const response = await request(app)
     .post('/api/sites')
     .field('title', '代码作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .field('htmlContent', '<!doctype html><h1>Code</h1>')
     .expect(201);
@@ -474,6 +477,7 @@ test('GET /api/sites can filter projects by class', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', '一班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
     .expect(201);
@@ -481,6 +485,7 @@ test('GET /api/sites can filter projects by class', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', '二班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-b')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
     .expect(201);
@@ -646,6 +651,7 @@ test('admin login does not unlock public class project lists', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', '一班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
     .expect(201);
@@ -670,6 +676,7 @@ test('admin login does not unlock the all-projects public list', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', '一班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
     .expect(201);
@@ -695,6 +702,7 @@ test('GET /api/sites without a class filter requires the all-projects password',
   await request(app)
     .post('/api/sites')
     .field('title', '一班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
     .expect(201);
@@ -702,6 +710,7 @@ test('GET /api/sites without a class filter requires the all-projects password',
   await request(app)
     .post('/api/sites')
     .field('title', '二班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-b')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
     .expect(201);
@@ -775,6 +784,7 @@ test('POST /api/sites regenerates IDs that already exist', async () => {
   const response = await request(app)
     .post('/api/sites')
     .field('title', 'Unique ID')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Hello</h1>'), { filename: 'index.html' })
     .expect(201);
@@ -821,6 +831,7 @@ test('PUT /api/sites/:id updates project title and optionally replaces HTML', as
   await agent
     .post('/api/sites')
     .field('title', '旧名字')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Old</h1>'), { filename: 'old.html' })
     .expect(201);
@@ -934,6 +945,7 @@ test('DELETE /api/sites/:id removes project metadata and files', async () => {
   await agent
     .post('/api/sites')
     .field('title', '要删除')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Delete</h1>'), { filename: 'index.html' })
     .expect(201);
@@ -960,6 +972,7 @@ test('admin can download a project HTML file', async () => {
   await agent
     .post('/api/sites')
     .field('title', '下载作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Download</h1>'), { filename: 'download.html' })
     .expect(201);
@@ -1083,6 +1096,7 @@ test('admin cannot delete a class that still has projects', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', '一班作品')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
     .expect(201);
@@ -1102,6 +1116,7 @@ test('GET /site/:id returns index.html when present', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', 'Has index')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Hello</h1>'), { filename: 'index.html' })
     .expect(201);
@@ -1127,6 +1142,7 @@ test('GET /site/:id/* blocks traversal for uploaded HTML projects', async () => 
   await request(app)
     .post('/api/sites')
     .field('title', 'Files')
+    .field('author', '测试作者')
     .field('classId', 'class-a')
     .attach('file', Buffer.from('<!doctype html><h1>Only HTML</h1>'), { filename: 'index.html' })
     .expect(201);
