@@ -891,6 +891,7 @@
               <select id="filterClassId" class="class-select" aria-label="按班级筛选"></select>
             </div>
             <div class="toolbar-right">
+              <button class="warning-button" id="auditForbiddenSitesButton" type="button">违禁词审查</button>
               <button class="button" id="generateThumbnailsButton" type="button">生成全部封面</button>
               <button class="button" id="reloadButton" type="button">刷新列表</button>
             </div>
@@ -1066,6 +1067,7 @@
     const emptyState = document.getElementById('emptyState');
     const searchInput = document.getElementById('searchInput');
     const filterClassId = document.getElementById('filterClassId');
+    const auditForbiddenSitesButton = document.getElementById('auditForbiddenSitesButton');
     const generateThumbnailsButton = document.getElementById('generateThumbnailsButton');
     const navButtons = Array.from(document.querySelectorAll('[data-view-target]'));
     const workspaces = Array.from(document.querySelectorAll('[data-admin-view]'));
@@ -1878,6 +1880,33 @@
         : `封面生成完成，共 ${result.generated.length} 个`);
     }
 
+    async function auditForbiddenSites() {
+      auditForbiddenSitesButton.disabled = true;
+      auditForbiddenSitesButton.textContent = '审查中...';
+      setMessage(listMessage, '正在审查项目网页名字和作者名...');
+
+      const response = await fetch('/api/admin/sites/forbidden-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      auditForbiddenSitesButton.disabled = false;
+      auditForbiddenSitesButton.textContent = '违禁词审查';
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '违禁词审查失败' }));
+        setMessage(listMessage, result.error || '违禁词审查失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      await loadSites();
+      setMessage(listMessage, result.disabled
+        ? `审查完成：命中 ${result.matched} 个项目，新禁用 ${result.disabled} 个`
+        : `审查完成：命中 ${result.matched} 个项目，没有新增禁用`);
+    }
+
     async function createSite(event) {
       event.preventDefault();
       setMessage(createMessage, '');
@@ -2296,6 +2325,7 @@
       await loadClasses();
       await loadSites();
     });
+    auditForbiddenSitesButton.addEventListener('click', auditForbiddenSites);
     generateThumbnailsButton.addEventListener('click', generateAllThumbnails);
     document.getElementById('closeCodeWindow').addEventListener('click', closeCodeWindow);
     reloadCodeButton.addEventListener('click', () => {

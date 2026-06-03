@@ -137,6 +137,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /fetch\('\/api\/admin\/sites'/);
   assert.match(html, /method: 'PUT'/);
   assert.match(html, /method: 'DELETE'/);
+  assert.match(html, /id="auditForbiddenSitesButton"[^>]*>违禁词审查<\/button>/);
+  assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
   assert.match(html, /textContent = 'AI优化'/);
@@ -554,6 +556,65 @@ test('admin can disable a project so public lists and pages hide it', async () =
     [
       ['hidden-site', false],
       ['visible-site', true]
+    ]
+  );
+});
+
+test('admin forbidden audit disables projects with forbidden title or author', async () => {
+  const ids = ['class-a', 'safe-site', 'bad-title-site', 'bad-author-site'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '安全项目')
+    .field('author', '普通作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>安全项目</title>')
+    .expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '包含坏词项目')
+    .field('author', '普通作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>包含坏词项目</title>')
+    .expect(201);
+  await request(app)
+    .post('/api/sites')
+    .field('title', '普通项目')
+    .field('author', '坏作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>普通项目</title>')
+    .expect(201);
+
+  await admin
+    .put('/api/admin/settings')
+    .send({ allPassword: '111111', forbiddenWords: ['坏词', '坏作者'] })
+    .expect(200);
+
+  const audit = await admin.post('/api/admin/sites/forbidden-audit').send({}).expect(200);
+  assert.equal(audit.body.checked, 3);
+  assert.equal(audit.body.matched, 2);
+  assert.equal(audit.body.disabled, 2);
+  assert.deepEqual(
+    audit.body.matches.map((match) => [match.id, match.field, match.word]),
+    [
+      ['bad-author-site', '作者署名', '坏作者'],
+      ['bad-title-site', '网页名字', '坏词']
+    ]
+  );
+
+  const sites = await admin.get('/api/admin/sites').expect(200);
+  assert.deepEqual(
+    sites.body.map((site) => [site.id, site.enabled]),
+    [
+      ['bad-author-site', false],
+      ['bad-title-site', false],
+      ['safe-site', true]
     ]
   );
 });

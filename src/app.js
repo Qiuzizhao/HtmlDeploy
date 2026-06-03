@@ -1346,6 +1346,62 @@ function createApp(options = {}) {
     }
   });
 
+  app.post('/api/admin/sites/forbidden-audit', requireAdmin, async (req, res, next) => {
+    try {
+      const sites = await readSites(dataFile);
+      const settings = await readSettings(settingsFile);
+      const forbiddenWords = Array.isArray(settings.forbiddenWords) ? settings.forbiddenWords : [];
+      const matches = [];
+      let disabledCount = 0;
+      let changed = false;
+
+      const nextSites = sites.map((site) => {
+        const match = findForbiddenWordMatch(
+          { title: site.title || '', author: site.author || '' },
+          forbiddenWords
+        );
+
+        if (!match) {
+          return site;
+        }
+
+        matches.push({
+          id: site.id,
+          title: site.title,
+          author: site.author || '',
+          field: match.field,
+          word: match.word,
+          wasEnabled: site.enabled !== false
+        });
+
+        if (site.enabled === false) {
+          return site;
+        }
+
+        disabledCount += 1;
+        changed = true;
+        return {
+          ...site,
+          enabled: false,
+          updatedAt: new Date().toISOString()
+        };
+      });
+
+      if (changed) {
+        await writeSites(dataFile, nextSites);
+      }
+
+      return res.json({
+        checked: sites.length,
+        matched: matches.length,
+        disabled: disabledCount,
+        matches
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.patch('/api/sites/:id/enabled', requireAdmin, async (req, res, next) => {
     try {
       const { id } = req.params;
