@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雷霆奶龙大冒险</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+        body{background:#0a1028;display:flex;flex-direction:column;align-items:center;padding:10px}
+        #gameBox{
+            width:min(95vw,800px);height:500px;background:linear-gradient(#3474e6,#87cefa);
+            position:relative;overflow:hidden;border:3px solid #ffd100;border-radius:12px;
+        }
+        /* 雷霆奶龙样式 */
+        #nailong{
+            width:60px;height:65px;position:absolute;bottom:80px;left:80px;
+            background:#ffdd22;border-radius:50% 50% 45% 45%;
+            border:3px solid #ffaa00;z-index:2;
+            box-shadow:0 0 12px #fff,0 0 22px #0cf,0 0 35px #0099ff;
+        }
+        #nailong::before{
+            content:"";position:absolute;width:16px;height:22px;background:#0cf;top:-18px;left:22px;
+            clip-path:polygon(50% 0,0 100%,100% 100%);box-shadow:0 0 8px #0ff;
+        }
+        #nailong::after{
+            content:"⚡";position:absolute;right:-14px;top:12px;font-size:24px;color:#0ff;
+            text-shadow:0 0 10px #0cf;animation:lightning 0.4s infinite alternate;
+        }
+        @keyframes lightning{0{opacity:0.4}100%{opacity:1}}
+        /* 地面 */
+        .ground{width:100%;height:80px;background:#8b5a2b;position:absolute;bottom:0}
+        /* 闪电道具 */
+        .light{width:32px;height:36px;position:absolute;color:#0ff;font-size:32px;content:"⚡";text-shadow:0 0 10px cyan}
+        /* 乌云障碍 */
+        .cloud{width:75px;height:42px;background:#333;border-radius:50%;position:absolute;box-shadow:inset 0 0 10px #111}
+        /* UI面板 */
+        .ui{width:min(95vw,800px);display:flex;justify-content:space-between;color:#fff;padding:8px 0;font-size:18px}
+        .btn-box{margin-top:8px;display:flex;gap:10px}
+        button{padding:6px 16px;border:none;border-radius:6px;background:#ffd100;color:#000;font-weight:bold;cursor:pointer}
+        .tip{color:#ccc;font-size:13px;margin-top:6px}
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <span>得分：<span id="score">0</span></span>
+        <span>最高分：<span id="maxScore">0</span></span>
+    </div>
+    <div id="gameBox">
+        <div id="nailong"></div>
+        <div class="ground"></div>
+    </div>
+    <div class="btn-box">
+        <button onclick="restartGame()">重新开始</button>
+    </div>
+    <div class="tip">键盘 ← → 左右移动｜空格跳跃｜手机点击屏幕跳跃</div>
+
+    <script>
+        // 游戏变量
+        const game = document.getElementById('gameBox')
+        const nailong = document.getElementById('nailong')
+        let x = 80,y = 80,speed = 7,jumpPower = -16,gravity = 0.7,onGround = true,vy = 0
+        let score = 0,maxScore = localStorage.getItem('nailongMax')||0
+        document.getElementById('maxScore').innerText = maxScore
+        let lightList = [],cloudList = [],gameRun = true,gameSpeed = 3
+        const key = {left:false,right:false}
+
+        // 键盘监听
+        document.addEventListener('keydown',e=>{
+            if(e.code==='ArrowLeft')key.left=true
+            if(e.code==='ArrowRight')key.right=true
+            if(e.code==='Space'&&onGround&&gameRun){vy=jumpPower;onGround=false}
+        })
+        document.addEventListener('keyup',e=>{
+            if(e.code==='ArrowLeft')key.left=false
+            if(e.code==='ArrowRight')key.right=false
+        })
+        // 手机点击跳跃
+        game.addEventListener('click',()=>{if(onGround&&gameRun){vy=jumpPower;onGround=false}})
+
+        // 创建闪电道具
+        function createLight(){
+            if(!gameRun)return
+            const el = document.createElement('div')
+            el.className = 'light'
+            el.innerText = '⚡'
+            el.style.left = game.offsetWidth+'px'
+            el.style.top = (Math.random()*260+60)+'px'
+            game.appendChild(el)
+            lightList.push({dom:el,x:game.offsetWidth})
+        }
+        // 创建乌云障碍
+        function createCloud(){
+            if(!gameRun)return
+            const el = document.createElement('div')
+            el.className = 'cloud'
+            el.style.left = game.offsetWidth+'px'
+            el.style.top = (Math.random()*220+40)+'px'
+            game.appendChild(el)
+            cloudList.push({dom:el,x:game.offsetWidth})
+        }
+
+        // 碰撞检测
+        function isCrash(objX,objY,objW,objH){
+            const nx = x,ny = game.offsetHeight-y-65,nw=60,nh=65
+            return nx<objX+objW && nx+nw>objX && ny<objY+objH && ny+nh>objY
+        }
+
+        // 游戏主循环
+        function loop(){
+            if(!gameRun)return
+            // 左右移动
+            if(key.left&&x>0)x -= speed
+            if(key.right&&x<game.offsetWidth-60)x += speed
+            // 跳跃重力
+            y += vy;vy += gravity
+            // 落地判定
+            const groundH = 80
+            if(y<=groundH){y=groundH;onGround=true;vy=0}
+            nailong.style.left = x+'px'
+            nailong.style.bottom = y+'px'
+
+            // 更新闪电
+            lightList.forEach((item,i)=>{
+                item.x -= gameSpeed
+                item.dom.style.left = item.x+'px'
+                // 吃到闪电加分
+                if(isCrash(item.x,parseInt(item.dom.style.top),32,36)){
+                    score +=10
+                    document.getElementById('score').innerText = score
+                    item.dom.remove();lightList.splice(i,1)
+                }
+                if(item.x<-40){item.dom.remove();lightList.splice(i,1)}
+            })
+            // 更新乌云
+            cloudList.forEach((item,i)=>{
+                item.x -= gameSpeed
+                item.dom.style.left = item.x+'px'
+                // 撞到乌云游戏结束
+                if(isCrash(item.x,parseInt(item.dom.style.top),75,42)){
+                    gameOver()
+                }
+                if(item.x<-80){item.dom.remove();cloudList.splice(i,1)}
+            })
+            requestAnimationFrame(loop)
+        }
+
+        // 生成道具计时器
+        setInterval(createLight,1100)
+        setInterval(createCloud,2200)
+
+        // 游戏结束
+        function gameOver(){
+            gameRun = false
+            if(score>maxScore){
+                maxScore = score
+                localStorage.setItem('nailongMax',maxScore)
+                document.getElementById('maxScore').innerText = maxScore
+            }
+            alert(`游戏结束！本次得分：${score}\n历史最高分：${maxScore}`)
+        }
+        // 重新开局
+        function restartGame(){
+            // 清空道具
+            lightList.forEach(v=>v.dom.remove())
+            cloudList.forEach(v=>v.dom.remove())
+            lightList=[];cloudList=[]
+            // 重置参数
+            x=80;y=80;vy=0;score=0;gameRun=true;onGround=true
+            document.getElementById('score').innerText=0
+            loop()
+        }
+        loop()
+    </script>
+</body>
+</html>
