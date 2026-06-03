@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>简易下落音游</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#121212;color:#fff;display:flex;flex-direction:column;align-items:center}
+#info{
+    width:400px;padding:10px;font-size:18px;
+    display:flex;justify-content:space-between;
+}
+#gameBox{
+    width:400px;height:600px;
+    background:#1a1a1a;
+    border:2px solid #555;
+    position:relative;
+    overflow:hidden;
+}
+/*4个按键轨道*/
+.track{
+    width:100px;height:100%;
+    float:left;
+    border-right:1px solid #333;
+}
+/*判定线*/
+.judgeLine{
+    width:400px;height:6px;
+    background:#0cf;
+    position:absolute;
+    bottom:120px;
+    box-shadow:0 0 12px #0cf;
+}
+/*底部按键提示区*/
+.keyArea{
+    width:400px;height:120px;
+    display:flex;
+}
+.keyBtn{
+    width:100px;height:100px;
+    margin:auto 4px;
+    background:#333;
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;font-weight:bold;
+    border:2px solid #666;
+}
+.keyBtn.active{
+    background:#0cf;
+    color:#000;
+}
+/*下落音符*/
+.note{
+    width:90px;height:22px;
+    margin:0 5px;
+    background:#f45;
+    border-radius:4px;
+    position:absolute;
+    box-shadow:0 0 6px #f45;
+}
+</style>
+</head>
+<body>
+<div id="info">
+    <div>分数：<span id="score">0</span></div>
+    <div>连击：<span id="combo">0</span></div>
+    <div>PERF:<span id="perfect">0</span></div>
+</div>
+<div id="gameBox">
+    <!--4轨道-->
+    <div class="track"></div>
+    <div class="track"></div>
+    <div class="track"></div>
+    <div class="track"></div>
+    <!--判定线-->
+    <div class="judgeLine"></div>
+</div>
+<div class="keyArea">
+    <div class="keyBtn" data-key="D">D</div>
+    <div class="keyBtn" data-key="F">F</div>
+    <div class="keyBtn" data-key="J">J</div>
+    <div class="keyBtn" data-key="K">K</div>
+</div>
+<p style="margin-top:8px">操作：D F J K 击打对应轨道音符</p>
+
+<script>
+const game = document.getElementById('gameBox');
+const scoreDom = document.getElementById('score');
+const comboDom = document.getElementById('combo');
+const perfDom = document.getElementById('perfect');
+const keyBtns = document.querySelectorAll('.keyBtn');
+
+//游戏数据
+let score = 0,combo = 0,perfect=0;
+const keyList = ['D','F','J','K'];
+let noteList = [];
+const judgeY = 480; //判定线Y坐标
+const fallSpeed = 3;
+
+//按键映射
+const keyMap = {};
+keyBtns.forEach(btn=>{
+    let k = btn.dataset.key;
+    keyMap[k] = btn;
+})
+
+//键盘按下
+document.addEventListener('keydown',e=>{
+    let k = e.key.toUpperCase();
+    if(!keyMap[k])return;
+    keyMap[k].classList.add('active');
+    checkHit(keyList.indexOf(k));
+})
+document.addEventListener('keyup',e=>{
+    let k = e.key.toUpperCase();
+    if(keyMap[k]) keyMap[k].classList.remove('active');
+})
+
+//生成音符(随机轨道定时生成)
+function createNote(){
+    let trackIdx = Math.floor(Math.random()*4);
+    let note = document.createElement('div');
+    note.className = 'note';
+    note.style.left = (trackIdx*100+5)+'px';
+    note.style.top = '-30px';
+    game.appendChild(note);
+    noteList.push({dom:note,idx:trackIdx,y:-30});
+}
+
+//打击判定
+function checkHit(track){
+    //找当前轨道最靠近判定线的音符
+    for(let i=0;i<noteList.length;i++){
+        let n = noteList[i];
+        if(n.idx===track && Math.abs(n.y-judgeY)<35){
+            //完美判定
+            if(Math.abs(n.y-judgeY)<12){
+                score +=100;perfect++;
+            }else{
+                score +=50;
+            }
+            combo++;
+            removeNote(i);
+            updateUI();
+            break;
+        }
+    }
+}
+
+//移除音符
+function removeNote(index){
+    noteList[index].dom.remove();
+    noteList.splice(index,1);
+}
+
+//刷新数据显示
+function updateUI(){
+    scoreDom.textContent = score;
+    comboDom.textContent = combo;
+    perfDom.textContent = perfect;
+}
+
+//音符下落+漏键判定
+function loop(){
+    for(let i=noteList.length-1;i>=0;i--){
+        let n = noteList[i];
+        n.y += fallSpeed;
+        n.dom.style.top = n.y+'px';
+        //漏键超出判定线
+        if(n.y>judgeY+40){
+            combo=0;
+            removeNote(i);
+            updateUI();
+        }
+    }
+    requestAnimationFrame(loop);
+}
+
+//定时生成音符，350ms一个
+setInterval(createNote,350);
+loop();
+</script>
+</body>
+</html>
