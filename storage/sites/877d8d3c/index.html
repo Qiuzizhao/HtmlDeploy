@@ -2,149 +2,255 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3D建房模拟器</title>
 <style>
-*{margin:0;padding:0}
-body{overflow:hidden;background:#87CEEB}
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#87CEEB;font-family:sans-serif}
 #ui{
-    position:absolute;top:10px;left:10px;z-index:99;
-    background:rgba(255,255,255,0.85);padding:12px;border-radius:8px
+    position:absolute;top:12px;left:12px;z-index:99;
+    background:rgba(255,255,255,0.92);padding:14px 16px;border-radius:10px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.15);user-select:none;
+    backdrop-filter:blur(4px)
 }
-button{padding:6px 10px;margin:3px;border:none;border-radius:4px;cursor:pointer}
-#wood{background:#deb887}
-#stone{background:#999}
+#ui h4{margin-bottom:8px;font-size:14px;color:#333}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+button{padding:7px 14px;margin:0;border:none;border-radius:5px;cursor:pointer;font-size:13px;transition:all 0.15s;outline:none}
+button:active{transform:scale(0.95)}
+#wood{background:#deb887;color:#333}
+#wood.active{box-shadow:0 0 0 3px #fff,0 0 0 5px #a0784c}
+#stone{background:#999;color:#fff}
+#stone.active{box-shadow:0 0 0 3px #fff,0 0 0 5px #555}
 #brick{background:#cd7840;color:#fff}
-#clear{background:#f55;color:#fff}
+#brick.active{box-shadow:0 0 0 3px #fff,0 0 0 5px #8a4f28}
+#clear{background:#e04545;color:#fff;margin-left:4px}
+#clear:hover{background:#c0392b}
 </style>
 </head>
 <body>
 <div id="ui">
     <h4>3D建房｜WASD移动 鼠标拖拽旋转视角</h4>
-    <button id="wood">木头</button>
-    <button id="stone">石头</button>
-    <button id="brick">砖块</button>
-    <button id="clear">清空建筑</button>
+    <div class="btn-group">
+        <button id="wood" class="active">木头</button>
+        <button id="stone">石头</button>
+        <button id="brick">砖块</button>
+        <button id="clear">清空建筑</button>
+    </div>
 </div>
 
-<!-- 引入Three.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script>
-// ========== 初始化3D场景 ==========
-let scene,camera,renderer,controls;
-let blockList = [];
-let selectMat = "wood";
-let player;
+// ========== 全局状态 ==========
+let scene, camera, renderer, controls;
+const blockList = [];
+let selectMat = 'wood';
+let player = null;
 const BLOCK_SIZE = 2;
+const HALF_BLOCK = BLOCK_SIZE / 2;
+const key = {};
 
-init();
-animate();
+// 可复用对象（减少GC压力）
+const _raycaster = new THREE.Raycaster();
+const _mouse = new THREE.Vector2();
+const _pos = new THREE.Vector3();
 
-function init(){
+// ========== 材质配置 ==========
+const MATERIALS = {
+    wood: 0xdeb887,
+    stone: 0x999999,
+    brick: 0xcd7840
+};
+
+// ========== 初始化场景 ==========
+function initScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
 
-    //相机
-    camera = new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1000);
-    camera.position.set(15,12,18);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(15, 12, 18);
 
-    //渲染
-    renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    //轨道控制器（鼠标拖动旋转、滚轮缩放）
-    controls = new THREE.OrbitControls(camera,renderer.domElement);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.target.set(0, 1, 0);
+}
 
-    //灯光
-    const dirLight = new THREE.DirectionalLight(0xffffff,1);
-    dirLight.position.set(20,30,20);
+// ========== 灯光 ==========
+function initLights() {
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(20, 30, 20);
     scene.add(dirLight);
-    scene.add(new THREE.AmbientLight(0xffffff,0.4));
 
-    //地面
-    const groundGeo = new THREE.PlaneGeometry(50,50);
-    const groundMat = new THREE.MeshLambertMaterial({color:0x7ccd7c});
-    const ground = new THREE.Mesh(groundGeo,groundMat);
-    ground.rotation.x = -Math.PI/2;
+    const ambLight = new THREE.AmbientLight(0xffffff, 0.45);
+    scene.add(ambLight);
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.25);
+    backLight.position.set(-10, 5, -10);
+    scene.add(backLight);
+}
+
+// ========== 地面 ==========
+function initGround() {
+    const geo = new THREE.PlaneGeometry(50, 50);
+    const mat = new THREE.MeshLambertMaterial({ color: 0x7ccd7c });
+    const ground = new THREE.Mesh(geo, mat);
+    ground.rotation.x = -Math.PI / 2;
     ground.position.y = 0;
+    ground.name = 'ground';
     scene.add(ground);
+}
 
-    //玩家角色方块小人
-    const pGeo = new THREE.BoxGeometry(1.2,1.8,1);
-    const pMat = new THREE.MeshLambertMaterial({color:0x4285F4});
-    player = new THREE.Mesh(pGeo,pMat);
-    player.position.set(0,0.9,0);
+// ========== 玩家角色 ==========
+function initPlayer() {
+    const geo = new THREE.BoxGeometry(1.2, 1.8, 1);
+    const mat = new THREE.MeshLambertMaterial({ color: 0x4285F4 });
+    player = new THREE.Mesh(geo, mat);
+    player.position.set(0, 0.9, 0);
     scene.add(player);
-
-    //键盘移动
-    const key = {};
-    document.addEventListener('keydown',e=>key[e.code]=true);
-    document.addEventListener('keyup',e=>key[e.code]=false);
-
-    //切换建材按钮
-    document.getElementById('wood').onclick=()=>selectMat='wood';
-    document.getElementById('stone').onclick=()=>selectMat='stone';
-    document.getElementById('brick').onclick=()=>selectMat='brick';
-
-    //点击地面生成3D方块
-    const raycaster = new THREE.Raycaster();
-    renderer.domElement.onclick=(e)=>{
-        const mouse = new THREE.Vector2();
-        mouse.x = (e.clientX/window.innerWidth)*2-1;
-        mouse.y = -(e.clientY/window.innerHeight)*2+1;
-        raycaster.setFromCamera(mouse,camera);
-        const intersect = raycaster.intersectObjects([ground,...blockList]);
-        if(intersect.length>0){
-            let pos = intersect[0].point.clone();
-            pos.x = Math.round(pos.x/BLOCK_SIZE)*BLOCK_SIZE;
-            pos.z = Math.round(pos.z/BLOCK_SIZE)*BLOCK_SIZE;
-            pos.y += BLOCK_SIZE/2;
-
-            //材质颜色
-            let color;
-            if(selectMat==='wood') color=0xdeb887;
-            else if(selectMat==='stone') color=0x999999;
-            else color=0xcd7840;
-
-            const bGeo = new THREE.BoxGeometry(BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE);
-            const bMat = new THREE.MeshLambertMaterial({color});
-            const block = new THREE.Mesh(bGeo,bMat);
-            block.position.copy(pos);
-            scene.add(block);
-            blockList.push(block);
-        }
-    }
-
-    //清空所有建筑
-    document.getElementById('clear').onclick=()=>{
-        blockList.forEach(b=>scene.remove(b));
-        blockList=[];
-    }
-
-    //窗口自适应
-    window.onresize=()=>{
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth,window.innerHeight);
-    }
 }
 
-//WASD控制玩家移动
-function movePlayer(){
+// ========== 键盘输入 ==========
+function initKeyboard() {
+    document.addEventListener('keydown', (e) => { key[e.code] = true; });
+    document.addEventListener('keyup', (e) => { key[e.code] = false; });
+}
+
+// ========== 玩家移动 ==========
+function movePlayer() {
+    if (!player) return;
     const speed = 0.15;
-    if(key['KeyW']) player.position.z -= speed;
-    if(key['KeyS']) player.position.z += speed;
-    if(key['KeyA']) player.position.x -= speed;
-    if(key['KeyD']) player.position.x += speed;
+    if (key['KeyW']) player.position.z -= speed;
+    if (key['KeyS']) player.position.z += speed;
+    if (key['KeyA']) player.position.x -= speed;
+    if (key['KeyD']) player.position.x += speed;
+
+    // 限制移动范围（防止跑出地面）
+    const limit = 23;
+    player.position.x = Math.max(-limit, Math.min(limit, player.position.x));
+    player.position.z = Math.max(-limit, Math.min(limit, player.position.z));
 }
 
-function animate(){
+// ========== 放置方块 ==========
+function initClickHandler() {
+    const dom = renderer.domElement;
+
+    dom.addEventListener('click', (e) => {
+        const rect = dom.getBoundingClientRect();
+        _mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        _mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        _raycaster.setFromCamera(_mouse, camera);
+
+        // 收集可点击物体
+        const targets = [scene.getObjectByName('ground'), ...blockList].filter(Boolean);
+        if (targets.length === 0) return;
+
+        const hits = _raycaster.intersectObjects(targets);
+        if (hits.length === 0) return;
+
+        const hit = hits[0];
+        _pos.copy(hit.point);
+
+        // 对齐网格
+        _pos.x = Math.round(_pos.x / BLOCK_SIZE) * BLOCK_SIZE;
+        _pos.z = Math.round(_pos.z / BLOCK_SIZE) * BLOCK_SIZE;
+        _pos.y = Math.max(0, Math.round(_pos.y / BLOCK_SIZE) * BLOCK_SIZE) + HALF_BLOCK;
+
+        // 防止在已占据位置重复放置（检查距离）
+        for (let i = 0; i < blockList.length; i++) {
+            const b = blockList[i];
+            if (Math.abs(b.position.x - _pos.x) < 0.1 &&
+                Math.abs(b.position.y - _pos.y) < 0.1 &&
+                Math.abs(b.position.z - _pos.z) < 0.1) {
+                return;
+            }
+        }
+
+        const color = MATERIALS[selectMat] || MATERIALS.wood;
+        const geo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        const mat = new THREE.MeshLambertMaterial({ color });
+        const block = new THREE.Mesh(geo, mat);
+        block.position.copy(_pos);
+        scene.add(block);
+        blockList.push(block);
+    });
+}
+
+// ========== UI 事件 ==========
+function initUI() {
+    const btnWood = document.getElementById('wood');
+    const btnStone = document.getElementById('stone');
+    const btnBrick = document.getElementById('brick');
+    const btnClear = document.getElementById('clear');
+
+    function setActive(mat) {
+        selectMat = mat;
+        [btnWood, btnStone, btnBrick].forEach(el => el.classList.remove('active'));
+        if (mat === 'wood') btnWood.classList.add('active');
+        else if (mat === 'stone') btnStone.classList.add('active');
+        else if (mat === 'brick') btnBrick.classList.add('active');
+    }
+
+    btnWood.addEventListener('click', () => setActive('wood'));
+    btnStone.addEventListener('click', () => setActive('stone'));
+    btnBrick.addEventListener('click', () => setActive('brick'));
+    btnClear.addEventListener('click', () => {
+        for (let i = blockList.length - 1; i >= 0; i--) {
+            scene.remove(blockList[i]);
+            blockList[i].geometry.dispose();
+            blockList[i].material.dispose();
+        }
+        blockList.length = 0;
+    });
+}
+
+// ========== 窗口自适应（带防抖） ==========
+function initResize() {
+    let timer = null;
+    const handler = () => {
+        if (timer) cancelAnimationFrame(timer);
+        timer = requestAnimationFrame(() => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            timer = null;
+        });
+    };
+    window.addEventListener('resize', handler);
+}
+
+// ========== 渲染循环 ==========
+function animate() {
     requestAnimationFrame(animate);
     controls.update();
     movePlayer();
-    renderer.render(scene,camera);
+    renderer.render(scene, camera);
+}
+
+// ========== 启动 ==========
+function init() {
+    initScene();
+    initLights();
+    initGround();
+    initPlayer();
+    initKeyboard();
+    initClickHandler();
+    initUI();
+    initResize();
+    animate();
+}
+
+// 当页面完全加载后启动
+if (document.readyState === 'complete') {
+    init();
+} else {
+    window.addEventListener('load', init);
 }
 </script>
 </body>
