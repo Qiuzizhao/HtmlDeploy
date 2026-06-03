@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -35,7 +34,6 @@
             will-change: transform;
             contain: layout style;
         }
-        /* 雷霆奶龙 */
         #nailong {
             width: 60px;
             height: 65px;
@@ -81,7 +79,6 @@
                 opacity: 1;
             }
         }
-        /* 地面 */
         .ground {
             width: 100%;
             height: 80px;
@@ -90,7 +87,6 @@
             bottom: 0;
             pointer-events: none;
         }
-        /* 闪电道具 */
         .light {
             width: 32px;
             height: 36px;
@@ -102,7 +98,6 @@
             pointer-events: none;
             z-index: 1;
         }
-        /* 乌云障碍 */
         .cloud {
             width: 75px;
             height: 42px;
@@ -114,7 +109,6 @@
             pointer-events: none;
             z-index: 1;
         }
-        /* UI面板 */
         .ui {
             width: min(95vw, 800px);
             display: flex;
@@ -158,7 +152,6 @@
             text-align: center;
             max-width: min(95vw, 800px);
         }
-        /* 游戏结束覆盖层 */
         #gameOverlay {
             position: absolute;
             inset: 0;
@@ -221,7 +214,6 @@
         #gameOverlay .overlay-btn:hover {
             box-shadow: 0 6px 28px rgba(255, 209, 0, 0.5);
         }
-        /* 得分动画提示 */
         .score-popup {
             position: absolute;
             color: #ffd100;
@@ -242,7 +234,6 @@
                 transform: translateY(-50px) scale(1.3);
             }
         }
-        /* 响应式 */
         @media (max-width: 600px) {
             #gameBox {
                 height: 380px;
@@ -309,7 +300,6 @@
     <div id="gameBox">
         <div id="nailong"></div>
         <div class="ground"></div>
-        <!-- 游戏结束覆盖层 -->
         <div id="gameOverlay">
             <div class="overlay-title">⚡ 游戏结束</div>
             <div class="overlay-score">本次得分：<span id="finalScore">0</span></div>
@@ -320,13 +310,12 @@
     <div class="btn-box">
         <button id="restartTopBtn">重新开始</button>
     </div>
-    <div class="tip">键盘 ← → 左右移动｜空格跳跃｜手机点击屏幕跳跃</div>
+    <div class="tip">键盘 ← → 左右移动｜手机点击屏幕移动</div>
 
     <script>
         (function() {
             'use strict';
 
-            // --- DOM 缓存 ---
             const game = document.getElementById('gameBox');
             const nailong = document.getElementById('nailong');
             const scoreSpan = document.getElementById('score');
@@ -337,7 +326,6 @@
             const restartBtn = document.getElementById('restartBtn');
             const restartTopBtn = document.getElementById('restartTopBtn');
 
-            // --- 常量 ---
             const GROUND_H = 80;
             const NAILONG_W = 60;
             const NAILONG_H = 65;
@@ -346,19 +334,14 @@
             const CLOUD_W = 75;
             const CLOUD_H = 42;
             const SPEED_X = 7;
-            const JUMP_POWER = -16;
-            const GRAVITY = 0.7;
             const BASE_GAME_SPEED = 3;
             const LIGHT_INTERVAL_MS = 1100;
             const CLOUD_INTERVAL_MS = 2200;
             const MAX_SPEED = 9;
-            const SPEED_INCREASE_PER_SCORE = 0.04; // 每得10分速度+0.04
+            const SPEED_INCREASE_PER_SCORE = 0.04;
 
-            // --- 状态 ---
             let x = 80;
             let y = GROUND_H;
-            let vy = 0;
-            let onGround = true;
             let score = 0;
             let maxScore = parseInt(localStorage.getItem('nailongMax'), 10) || 0;
             let gameRun = false;
@@ -366,24 +349,18 @@
             let animId = null;
             let lastTimestamp = 0;
 
-            // 对象列表
             let lightList = [];
             let cloudList = [];
 
-            // 键盘状态
             const key = { left: false, right: false };
 
-            // 生成时间控制
             let lastLightTime = 0;
             let lastCloudTime = 0;
 
-            // 尺寸缓存
             let gameW = game.offsetWidth;
             let gameH = game.offsetHeight;
 
-            // --- DOM 更新辅助 ---
             function setNailongPos(px, py) {
-                // px: left, py: bottom
                 nailong.style.transform = 'translate3d(' + px + 'px, ' + (-py) + 'px, 0)';
             }
 
@@ -403,7 +380,6 @@
                 }, 650);
             }
 
-            // --- 游戏逻辑 ---
             function isCrash(objX, objY, objW, objH) {
                 const nx = x;
                 const ny = gameH - y - NAILONG_H;
@@ -445,7 +421,6 @@
                 cloudList.push({ dom: el, x: gameW, top: top, w: CLOUD_W, h: CLOUD_H });
             }
 
-            // --- 游戏结束 ---
             function gameOver() {
                 if (!gameRun) return;
                 gameRun = false;
@@ -459,12 +434,9 @@
                 overlay.classList.add('show');
             }
 
-            // --- 重置 ---
             function restartGame() {
-                // 清除覆盖层
                 overlay.classList.remove('show');
 
-                // 清除所有道具
                 for (let i = 0; i < lightList.length; i++) {
                     if (lightList[i].dom.parentNode) lightList[i].dom.remove();
                 }
@@ -474,13 +446,10 @@
                 lightList = [];
                 cloudList = [];
 
-                // 重置状态
                 x = 80;
                 y = GROUND_H;
-                vy = 0;
                 score = 0;
                 gameSpeed = BASE_GAME_SPEED;
-                onGround = true;
                 key.left = false;
                 key.right = false;
                 lastLightTime = 0;
@@ -500,25 +469,21 @@
                 }
             }
 
-            // --- 主循环 (使用 delta time) ---
             function loop(timestamp) {
                 if (!gameRun) {
                     animId = null;
                     return;
                 }
 
-                // 初始化时间
                 if (lastTimestamp === 0) {
                     lastTimestamp = timestamp;
                     lastLightTime = timestamp;
                     lastCloudTime = timestamp;
                 }
 
-                // delta time (ms) 限制最大步长防止卡顿
                 var dt = Math.min(timestamp - lastTimestamp, 40);
                 lastTimestamp = timestamp;
 
-                // 更新尺寸
                 var newW = game.offsetWidth;
                 var newH = game.offsetHeight;
                 if (newW !== gameW || newH !== gameH) {
@@ -526,11 +491,9 @@
                     gameH = newH;
                 }
 
-                // 难度渐进 (基于得分)
                 var speedBoost = Math.min(score / 10 * SPEED_INCREASE_PER_SCORE, MAX_SPEED - BASE_GAME_SPEED);
                 gameSpeed = BASE_GAME_SPEED + speedBoost;
 
-                // --- 生成道具 (基于时间) ---
                 if (timestamp - lastLightTime >= LIGHT_INTERVAL_MS) {
                     createLight();
                     lastLightTime = timestamp;
@@ -540,24 +503,11 @@
                     lastCloudTime = timestamp;
                 }
 
-                // --- 移动 ---
                 if (key.left && x > 0) x -= SPEED_X;
                 if (key.right && x < gameW - NAILONG_W) x += SPEED_X;
 
-                // --- 跳跃 & 重力 ---
-                y += vy;
-                vy += GRAVITY;
-                if (y <= GROUND_H) {
-                    y = GROUND_H;
-                    onGround = true;
-                    vy = 0;
-                } else {
-                    onGround = false;
-                }
-
                 setNailongPos(x, y);
 
-                // --- 更新闪电 (delta time 缩放) ---
                 var step = gameSpeed * (dt / 16.667);
                 for (var i = lightList.length - 1; i >= 0; i--) {
                     var item = lightList[i];
@@ -565,14 +515,11 @@
                     setElPos(item.dom, item.x, item.top);
 
                     if (isCrash(item.x, item.top, item.w, item.h)) {
-                        // 得分
                         score += 10;
                         updateScoreUI();
-                        // 弹出 +10 动画
                         var popX = item.x + 4;
                         var popY = item.top - 10;
                         showScorePopup(popX, popY);
-                        // 移除
                         if (item.dom.parentNode) item.dom.remove();
                         lightList.splice(i, 1);
                         continue;
@@ -583,7 +530,6 @@
                     }
                 }
 
-                // --- 更新乌云 ---
                 for (var j = cloudList.length - 1; j >= 0; j--) {
                     var c = cloudList[j];
                     c.x -= step;
@@ -603,20 +549,11 @@
                 animId = requestAnimationFrame(loop);
             }
 
-            // --- 事件绑定 ---
-            // 键盘
             function onKeyDown(e) {
                 if (e.code === 'ArrowLeft') { key.left = true;
                     e.preventDefault(); }
                 if (e.code === 'ArrowRight') { key.right = true;
                     e.preventDefault(); }
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    if (onGround && gameRun) {
-                        vy = JUMP_POWER;
-                        onGround = false;
-                    }
-                }
             }
 
             function onKeyUp(e) {
@@ -624,43 +561,46 @@
                     e.preventDefault(); }
                 if (e.code === 'ArrowRight') { key.right = false;
                     e.preventDefault(); }
-                if (e.code === 'Space') { e.preventDefault(); }
             }
 
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
 
-            // 游戏区域点击 / 触摸跳跃
-            function handleJump(e) {
-                // 阻止事件冒泡，避免与覆盖层按钮冲突
+            function handleMove(e) {
                 if (e.target && (e.target.closest('#gameOverlay') || e.target.closest('.btn-box') || e.target.closest(
                         '.overlay-btn') || e.target.id === 'restartTopBtn')) {
                     return;
                 }
-                if (onGround && gameRun) {
-                    vy = JUMP_POWER;
-                    onGround = false;
-                }
-                if (e.type === 'touchstart') {
+                if (!gameRun) return;
+
+                const rect = game.getBoundingClientRect();
+                let clientX;
+                if (e.type === 'touchstart' || e.type === 'touchmove') {
+                    clientX = e.touches[0].clientX;
                     e.preventDefault();
+                } else {
+                    clientX = e.clientX;
                 }
+
+                const relativeX = clientX - rect.left;
+                const targetX = relativeX - NAILONG_W / 2;
+                x = Math.max(0, Math.min(gameW - NAILONG_W, targetX));
+                setNailongPos(x, y);
             }
 
-            game.addEventListener('click', handleJump);
-            game.addEventListener('touchstart', handleJump, { passive: false });
+            game.addEventListener('click', handleMove);
+            game.addEventListener('touchstart', handleMove, { passive: false });
+            game.addEventListener('touchmove', handleMove, { passive: false });
 
-            // 重新开始按钮
             function onRestart() {
                 restartGame();
             }
             restartBtn.addEventListener('click', onRestart);
             restartTopBtn.addEventListener('click', onRestart);
 
-            // 窗口缩放时更新尺寸缓存 (防止跳跃瞬间位置偏移)
             function onResize() {
                 gameW = game.offsetWidth;
                 gameH = game.offsetHeight;
-                // 确保奶龙不超出右边界
                 if (x + NAILONG_W > gameW) {
                     x = gameW - NAILONG_W;
                     setNailongPos(x, y);
@@ -668,32 +608,26 @@
             }
             window.addEventListener('resize', onResize);
 
-            // 页面可见性变化时暂停/恢复 (优化性能)
             function onVisibilityChange() {
                 if (document.hidden && gameRun) {
-                    // 暂停：取消动画循环，但保持状态
                     if (animId) {
                         cancelAnimationFrame(animId);
                         animId = null;
                     }
                 } else if (!document.hidden && gameRun && !animId) {
-                    // 恢复：重置时间戳，重新开始循环
                     lastTimestamp = 0;
                     animId = requestAnimationFrame(loop);
                 }
             }
             document.addEventListener('visibilitychange', onVisibilityChange);
 
-            // --- 初始化 ---
             maxScoreSpan.textContent = maxScore;
             setNailongPos(x, y);
             gameRun = true;
             animId = requestAnimationFrame(loop);
 
-            // 暴露 restartGame 给全局（方便调试，但不再依赖 onclick）
             window.restartGame = restartGame;
 
-            // 清理：页面卸载时取消动画
             window.addEventListener('beforeunload', function() {
                 if (animId) cancelAnimationFrame(animId);
                 animId = null;
