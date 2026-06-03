@@ -2,92 +2,304 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>原创精灵大陆-宠物对战</title>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
-        body{background:#87CEEB;padding:20px}
-        .box{max-width:700px;margin:0 auto;background:#fff;padding:20px;border-radius:10px}
-        .pet-box{display:flex;justify-content:space-around;margin:30px 0}
-        .pet{text-align:center;border:1px solid #ccc;padding:15px;border-radius:8px;width:220px}
-        .hp{height:12px;background:#eee;border-radius:6px;margin:8px 0}
-        .hp-inner{height:100%;background:#2ecc71;border-radius:6px}
-        .btn-group{text-align:center}
-        button{padding:8px 16px;margin:0 5px;cursor:pointer;border:none;background:#3498db;color:#fff;border-radius:5px}
-        #log{margin-top:20px;border:1px solid #eee;padding:10px;height:150px;overflow:auto}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "微软雅黑", system-ui, sans-serif;
+        }
+        body {
+            background: #87CEEB;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .box {
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .pet-box {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pet {
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            width: 220px;
+            background: #fafafa;
+            transition: box-shadow 0.3s;
+        }
+        .pet:hover {
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+        .hp {
+            height: 12px;
+            background: #eee;
+            border-radius: 6px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        .hp-inner {
+            height: 100%;
+            background: #2ecc71;
+            border-radius: 6px;
+            transition: width 0.35s ease, background 0.35s ease;
+        }
+        .btn-group {
+            text-align: center;
+            margin-top: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: none;
+            background: #3498db;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background 0.2s, opacity 0.2s, transform 0.1s;
+        }
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        button:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        button.reset-btn {
+            background: #95a5a6;
+        }
+        button.reset-btn:hover:not(:disabled) {
+            background: #7f8c8d;
+        }
+        #log {
+            margin-top: 20px;
+            border: 1px solid #eee;
+            padding: 12px;
+            height: 150px;
+            overflow-y: auto;
+            background: #fcfcfc;
+            border-radius: 6px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .log-entry {
+            color: #333;
+        }
+        .log-entry.damage {
+            color: #c0392b;
+        }
+        .log-entry.heal {
+            color: #27ae60;
+        }
+        .log-entry.victory {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .log-entry.defeat {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .log-entry.info {
+            color: #555;
+        }
+        .log-divider {
+            border-top: 1px dashed #ddd;
+            margin: 4px 0;
+        }
+        @media (max-width: 500px) {
+            .pet {
+                width: 100%;
+                max-width: 280px;
+            }
+            .box {
+                padding: 15px;
+            }
+            button {
+                margin: 4px 3px;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
 <div class="box">
-    <h2 align="center">原创精灵回合对战</h2>
+    <h2 style="text-align:center;">原创精灵回合对战</h2>
     <div class="pet-box">
-        <div class="pet">
+        <div class="pet" role="region" aria-label="我方精灵">
             <h3>焰毛兽(我方)</h3>
             <p>血量:<span id="myHp">100</span>/100</p>
-            <div class="hp"><div class="hp-inner" id="myHpBar" style="width:100%"></div></div>
+            <div class="hp" aria-hidden="true">
+                <div class="hp-inner" id="myHpBar" style="width:100%"></div>
+            </div>
         </div>
-        <div class="pet">
+        <div class="pet" role="region" aria-label="敌方精灵">
             <h3>叶尾蜥(敌方)</h3>
             <p>血量:<span id="enHp">100</span>/100</p>
-            <div class="hp"><div class="hp-inner" id="enHpBar" style="width:100%"></div></div>
+            <div class="hp" aria-hidden="true">
+                <div class="hp-inner" id="enHpBar" style="width:100%"></div>
+            </div>
         </div>
     </div>
     <div class="btn-group">
-        <button onclick="attack()">使用技能【火焰冲击】</button>
-        <button onclick="resetGame()">重新开局</button>
+        <button id="attackBtn" class="attack-btn">使用技能【火焰冲击】</button>
+        <button id="resetBtn" class="reset-btn">重新开局</button>
     </div>
-    <div id="log">战斗日志：</div>
+    <div id="log" role="log" aria-live="polite">战斗日志：</div>
 </div>
 
 <script>
-// 宠物血量数据
-let myHP = 100, enHP = 100;
-const logDom = document.getElementById('log');
-const myHpDom = document.getElementById('myHp');
-const enHpDom = document.getElementById('enHp');
-const myBar = document.getElementById('myHpBar');
-const enBar = document.getElementById('enHpBar');
+    (function() {
+        'use strict';
 
-// 我方攻击
-function attack(){
-    //我方伤害15~25随机
-    let dmg = Math.floor(Math.random()*11)+15;
-    enHP -= dmg;
-    if(enHP<0) enHP=0;
-    logDom.innerHTML += `<br>焰毛兽发动火焰冲击，造成${dmg}点伤害！`;
-    refreshHp();
-    if(enHP<=0){
-        logDom.innerHTML += '<br>敌方叶尾蜥战败！战斗胜利！';
-        return;
-    }
-    //敌方反击
-    let edmg = Math.floor(Math.random()*9)+12;
-    myHP -= edmg;
-    if(myHP<0) myHP=0;
-    logDom.innerHTML += `<br>叶尾蜥反击，造成${edmg}点伤害！`;
-    refreshHp();
-    if(myHP<=0){
-        logDom.innerHTML += '<br>我方焰毛兽战败，战斗失败！';
-    }
-    logDom.scrollTop = logDom.scrollHeight;
-}
+        // ---- 常量配置 ----
+        const MAX_HP = 100;
+        const MY_ATTACK_MIN = 15;
+        const MY_ATTACK_MAX = 25;
+        const ENEMY_ATTACK_MIN = 12;
+        const ENEMY_ATTACK_MAX = 20;
+        const HP_LOW_THRESHOLD = 30;
+        const COLOR_NORMAL = '#2ecc71';
+        const COLOR_LOW = '#e74c3c';
 
-//刷新血条
-function refreshHp(){
-    myHpDom.innerText = myHP;
-    enHpDom.innerText = enHP;
-    myBar.style.width = myHP+'%';
-    enBar.style.width = enHP+'%';
-    //残血变色
-    enBar.style.background = enHP<30?'#e74c3c':'#2ecc71';
-    myBar.style.background = myHP<30?'#e74c3c':'#2ecc71';
-}
+        // ---- DOM 缓存 ----
+        const dom = {
+            myHp: document.getElementById('myHp'),
+            enHp: document.getElementById('enHp'),
+            myBar: document.getElementById('myHpBar'),
+            enBar: document.getElementById('enHpBar'),
+            log: document.getElementById('log'),
+            attackBtn: document.getElementById('attackBtn'),
+            resetBtn: document.getElementById('resetBtn')
+        };
 
-//重置游戏
-function resetGame(){
-    myHP=100;enHP=100;
-    logDom.innerHTML='战斗日志：';
-    refreshHp();
-}
+        // ---- 游戏状态 ----
+        let state = {
+            myHP: MAX_HP,
+            enHP: MAX_HP,
+            gameOver: false
+        };
+
+        // ---- 工具函数 ----
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function calcPercent(current, max) {
+            return (current / max) * 100;
+        }
+
+        // ---- 日志系统 ----
+        function addLog(message, className) {
+            var entry = document.createElement('div');
+            entry.className = 'log-entry' + (className ? ' ' + className : '');
+            entry.textContent = message;
+            dom.log.appendChild(entry);
+            dom.log.scrollTop = dom.log.scrollHeight;
+        }
+
+        function clearLog() {
+            dom.log.innerHTML = '战斗日志：';
+        }
+
+        // ---- 血量刷新 ----
+        function refreshHp() {
+            var myPercent = calcPercent(state.myHP, MAX_HP);
+            var enPercent = calcPercent(state.enHP, MAX_HP);
+
+            dom.myHp.textContent = state.myHP;
+            dom.enHp.textContent = state.enHP;
+            dom.myBar.style.width = myPercent + '%';
+            dom.enBar.style.width = enPercent + '%';
+            dom.myBar.style.background = state.myHP < HP_LOW_THRESHOLD ? COLOR_LOW : COLOR_NORMAL;
+            dom.enBar.style.background = state.enHP < HP_LOW_THRESHOLD ? COLOR_LOW : COLOR_NORMAL;
+        }
+
+        // ---- 检查战斗结果 ----
+        function checkBattle() {
+            if (state.enHP <= 0) {
+                state.enHP = 0;
+                state.gameOver = true;
+                dom.attackBtn.disabled = true;
+                addLog('敌方叶尾蜥战败！战斗胜利！', 'victory');
+                refreshHp();
+                return true;
+            }
+            if (state.myHP <= 0) {
+                state.myHP = 0;
+                state.gameOver = true;
+                dom.attackBtn.disabled = true;
+                addLog('我方焰毛兽战败，战斗失败！', 'defeat');
+                refreshHp();
+                return true;
+            }
+            return false;
+        }
+
+        // ---- 攻击逻辑 ----
+        function attack() {
+            if (state.gameOver) return;
+
+            // 我方攻击
+            var dmg = randomInt(MY_ATTACK_MIN, MY_ATTACK_MAX);
+            state.enHP = clamp(state.enHP - dmg, 0, MAX_HP);
+            addLog('焰毛兽发动火焰冲击，造成' + dmg + '点伤害！', 'damage');
+            refreshHp();
+
+            // 检查敌方是否战败
+            if (checkBattle()) return;
+
+            // 敌方反击
+            var edmg = randomInt(ENEMY_ATTACK_MIN, ENEMY_ATTACK_MAX);
+            state.myHP = clamp(state.myHP - edmg, 0, MAX_HP);
+            addLog('叶尾蜥反击，造成' + edmg + '点伤害！', 'damage');
+            refreshHp();
+
+            // 检查我方是否战败
+            checkBattle();
+        }
+
+        // ---- 重置游戏 ----
+        function resetGame() {
+            state.myHP = MAX_HP;
+            state.enHP = MAX_HP;
+            state.gameOver = false;
+            dom.attackBtn.disabled = false;
+            clearLog();
+            refreshHp();
+        }
+
+        // ---- 事件绑定 ----
+        dom.attackBtn.addEventListener('click', attack);
+        dom.resetBtn.addEventListener('click', resetGame);
+
+        // ---- 初始化 ----
+        refreshHp();
+    })();
 </script>
 </body>
 </html>

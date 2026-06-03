@@ -4,18 +4,18 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-02T17:59:08.145Z",
+    "updatedAt": "2026-06-03T14:06:12.358Z",
     "uploadEnabled": false,
-    "passwordEnabled": true
+    "passwordEnabled": false
   },
   {
     "id": "392f3c64",
     "name": "六5",
     "password": "003794",
     "createdAt": "2026-06-02T12:01:31.958Z",
-    "updatedAt": "2026-06-02T12:01:37.628Z",
+    "updatedAt": "2026-06-03T14:06:07.529Z",
     "uploadEnabled": true,
-    "passwordEnabled": true
+    "passwordEnabled": false
   },
   {
     "id": "b3f7dd30",
@@ -23,7 +23,8 @@
     "password": "186559",
     "createdAt": "2026-06-02T12:01:47.337Z",
     "uploadEnabled": true,
-    "passwordEnabled": true
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-03T14:06:09.157Z"
   },
   {
     "id": "2c2fab13",
@@ -31,7 +32,8 @@
     "password": "765140",
     "createdAt": "2026-06-02T12:01:52.127Z",
     "uploadEnabled": true,
-    "passwordEnabled": true
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-03T14:06:09.445Z"
   },
   {
     "id": "c37011bf",
@@ -39,7 +41,8 @@
     "password": "815726",
     "createdAt": "2026-06-02T12:01:55.583Z",
     "uploadEnabled": true,
-    "passwordEnabled": true
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-03T14:06:09.981Z"
   },
   {
     "id": "f438ed26",
@@ -47,7 +50,8 @@
     "password": "978153",
     "createdAt": "2026-06-02T12:01:59.681Z",
     "uploadEnabled": true,
-    "passwordEnabled": true
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-03T14:06:10.347Z"
   },
   {
     "id": "b4f9025a",
@@ -55,6 +59,7 @@
     "password": "951585",
     "createdAt": "2026-06-02T12:03:03.372Z",
     "uploadEnabled": true,
-    "passwordEnabled": true
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-03T14:06:10.965Z"
   }
 ]
