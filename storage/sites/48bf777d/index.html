@@ -1,85 +1,807 @@
-import random
-import time
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍦 冰淇淋小店</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-def ice_cream_shop_game():
-    # 游戏初始数据
-    money = 50  # 初始资金
-    level = 1   # 店铺等级
-    customers_served = 0
-    flavors = ["香草", "巧克力", "草莓", "芒果", "抹茶"]
-    toppings = ["彩糖针", "奥利奥碎", "坚果", "巧克力酱", "樱桃"]
-    
-    print("🍦 欢迎来到你的冰淇淋小店！")
-    print("=" * 40)
-    print(f"初始资金：{money}元 | 店铺等级：{level}级")
-    print("=" * 40)
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(145deg, #fce4ec 0%, #fff3e0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
 
-    while True:
-        # 主菜单
-        print("\n===== 菜单 =====")
-        print("1. 接待顾客，制作冰淇淋")
-        print("2. 查看店铺信息")
-        print("3. 升级店铺（赚更多钱）")
-        print("4. 退出游戏")
-        choice = input("请选择操作（1-4）：")
+        .game-container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 248, 240, 0.85);
+            backdrop-filter: blur(6px);
+            border-radius: 40px 40px 32px 32px;
+            box-shadow: 0 20px 60px rgba(233, 150, 87, 0.25),
+                        0 8px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: box-shadow 0.3s;
+        }
 
-        if choice == "1":
-            # 接待顾客
-            print("\n🎧 有顾客来啦！正在准备冰淇淋...")
-            time.sleep(1)
-            
-            # 随机口味 + 配料
-            fav_flavor = random.choice(flavors)
-            fav_topping = random.choice(toppings)
-            price = random.randint(8, 15) + (level * 2)  # 等级越高越贵
-            
-            print(f"顾客想要：【{fav_flavor}冰淇淋 + {fav_topping}】")
-            print(f"售价：{price}元")
-            
-            make = input("确认制作吗？(y/n)：")
-            if make.lower() == "y":
-                print("\n🥄 正在制作冰淇淋...")
-                time.sleep(1.5)
-                print("✅ 冰淇淋完成！顾客很满意～")
-                money += price
-                customers_served += 1
-                print(f"收入 +{price}元 | 当前余额：{money}元")
-            else:
-                print("❌ 顾客失望地离开了...")
+        .game-header {
+            background: linear-gradient(135deg, #f8a5c2, #f093fb);
+            padding: 28px 24px 22px;
+            text-align: center;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
 
-        elif choice == "2":
-            # 查看店铺信息
-            print("\n===== 店铺信息 =====")
-            print(f"店铺等级：Lv.{level}")
-            print(f"总资金：{money}元")
-            print(f"已接待顾客：{customers_served} 位")
-            print(f"可做口味：{', '.join(flavors)}")
+        .game-header::after {
+            content: "🍦🍨🍧";
+            position: absolute;
+            bottom: -6px;
+            right: 16px;
+            font-size: 48px;
+            opacity: 0.25;
+            pointer-events: none;
+            letter-spacing: 8px;
+        }
 
-        elif choice == "3":
-            # 升级店铺
-            upgrade_cost = 100 + (level * 50)
-            print(f"\� 升级到 Lv.{level+1} 需要 {upgrade_cost} 元")
-            print(f"你的资金：{money}元")
-            
-            if money >= upgrade_cost:
-                confirm = input("确认升级？(y/n)：")
-                if confirm.lower() == "y":
-                    money -= upgrade_cost
-                    level += 1
-                    print(f"\n🎉 恭喜！店铺升级到 Lv.{level} 啦！")
-                    print("顾客愿意付更多钱啦～")
-            else:
-                print("\n❌ 钱不够哦，多接待几位顾客吧！")
+        .game-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
 
-        elif choice == "4":
-            # 退出游戏
-            print("\n感谢游玩冰淇淋小店！")
-            print(f"你最终赚到了 {money} 元，接待了 {customers_served} 位顾客！")
-            break
-        
-        else:
-            print("\n⚠️ 输入无效，请选择 1-4")
+        .game-header .sub {
+            font-size: 15px;
+            opacity: 0.9;
+            margin-top: 6px;
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
 
-# 启动游戏
-if __name__ == "__main__":
-    ice_cream_shop_game()
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            padding: 14px 16px;
+            border-bottom: 2px solid #f8e1d4;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #4a2e1e;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 4px 14px 4px 10px;
+            border-radius: 30px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-item .icon {
+            font-size: 20px;
+        }
+
+        .stat-item .label {
+            font-weight: 400;
+            opacity: 0.7;
+            font-size: 13px;
+        }
+
+        .stat-item .value {
+            font-weight: 700;
+            color: #7b4a2a;
+            min-width: 28px;
+        }
+
+        .game-body {
+            padding: 24px 24px 20px;
+        }
+
+        .log-area {
+            background: #fff7f0;
+            border-radius: 24px;
+            padding: 18px 20px;
+            min-height: 80px;
+            margin-bottom: 22px;
+            border: 2px dashed #fadbc8;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #3e2a1b;
+            box-shadow: inset 0 2px 8px rgba(233, 150, 87, 0.06);
+            transition: all 0.2s;
+            word-break: break-word;
+        }
+
+        .log-area .highlight {
+            color: #d4693c;
+            font-weight: 600;
+        }
+
+        .log-area .success {
+            color: #2e7d32;
+            font-weight: 600;
+        }
+
+        .log-area .warn {
+            color: #b76e1e;
+        }
+
+        .log-area .info-muted {
+            color: #8a7a6e;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .menu-btn {
+            background: #fffaf5;
+            border: 2px solid #f5ddd0;
+            border-radius: 20px;
+            padding: 14px 8px;
+            font-size: 17px;
+            font-weight: 600;
+            color: #4a2e1e;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+            line-height: 1.3;
+            text-align: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .menu-btn:hover:not(:disabled) {
+            background: #fff3ea;
+            border-color: #dba885;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(210, 120, 60, 0.15);
+        }
+
+        .menu-btn:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .menu-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .menu-btn .emoji {
+            font-size: 22px;
+        }
+
+        .menu-btn.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .confirm-area {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .confirm-btn {
+            padding: 10px 28px;
+            border-radius: 40px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            min-width: 80px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .confirm-btn.yes {
+            background: #ff8a65;
+            color: #fff;
+        }
+
+        .confirm-btn.yes:hover {
+            background: #ff7043;
+            transform: scale(1.02);
+            box-shadow: 0 4px 14px rgba(255, 112, 67, 0.35);
+        }
+
+        .confirm-btn.no {
+            background: #e0d6ce;
+            color: #4a2e1e;
+        }
+
+        .confirm-btn.no:hover {
+            background: #d4c8be;
+            transform: scale(1.02);
+        }
+
+        .confirm-btn:active {
+            transform: scale(0.96);
+        }
+
+        .info-panel {
+            background: #fffaf5;
+            border-radius: 24px;
+            padding: 18px 20px;
+            border: 2px solid #f5ddd0;
+            margin-top: 14px;
+            animation: fadeSlideUp 0.3s ease;
+        }
+
+        .info-panel h3 {
+            font-size: 18px;
+            color: #4a2e1e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-panel .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px dashed #f0ddd0;
+            font-size: 15px;
+        }
+
+        .info-panel .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-panel .info-label {
+            color: #7f6a5a;
+        }
+
+        .info-panel .info-value {
+            font-weight: 600;
+            color: #3e2a1b;
+        }
+
+        .flavor-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .flavor-tag {
+            background: #f8e1d4;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #5a3a28;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes fadeSlideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.92);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .pop-in {
+            animation: popIn 0.25s ease;
+        }
+
+        .ice-emoji-bg {
+            font-size: 48px;
+            line-height: 1;
+        }
+
+        .footer-note {
+            text-align: center;
+            padding: 12px 20px 18px;
+            font-size: 13px;
+            color: #b5a094;
+            letter-spacing: 0.5px;
+            border-top: 1px solid #f5e5da;
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                border-radius: 28px 28px 24px 24px;
+            }
+            .game-header {
+                padding: 20px 18px 16px;
+            }
+            .game-header h1 {
+                font-size: 26px;
+            }
+            .game-body {
+                padding: 16px 16px 12px;
+            }
+            .stats-bar {
+                padding: 10px 10px;
+                gap: 6px 8px;
+            }
+            .stat-item {
+                font-size: 14px;
+                padding: 3px 10px 3px 8px;
+            }
+            .menu-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .menu-btn {
+                font-size: 15px;
+                padding: 12px 6px;
+                border-radius: 16px;
+            }
+            .menu-btn .emoji {
+                font-size: 18px;
+            }
+            .log-area {
+                font-size: 14px;
+                padding: 14px 16px;
+                min-height: 60px;
+            }
+            .confirm-btn {
+                padding: 8px 20px;
+                font-size: 14px;
+                min-width: 66px;
+            }
+            .info-panel {
+                padding: 14px 16px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+            .stat-item .label {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container" role="main" aria-label="冰淇淋小店游戏">
+        <div class="game-header">
+            <h1>🍦 冰淇淋小店</h1>
+            <div class="sub">🍧 欢迎光临！今天想吃点什么？</div>
+        </div>
+
+        <div class="stats-bar" aria-label="店铺状态">
+            <div class="stat-item"><span class="icon">💰</span><span class="label">资金</span><span class="value" id="moneyDisplay">50</span></div>
+            <div class="stat-item"><span class="icon">📈</span><span class="label">等级</span><span class="value" id="levelDisplay">1</span></div>
+            <div class="stat-item"><span class="icon">👥</span><span class="label">顾客</span><span class="value" id="customersDisplay">0</span></div>
+        </div>
+
+        <div class="game-body">
+            <div class="log-area" id="logArea" aria-live="polite">
+                🍦 欢迎来到你的冰淇淋小店！<br>初始资金：<span class="highlight">50元</span> ｜ 店铺等级：<span class="highlight">1级</span>
+            </div>
+
+            <div class="menu-grid" id="menuGrid">
+                <button class="menu-btn" data-action="serve" id="btnServe" aria-label="接待顾客">
+                    <span class="emoji">🎧</span> 接待顾客
+                </button>
+                <button class="menu-btn" data-action="info" id="btnInfo" aria-label="查看店铺信息">
+                    <span class="emoji">📋</span> 店铺信息
+                </button>
+                <button class="menu-btn" data-action="upgrade" id="btnUpgrade" aria-label="升级店铺">
+                    <span class="emoji">⬆️</span> 升级店铺
+                </button>
+                <button class="menu-btn" data-action="exit" id="btnExit" aria-label="退出游戏">
+                    <span class="emoji">🚪</span> 退出游戏
+                </button>
+            </div>
+
+            <div id="actionPanel" class="hidden"></div>
+
+            <div id="infoPanel" class="info-panel hidden" aria-label="店铺详细信息">
+                <h3>📋 店铺信息</h3>
+                <div class="info-row"><span class="info-label">🏪 店铺等级</span><span class="info-value" id="infoLevel">Lv.1</span></div>
+                <div class="info-row"><span class="info-label">💰 总资金</span><span class="info-value" id="infoMoney">50 元</span></div>
+                <div class="info-row"><span class="info-label">👥 已接待顾客</span><span class="info-value" id="infoCustomers">0 位</span></div>
+                <div class="info-row"><span class="info-label">🍦 可做口味</span>
+                    <span class="info-value">
+                        <span class="flavor-tags" id="infoFlavors"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">🍨 用心做好每一杯冰淇淋</div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ========== 游戏状态 ==========
+            const state = {
+                money: 50,
+                level: 1,
+                customersServed: 0,
+                flavors: ['香草', '巧克力', '草莓', '芒果', '抹茶'],
+                toppings: ['彩糖针', '奥利奥碎', '坚果', '巧克力酱', '樱桃'],
+                isPlaying: true,
+                isProcessing: false
+            };
+
+            // ========== DOM 引用 ==========
+            const $ = (id) => document.getElementById(id);
+            const moneyDisplay = $('moneyDisplay');
+            const levelDisplay = $('levelDisplay');
+            const customersDisplay = $('customersDisplay');
+            const logArea = $('logArea');
+            const actionPanel = $('actionPanel');
+            const infoPanel = $('infoPanel');
+            const btnServe = $('btnServe');
+            const btnInfo = $('btnInfo');
+            const btnUpgrade = $('btnUpgrade');
+            const btnExit = $('btnExit');
+
+            const infoLevel = $('infoLevel');
+            const infoMoney = $('infoMoney');
+            const infoCustomers = $('infoCustomers');
+            const infoFlavors = $('infoFlavors');
+
+            // ========== 工具函数 ==========
+            function randInt(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            function randChoice(arr) {
+                return arr[Math.floor(Math.random() * arr.length)];
+            }
+
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            // ========== 更新 UI ==========
+            function updateStats() {
+                moneyDisplay.textContent = state.money;
+                levelDisplay.textContent = state.level;
+                customersDisplay.textContent = state.customersServed;
+            }
+
+            function updateInfoPanel() {
+                infoLevel.textContent = 'Lv.' + state.level;
+                infoMoney.textContent = state.money + ' 元';
+                infoCustomers.textContent = state.customersServed + ' 位';
+                infoFlavors.innerHTML = state.flavors.map(f =>
+                    '<span class="flavor-tag">' + f + '</span>'
+                ).join('');
+            }
+
+            function setLog(html) {
+                logArea.innerHTML = html;
+            }
+
+            function appendLog(html) {
+                logArea.innerHTML += '<br>' + html;
+            }
+
+            // ========== 面板控制 ==========
+            function hideActionPanel() {
+                actionPanel.classList.add('hidden');
+                actionPanel.innerHTML = '';
+            }
+
+            function showActionPanel(html) {
+                actionPanel.innerHTML = html;
+                actionPanel.classList.remove('hidden');
+                // 触发动画
+                actionPanel.classList.remove('pop-in');
+                void actionPanel.offsetWidth;
+                actionPanel.classList.add('pop-in');
+            }
+
+            function hideInfoPanel() {
+                infoPanel.classList.add('hidden');
+            }
+
+            function showInfoPanel() {
+                updateInfoPanel();
+                infoPanel.classList.remove('hidden');
+                infoPanel.classList.remove('pop-in');
+                void infoPanel.offsetWidth;
+                infoPanel.classList.add('pop-in');
+            }
+
+            function setButtonsEnabled(enabled) {
+                const btns = [btnServe, btnInfo, btnUpgrade, btnExit];
+                btns.forEach(btn => btn.disabled = !enabled);
+            }
+
+            // ========== 核心游戏逻辑 ==========
+
+            // 接待顾客
+            async function handleServe() {
+                if (!state.isPlaying || state.isProcessing) return;
+                state.isProcessing = true;
+                setButtonsEnabled(false);
+                hideActionPanel();
+                hideInfoPanel();
+
+                const flavor = randChoice(state.flavors);
+                const topping = randChoice(state.toppings);
+                const price = randInt(8, 15) + (state.level * 2);
+
+                setLog('🎧 有顾客来啦！正在准备冰淇淋...');
+
+                await sleep(600);
+
+                setLog('🎧 顾客想要：<span class="highlight">【' + flavor + '冰淇淋 + ' + topping + '】</span><br>' +
+                    '💰 售价：<span class="highlight">' + price + '元</span>');
+
+                showActionPanel(`
+                    <div style="margin-top:6px;">
+                        <span style="font-weight:600;color:#4a2e1e;font-size:15px;">确认制作吗？</span>
+                        <div class="confirm-area" style="margin-top:10px;">
+                            <button class="confirm-btn yes" id="confirmYes">✅ 制作</button>
+                            <button class="confirm-btn no" id="confirmNo">❌ 拒绝</button>
+                        </div>
+                    </div>
+                `);
+
+                const yesBtn = document.getElementById('confirmYes');
+                const noBtn = document.getElementById('confirmNo');
+
+                const result = await new Promise((resolve) => {
+                    yesBtn.addEventListener('click', function handler() {
+                        yesBtn.removeEventListener('click', handler);
+                        noBtn.removeEventListener('click', handler);
+                        resolve(true);
+                    });
+                    noBtn.addEventListener('click', function handler() {
+                        yesBtn.removeEventListener('click', handler);
+                        noBtn.removeEventListener('click', handler);
+                        resolve(false);
+                    });
+                });
+
+                hideActionPanel();
+
+                if (result) {
+                    setLog('🥄 正在制作冰淇淋...');
+                    await sleep(800);
+                    state.money += price;
+                    state.customersServed += 1;
+                    updateStats();
+                    setLog('✅ <span class="success">冰淇淋完成！顾客很满意～</span><br>' +
+                        '收入 <span class="highlight">+' + price + '元</span> ｜ 当前余额：<span class="highlight">' +
+                        state.money + '元</span>');
+                } else {
+                    setLog('❌ <span class="warn">顾客失望地离开了...</span>');
+                }
+
+                state.isProcessing = false;
+                setButtonsEnabled(true);
+                updateInfoPanel();
+            }
+
+            // 查看店铺信息
+            function handleInfo() {
+                if (!state.isPlaying || state.isProcessing) return;
+                hideActionPanel();
+                showInfoPanel();
+                setLog('📋 已显示店铺信息 👆');
+                updateInfoPanel();
+            }
+
+            // 升级店铺
+            async function handleUpgrade() {
+                if (!state.isPlaying || state.isProcessing) return;
+                state.isProcessing = true;
+                setButtonsEnabled(false);
+                hideActionPanel();
+                hideInfoPanel();
+
+                const cost = 100 + (state.level * 50);
+
+                setLog('⬆️ 升级到 <span class="highlight">Lv.' + (state.level + 1) + '</span> 需要 <span class="highlight">' +
+                    cost + '元</span><br>' +
+                    '你的资金：<span class="highlight">' + state.money + '元</span>');
+
+                if (state.money >= cost) {
+                    showActionPanel(`
+                        <div style="margin-top:6px;">
+                            <span style="font-weight:600;color:#4a2e1e;font-size:15px;">确认升级？</span>
+                            <div class="confirm-area" style="margin-top:10px;">
+                                <button class="confirm-btn yes" id="upgradeYes">✅ 升级</button>
+                                <button class="confirm-btn no" id="upgradeNo">❌ 取消</button>
+                            </div>
+                        </div>
+                    `);
+
+                    const yesBtn = document.getElementById('upgradeYes');
+                    const noBtn = document.getElementById('upgradeNo');
+
+                    const confirmed = await new Promise((resolve) => {
+                        yesBtn.addEventListener('click', function handler() {
+                            yesBtn.removeEventListener('click', handler);
+                            noBtn.removeEventListener('click', handler);
+                            resolve(true);
+                        });
+                        noBtn.addEventListener('click', function handler() {
+                            yesBtn.removeEventListener('click', handler);
+                            noBtn.removeEventListener('click', handler);
+                            resolve(false);
+                        });
+                    });
+
+                    hideActionPanel();
+
+                    if (confirmed) {
+                        state.money -= cost;
+                        state.level += 1;
+                        updateStats();
+                        setLog('🎉 <span class="success">恭喜！店铺升级到 Lv.' + state.level + ' 啦！</span><br>' +
+                            '💬 顾客愿意付更多钱啦～');
+                    } else {
+                        setLog('↩️ 已取消升级。');
+                    }
+                } else {
+                    setLog('❌ <span class="warn">钱不够哦，多接待几位顾客吧！</span>');
+                    // 显示一个"知道了"按钮
+                    showActionPanel(`
+                        <div class="confirm-area" style="margin-top:8px;">
+                            <button class="confirm-btn no" id="okBtn">知道了</button>
+                        </div>
+                    `);
+                    await new Promise((resolve) => {
+                        document.getElementById('okBtn').addEventListener('click', function handler() {
+                            this.removeEventListener('click', handler);
+                            resolve();
+                        });
+                    });
+                    hideActionPanel();
+                }
+
+                state.isProcessing = false;
+                setButtonsEnabled(true);
+                updateInfoPanel();
+            }
+
+            // 退出游戏
+            async function handleExit() {
+                if (!state.isPlaying || state.isProcessing) return;
+                state.isProcessing = true;
+                setButtonsEnabled(false);
+                hideActionPanel();
+                hideInfoPanel();
+
+                setLog('🚪 确定要退出游戏吗？');
+
+                showActionPanel(`
+                    <div class="confirm-area" style="margin-top:8px;">
+                        <button class="confirm-btn yes" id="exitYes">确认退出</button>
+                        <button class="confirm-btn no" id="exitNo">继续玩</button>
+                    </div>
+                `);
+
+                const yesBtn = document.getElementById('exitYes');
+                const noBtn = document.getElementById('exitNo');
+
+                const confirmed = await new Promise((resolve) => {
+                    yesBtn.addEventListener('click', function handler() {
+                        yesBtn.removeEventListener('click', handler);
+                        noBtn.removeEventListener('click', handler);
+                        resolve(true);
+                    });
+                    noBtn.addEventListener('click', function handler() {
+                        yesBtn.removeEventListener('click', handler);
+                        noBtn.removeEventListener('click', handler);
+                        resolve(false);
+                    });
+                });
+
+                hideActionPanel();
+
+                if (confirmed) {
+                    state.isPlaying = false;
+                    setLog('🎮 感谢游玩冰淇淋小店！<br>' +
+                        '你最终赚到了 <span class="highlight">' + state.money + '元</span>，' +
+                        '接待了 <span class="highlight">' + state.customersServed + '位</span> 顾客！<br>' +
+                        '<span style="font-size:18px;">🍦 期待你下次光临！</span>');
+                    // 禁用所有按钮
+                    const allBtns = document.querySelectorAll('.menu-btn');
+                    allBtns.forEach(btn => btn.disabled = true);
+                    state.isProcessing = false;
+                    setButtonsEnabled(false);
+                    return;
+                } else {
+                    setLog('↩️ 欢迎回来！继续经营你的冰淇淋小店吧～');
+                    state.isProcessing = false;
+                    setButtonsEnabled(true);
+                    updateInfoPanel();
+                }
+            }
+
+            // ========== 事件绑定 ==========
+            btnServe.addEventListener('click', handleServe);
+            btnInfo.addEventListener('click', handleInfo);
+            btnUpgrade.addEventListener('click', handleUpgrade);
+            btnExit.addEventListener('click', handleExit);
+
+            // ========== 键盘快捷键 ==========
+            document.addEventListener('keydown', function(e) {
+                if (e.key === '1') { btnServe.click();
+                    e.preventDefault(); }
+                if (e.key === '2') { btnInfo.click();
+                    e.preventDefault(); }
+                if (e.key === '3') { btnUpgrade.click();
+                    e.preventDefault(); }
+                if (e.key === '4') { btnExit.click();
+                    e.preventDefault(); }
+            });
+
+            // ========== 初始化 ==========
+            function init() {
+                updateStats();
+                updateInfoPanel();
+                setLog('🍦 欢迎来到你的冰淇淋小店！<br>初始资金：<span class="highlight">50元</span> ｜ 店铺等级：<span class="highlight">1级</span>');
+                hideActionPanel();
+                hideInfoPanel();
+                setButtonsEnabled(true);
+            }
+
+            // 暴露状态以便调试（非必须）
+            window.__gameState = state;
+
+            init();
+
+            // 兼容性: 确保 Promise 和 async/await 在老旧浏览器不报错
+            // 但现代浏览器都支持，这里不作 polyfill
+        })();
+    </script>
+
+</body>
+</html>
