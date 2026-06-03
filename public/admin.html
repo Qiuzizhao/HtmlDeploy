@@ -640,7 +640,7 @@
       }
 
       .side-nav {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
       .nav-button {
@@ -715,6 +715,7 @@
         <button class="nav-button is-active" type="button" data-view-target="projects">项目管理</button>
         <button class="nav-button" type="button" data-view-target="create">新增项目</button>
         <button class="nav-button" type="button" data-view-target="classes">班级管理</button>
+        <button class="nav-button" type="button" data-view-target="forbidden">违禁词</button>
       </nav>
       <div class="sidebar-footer">
         <a class="button" href="/">返回首页</a>
@@ -823,13 +824,6 @@
             <button class="button" id="generateAllPassword" type="button">随机生成</button>
             <button class="primary-button" id="saveAllPassword" type="submit">保存全部密码</button>
           </form>
-          <form class="forbidden-words-form" id="forbiddenWordsForm">
-            <label>
-              违禁词
-              <textarea id="forbiddenWordsInput" name="forbiddenWords" placeholder="一行一个词，或用逗号分隔"></textarea>
-            </label>
-            <button class="primary-button" id="saveForbiddenWords" type="submit">保存违禁词</button>
-          </form>
           <form class="class-form" id="classForm">
             <label>
               班级名称
@@ -844,6 +838,22 @@
             <button class="primary-button" type="submit">新增班级</button>
           </form>
           <div class="class-list" id="classList"></div>
+        </div>
+      </section>
+
+      <section data-admin-view="forbidden" class="workspace">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">违禁词</h2>
+            <div class="message" id="forbiddenWordsMessage"></div>
+          </div>
+          <form class="forbidden-words-form" id="forbiddenWordsForm">
+            <label>
+              上传违禁词
+              <textarea id="forbiddenWordsInput" name="forbiddenWords" placeholder="一行一个词，或用逗号分隔"></textarea>
+            </label>
+            <button class="primary-button" id="saveForbiddenWords" type="submit">保存违禁词</button>
+          </form>
         </div>
       </section>
     </main>
@@ -888,6 +898,7 @@
     const classPasswordInput = document.getElementById('classPasswordInput');
     const classList = document.getElementById('classList');
     const classMessage = document.getElementById('classMessage');
+    const forbiddenWordsMessage = document.getElementById('forbiddenWordsMessage');
     const createMessage = document.getElementById('createMessage');
     const listMessage = document.getElementById('listMessage');
     const siteRows = document.getElementById('siteRows');
@@ -916,7 +927,8 @@
     const viewTitles = {
       projects: '项目管理',
       create: '新增项目',
-      classes: '班级管理'
+      classes: '班级管理',
+      forbidden: '违禁词'
     };
 
     function setMessage(element, text, isError = false) {
@@ -1243,12 +1255,14 @@
       const response = await fetch('/api/admin/settings');
       if (!response.ok) {
         setMessage(classMessage, '加载全部密码失败', true);
+        setMessage(forbiddenWordsMessage, '加载违禁词失败', true);
         return;
       }
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
       forbiddenWordsInput.value = formatForbiddenWords(settings.forbiddenWords);
+      setMessage(forbiddenWordsMessage, `${settings.forbiddenWords?.length || 0} 个违禁词`);
     }
 
     async function saveAllPassword(event) {
@@ -1289,13 +1303,13 @@
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存违禁词失败' }));
-        setMessage(classMessage, result.error || '保存违禁词失败', true);
+        setMessage(forbiddenWordsMessage, result.error || '保存违禁词失败', true);
         return;
       }
 
       settings = await response.json();
       forbiddenWordsInput.value = formatForbiddenWords(settings.forbiddenWords);
-      setMessage(classMessage, forbiddenWords.length ? `已保存 ${forbiddenWords.length} 个违禁词` : '已清空违禁词');
+      setMessage(forbiddenWordsMessage, forbiddenWords.length ? `已保存 ${forbiddenWords.length} 个违禁词` : '已清空违禁词');
     }
 
     async function loadClasses() {
