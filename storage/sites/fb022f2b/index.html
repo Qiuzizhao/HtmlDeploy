@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>躲避球-难度递增版</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+        body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;padding:20px;color:#fff}
+        #game{
+            border:3px solid #555;
+            background:#08202b;
+            cursor:none;
+        }
+        .info{margin-bottom:10px;font-size:18px;display:flex;gap:30px}
+        #restartBtn{
+            margin-top:12px;
+            padding:8px 22px;
+            font-size:16px;
+            background:#2899dd;
+            border:none;
+            border-radius:6px;
+            color:#fff;
+            cursor:pointer;
+        }
+        #restartBtn:hover{background:#39b1f8;}
+    </style>
+</head>
+<body>
+    <div class="info">
+        分数：<span id="score">0</span>
+        存活时间：<span id="time">0.00</span>秒
+        鼠标左右移动操控
+    </div>
+    <canvas id="game" width="500" height="600"></canvas>
+    <button id="restartBtn">重新开始游戏</button>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreDom = document.getElementById('score');
+        const timeDom = document.getElementById('time');
+        const restartBtn = document.getElementById('restartBtn');
+
+        //全局变量统一初始化函数
+        function initGame(){
+            player.x = 225;
+            score = 0;
+            balls = [];
+            particles = [];
+            gameOver = false;
+            startTime = Date.now();
+            baseSpeedAdd = 0;
+            createRate = 0.035;
+            scoreDom.innerText = score;
+        }
+
+        //玩家数据
+        const player = {
+            x:225,y:530,w:50,h:30,color:'#42b9ff'
+        }
+        let score = 0;
+        let balls = [];
+        let gameOver = false;
+        let particles = [];
+        let startTime = Date.now();
+        let baseSpeedAdd = 0; //速度增幅
+        let createRate = 0.035;//生成概率
+
+        //重开按钮点击事件
+        restartBtn.onclick = initGame;
+
+        //鼠标移动监听
+        canvas.addEventListener('mousemove',e=>{
+            if(gameOver) return;
+            let rect = canvas.getBoundingClientRect();
+            let mx = e.clientX - rect.left - player.w/2;
+            //限制不出边界
+            if(mx<0) mx=0;
+            if(mx+player.w>canvas.width) mx=canvas.width-player.w;
+            player.x = mx;
+        })
+
+        //生成下落球（速度受时间增幅影响）
+        function createBall(){
+            let r = Math.random()*12+8;
+            let isBonus = Math.random()>0.75;
+            let baseSpd = Math.random()*3+2 + baseSpeedAdd;
+            balls.push({
+                x:Math.random()*(canvas.width-r*2)+r,
+                y:-r,
+                r:r,
+                spd: baseSpd,
+                color:isBonus?'#3cd953':'#ff4444',
+                bonus:isBonus
+            })
+        }
+
+        //触碰粒子爆炸
+        function createParticles(x,y,color,count=15){
+            for(let i=0;i<count;i++){
+                let angle = Math.PI*2/count*i;
+                let spd = Math.random()*3+2;
+                particles.push({
+                    x:x,y:y,
+                    vx:Math.cos(angle)*spd,
+                    vy:Math.sin(angle)*spd,
+                    r:Math.random()*3+2,
+                    color:color,
+                    life:35
+                })
+            }
+        }
+
+        //碰撞检测
+        function isHit(p,b){
+            return b.x+b.r>p.x && b.x-b.r<p.x+p.w && b.y+b.r>p.y && b.y-b.r<p.y+p.h;
+        }
+
+        //更新粒子
+        function updateParticles(){
+            for(let i=particles.length-1;i>=0;i--){
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if(p.life<=0){
+                    particles.splice(i,1);continue;
+                }
+                ctx.beginPath();
+                ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+                ctx.fillStyle=p.color;
+                ctx.fill();
+            }
+        }
+
+        function loop(){
+            //更新存活时间
+            let now = Date.now();
+            let surviveTime = ((now - startTime)/1000).toFixed(2);
+            let timeNum = Number(surviveTime);
+            if(!gameOver){
+                timeDom.innerText = surviveTime;
+                //每过10秒提速+提升生成概率
+                baseSpeedAdd = Math.floor(timeNum / 10) * 0.6;
+                createRate = 0.035 + Math.floor(timeNum / 10)*0.008;
+            }
+
+            if(gameOver){
+                ctx.fillStyle='#fff';
+                ctx.font='30px Arial';
+                ctx.textAlign='center';
+                ctx.fillText('游戏结束！',canvas.width/2,canvas.height/2-40);
+                ctx.fillText('得分：'+score,canvas.width/2,canvas.height/2);
+                ctx.fillText('存活：'+surviveTime+'秒',canvas.width/2,canvas.height/2+40);
+                updateParticles();
+                requestAnimationFrame(loop);
+                return;
+            }
+
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            //绘制玩家
+            ctx.fillStyle=player.color;
+            ctx.fillRect(player.x,player.y,player.w,player.h);
+
+            //随时间提高生成概率
+            if(Math.random()<createRate) createBall();
+
+            //遍历小球
+            for(let i=balls.length-1;i>=0;i--){
+                let b = balls[i];
+                b.y += b.spd;
+                if(b.y>canvas.height+b.r){
+                    balls.splice(i,1);continue;
+                }
+                //碰撞
+                if(isHit(player,b)){
+                    createParticles(b.x,b.y,b.color);
+                    if(b.bonus){
+                        score +=10;
+                        scoreDom.innerText = score;
+                        balls.splice(i,1);
+                    }else{
+                        gameOver = true;
+                    }
+                }
+                //画球
+                ctx.beginPath();
+                ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+                ctx.fillStyle=b.color;
+                ctx.fill();
+            }
+
+            updateParticles();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    </script>
+</body>
+</html>
