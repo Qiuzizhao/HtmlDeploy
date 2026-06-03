@@ -202,6 +202,7 @@ async function makeTestApp(options = {}) {
   const app = createApp({
     dataFile: path.join(dataDir, 'sites.json'),
     classesFile: path.join(dataDir, 'classes.json'),
+    settingsFile: path.join(dataDir, 'settings.json'),
     storageDir,
     publicDir,
     ...options
