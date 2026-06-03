@@ -32,7 +32,7 @@ test('public index renders a visible upload-order number on each project card', 
   assert.match(html, /className = 'site-heading'/);
   assert.match(html, /className = 'site-number'/);
   assert.match(html, /textContent = site\.number/);
-  assert.ok(html.indexOf("heading.append(number, title)") < html.indexOf("content.append(heading, classTag, url)"));
+  assert.ok(html.indexOf("heading.append(number, title)") < html.indexOf("content.append(heading, tagsContainer)"));
   assert.doesNotMatch(html, /cardMain\.append\(number, content\)/);
   assert.doesNotMatch(html, /textContent = String\(index \+ 1\)/);
 });
@@ -41,7 +41,7 @@ test('public index shows the class name tag on project cards', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
   assert.match(html, /className = 'site-class-tag'/);
-  assert.match(html, /textContent = `班级：\$\{site\.className \|\| '未分配'\}`/);
+  assert.match(html, /textContent = site\.className \|\| '未分配'/);
   assert.ok(html.indexOf("className = 'site-class-tag'") < html.indexOf("url.className = 'site-url'"));
 });
 
@@ -69,7 +69,7 @@ test('public index renders class password entry inside the project grid', async 
   assert.match(html, /siteGrid\.append\(panel\)/);
   assert.match(html, /input\.type = 'password'/);
   assert.match(html, /button\.textContent = currentClassId \? '解锁班级' : '解锁全部'/);
-  assert.match(html, /renderClassPasswordPrompt\('请输入班级密码后查看项目。'\)/);
+  assert.match(html, /renderClassPasswordPrompt\('请输入班级密码后查看项目。', data\.count \|\| 0\)/);
   assert.doesNotMatch(html, /openClassPassword\(\)/);
   assert.doesNotMatch(html, /closeClassPassword\(\)/);
 });
@@ -158,7 +158,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/enabled/);
   assert.match(html, /project-disabled-warning/);
-  assert.match(html, /搜索项目名称或 ID/);
+  assert.match(html, /搜索项目名称、ID 或序号/);
   assert.match(html, /id="classForm"/);
   assert.match(html, /id="classPasswordInput"/);
   assert.match(html, /id="generateClassPassword"/);
