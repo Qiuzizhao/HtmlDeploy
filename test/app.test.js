@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
@@ -133,6 +134,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /method: 'DELETE'/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
+  assert.match(html, /textContent = 'AI优化'/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
   assert.match(html, /搜索项目名称或 ID/);
   assert.match(html, /id="classForm"/);
   assert.match(html, /id="classPasswordInput"/);
@@ -604,6 +607,72 @@ test('PUT /api/sites/:id updates project title and optionally replaces HTML', as
   assert.equal(sites[0].title, '新名字');
   assert.equal(sites[0].classId, 'class-b');
   assert.ok(sites[0].updatedAt);
+});
+
+test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', async () => {
+  const optimizedHtml = '<!doctype html><html><body><h1>Optimized</h1></body></html>';
+  let requestPayload = null;
+  const llmServer = http.createServer(async (req, res) => {
+    if (req.method !== 'POST' || req.url !== '/chat/completions') {
+      res.writeHead(404).end();
+      return;
+    }
+
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    requestPayload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: optimizedHtml
+          }
+        }
+      ]
+    }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'ai-save'];
+    const { app, storageDir, dataDir } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+    await agent
+      .post('/api/sites')
+      .field('title', 'AI 项目')
+      .field('author', '测试作者')
+      .field('classId', 'class-a')
+      .attach('file', Buffer.from('<!doctype html><h1>Original</h1>'), { filename: 'old.html' })
+      .expect(201);
+
+    const response = await agent.post('/api/sites/ai-save/ai-optimize-save').send({}).expect(200);
+
+    assert.equal(response.body.site.id, 'ai-save');
+    assert.equal(response.body.site.title, 'AI 项目');
+    assert.equal(response.body.model, 'fake-model');
+    assert.equal(
+      await fsp.readFile(path.join(storageDir, 'ai-save', 'index.html'), 'utf8'),
+      optimizedHtml
+    );
+
+    const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+    assert.ok(sites[0].updatedAt);
+    assert.equal(requestPayload.model, 'fake-model');
+    assert.equal(requestPayload.stream, false);
+    assert.match(requestPayload.messages[1].content, /Original/);
+  } finally {
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
 });
 
 test('DELETE /api/sites/:id removes project metadata and files', async () => {

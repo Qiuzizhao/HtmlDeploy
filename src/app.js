@@ -1362,6 +1362,54 @@ function createApp(options = {}) {
     }
   });
 
+  app.post('/api/sites/:id/ai-optimize-save', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const instruction = String(req.body?.instruction || '').trim();
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((item) => item.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const indexPath = path.join(storageDir, id, 'index.html');
+      if (!fs.existsSync(indexPath)) {
+        return res.status(404).json({ error: '项目文件不存在' });
+      }
+
+      const htmlContent = await fsp.readFile(indexPath, 'utf8');
+      if (!htmlContent.trim()) {
+        return res.status(400).json({ error: '代码不能为空' });
+      }
+
+      const optimizedContent = await optimizeHtmlWithLlm({
+        htmlContent,
+        siteTitle: sites[siteIndex].title,
+        instruction,
+        llmConfig
+      });
+
+      await fsp.writeFile(indexPath, optimizedContent);
+
+      const site = {
+        ...sites[siteIndex],
+        updatedAt: new Date().toISOString()
+      };
+      sites[siteIndex] = site;
+      await writeSites(dataFile, sites);
+      generateThumbnailLater(id, getRequestOrigin(req));
+
+      const classes = await readClasses(classesFile);
+      return res.json({
+        site: toPublicSite(site, classes, thumbnailDir),
+        model: llmConfig.model
+      });
+    } catch (error) {
+      return res.status(error.message.includes('配置') ? 400 : 502).json({ error: error.message });
+    }
+  });
+
   app.put('/api/sites/:id', requireAdmin, upload.single('file'), async (req, res, next) => {
       try {
         const { id } = req.params;

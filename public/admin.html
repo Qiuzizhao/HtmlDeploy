@@ -1221,6 +1221,35 @@
       codeEditor.focus();
     }
 
+    async function optimizeSiteCode(site, button) {
+      button.disabled = true;
+      button.textContent = '优化中...';
+      setMessage(listMessage, `正在 AI 优化并保存「${site.title}」...`);
+
+      const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/ai-optimize-save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'AI 优化失败' }));
+        button.disabled = false;
+        button.textContent = 'AI优化';
+        setMessage(listMessage, result.error || 'AI 优化失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      const updatedSite = result.site;
+      const index = sites.findIndex((item) => item.id === updatedSite.id);
+      if (index !== -1) {
+        sites[index] = updatedSite;
+      }
+      renderRows();
+      setMessage(listMessage, `「${updatedSite.title}」AI 优化已保存${result.model ? `（${result.model}）` : ''}，封面会在后台自动刷新。`);
+    }
+
     function renderClassList() {
       classList.innerHTML = '';
       fillClassSelect(createClassId, createClassId.value);
@@ -1509,6 +1538,12 @@
         codeButton.textContent = '代码';
         codeButton.addEventListener('click', () => openCodeWindow(site));
 
+        const aiOptimizeButton = document.createElement('button');
+        aiOptimizeButton.className = 'button';
+        aiOptimizeButton.type = 'button';
+        aiOptimizeButton.textContent = 'AI优化';
+        aiOptimizeButton.addEventListener('click', () => optimizeSiteCode(site, aiOptimizeButton));
+
         const downloadLink = document.createElement('a');
         downloadLink.className = 'button';
         downloadLink.href = `/api/sites/${encodeURIComponent(site.id)}/download`;
@@ -1527,7 +1562,7 @@
         deleteButton.textContent = '删除';
         deleteButton.addEventListener('click', () => deleteSite(site));
 
-        actions.append(saveButton, previewLink, codeButton, downloadLink, thumbnailButton, deleteButton);
+        actions.append(saveButton, previewLink, codeButton, aiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
         actionCell.append(actions);
 
         row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, thumbnailCell, actionCell);
