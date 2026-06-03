@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>慢速简易音游</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;overflow:hidden}
+#game{width:400px;height:600px;margin:20px auto;position:relative;background:#16213e;border:2px solid #0f3460}
+.line{position:absolute;width:100%;height:2px;background:#533483;top:500px}
+.key{position:absolute;width:80px;height:30px;background:#e94560;border-radius:6px;bottom:0}
+#k1{left:30px}#k2{left:150px}#k3{left:270px}
+.note{width:80px;height:35px;background:#00d4ff;border-radius:6px;position:absolute}
+.tip{color:#fff;text-align:center;margin-top:10px;font-size:18px}
+</style>
+</head>
+<body>
+<div class="tip">按键：A S D | 慢速下落，对准白线点击</div>
+<div id="game">
+    <div class="line"></div>
+    <div class="key" id="k1"></div>
+    <div class="key" id="k2"></div>
+    <div class="key" id="k3"></div>
+</div>
+<script>
+const game = document.getElementById('game');
+// 三列对应 A S D
+const keyPos = [30,150,270];
+const keyCode = ['KeyA','KeyS','KeyD'];
+let noteList = [];
+let score = 0;
+
+// 【核心：慢速参数】下落速度 2px/帧（很慢），生成音符间隔1800毫秒
+const fallSpeed = 2;
+const spawnGap = 1800;
+
+// 生成随机音符
+function createNote(){
+    let col = Math.floor(Math.random()*3);
+    let n = document.createElement('div');
+    n.className = 'note';
+    n.style.left = keyPos[col]+'px';
+    n.style.top = '-40px';
+    n.dataset.col = col;
+    game.appendChild(n);
+    noteList.push(n);
+}
+
+// 音符下落循环
+function gameLoop(){
+    for(let i=noteList.length-1;i>=0;i--){
+        let n = noteList[i];
+        let top = parseInt(n.style.top);
+        top += fallSpeed;
+        n.style.top = top+'px';
+        // 超出底部移除（miss）
+        if(top>530){
+            n.remove();
+            noteList.splice(i,1);
+        }
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+// 按键判定
+document.addEventListener('keydown',e=>{
+    let idx = keyCode.indexOf(e.code);
+    if(idx===-1)return;
+    // 找同列、靠近判定线的音符
+    for(let i=noteList.length-1;i>=0;i--){
+        let n = noteList[i];
+        let top = parseInt(n.style.top);
+        if(Number(n.dataset.col)===idx && top>470 && top<530){
+            score+=10;
+            n.remove();
+            noteList.splice(i,1);
+            console.log('击中！当前分数：'+score);
+            break;
+        }
+    }
+})
+
+// 定时生成音符
+setInterval(createNote,spawnGap);
+gameLoop();
+</script>
+</body>
+</html>
