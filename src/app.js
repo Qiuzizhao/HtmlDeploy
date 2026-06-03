@@ -826,11 +826,11 @@ function createApp(options = {}) {
         }
 
         if (!hasClassAccess(req, classItem)) {
-          const count = sites.filter((site) => site.classId === classId).length;
+          const count = sites.filter((site) => site.classId === classId && site.enabled !== false).length;
           return res.status(401).json({ error: '请输入班级密码', count });
         }
       } else if (!hasAllAccess(req, settings)) {
-        return res.status(401).json({ error: '请输入全部密码', count: sites.length });
+        return res.status(401).json({ error: '请输入全部密码', count: sites.filter((site) => site.enabled !== false).length });
       }
 
       const filteredSites = classId

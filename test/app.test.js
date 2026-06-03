@@ -140,7 +140,10 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
   assert.match(html, /textContent = 'AI优化'/);
+  assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/enabled/);
+  assert.match(html, /project-disabled-warning/);
   assert.match(html, /搜索项目名称或 ID/);
   assert.match(html, /id="classForm"/);
   assert.match(html, /id="classPasswordInput"/);
