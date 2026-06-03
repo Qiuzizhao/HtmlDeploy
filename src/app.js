@@ -1537,6 +1537,47 @@ function createApp(options = {}) {
     }
   });
 
+  app.get('/api/sites/:id/public-code', async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const site = sites.find((item) => item.id === id);
+
+      if (!site) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      if (site.enabled === false && !hasAdminAccess(req)) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      if (!(await canReadSite(req, id))) {
+        return res.status(401).json({ error: '请输入班级密码' });
+      }
+
+      let projectDir;
+      try {
+        projectDir = resolveInside(storageDir, id);
+      } catch {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      if (!fs.existsSync(projectDir)) {
+        return res.status(404).json({ error: '项目文件不存在' });
+      }
+
+      const { files, combinedText } = await readProjectCodeSnapshot(projectDir);
+      const classes = await readClasses(classesFile);
+      return res.json({
+        ...toPublicSite(site, classes, thumbnailDir),
+        files,
+        combinedText
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.put('/api/sites/:id/code', requireAdmin, upload.single('file'), async (req, res, next) => {
     try {
       const { id } = req.params;

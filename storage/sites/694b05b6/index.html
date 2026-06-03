@@ -5,17 +5,22 @@
     <title>慢节奏休闲音游</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#1a1a22;display:flex;justify-content:center}
-        #game{width:480px;height:700px;position:relative;overflow:hidden;background:#222733}
-        .line{position:absolute;bottom:120px;width:100%;height:4px;background:#4cf}
-        .key{position:absolute;width:110px;height:30px;border-radius:6px;background:#39f;top:-40px}
-        .btn{position:absolute;bottom:30px;width:110px;height:70px;border:2px solid #5cf;border-radius:8px}
+        body{background:#1a1a22;display:flex;justify-content:center;align-items:center;min-height:100vh}
+        #game{width:480px;height:700px;position:relative;overflow:hidden;background:#222733;border-radius:12px;box-shadow:0 0 30px rgba(0,0,0,0.5)}
+        .line{position:absolute;bottom:120px;width:100%;height:4px;background:#4cf;box-shadow:0 0 8px #4cf}
+        .key{position:absolute;width:110px;height:30px;border-radius:6px;background:linear-gradient(135deg,#39f,#2a7fdd);top:-40px;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.1s}
+        .btn{position:absolute;bottom:30px;width:110px;height:70px;border:2px solid #5cf;border-radius:8px;background:rgba(255,255,255,0.05);cursor:pointer;transition:background 0.1s}
+        .btn:active{background:rgba(92,204,255,0.3)}
         #b1{left:10px}#b2{left:130px}#b3{left:250px}#b4{left:370px}
+        .score{position:absolute;top:20px;left:50%;transform:translateX(-50%);color:#fff;font-family:Arial,sans-serif;font-size:24px;font-weight:bold;text-shadow:0 2px 8px rgba(0,0,0,0.5);z-index:10;pointer-events:none}
+        .hint{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.3);font-family:Arial,sans-serif;font-size:12px;white-space:nowrap;z-index:5;pointer-events:none}
     </style>
 </head>
 <body>
 <div id="game">
     <div class="line"></div>
+    <div class="score" id="scoreDisplay">0</div>
+    <div class="hint">按 A S K L 击中音符</div>
     <div class="btn" id="b1"></div>
     <div class="btn" id="b2"></div>
     <div class="btn" id="b3"></div>
@@ -23,69 +28,81 @@
 </div>
 
 <script>
-const game = document.getElementById("game");
-// 四键横坐标
-const pos = [10,130,250,370];
-// 慢速配置：下落速度px/帧，数值越小下落越慢
-const fallSpeed = 1.2;
-// 慢速谱面 [按键序号, 出现时间ms]
-const noteData = [
-    [0,800],[1,1600],[2,2500],[3,3300],
-    [0,4500],[2,5400],[1,6300],[3,7200]
-];
-let noteList = [];
-let time = 0;
-let score = 0;
-let spawnIdx = 0;
+(function() {
+    const game = document.getElementById("game");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const pos = [10, 130, 250, 370];
+    const fallSpeed = 1.2;
+    const noteData = [
+        [0, 800], [1, 1600], [2, 2500], [3, 3300],
+        [0, 4500], [2, 5400], [1, 6300], [3, 7200]
+    ];
+    let noteList = [];
+    let time = 0;
+    let score = 0;
+    let spawnIdx = 0;
+    let lastTimestamp = 0;
+    let animId = null;
 
-// 生成音符
-function addNote(idx){
-    let div = document.createElement("div");
-    div.className="key";
-    div.style.left = pos[idx]+"px";
-    game.appendChild(div);
-    noteList.push({dom:div,key:idx,y:-40});
-}
+    function addNote(idx) {
+        const div = document.createElement("div");
+        div.className = "key";
+        div.style.left = pos[idx] + "px";
+        game.appendChild(div);
+        noteList.push({ dom: div, key: idx, y: -40 });
+    }
 
-// 键盘监听 A S K L
-const keyMap = {65:0,83:1,75:2,76:3};
-document.onkeydown=e=>{
-    let k = keyMap[e.keyCode];
-    if(k===undefined)return;
-    // 命中判定线范围：100~140y
-    for(let i=noteList.length-1;i>=0;i--){
-        let n = noteList[i];
-        if(n.key===k && n.y>90&&n.y<150){
-            score+=100;
-            n.dom.remove();
-            noteList.splice(i,1);
-            break;
+    function updateScore() {
+        scoreDisplay.textContent = score;
+    }
+
+    const keyMap = { 65: 0, 83: 1, 75: 2, 76: 3 };
+    document.addEventListener("keydown", function(e) {
+        const k = keyMap[e.keyCode];
+        if (k === undefined) return;
+        e.preventDefault();
+        for (let i = noteList.length - 1; i >= 0; i--) {
+            const n = noteList[i];
+            if (n.key === k && n.y > 90 && n.y < 150) {
+                score += 100;
+                updateScore();
+                n.dom.remove();
+                noteList.splice(i, 1);
+                break;
+            }
         }
-    }
-}
+    });
 
-// 游戏主循环
-function loop(){
-    time+=16;
-    // 按时间生成音符
-    while(spawnIdx<noteData.length && noteData[spawnIdx][1]<time){
-        addNote(noteData[spawnIdx][0]);
-        spawnIdx++;
-    }
-    // 更新音符位置
-    for(let i=noteList.length-1;i>=0;i--){
-        let n=noteList[i];
-        n.y+=fallSpeed;
-        n.dom.style.top = n.y+"px";
-        // 超出底部移除
-        if(n.y>720){
-            n.dom.remove();
-            noteList.splice(i,1);
+    function loop(timestamp) {
+        if (!lastTimestamp) lastTimestamp = timestamp;
+        const delta = Math.min(timestamp - lastTimestamp, 50);
+        lastTimestamp = timestamp;
+        time += delta;
+
+        while (spawnIdx < noteData.length && noteData[spawnIdx][1] < time) {
+            addNote(noteData[spawnIdx][0]);
+            spawnIdx++;
         }
+
+        for (let i = noteList.length - 1; i >= 0; i--) {
+            const n = noteList[i];
+            n.y += fallSpeed * (delta / 16);
+            n.dom.style.top = n.y + "px";
+            if (n.y > 720) {
+                n.dom.remove();
+                noteList.splice(i, 1);
+            }
+        }
+
+        animId = requestAnimationFrame(loop);
     }
-    requestAnimationFrame(loop);
-}
-loop();
+
+    animId = requestAnimationFrame(loop);
+
+    window.addEventListener("beforeunload", function() {
+        if (animId) cancelAnimationFrame(animId);
+    });
+})();
 </script>
 </body>
 </html>

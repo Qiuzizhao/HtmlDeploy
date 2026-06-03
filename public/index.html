@@ -477,6 +477,10 @@
       overflow: hidden;
     }
 
+    body.is-code-viewing {
+      overflow: hidden;
+    }
+
     body.is-previewing > .topbar,
     body.is-previewing > main {
       display: none;
@@ -661,6 +665,88 @@
       background: #000;
     }
 
+    .code-window {
+      width: min(1000px, calc(100vw - 32px));
+      height: min(760px, calc(100vh - 32px));
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: 0 25px 50px rgba(15, 23, 42, 0.22);
+    }
+
+    .code-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    .code-title-wrap {
+      min-width: 0;
+    }
+
+    .code-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .code-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .code-message {
+      min-height: 34px;
+      padding: 9px 18px;
+      color: var(--brand-dark);
+      font-size: 14px;
+      font-weight: 650;
+      border-bottom: 1px solid var(--line);
+      background: #f8fbff;
+    }
+
+    .code-message.is-error {
+      color: var(--danger);
+    }
+
+    .code-viewer {
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px;
+      resize: none;
+      line-height: 1.55;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    .code-viewer:focus {
+      outline: none;
+    }
+
+    .code-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+    }
+
     @media (max-width: 700px) {
       .topbar {
         height: 66px;
@@ -757,6 +843,22 @@
         top: 93px;
         height: calc(100% - 94px);
       }
+
+      .code-window {
+        width: calc(100vw - 24px);
+        height: calc(100vh - 24px);
+        border-radius: 12px;
+      }
+
+      .code-head,
+      .code-actions {
+        padding: 12px;
+      }
+
+      .code-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -836,6 +938,23 @@
     </section>
   </div>
 
+  <div class="overlay" id="codeOverlay" aria-hidden="true">
+    <section class="code-window" role="dialog" aria-modal="true" aria-labelledby="codeTitle">
+      <header class="code-head">
+        <div class="code-title-wrap">
+          <h2 class="code-title" id="codeTitle">项目代码</h2>
+          <div class="code-meta" id="codeMeta"></div>
+        </div>
+        <button class="icon-button" id="closeCode" type="button" aria-label="关闭代码窗口">×</button>
+      </header>
+      <div class="code-message" id="codeMessage"></div>
+      <textarea class="code-viewer" id="codeViewer" spellcheck="false" readonly aria-label="项目代码"></textarea>
+      <footer class="code-actions">
+        <button class="secondary-button" id="copyCode" type="button">复制</button>
+      </footer>
+    </section>
+  </div>
+
   <script>
     const classTabs = document.getElementById('classTabs');
     const siteGrid = document.getElementById('siteGrid');
@@ -843,6 +962,7 @@
     const uploadOverlay = document.getElementById('uploadOverlay');
     const previewBackdrop = document.getElementById('previewBackdrop');
     const previewOverlay = document.getElementById('previewOverlay');
+    const codeOverlay = document.getElementById('codeOverlay');
     const uploadForm = document.getElementById('uploadForm');
     const titleInput = document.getElementById('titleInput');
     const authorInput = document.getElementById('authorInput');
@@ -858,9 +978,15 @@
     const refreshClassSitesButton = document.getElementById('refreshClassSites');
     const classProjectCount = document.getElementById('classProjectCount');
     const currentClassLabel = document.getElementById('currentClassLabel');
+    const codeTitle = document.getElementById('codeTitle');
+    const codeMeta = document.getElementById('codeMeta');
+    const codeMessage = document.getElementById('codeMessage');
+    const codeViewer = document.getElementById('codeViewer');
+    const copyCodeButton = document.getElementById('copyCode');
 
     let currentPreviewUrl = '';
     let currentPreviewExternalUrl = '';
+    let currentCodeText = '';
     let classes = [];
     let uploadRules = { forbiddenWords: [] };
     let currentClassId = '';
@@ -1038,6 +1164,70 @@
       clearPreviewBackdrop();
     }
 
+    function setCodeMessage(text, isError = false) {
+      codeMessage.textContent = text;
+      codeMessage.classList.toggle('is-error', isError);
+    }
+
+    function setCodeBusy(isBusy) {
+      copyCodeButton.disabled = isBusy || !currentCodeText;
+    }
+
+    async function openCodeWindow(site) {
+      currentCodeText = '';
+      codeTitle.textContent = `代码：${site.title}`;
+      codeMeta.textContent = site.url;
+      codeViewer.value = '';
+      setCodeBusy(true);
+      setCodeMessage('正在加载代码...');
+      openOverlay(codeOverlay);
+      document.body.classList.add('is-code-viewing');
+
+      const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/public-code`);
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '加载代码失败' }));
+        setCodeMessage(result.error || '加载代码失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      currentCodeText = result.combinedText || '';
+      codeViewer.value = currentCodeText;
+      const fileCount = Array.isArray(result.files) ? result.files.length : 0;
+      codeMeta.textContent = `${fileCount} 个文件 · ${result.url || site.url}`;
+      setCodeMessage('代码为只读，可以复制完整项目代码。');
+      setCodeBusy(false);
+      codeViewer.focus();
+    }
+
+    function closeCodeWindow() {
+      currentCodeText = '';
+      codeViewer.value = '';
+      closeOverlay(codeOverlay);
+      document.body.classList.remove('is-code-viewing');
+      setCodeBusy(true);
+      setCodeMessage('');
+    }
+
+    async function copyProjectCode() {
+      if (!currentCodeText) {
+        return;
+      }
+
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(currentCodeText);
+        } else {
+          codeViewer.focus();
+          codeViewer.select();
+          document.execCommand('copy');
+        }
+        setCodeMessage('已复制完整项目代码。');
+      } catch {
+        setCodeMessage('复制失败，请手动选中代码复制。', true);
+      }
+    }
+
     async function unlockClass(classId, password, messageElement) {
       const unlockUrl = classId
         ? `/api/classes/${encodeURIComponent(classId)}/unlock`
@@ -1200,7 +1390,13 @@
         previewButton.textContent = '预览项目';
         previewButton.addEventListener('click', () => openProjectWindow(site));
 
-        actions.append(previewButton);
+        const codeButton = document.createElement('button');
+        codeButton.className = 'secondary-button';
+        codeButton.type = 'button';
+        codeButton.textContent = '查看代码';
+        codeButton.addEventListener('click', () => openCodeWindow(site));
+
+        actions.append(previewButton, codeButton);
         card.append(cardMain, actions);
 
         siteGrid.append(card);
@@ -1346,6 +1542,8 @@
     document.getElementById('closeUpload').addEventListener('click', closeUpload);
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
     document.getElementById('closePreview').addEventListener('click', closePreview);
+    document.getElementById('closeCode').addEventListener('click', closeCodeWindow);
+    copyCodeButton.addEventListener('click', copyProjectCode);
     openPreviewExternal.addEventListener('click', () => {
       if (currentPreviewExternalUrl) {
         window.open(currentPreviewExternalUrl, '_blank', 'noopener');
@@ -1367,6 +1565,12 @@
     previewOverlay.addEventListener('click', (event) => {
       if (event.target === previewOverlay) {
         closePreview();
+      }
+    });
+
+    codeOverlay.addEventListener('click', (event) => {
+      if (event.target === codeOverlay) {
+        closeCodeWindow();
       }
     });
 
