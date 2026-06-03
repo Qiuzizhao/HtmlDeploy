@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>键盘音游</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 游戏标题 */
+        .game-title {
+            font-size: 32px;
+            margin: 10px 0;
+            color: #00f5d4;
+            text-shadow: 0 0 10px #00f5d4;
+        }
+
+        /* 分数面板 */
+        .score-panel {
+            display: flex;
+            gap: 30px;
+            margin: 10px 0;
+            font-size: 20px;
+        }
+
+        /* 游戏主容器 */
+        .game-container {
+            width: 500px;
+            height: 600px;
+            background: #16213e;
+            border: 3px solid #00f5d4;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px #00f5d4;
+        }
+
+        /* 判定线 */
+        .judge-line {
+            position: absolute;
+            bottom: 100px;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: #ff2e63;
+            box-shadow: 0 0 15px #ff2e63;
+            z-index: 10;
+        }
+
+        /* 轨道区域 */
+        .tracks {
+            display: flex;
+            height: 100%;
+        }
+
+        /* 单条轨道 */
+        .track {
+            flex: 1;
+            border-left: 1px solid #333;
+            border-right: 1px solid #333;
+            position: relative;
+        }
+
+        /* 按键提示 */
+        .key-hint {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #00f5d4;
+        }
+
+        /* 音符样式 */
+        .note {
+            position: absolute;
+            width: 80%;
+            height: 30px;
+            background: linear-gradient(90deg, #00f5d4, #00bbf0);
+            border-radius: 5px;
+            left: 10%;
+            top: -30px;
+            box-shadow: 0 0 10px #00f5d4;
+        }
+
+        /* 打击特效 */
+        .hit-effect {
+            position: absolute;
+            width: 80%;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            left: 10%;
+            bottom: 100px;
+            opacity: 0;
+            animation: hitAnim 0.3s ease-out;
+        }
+
+        @keyframes hitAnim {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.3); }
+        }
+
+        /* 判定文字 */
+        .judge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            text-shadow: 0 0 15px white;
+            opacity: 0;
+            animation: judgeFade 0.8s ease-out;
+            z-index: 20;
+        }
+
+        @keyframes judgeFade {
+            0% { opacity: 1; transform: translate(-50%, -60%); }
+            100% { opacity: 0; transform: translate(-50%, -80%); }
+        }
+
+        /* 开始/结束界面 */
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .start-btn, .restart-btn {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #00f5d4;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .start-btn:hover, .restart-btn:hover {
+            background: #00bbf0;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="game-title">键盘音游</h1>
+    <div class="score-panel">
+        <div>分数: <span id="score">0</span></div>
+        <div>连击: <span id="combo">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <div class="judge-line"></div>
+        <div class="tracks">
+            <div class="track" data-key="65"><div class="key-hint">A</div><div class="hit-effect"></div></div>
+            <div class="track" data-key="83"><div class="key-hint">S</div><div class="hit-effect"></div></div>
+            <div class="track" data-key="68"><div class="key-hint">D</div><div class="hit-effect"></div></div>
+            <div class="track" data-key="70"><div class="key-hint">F</div><div class="hit-effect"></div></div>
+        </div>
+        <div class="judge-text" id="judgeText"></div>
+
+        <!-- 开始界面 -->
+        <div class="game-overlay" id="startOverlay">
+            <h2>欢迎来到键盘音游</h2>
+            <p>按 A / S / D / F 击打音符</p>
+            <button class="start-btn" id="startBtn">开始游戏</button>
+        </div>
+
+        <!-- 结束界面 -->
+        <div class="game-overlay hidden" id="endOverlay">
+            <h2>游戏结束</h2>
+            <p>最终分数: <span id="finalScore">0</span></p>
+            <p>最高连击: <span id="maxCombo">0</span></p>
+            <button class="restart-btn" id="restartBtn">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心变量
+        const gameContainer = document.querySelector('.game-container');
+        const tracks = document.querySelectorAll('.track');
+        const judgeText = document.getElementById('judgeText');
+        const scoreEl = document.getElementById('score');
+        const comboEl = document.getElementById('combo');
+        const startOverlay = document.getElementById('startOverlay');
+        const endOverlay = document.getElementById('endOverlay');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let gameRunning = false;
+        let noteSpeed = 3; // 音符下落速度
+        let notes = [];
+        let noteInterval;
+        let gameTimer;
+
+        // 按键映射 A(65) S(83) D(68) F(70)
+        const keyMap = {
+            65: 0,
+            83: 1,
+            68: 2,
+            70: 3
+        };
+
+        // 打击音效（网页提示音）
+        function playHitSound() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+        }
+
+        // 创建音符
+        function createNote() {
+            if (!gameRunning) return;
+            const trackIndex = Math.floor(Math.random() * 4);
+            const track = tracks[trackIndex];
+            
+            const note = document.createElement('div');
+            note.classList.add('note');
+            track.appendChild(note);
+            
+            notes.push({
+                element: note,
+                track: trackIndex,
+                top: -30
+            });
+        }
+
+        // 音符下落动画
+        function updateNotes() {
+            for (let i = notes.length - 1; i >= 0; i--) {
+                const note = notes[i];
+                note.top += noteSpeed;
+                note.element.style.top = note.top + 'px';
+
+                // 音符超出判定线未击打 = MISS
+                if (note.top > 500) {
+                    note.element.remove();
+                    notes.splice(i, 1);
+                    combo = 0;
+                    updateCombo();
+                    showJudge('MISS', '#ff4444');
+                }
+            }
+        }
+
+        // 按键检测
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || !keyMap.hasOwnProperty(e.keyCode)) return;
+            
+            const trackIndex = keyMap[e.keyCode];
+            const track = tracks[trackIndex];
+            const hitEffect = track.querySelector('.hit-effect');
+            
+            // 播放打击特效
+            hitEffect.style.animation = 'none';
+            setTimeout(() => hitEffect.style.animation = 'hitAnim 0.3s ease-out', 10);
+            
+            // 检测音符判定
+            checkNoteHit(trackIndex);
+        });
+
+        // 音符击中判定
+        function checkNoteHit(trackIndex) {
+            const judgeLineY = 500;
+            const tolerance = 50; // 判定范围
+
+            for (let i = notes.length - 1; i >= 0; i--) {
+                const note = notes[i];
+                if (note.track !== trackIndex) continue;
+
+                const distance = Math.abs(note.top - judgeLineY);
+                
+                if (distance < tolerance) {
+                    // 判定逻辑
+                    let judge, points, color;
+                    if (distance < 10) {
+                        judge = 'PERFECT';
+                        points = 300;
+                        color = '#ffd700';
+                    } else if (distance < 25) {
+                        judge = 'GREAT';
+                        points = 200;
+                        color = '#00ff00';
+                    } else {
+                        judge = 'GOOD';
+                        points = 100;
+                        color = '#00f5d4';
+                    }
+
+                    // 加分 + 连击
+                    score += points;
+                    combo++;
+                    if (combo > maxCombo) maxCombo = combo;
+                    
+                    // 播放音效 & 显示判定
+                    playHitSound();
+                    showJudge(judge, color);
+                    updateScore();
+                    updateCombo();
+
+                    // 移除音符
+                    note.element.remove();
+                    notes.splice(i, 1);
+                    return;
+                }
+            }
+        }
+
+        // 显示判定文字
+        function showJudge(text, color) {
+            judgeText.textContent = text;
+            judgeText.style.color = color;
+            judgeText.style.animation = 'none';
+            setTimeout(() => judgeText.style.animation = 'judgeFade 0.8s ease-out', 10);
+        }
+
+        // 更新分数
+        function updateScore() {
+            scoreEl.textContent = score;
+        }
+
+        // 更新连击
+        function updateCombo() {
+            comboEl.textContent = combo;
+        }
+
+        // 开始游戏
+        function startGame() {
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            notes = [];
+            gameRunning = true;
+            
+            startOverlay.classList.add('hidden');
+            updateScore();
+            updateCombo();
+            
+            // 生成音符
+            noteInterval = setInterval(createNote, 600);
+            // 游戏主循环
+            gameTimer = setInterval(updateNotes, 16);
+            
+            // 游戏时长 30 秒
+            setTimeout(endGame, 30000);
+        }
+
+        // 结束游戏
+        function endGame() {
+            gameRunning = false;
+            clearInterval(noteInterval);
+            clearInterval(gameTimer);
+            
+            // 清除所有音符
+            document.querySelectorAll('.note').forEach(n => n.remove());
+            
+            // 显示结算
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('maxCombo').textContent = maxCombo;
+            endOverlay.classList.remove('hidden');
+        }
+
+        // 按钮事件
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', () => {
+            endOverlay.classList.add('hidden');
+            startGame();
+        });
+    </script>
+</body>
+</html>
