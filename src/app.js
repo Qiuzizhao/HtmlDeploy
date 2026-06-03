@@ -1677,14 +1677,20 @@ function createApp(options = {}) {
         llmConfig
       });
 
+      const latestSites = await readSites(dataFile);
+      const latestSiteIndex = latestSites.findIndex((item) => item.id === id);
+      if (latestSiteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
       await fsp.writeFile(indexPath, optimizedContent);
 
       const site = {
-        ...sites[siteIndex],
+        ...latestSites[latestSiteIndex],
         updatedAt: new Date().toISOString()
       };
-      sites[siteIndex] = site;
-      await writeSites(dataFile, sites);
+      latestSites[latestSiteIndex] = site;
+      await writeSites(dataFile, latestSites);
       generateThumbnailLater(id, getRequestOrigin(req));
 
       const classes = await readClasses(classesFile);

@@ -150,6 +150,9 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /method: 'PUT'/);
   assert.match(html, /method: 'DELETE'/);
   assert.match(html, /id="auditForbiddenSitesButton"[^>]*>违禁词审查<\/button>/);
+  assert.match(html, /id="aiOptimizeLog"/);
+  assert.match(html, /function addAiOptimizeLog/);
+  assert.match(html, /runningAiOptimizations/);
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
@@ -929,6 +932,86 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
     assert.equal(requestPayload.model, 'fake-model');
     assert.equal(requestPayload.stream, false);
     assert.match(requestPayload.messages[1].content, /Original/);
+  } finally {
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM is running', async () => {
+  const optimizedHtml = '<!doctype html><html><body><h1>Optimized Later</h1></body></html>';
+  let releaseLlm;
+  let llmReceived;
+  const llmReceivedPromise = new Promise((resolve) => {
+    llmReceived = resolve;
+  });
+  const releasePromise = new Promise((resolve) => {
+    releaseLlm = resolve;
+  });
+  const llmServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    llmReceived();
+    await releasePromise;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: optimizedHtml
+          }
+        }
+      ]
+    }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'ai-race'];
+    const { app, storageDir, dataDir } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+    await agent
+      .post('/api/sites')
+      .field('title', 'AI 并发项目')
+      .field('author', '测试作者')
+      .field('classId', 'class-a')
+      .attach('file', Buffer.from('<!doctype html><h1>Original</h1>'), { filename: 'old.html' })
+      .expect(201);
+
+    const optimizeRequest = agent.post('/api/sites/ai-race/ai-optimize-save').send({});
+    await llmReceivedPromise;
+
+    const sitesPath = path.join(dataDir, 'sites.json');
+    const sites = JSON.parse(await fsp.readFile(sitesPath, 'utf8'));
+    sites[0] = {
+      ...sites[0],
+      title: '并发修改后的标题',
+      author: '并发修改作者'
+    };
+    await fsp.writeFile(sitesPath, JSON.stringify(sites, null, 2));
+
+    releaseLlm();
+    const response = await optimizeRequest.expect(200);
+
+    assert.equal(response.body.site.title, '并发修改后的标题');
+    assert.equal(response.body.site.author, '并发修改作者');
+    assert.equal(
+      await fsp.readFile(path.join(storageDir, 'ai-race', 'index.html'), 'utf8'),
+      optimizedHtml
+    );
+
+    const savedSites = JSON.parse(await fsp.readFile(sitesPath, 'utf8'));
+    assert.equal(savedSites[0].title, '并发修改后的标题');
+    assert.equal(savedSites[0].author, '并发修改作者');
+    assert.ok(savedSites[0].updatedAt);
   } finally {
     await new Promise((resolve) => llmServer.close(resolve));
   }
