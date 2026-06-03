@@ -1299,12 +1299,10 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '作者署名不能为空' });
       }
 
-      if (sites[siteIndex].forbiddenWhitelist !== true) {
-        const settings = await readSettings(settingsFile);
-        const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
-        if (forbiddenMatch) {
-          return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
-        }
+      const settings = await readSettings(settingsFile);
+      const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
+      if (forbiddenMatch) {
+        return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
       }
 
       if (!classItem) {
@@ -1761,10 +1759,12 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '作者署名不能为空' });
       }
 
-      const settings = await readSettings(settingsFile);
-      const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
-      if (forbiddenMatch) {
-        return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+      if (sites[siteIndex].forbiddenWhitelist !== true) {
+        const settings = await readSettings(settingsFile);
+        const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
+        if (forbiddenMatch) {
+          return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+        }
       }
 
       if (!classItem) {
