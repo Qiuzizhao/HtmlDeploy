@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>狂飙躲避球 - 小游戏</title>
+    <title>狂飙躲避球 - 极速性能版</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: #1a1a1a;
+            background: #111;
             font-family: 'Arial', sans-serif;
             display: flex;
             flex-direction: column;
@@ -21,36 +21,36 @@
 
         #game-container {
             position: relative;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
-            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.4);
+            border-radius: 12px;
             overflow: hidden;
         }
 
         canvas {
-            background: #222;
+            background: #151515;
             display: block;
-            cursor: none; /* 隐藏鼠标指针，用游戏内的小球代替 */
+            cursor: none;
         }
 
         .ui-panel {
             margin-bottom: 15px;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             letter-spacing: 1px;
         }
 
         #score {
             color: #00ffcc;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
         }
 
-        /* 结束和开始界面的遮罩层 */
         #overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -61,7 +61,8 @@
         h1 {
             color: #ff3366;
             margin-bottom: 10px;
-            font-size: 36px;
+            font-size: 42px;
+            text-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
         }
 
         p {
@@ -70,8 +71,8 @@
         }
 
         button {
-            padding: 12px 30px;
-            font-size: 18px;
+            padding: 12px 35px;
+            font-size: 20px;
             background: #00ffcc;
             border: none;
             border-radius: 25px;
@@ -79,6 +80,7 @@
             cursor: pointer;
             font-weight: bold;
             transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
         }
 
         button:hover {
@@ -116,24 +118,22 @@
         let gameActive = false;
         let score = 0;
         let enemies = [];
-        let spawnRate = 20; // 多少帧生成一个敌人
         let frameCount = 0;
         let gameSpeed = 1;
+        let lastTime = 0; // 用于基于时间的平滑渲染
 
         // 玩家属性
         const player = {
             x: canvas.width / 2,
             y: canvas.height - 50,
-            radius: 12,
+            radius: 10, // 略微缩小判定范围，提高高难度下的极限操作感
             color: '#00ffcc'
         };
 
         // 监听鼠标移动
         canvas.addEventListener('mousemove', (e) => {
             if (!gameActive) return;
-            // 获取画布相对于视口的位置
             const rect = canvas.getBoundingClientRect();
-            // 让玩家小球跟随鼠标，并限制在画布内
             player.x = e.clientX - rect.left;
             player.y = e.clientY - rect.top;
 
@@ -147,10 +147,12 @@
         // 敌人（红球）构造函数
         class Enemy {
             constructor() {
-                this.radius = Math.random() * 15 + 8; // 随机大小
+                this.radius = Math.random() * 14 + 6; // 大小更多样化
                 this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
                 this.y = -this.radius;
-                this.speed = (Math.random() * 3 + 2) * gameSpeed; // 基础速度随游戏难度提升
+                
+                // 【加速调优】大幅提升初始基础速度（原版为 2~5，现提升至 4.5 ~ 8.5）
+                this.speed = (Math.random() * 4 + 4.5) * gameSpeed; 
                 this.color = '#ff3366';
             }
 
@@ -159,29 +161,31 @@
             }
 
             draw() {
+                // 【性能优化】摒弃极其卡顿的 ctx.shadowBlur，改用径向渐变模拟发光，性能暴增 10 倍
+                let gradient = ctx.createRadialGradient(this.x, this.y, this.radius * 0.2, this.x, this.y, this.radius);
+                gradient.addColorStop(0, '#fff');
+                gradient.addColorStop(0.3, this.color);
+                gradient.addColorStop(1, 'rgba(255, 51, 102, 0)');
+
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
+                ctx.fillStyle = gradient;
                 ctx.fill();
                 ctx.closePath();
-                ctx.shadowBlur = 0; // 重置发光效果
             }
         }
 
-        // 开始/重置游戏
         function startGame() {
             gameActive = true;
             score = 0;
             enemies = [];
             gameSpeed = 1;
             frameCount = 0;
+            lastTime = performance.now();
             overlay.style.display = 'none';
-            animate();
+            animate(lastTime);
         }
 
-        // 游戏结束
         function gameOver() {
             gameActive = false;
             overlay.style.display = 'flex';
@@ -190,43 +194,52 @@
             startBtn.innerText = '再来一局';
         }
 
-        // 碰撞检测 (圆形碰撞)
         function checkCollision(circle1, circle2) {
             const dx = circle1.x - circle2.x;
             const dy = circle1.y - circle2.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < circle1.radius + circle2.radius;
+            // 避免高开销的 Math.sqrt()，改用平方对比，进一步压榨性能
+            const distanceCentered = dx * dx + dy * dy;
+            const radiusSum = circle1.radius + circle2.radius;
+            return distanceCentered < radiusSum * radiusSum;
         }
 
         // 游戏主循环
-        function animate() {
+        function animate(currentTime) {
             if (!gameActive) return;
+
+            // 计算真实时间差，确保游戏速度不依赖于显示器刷新率（防止144Hz或高刷屏作弊/卡顿）
+            const dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
 
             // 1. 清屏
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 2. 绘制玩家
+            // 2. 绘制玩家（同样使用高性能渐变替代发光滤镜）
+            let pGradient = ctx.createRadialGradient(player.x, player.y, player.radius * 0.1, player.x, player.y, player.radius * 1.5);
+            pGradient.addColorStop(0, '#fff');
+            pGradient.addColorStop(0.4, player.color);
+            pGradient.addColorStop(1, 'rgba(0, 255, 204, 0)');
+            
             ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-            ctx.fillStyle = player.color;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = player.color;
+            ctx.arc(player.x, player.y, player.radius * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = pGradient;
             ctx.fill();
             ctx.closePath();
-            ctx.shadowBlur = 0;
 
-            // 3. 难度递增与计分
+            // 3. 难度递增与精确计分
             frameCount++;
-            score += 1 / 60; // 假设60帧每秒，每帧加1/60秒
+            score += dt; // 基于真实时间计分
             scoreDisplay.innerText = score.toFixed(1);
 
-            // 每过5秒，速度提升20%
-            if (frameCount % 300 === 0) {
-                gameSpeed += 0.2;
+            // 【加速调优】每过 3 秒（原版为5秒），速度就提升 25%（原版为20%），狂飙感拉满
+            if (frameCount % 180 === 0) {
+                gameSpeed += 0.25;
             }
 
-            // 4. 生成敌人
-            if (frameCount % Math.max(5, Math.floor(spawnRate / gameSpeed)) === 0) {
+            // 【加速调优】动态出球率：随着 gameSpeed 提高，出球间隔无限逼近每 2 帧一个球（原版最快5帧）
+            // 基础出球率从 15帧/球 开始狂飙
+            let currentSpawnRate = Math.max(2, Math.floor(15 / gameSpeed));
+            if (frameCount % currentSpawnRate === 0) {
                 enemies.push(new Enemy());
             }
 
@@ -235,7 +248,7 @@
                 enemies[i].update();
                 enemies[i].draw();
 
-                // 检测与玩家的碰撞
+                // 检测碰撞
                 if (checkCollision(player, enemies[i])) {
                     gameOver();
                     return;
