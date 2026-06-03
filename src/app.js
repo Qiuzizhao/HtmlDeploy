@@ -602,6 +602,60 @@ async function listProjectFiles(projectDir) {
   return result.sort((a, b) => a.localeCompare(b));
 }
 
+function isTextProjectFile(filePath, buffer) {
+  const textExtensions = new Set([
+    '.html',
+    '.htm',
+    '.css',
+    '.js',
+    '.mjs',
+    '.cjs',
+    '.json',
+    '.txt',
+    '.md',
+    '.svg',
+    '.xml',
+    '.csv',
+    '.ts',
+    '.tsx',
+    '.jsx',
+    '.vue'
+  ]);
+
+  if (textExtensions.has(path.extname(filePath).toLowerCase())) {
+    return true;
+  }
+
+  const sample = buffer.subarray(0, Math.min(buffer.length, 4096));
+  return !sample.includes(0);
+}
+
+async function readProjectCodeSnapshot(projectDir) {
+  const filePaths = await listProjectFiles(projectDir);
+  const files = [];
+
+  for (const filePath of filePaths) {
+    const absolutePath = resolveInside(projectDir, filePath);
+    const buffer = await fsp.readFile(absolutePath);
+    const isText = isTextProjectFile(filePath, buffer);
+    files.push({
+      path: filePath,
+      size: buffer.length,
+      binary: !isText,
+      content: isText ? buffer.toString('utf8') : ''
+    });
+  }
+
+  const combinedText = files
+    .map((file) => [
+      `===== ${file.path} =====`,
+      file.binary ? `[二进制文件，无法以文本显示：${file.size} bytes]` : file.content
+    ].join('\n'))
+    .join('\n\n');
+
+  return { files, combinedText };
+}
+
 async function renderFileList({ id, title, projectDir }) {
   const files = await listProjectFiles(projectDir);
   const items = files
