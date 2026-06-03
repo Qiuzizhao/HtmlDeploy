@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>霓虹赛博钢琴</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+    min-height:100vh;
+    background:#050118;
+    background-image:radial-gradient(#1b0b36,#050118);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+.title{
+    font-size:42px;
+    color:#fff;
+    margin-bottom:40px;
+    text-shadow:0 0 8px #0ff,0 0 20px #0cf,0 0 40px #08f;
+    letter-spacing:4px;
+}
+/*钢琴容器*/
+.piano-wrap{
+    display:flex;
+    position:relative;
+    padding:40px 20px;
+    background:#090422;
+    border-radius:16px;
+    box-shadow:0 0 25px #f0f7,inset 0 0 30px #40f3;
+}
+/*白键 霓虹白*/
+.key-white{
+    width:52px;
+    height:210px;
+    background:#0c0629;
+    border:1px solid #7cf;
+    border-bottom-left-radius:8px;
+    border-bottom-right-radius:8px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding-bottom:12px;
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+    user-select:none;
+    transition:0.12s all ease;
+    box-shadow:inset 0 0 12px #0ff4,0 0 6px #0ff5;
+}
+.key-white.active{
+    transform:translateY(4px);
+    background:#0ff3;
+    box-shadow:0 0 22px #0ff,inset 0 0 25px #0ff8;
+}
+/*黑键 玫红霓虹*/
+.key-black{
+    width:34px;
+    height:132px;
+    background:#110022;
+    margin:0 -17px;
+    z-index:9;
+    border:none;
+    border-bottom-left-radius:6px;
+    border-bottom-right-radius:6px;
+    color:#fff;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding-bottom:10px;
+    cursor:pointer;
+    user-select:none;
+    box-shadow:0 0 8px #f0f6,inset 0 0 10px #f0f4;
+    transition:0.12s all ease;
+}
+.key-black.active{
+    transform:translateY(3px);
+    background:#f0f4;
+    box-shadow:0 0 25px #f0f,inset 0 0 20px #f0f9;
+}
+.tip{
+    margin-top:32px;
+    color:#cdf;
+    text-shadow:0 0 6px #0cf;
+    font-size:17px;
+}
+</style>
+</head>
+<body>
+<h1 class="title">🎹 NEON 霓虹钢琴</h1>
+<div class="piano-wrap">
+    <div class="key-white" data-note="C4" data-key="a">A</div>
+    <div class="key-black" data-note="C#4" data-key="w">W</div>
+    <div class="key-white" data-note="D4" data-key="s">S</div>
+    <div class="key-black" data-note="D#4" data-key="e">E</div>
+    <div class="key-white" data-note="E4" data-key="d">D</div>
+    <div class="key-white" data-note="F4" data-key="f">F</div>
+    <div class="key-black" data-note="F#4" data-key="t">T</div>
+    <div class="key-white" data-note="G4" data-key="g">G</div>
+    <div class="key-black" data-note="G#4" data-key="y">Y</div>
+    <div class="key-white" data-note="A4" data-key="h">H</div>
+    <div class="key-black" data-note="A#4" data-key="u">U</div>
+    <div class="key-white" data-note="B4" data-key="j">J</div>
+    <div class="key-white" data-note="C5" data-key="k">K</div>
+</div>
+<p class="tip">鼠标点击按键｜键盘 A W S E D F T G Y H U J K 弹奏</p>
+
+<script>
+const allKeys = document.querySelectorAll('.key-white,.key-black');
+
+//播放钢琴音效
+function playSound(noteName){
+    let audio = new Audio(`https://assets.mixkit.co/sound-effects/sfx/235469/piano-${noteName.toLowerCase()}.mp3`);
+    audio.volume = 0.75;
+    audio.play().catch(e=>{});
+}
+//按键霓虹激活
+function keyDownAnim(el){
+    el.classList.add('active');
+    setTimeout(()=>el.classList.remove('active'),110);
+}
+
+//鼠标点击
+allKeys.forEach(k=>{
+    k.onclick = ()=>{
+        playSound(k.dataset.note);
+        keyDownAnim(k);
+    }
+})
+
+//键盘监听
+document.addEventListener('keydown',ev=>{
+    let kCode = ev.key.toLowerCase();
+    let findKey = document.querySelector(`[data-key="${kCode}"]`);
+    if(findKey){
+        playSound(findKey.dataset.note);
+        keyDownAnim(findKey);
+    }
+})
+</script>
+</body>
+</html>
