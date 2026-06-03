@@ -21,12 +21,12 @@
   {
     "id": "90cc94a8",
     "number": "00079",
-    "title": "射几把",
-    "author": "赖泽的87",
+    "title": "打靶射击小游戏",
+    "author": "赖泽",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:54.082Z",
-    "enabled": false,
-    "updatedAt": "2026-06-03T14:12:07.620Z"
+    "enabled": true,
+    "updatedAt": "2026-06-03T15:35:23.629Z"
   },
   {
     "id": "104a8681",
@@ -425,8 +425,8 @@
     "author": "鸡贼",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:13:07.526Z",
-    "enabled": true,
-    "updatedAt": "2026-06-03T15:34:14.301Z"
+    "enabled": false,
+    "updatedAt": "2026-06-03T15:35:26.440Z"
   },
   {
     "id": "7709ded1",
