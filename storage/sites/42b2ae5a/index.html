@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>崩坏：星穹铁道 Web完整版 | 抽卡+战斗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        * {font-family: 'Noto Sans SC', sans-serif; user-select: none;}
+        body{overflow:hidden}
+        /* 星铁配色 */
+        .star-grad{
+            background: linear-gradient(135deg,#7b2ff7 0%,#362499 50%,#140b42 100%);
+        }
+        .glass{
+            backdrop-filter: blur(12px);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,0.15);
+        }
+        .glow-purple{box-shadow: 0 0 22px #9d4edd66,inset 0 0 12px #9d4edd22;}
+        .char-card{transition:all 0.3s ease;}
+        .char-card:hover{transform: translateY(-8px) scale(1.03);box-shadow:0 0 30px #c77dff77;}
+        /* 抽卡闪光动画 */
+        @keyframes goldFlash{
+            0%{box-shadow:0 0 10px gold}
+            50%{box-shadow:0 0 40px gold,0 0 70px #ffdd00}
+            100%{box-shadow:0 0 10px gold}
+        }
+        .gold-card{animation: goldFlash 1.2s infinite;}
+        @keyframes purpleFlash{
+            0%{box-shadow:0 0 8px #b86bff}
+            50%{box-shadow:0 0 25px #b86bff}
+            100%{box-shadow:0 0 8px #b86bff}
+        }
+        .purple-card{animation: purpleFlash 1.2s infinite;}
+        /* 加载旋转 */
+        @keyframes loadSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .spin{animation: loadSpin 2s linear infinite;}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .fade{animation: fadeIn .8s ease forwards;}
+        #starBg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;}
+        /* 页面切换动画 */
+        .page{display:none;}
+        .page.active{display:flex;}
+        /* 战斗血条 */
+        .hp-bar{height:6px;background:#333;border-radius:3px;overflow:hidden}
+        .hp-inner{height:100%;background:#22c55e;transition:0.3s}
+        .enemy-hp{background:#ef4444}
+    </style>
+    <script>
+        tailwind.config={
+            theme:{
+                extend:{
+                    colors:{
+                        starMain:'#9d4edd',
+                        starDark:'#221550',
+                        starLight:'#e0c3fc'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-white">
+    <!-- 3D星空背景 -->
+    <div id="starBg"></div>
+
+    <!-- 加载页 -->
+    <div id="loadingPage" class="fixed inset-0 star-grad z-[9999] flex flex-col items-center justify-center">
+        <div class="w-24 h-24 border-4 border-starMain border-t-transparent rounded-full spin mb-6"></div>
+        <h1 class="text-[2.2rem] font-bold tracking-widest">崩坏：星穹铁道</h1>
+        <p class="mt-3 text-gray-300">正在加载星轨世界 · 开拓启程...</p>
+    </div>
+
+    <!-- 主容器 -->
+    <div id="gameMain" class="hidden w-full h-screen flex flex-col p-4 fade">
+        <!-- 顶部资源栏 -->
+        <header class="glass rounded-xl px-5 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa fa-star text-starMain text-xl"></i>
+                <span class="text-lg font-medium">开拓者 · 主页</span>
+            </div>
+            <div class="flex gap-6 items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-diamond text-cyan-300"></i>
+                    <span id="diamondNum">12580</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-coffee text-amber-400"></i>
+                    <span>240/240</span>
+                </div>
+                <!-- 页面切换按钮 -->
+                <button onclick="switchPage('home')" class="px-3 py-1 rounded-lg bg-starMain/30 hover:bg-starMain/50 transition">角色主页</button>
+                <button onclick="switchPage('gacha')" class="px-3 py-1 rounded-lg bg-amber-500/30 hover:bg-amber-500/50 transition">星轨跃迁</button>
+                <button onclick="switchPage('battle')" class="px-3 py-1 rounded-lg bg-emerald-500/30 hover:bg-emerald-500/50 transition">开始战斗</button>
+            </div>
+        </header>
+
+        <main class="flex flex-1 mt-4 gap-4 overflow-hidden">
+            <!-- 左侧菜单栏 -->
+            <aside class="glass glow-purple w-[220px] rounded-xl p-4 flex flex-col gap-3">
+                <div class="text-sm text-gray-300 mb-2">开拓导航</div>
+                <button class="w-full py-3 rounded-lg hover:bg-white/10 transition text-left pl-3 flex items-center gap-2" onclick="switchPage('home')">
+                    <i class="fa fa-users text-starMain"></i>角色编队
+                </button>
+                <button class="w-full py-3 rounded-lg hover:bg-white/10 transition text-left pl-3 flex items-center gap-2" onclick="switchPage('gacha')">
+                    <i class="fa fa-diamond text-cyan-300"></i>星轨跃迁
+                </button>
+                <button class="w-full py-3 rounded-lg hover:bg-white/10 transition text-left pl-3 flex items-center gap-2" onclick="switchPage('battle')">
+                    <i class="fa fa-crosshairs text-emerald-300"></i>副本战斗
+                </button>
+                <div class="flex-1"></div>
+                <span class="text-xs text-gray-400">五星概率:0.6% | 四星5.1%</span>
+            </aside>
+
+            <!-- ========== 1.角色主页页面 ========== -->
+            <section id="home" class="page active flex-1 glass glow-purple rounded-xl p-5 overflow-auto flex-col">
+                <h2 class="text-xl mb-5 flex items-center gap-2"><i class="fa fa-user-circle text-starMain"></i>已拥有角色</h2>
+                <div id="charBox" class="grid grid-cols-4 gap-5">
+                    <!-- 角色由JS动态渲染 -->
+                </div>
+            </section>
+
+            <!-- ========== 2.抽卡跃迁页面 ========== -->
+            <section id="gacha" class="page flex-1 glass glow-purple rounded-xl p-5 overflow-auto flex-col">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-xl flex items-center gap-2"><i class="fa fa-rocket text-amber-400"></i>星轨跃迁【常驻池】</h2>
+                    <div class="flex gap-3">
+                        <button onclick="singlePull()" class="px-5 py-2 bg-amber-500/40 hover:bg-amber-500/60 rounded-lg">单抽(100星琼)</button>
+                        <button onclick="tenPull()" class="px-5 py-2 bg-amber-500/50 hover:bg-amber-500/70 rounded-lg">十连(900星琼)</button>
+                    </div>
+                </div>
+                <div id="gachaResult" class="grid grid-cols-5 gap-4 flex-1 overflow-auto">
+                    <div class="text-gray-400 col-span-5">点击上方按钮开始抽卡，抽取角色自动存入角色仓库</div>
+                </div>
+            </section>
+
+            <!-- ========== 3.回合战斗页面 ========== -->
+            <section id="battle" class="page flex-1 glass glow-purple rounded-xl p-5 overflow-hidden flex-col">
+                <h2 class="text-xl mb-3"><i class="fa fa-crosshairs text-emerald-400"></i>回合战斗 · 对战毁灭之影</h2>
+                <!-- 敌人区域 -->
+                <div class="flex justify-center gap-6 py-4 border-b border-white/10">
+                    <div class="w-36">
+                        <div class="h-36 bg-red-900/40 rounded-lg flex items-center justify-center text-5xl">👹</div>
+                        <div class="mt-2">
+                            <div class="text-center">毁灭之影</div>
+                            <div class="hp-bar mt-1"><div id="enemyHpBar" class="hp-inner enemy-hp" style="width:100%"></div></div>
+                            <div class="text-xs text-center mt-1">HP:<span id="enemyHp">800</span>/800</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 我方角色区 -->
+                <div class="flex flex-1 flex-col justify-end">
+                    <div class="flex gap-4 justify-center py-4" id="teamBox">
+                        <!-- 出战编队JS渲染 -->
+                    </div>
+                    <!-- 操作按钮 -->
+                    <div class="flex justify-center gap-4 py-3 border-t border-white/10">
+                        <button onclick="battleAtk()" class="px-5 py-2 bg-emerald-500/40 rounded-lg hover:bg-emerald-500/60">普攻攻击</button>
+                        <button onclick="battleSkill()" class="px-5 py-2 bg-blue-500/40 rounded-lg hover:bg-blue-500/60">角色技能</button>
+                        <button onclick="resetBattle()" class="px-5 py-2 bg-red-500/40 rounded-lg hover:bg-red-500/60">重置战斗</button>
+                    </div>
+                    <div id="battleLog" class="h-20 overflow-auto mt-2 text-sm text-gray-300 border border-white/10 p-2 rounded">战斗日志：战斗开始，选择行动</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // 角色数据源【官方立绘图片链接】
+        const allChars = [
+            {id:1,name:"三月七",star:5,attr:"冰·存护",img:"https://p.qqan.com/up/2023-3/1679597243874129.jpg"},
+            {id:2,name:"丹恒",star:5,attr:"风·巡猎",img:"https://img.51miz.com/Element/00/81/93/10/3986146_E819310_917139.jpg"},
+            {id:3,name:"姬子",star:5,attr:"火·智识",img:"https://pic.baike.soso.com/ugc/baikepic2/56424/20230506151431-1354119914_png_600_848_45454.jpg"},
+            {id:4,name:"瓦尔特",star:5,attr:"虚数·虚无",img:"https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/39697d32257e491892f902d731144351~tplv-a9rns2rl98-image.image"},
+            {id:5,name:"开拓者",star:5,attr:"全属性",img:"https://p.qqan.com/up/2023-2/1676959521734197.jpg"},
+            {id:6,name:"阿兰",star:4,attr:"雷·巡猎",img:"https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/2c477c9d3999446899999d3d48938f60~tplv-a9rns2rl98-image.image"},
+            {id:7,name:"黑塔",star:4,attr:"冰·智识",img:"https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/8f8c4002c96c417998077d779d07f976~tplv-a9rns2rl98-image.image"},
+            {id:8,name:"桑博",star:4,attr:"风·虚无",img:"https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/90d9291f4825417991d28d9d478d2587~tplv-a9rns2rl98-image.image"},
+        ]
+
+        // 玩家数据
+        let player = {
+            diamond:12580,
+            ownChar:[1,2,3,4], // 初始拥有角色ID
+            enemyMaxHp:800,
+            enemyHp:800
+        }
+
+        // 页面切换
+        function switchPage(id){
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+            document.getElementById(id).classList.add('active')
+            if(id==='battle') renderBattleTeam()
+        }
+
+        // 渲染角色仓库
+        function renderHomeChar(){
+            const box = document.getElementById('charBox')
+            box.innerHTML = ''
+            player.ownChar.forEach(cid=>{
+                const c = allChars.find(x=>x.id===cid)
+                let starCls = c.star===5?'gold-card':'purple-card'
+                box.innerHTML += `
+                <div class="char-card glass rounded-xl overflow-hidden transition-all duration-300 cursor-pointer ${starCls}">
+                    <div class="h-[220px]"><img src="${c.img}" class="w-full h-full object-cover"></div>
+                    <div class="p-3">
+                        <div class="font-medium">${c.name} ${c.star===5?'★★★★★':'★★★★'}</div>
+                        <div class="text-xs ${c.star===5?'text-amber-300':'text-purple-300'}">${c.attr}</div>
+                    </div>
+                </div>`
+            })
+        }
+
+        // 抽卡逻辑
+        function getOneChar(){
+            let rand = Math.random()
+            // 5星0.6% 4星99.4%
+            let pool = rand<=0.006 ? allChars.filter(x=>x.star===5) : allChars.filter(x=>x.star===4)
+            let res = pool[Math.floor(Math.random()*pool.length)]
+            return res
+        }
+        function singlePull(){
+            if(player.diamond<100){alert('星琼不足！');return}
+            player.diamond -=100
+            updateDiamond()
+            const c = getOneChar()
+            if(!player.ownChar.includes(c.id)) player.ownChar.push(c.id)
+            showGachaRes([c])
+            renderHomeChar()
+        }
+        function tenPull(){
+            if(player.diamond<900){alert('星琼不足！');return}
+            player.diamond -=900
+            updateDiamond()
+            let list = []
+            for(let i=0;i<10;i++) list.push(getOneChar())
+            list.forEach(c=>{if(!player.ownChar.includes(c.id)) player.ownChar.push(c.id)})
+            showGachaRes(list)
+            renderHomeChar()
+        }
+        function showGachaRes(list){
+            const dom = document.getElementById('gachaResult')
+            dom.innerHTML = ''
+            list.forEach(c=>{
+                let cls = c.star===5?'gold-card':'purple-card'
+                dom.innerHTML += `
+                <div class="glass rounded-lg p-2 ${cls}">
+                    <img src="${c.img}" class="w-full h-36 object-cover rounded">
+                    <div class="text-center mt-2">${c.name}</div>
+                    <div class="text-xs text-center">${c.star===5?'五星':'四星'}</div>
+                </div>`
+            })
+        }
+        function updateDiamond(){
+            document.getElementById('diamondNum').innerText = player.diamond
+        }
+
+        // ======回合战斗逻辑======
+        function renderBattleTeam(){
+            const box = document.getElementById('teamBox')
+            box.innerHTML = ''
+            // 出战取前4名角色
+            const team = player.ownChar.slice(0,4).map(id=>allChars.find(c=>c.id===id))
+            team.forEach(c=>{
+                box.innerHTML +=`
+                <div class="w-28">
+                    <div class="h-28 glass rounded overflow-hidden"><img src="${c.img}" class="w-full h-full object-cover"></div>
+                    <div class="text-center text-sm mt-1">${c.name}</div>
+                </div>`
+            })
+        }
+        function addLog(txt){
+            document.getElementById('battleLog').innerHTML += txt+'<br>'
+            document.getElementById('battleLog').scrollTop = document.getElementById('battleLog').scrollHeight
+        }
+        function refreshEnemyHp(){
+            document.getElementById('enemyHp').innerText = player.enemyHp
+            let per = (player.enemyHp/player.enemyMaxHp)*100
+            document.getElementById('enemyHpBar').style.width = per+'%'
+            if(player.enemyHp<=0) addLog('✅敌人被击败，战斗胜利！')
+        }
+        function battleAtk(){
+            if(player.enemyHp<=0) return addLog('敌人已阵亡！')
+            let dmg = Math.floor(Math.random()*60+40)
+            player.enemyHp -= dmg
+            if(player.enemyHp<0) player.enemyHp=0
+            addLog(`我方普攻，造成${dmg}点伤害`)
+            refreshEnemyHp()
+            enemyTurn()
+        }
+        function battleSkill(){
+            if(player.enemyHp<=0) return addLog('敌人已阵亡！')
+            let dmg = Math.floor(Math.random()*120+80)
+            player.enemyHp -= dmg
+            if(player.enemyHp<0) player.enemyHp=0
+            addLog(`释放角色必杀技！造成${dmg}高额伤害`)
+            refreshEnemyHp()
+            enemyTurn()
+        }
+        function enemyTurn(){
+            if(player.enemyHp<=0) return
+            addLog('👹敌人回合，我方受到少量伤害')
+        }
+        function resetBattle(){
+            player.enemyHp = player.enemyMaxHp
+            refreshEnemyHp()
+            document.getElementById('battleLog').innerHTML='战斗重置，重新开战'
+        }
+
+        // 3D星空背景
+        function createStarSky(){
+            const scene=new THREE.Scene();
+            const camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+            const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+            renderer.setSize(window.innerWidth,window.innerHeight);
+            document.getElementById('starBg').appendChild(renderer.domElement);
+            const geo=new THREE.BufferGeometry();
+            const count=1800;
+            const pos=new Float32Array(count*3);
+            for(let i=0;i<count*3;i++) pos[i]=(Math.random()-0.5)*2200;
+            geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+            const mat=new THREE.PointsMaterial({color:0xffffff,size:1.2,transparent:true,opacity:0.8});
+            const stars=new THREE.Points(geo,mat);
+            scene.add(stars);
+            camera.position.z=250;
+            function animate(){
+                requestAnimationFrame(animate);
+                stars.rotation.y+=0.0003;
+                renderer.render(scene,camera);
+            }
+            animate();
+            window.addEventListener('resize',()=>{
+                camera.aspect=window.innerWidth/window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth,window.innerHeight);
+            })
+        }
+
+        // 初始化
+        createStarSky()
+        setTimeout(()=>{
+            document.getElementById('loadingPage').style.opacity='0';
+            setTimeout(()=>{
+                document.getElementById('loadingPage').style.display='none';
+                document.getElementById('gameMain').classList.remove('hidden');
+                renderHomeChar()
+            },700)
+        },3000);
+    </script>
+</body>
+</html>
