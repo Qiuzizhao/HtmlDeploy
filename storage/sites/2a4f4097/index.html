@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>迷你KARDS网页卡牌</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft Yahei}
+body{background:#222831;color:#fff;padding:10px}
+.container{max-width:1300px;margin:0 auto}
+/* 对手区域 */
+.enemy-area{border:2px solid #992222;padding:10px;background:#382222}
+/* 中间战场分割 */
+.battle{display:flex;gap:10px;margin:8px 0}
+.front,.back{width:50%;border:1px solid #555;padding:8px;min-height:120px}
+.front{background:#2c3830}
+.back{background:#282c38}
+/* 我方区域 */
+.my-area{border:2px solid #226622;padding:10px;background:#1f331f}
+.card{
+    display:inline-block;width:90px;padding:6px;margin:3px;
+    background:#445;border-radius:6px;border:1px solid #aaa;cursor:pointer;
+    vertical-align:top;min-height:110px;
+}
+.card.cantPlay{opacity:0.5}
+.card.canAtk{border:2px solid #0f0}
+.info{padding:8px;margin:5px 0;background:#333}
+.opt{margin:6px 0}
+button{padding:6px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="info">
+        <span id="infoText">游戏初始化...</span>
+        <div class="opt">
+            <button onclick="endTurn()">结束回合</button>
+            <button onclick="attackHQ()">全军进攻大本营</button>
+        </div>
+    </div>
+
+    <!-- 敌方 -->
+    <div class="enemy-area">
+        <h3>敌方｜大本营血量:<span id="enemyHp">20</span>｜费用:<span id="enemyMana">0</span>/<span id="enemyMaxMana">0</span></h3>
+        <div>前线战场：<div id="enemyFront"></div></div>
+        <div>后备阵地：<div id="enemyBack"></div></div>
+        <div>敌方手牌：<span id="enemyHandCnt">0</span>张</div>
+    </div>
+
+    <div class="battle">
+        <div class="front"><h4>【前线阵地-只能被前线单位攻击】我方前线</h4><div id="myFront"></div></div>
+        <div class="back"><h4>【后备阵地】我方后备</h4><div id="myBack"></div></div>
+    </div>
+
+    <!-- 我方 -->
+    <div class="my-area">
+        <h3>我方｜大本营血量:<span id="myHp">20</span>｜费用:<span id="myMana">0</span>/<span id="myMaxMana">0</span></h3>
+        <div>手牌：<div id="myHand"></div></div>
+    </div>
+</div>
+
+<script>
+// 卡牌模板 复刻KARDS：步兵/坦克/反坦克/侦察
+const cardDB = [
+    {name:"美军步兵",cost:1,atk:2,hp:2,desc:"基础步兵"},
+    {name:"三号坦克",cost:3,atk:4,hp:3,desc:"德国主战坦克"},
+    {name:"苏军侦察兵",cost:2,atk:3,hp:1,desc:"高速突击"},
+    {name:"工程兵",cost:2,atk:1,hp:4,desc:"高血量肉盾"},
+    {name:"反坦克炮",cost:4,atk:5,hp:2,desc:"重甲杀手"}
+];
+// 玩家数据
+let my = {hp:20,mana:0,maxMana:0,hand:[],front:[],back:[],deck:[]};
+let enemy = {hp:20,mana:0,maxMana:0,hand:[],front:[],back:[],deck:[]};
+let isMyTurn = true;
+
+// 生成卡组
+function initDeck(){
+    let arr = [];
+    for(let i=0;i<20;i++) arr.push({...cardDB[Math.floor(Math.random()*cardDB.length)],canAtk:false});
+    return arr.sort(()=>Math.random()-0.5);
+}
+// 抽卡
+function drawCard(who,n=1){
+    for(let i=0;i<n;i++){
+        if(who.deck.length===0)return;
+        who.hand.push(who.deck.shift());
+    }
+    renderAll();
+}
+// 开局
+function initGame(){
+    my.deck = initDeck();
+    enemy.deck = initDeck();
+    drawCard(my,4);
+    drawCard(enemy,4);
+    newTurn();
+}
+// 新回合
+function newTurn(){
+    if(isMyTurn){
+        my.maxMana = Math.min(my.maxMana+1,10);
+        my.mana = my.maxMana;
+        drawCard(my,1);
+        // 我方所有单位本回合可攻击
+        [...my.front,...my.back].forEach(c=>c.canAtk=true);
+        setInfo("我方回合，出牌或进攻");
+    }else{
+        enemy.maxMana = Math.min(enemy.maxMana+1,10);
+        enemy.mana = enemy.maxMana;
+        drawCard(enemy,1);
+        [...enemy.front,...enemy.back].forEach(c=>c.canAtk=true);
+        setInfo("敌方回合...");
+        setTimeout(aiRun,1200);
+    }
+    renderAll();
+}
+// 打出卡牌到阵地
+function playCard(idx,zone){//zone front/back
+    if(!isMyTurn)return;
+    let c = my.hand[idx];
+    if(my.mana<c.cost){setInfo("费用不足！");return;}
+    my.mana -= c.cost;
+    c.canAtk = false;//上场不能攻击
+    my[zone].push(c);
+    my.hand.splice(idx,1);
+    renderAll();
+}
+// 攻击逻辑：我方单体打敌方单位
+function attack(atkZone,atkIdx,defZone,defIdx){
+    let atkList = my[atkZone],defList = enemy[defZone];
+    let atk = atkList[atkIdx];
+    let def = defList[defIdx];
+    if(!atk.canAtk){setInfo("该单位本回合无法攻击");return;}
+    // KARDS互伤规则 互相扣血
+    def.hp -= atk.atk;
+    atk.hp -= def.atk;
+    atk.canAtk = false;
+    // 移除死亡
+    my[atkZone] = atkList.filter(x=>x.hp>0);
+    enemy[defZone] = defList.filter(x=>x.hp>0);
+    checkWin();
+    renderAll();
+}
+// 全体攻击大本营
+function attackHQ(){
+    if(!isMyTurn)return;
+    let dmg = 0;
+    [...my.front,...my.back].forEach(c=>{
+        if(c.canAtk){dmg+=c.atk;c.canAtk=false;}
+    })
+    enemy.hp -= dmg;
+    setInfo(`对敌方基地造成${dmg}伤害！`);
+    checkWin();renderAll();
+}
+// 结束回合
+function endTurn(){
+    isMyTurn = !isMyTurn;
+    newTurn();
+}
+// AI简单行动
+function aiRun(){
+    // AI打牌
+    for(let i=enemy.hand.length-1;i>=0;i--){
+        let c = enemy.hand[i];
+        if(enemy.mana>=c.cost){
+            enemy.mana -= c.cost;
+            c.canAtk=false;
+            if(enemy.front.length<=3)enemy.front.push(c);
+            else enemy.back.push(c);
+            enemy.hand.splice(i,1);
+        }
+    }
+    // AI有能攻击的就打基地
+    let dmg=0;
+    [...enemy.front,...enemy.back].forEach(c=>{
+        if(c.canAtk){dmg+=c.atk;c.canAtk=false;}
+    })
+    my.hp -= dmg;
+    setInfo(`敌方进攻，我方基地受到${dmg}伤害`);
+    checkWin();
+    isMyTurn=true;
+    setTimeout(newTurn,800);
+}
+// 胜负判定
+function checkWin(){
+    if(my.hp<=0){alert("你输了！");location.reload()}
+    if(enemy.hp<=0){alert("胜利！");location.reload()}
+}
+function setInfo(s){document.getElementById("infoText").innerText=s;}
+
+// 页面渲染
+function renderAll(){
+    // 血量费用
+    document.getElementById("myHp").innerText=my.hp;
+    document.getElementById("enemyHp").innerText=enemy.hp;
+    document.getElementById("myMana").innerText=my.mana;
+    document.getElementById("myMaxMana").innerText=my.maxMana;
+    document.getElementById("enemyMana").innerText=enemy.mana;
+    document.getElementById("enemyMaxMana").innerText=enemy.maxMana;
+    document.getElementById("enemyHandCnt").innerText=enemy.hand.length;
+
+    // 渲染我方手牌
+    let handDom = document.getElementById("myHand");
+    handDom.innerHTML="";
+    my.hand.forEach((c,i)=>{
+        let div = document.createElement("div");
+        div.className = "card"+(my.mana<c.cost?" cantPlay":"");
+        div.innerHTML=`${c.name}<br>费${c.cost} 攻${c.atk}血${c.hp}<br>${c.desc}`;
+        div.onclick=()=>{
+            let z = confirm("放前线？取消放后备")?"front":"back";
+            playCard(i,z);
+        }
+        handDom.appendChild(div);
+    })
+
+    // 渲染战场
+    function renderZone(domId,arr,isEnemy=false,zoneKey){
+        let dom = document.getElementById(domId);dom.innerHTML="";
+        arr.forEach((c,i)=>{
+            let d = document.createElement("div");
+            d.className="card"+(c.canAtk&&!isEnemy?" canAtk":"");
+            d.innerHTML=`${c.name}<br>攻${c.atk}血${c.hp}`;
+            // 我方单位点击选目标进攻敌方
+            if(!isEnemy&&c.canAtk&&isMyTurn){
+                d.onclick=()=>{
+                    setInfo(`选中【${c.name}】，点击敌方单位发起进攻`);
+                    window.tempAtk = {z:zoneKey,idx:i};
+                }
+            }
+            // 敌方单位被点击=被选中攻击
+            if(isEnemy&&isMyTurn&&window.tempAtk){
+                d.onclick=()=>{
+                    attack(window.tempAtk.z,window.tempAtk.idx,zoneKey,i);
+                    window.tempAtk=null;
+                }
+            }
+            dom.appendChild(d);
+        })
+    }
+    renderZone("myFront",my.front,false,"front");
+    renderZone("myBack",my.back,false,"back");
+    renderZone("enemyFront",enemy.front,true,"front");
+    renderZone("enemyBack",enemy.back,true,"back");
+}
+
+// 启动
+initGame();
+</script>
+</body>
+</html>
