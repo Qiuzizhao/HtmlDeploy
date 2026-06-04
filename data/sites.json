@@ -100,9 +100,10 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:25.257Z"
+    "createdAt": "2026-06-04T06:58:25.257Z",
+    "updatedAt": "2026-06-04T07:59:19.654Z"
   },
   {
     "id": "1be19d08",
@@ -110,9 +111,10 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:11.953Z"
+    "createdAt": "2026-06-04T06:58:11.953Z",
+    "updatedAt": "2026-06-04T07:59:22.447Z"
   },
   {
     "id": "f8b5f9a0",
