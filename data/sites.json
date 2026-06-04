@@ -679,13 +679,13 @@
   {
     "id": "66a141d9",
     "number": "00085",
-    "title": "kards",
+    "title": "简化卡牌对战",
     "author": "1939工作室",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:52:53.913Z",
-    "updatedAt": "2026-06-04T08:00:25.424Z"
+    "updatedAt": "2026-06-04T08:02:36.575Z"
   },
   {
     "id": "db6e28b5",
