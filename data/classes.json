@@ -4,17 +4,17 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-04T06:31:59.928Z",
+    "updatedAt": "2026-06-04T07:58:05.701Z",
     "uploadEnabled": false,
-    "passwordEnabled": true
+    "passwordEnabled": false
   },
   {
     "id": "392f3c64",
     "name": "六5",
     "password": "003794",
     "createdAt": "2026-06-02T12:01:31.958Z",
-    "updatedAt": "2026-06-04T06:44:15.116Z",
-    "uploadEnabled": true,
+    "updatedAt": "2026-06-04T07:58:11.256Z",
+    "uploadEnabled": false,
     "passwordEnabled": false
   },
   {
@@ -22,52 +22,53 @@
     "name": "六6",
     "password": "186559",
     "createdAt": "2026-06-02T12:01:47.337Z",
-    "uploadEnabled": true,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-04T06:31:57.658Z"
+    "uploadEnabled": false,
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-04T07:58:10.873Z"
   },
   {
     "id": "2c2fab13",
     "name": "六7",
     "password": "765140",
     "createdAt": "2026-06-02T12:01:52.127Z",
-    "uploadEnabled": true,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-04T06:31:58.019Z"
+    "uploadEnabled": false,
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-04T07:58:10.515Z"
   },
   {
     "id": "c37011bf",
     "name": "六8",
     "password": "815726",
     "createdAt": "2026-06-02T12:01:55.583Z",
-    "uploadEnabled": true,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-04T06:31:58.452Z"
+    "uploadEnabled": false,
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-04T07:58:10.207Z"
   },
   {
     "id": "f438ed26",
     "name": "六9",
     "password": "978153",
     "createdAt": "2026-06-02T12:01:59.681Z",
-    "uploadEnabled": true,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-04T06:31:58.799Z"
+    "uploadEnabled": false,
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-04T07:58:09.720Z"
   },
   {
     "id": "b4f9025a",
     "name": "六10",
     "password": "951585",
     "createdAt": "2026-06-02T12:03:03.372Z",
-    "uploadEnabled": true,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-04T06:31:59.183Z"
+    "uploadEnabled": false,
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-04T07:58:09.401Z"
   },
   {
     "id": "767d3252",
     "name": "社团",
     "password": "666666",
-    "uploadEnabled": true,
-    "passwordEnabled": true,
-    "createdAt": "2026-06-04T01:20:15.251Z"
+    "uploadEnabled": false,
+    "passwordEnabled": false,
+    "createdAt": "2026-06-04T01:20:15.251Z",
+    "updatedAt": "2026-06-04T07:58:09.127Z"
   }
 ]

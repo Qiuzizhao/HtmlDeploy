@@ -1,6 +1,7 @@
 {
   "allPassword": "276238",
-  "allPasswordEnabled": true,
+  "allPasswordEnabled": false,
   "forbiddenWords": [],
-  "lastUsedSiteNumber": 149
+  "lastUsedSiteNumber": 149,
+  "updatedAt": "2026-06-04T07:58:12.704Z"
 }
