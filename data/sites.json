@@ -1,5 +1,15 @@
 [
   {
+    "id": "6a1236e4",
+    "number": "00141",
+    "title": "会卡八个的游戏",
+    "author": "chr",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:58:28.879Z"
+  },
+  {
     "id": "258897e2",
     "number": "00140",
     "title": "刘奕鑫",
