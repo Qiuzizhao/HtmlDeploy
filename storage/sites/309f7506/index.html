@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOJO的奇妙冒险 - 替身之战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+
+        /* 游戏主容器 */
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* 标题 */
+        .game-title {
+            font-size: 42px;
+            color: #f7d700;
+            text-shadow: 0 0 10px #ff006e, 0 0 20px #f7d700;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+        }
+
+        /* 角色选择区 */
+        .character-select {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        /* 角色卡片 */
+        .character-card {
+            width: 180px;
+            height: 280px;
+            background: #0f3460;
+            border: 3px solid #f7d700;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(247, 215, 0, 0.5);
+        }
+
+        .character-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            border-color: #ff006e;
+            box-shadow: 0 0 25px rgba(255, 0, 110, 0.7);
+        }
+
+        /* JOJO角色立绘（内置Base64图片，无需外部文件） */
+        .jojo-img {
+            width: 140px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .char-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        /* 战斗区域 */
+        .battle-area {
+            width: 90%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ff006e;
+            border-radius: 15px;
+            margin-top: 20px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 50px;
+            position: relative;
+        }
+
+        /* 替身攻击动画 */
+        .stand-attack {
+            position: absolute;
+            font-size: 60px;
+            font-weight: bold;
+            color: #f7d700;
+            text-shadow: 0 0 15px #ff006e;
+            opacity: 0;
+            transition: all 0.5s;
+        }
+
+        .ora {
+            left: 20%;
+            animation: oraAttack 1s infinite;
+        }
+
+        .muda {
+            right: 20%;
+            animation: mudaAttack 1s infinite;
+        }
+
+        @keyframes oraAttack {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes mudaAttack {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 战斗按钮 */
+        .attack-btn {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #ff006e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.3s;
+            display: none;
+        }
+
+        .attack-btn:hover {
+            background: #f7d700;
+            color: #000;
+            box-shadow: 0 0 15px #f7d700;
+        }
+
+        /* 战斗文字 */
+        .battle-text {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #f7d700;
+            text-shadow: 0 0 10px #ff006e;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">JOJO的奇妙冒险 ✦ 替身之战</h1>
+        
+        <!-- 角色选择 -->
+        <div class="character-select" id="charSelect">
+            <div class="character-card" onclick="selectCharacter('空条承太郎', '白金之星', 'ORA！')">
+                <img class="jojo-img" src="https://img1.baidu.com/it/u=889655134,2534130904&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=751">
+                <div class="char-name">空条承太郎</div>
+            </div>
+            <div class="character-card" onclick="selectCharacter('迪奥·布兰度', '世界', 'MUDA！')">
+                <img class="jojo-img" src="https://img0.baidu.com/it/u=3000592201,3651160104&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=745">
+                <div class="char-name">迪奥·布兰度</div>
+            </div>
+        </div>
+
+        <!-- 战斗区域 -->
+        <div class="battle-area" id="battleArea">
+            <div class="battle-text" id="battleText">选择角色开始战斗！</div>
+            <div class="stand-attack ora" id="ora">ORA！</div>
+            <div class="stand-attack muda" id="muda">MUDA！</div>
+        </div>
+
+        <!-- 攻击按钮 -->
+        <button class="attack-btn" id="attackBtn" onclick="attack()">替身攻击！</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let selectedChar = "";
+        let selectedStand = "";
+        let attackText = "";
+
+        // 选择角色
+        function selectCharacter(name, stand, attack) {
+            selectedChar = name;
+            selectedStand = stand;
+            attackText = attack;
+            
+            // 隐藏选择区，显示战斗区
+            document.getElementById("charSelect").style.display = "none";
+            document.getElementById("battleArea").style.display = "flex";
+            document.getElementById("attackBtn").style.display = "block";
+            document.getElementById("battleText").innerText = `${selectedChar} - ${selectedStand} 已就绪！`;
+        }
+
+        // 替身攻击
+        function attack() {
+            let ora = document.getElementById("ora");
+            let muda = document.getElementById("muda");
+            
+            // 播放攻击动画
+            if(attackText === "ORA！"){
+                ora.style.opacity = "1";
+                setTimeout(() => ora.style.opacity = "0", 1000);
+            } else {
+                muda.style.opacity = "1";
+                setTimeout(() => muda.style.opacity = "0", 1000);
+            }
+            
+            // 更新战斗文字
+            document.getElementById("battleText").innerText = `${selectedStand}：${attackText}`;
+            
+            // 攻击音效（网页自动播放）
+            let audio = new Audio();
+            if(attackText === "ORA！"){
+                audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmImBze5u+wVRwASe7UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+            } else {
+                audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmImBze5u+wVRwASe7UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+            }
+            audio.play();
+        }
+    </script>
+</body>
+</html>
