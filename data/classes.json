@@ -4,18 +4,18 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-03T14:06:12.358Z",
+    "updatedAt": "2026-06-04T06:31:59.928Z",
     "uploadEnabled": false,
-    "passwordEnabled": false
+    "passwordEnabled": true
   },
   {
     "id": "392f3c64",
     "name": "六5",
     "password": "003794",
     "createdAt": "2026-06-02T12:01:31.958Z",
-    "updatedAt": "2026-06-03T14:06:07.529Z",
+    "updatedAt": "2026-06-04T06:31:57.017Z",
     "uploadEnabled": true,
-    "passwordEnabled": false
+    "passwordEnabled": true
   },
   {
     "id": "b3f7dd30",
@@ -23,8 +23,8 @@
     "password": "186559",
     "createdAt": "2026-06-02T12:01:47.337Z",
     "uploadEnabled": true,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-03T14:06:09.157Z"
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-04T06:31:57.658Z"
   },
   {
     "id": "2c2fab13",
@@ -32,8 +32,8 @@
     "password": "765140",
     "createdAt": "2026-06-02T12:01:52.127Z",
     "uploadEnabled": true,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-03T14:06:09.445Z"
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-04T06:31:58.019Z"
   },
   {
     "id": "c37011bf",
@@ -41,8 +41,8 @@
     "password": "815726",
     "createdAt": "2026-06-02T12:01:55.583Z",
     "uploadEnabled": true,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-03T14:06:09.981Z"
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-04T06:31:58.452Z"
   },
   {
     "id": "f438ed26",
@@ -50,8 +50,8 @@
     "password": "978153",
     "createdAt": "2026-06-02T12:01:59.681Z",
     "uploadEnabled": true,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-03T14:06:10.347Z"
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-04T06:31:58.799Z"
   },
   {
     "id": "b4f9025a",
@@ -59,8 +59,8 @@
     "password": "951585",
     "createdAt": "2026-06-02T12:03:03.372Z",
     "uploadEnabled": true,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-03T14:06:10.965Z"
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-04T06:31:59.183Z"
   },
   {
     "id": "767d3252",
