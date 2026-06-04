@@ -288,12 +288,13 @@
   {
     "id": "4632d81e",
     "number": "00122",
-    "title": "9",
+    "title": "崩坏星穹铁道回合战斗",
     "author": "9",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:56:59.400Z"
+    "createdAt": "2026-06-04T06:56:59.400Z",
+    "updatedAt": "2026-06-04T08:01:38.950Z"
   },
   {
     "id": "7dee5414",
