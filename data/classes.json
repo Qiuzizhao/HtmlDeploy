@@ -61,5 +61,13 @@
     "uploadEnabled": true,
     "passwordEnabled": false,
     "updatedAt": "2026-06-03T14:06:10.965Z"
+  },
+  {
+    "id": "767d3252",
+    "name": "社团",
+    "password": "666666",
+    "uploadEnabled": true,
+    "passwordEnabled": true,
+    "createdAt": "2026-06-04T01:20:15.251Z"
   }
 ]
