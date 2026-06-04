@@ -6,13 +6,13 @@
     <title>跟枪练枪小游戏</title>
     <style>
         * {margin:0;padding:0;box-sizing:border-box;}
-        body {overflow:hidden;background:#111;cursor:none;}
+        body {overflow:hidden;background:#111;cursor:none;user-select:none;}
         #game {display:block;background:#0a0a0a;}
         #crosshair {
             position:fixed;width:12px;height:12px;border:2px solid #fff;
             border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);z-index:99;
         }
-        .tip{position:fixed;top:20px;left:20px;color:#eee;font-size:16px;}
+        .tip{position:fixed;top:20px;left:20px;color:#eee;font-size:16px;pointer-events:none;z-index:1;}
     </style>
 </head>
 <body>
@@ -20,78 +20,75 @@
 <canvas id="game"></canvas>
 <div id="crosshair"></div>
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const crosshair = document.getElementById('crosshair');
-let w,h,mouseX=0,mouseY=0;
+(function() {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const crosshair = document.getElementById('crosshair');
+    let w, h, mouseX = 0, mouseY = 0;
+    const LIVE_TIME = 3000;
+    let spawnTime = Date.now();
+    let ball;
 
-// 画布自适应
-function resize(){
-    w = canvas.width = innerWidth;
-    h = canvas.height = innerHeight;
-}
-resize();
-window.onresize=resize;
-
-// 目标小球配置
-let ball = resetBall();
-// 单个小球存活时长（毫秒）3秒消失
-const LIVE_TIME = 3000;
-let spawnTime = Date.now();
-
-// 重置/生成新小球
-function resetBall(){
-    return {
-        x:Math.random()*w*0.7 + w*0.15,
-        y:Math.random()*h*0.7 + h*0.15,
-        size:22,
-        followSpeed:0.11,
-        color:'#f43636'
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
     }
-}
+    resize();
+    window.addEventListener('resize', resize);
 
-document.addEventListener('mousemove',e=>{
-    mouseX=e.clientX;mouseY=e.clientY;
-    crosshair.style.left = mouseX+'px';
-    crosshair.style.top = mouseY+'px';
-})
-
-function loop(){
-    // 清空画布
-    ctx.fillStyle='#0a0a0a';
-    ctx.fillRect(0,0,w,h);
-
-    // 存活倒计时，时间到换球
-    const now = Date.now();
-    if(now - spawnTime > LIVE_TIME){
-        ball = resetBall();
-        spawnTime = now;
+    function resetBall() {
+        const margin = 0.15;
+        return {
+            x: w * (margin + Math.random() * (1 - 2 * margin)),
+            y: h * (margin + Math.random() * (1 - 2 * margin)),
+            size: 22,
+            followSpeed: 0.11,
+            color: '#f43636'
+        };
     }
+    ball = resetBall();
 
-    // 平滑跟枪逻辑
-    ball.x += (mouseX - ball.x)*ball.followSpeed;
-    ball.y += (mouseY - ball.y)*ball.followSpeed;
+    document.addEventListener('mousemove', function(e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        crosshair.style.left = mouseX + 'px';
+        crosshair.style.top = mouseY + 'px';
+    });
 
-    // 绘制球体
-    ctx.beginPath();
-    ctx.arc(ball.x,ball.y,ball.size,0,Math.PI*2);
-    ctx.fillStyle=ball.color;
-    ctx.fill();
-    // 高光
-    ctx.beginPath();
-    ctx.arc(ball.x-6,ball.y-6,5,0,Math.PI*2);
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fill();
+    function loop() {
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, w, h);
 
-    // 剩余生存时间文字
-    const left = ((LIVE_TIME - (now-spawnTime))/1000).toFixed(1);
-    ctx.fillStyle='#fff';
-    ctx.font='18px Arial';
-    ctx.fillText('剩余:'+left+'s',ball.x-25,ball.y-ball.size-8);
+        const now = Date.now();
+        if (now - spawnTime > LIVE_TIME) {
+            ball = resetBall();
+            spawnTime = now;
+        }
 
-    requestAnimationFrame(loop);
-}
-loop();
+        ball.x += (mouseX - ball.x) * ball.followSpeed;
+        ball.y += (mouseY - ball.y) * ball.followSpeed;
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+        ctx.fillStyle = ball.color;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(ball.x - 6, ball.y - 6, 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fill();
+
+        const left = ((LIVE_TIME - (now - spawnTime)) / 1000).toFixed(1);
+        ctx.fillStyle = '#fff';
+        ctx.font = '18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('剩余:' + left + 's', ball.x, ball.y - ball.size - 8);
+
+        requestAnimationFrame(loop);
+    }
+    loop();
+})();
 </script>
 </body>
 </html>
