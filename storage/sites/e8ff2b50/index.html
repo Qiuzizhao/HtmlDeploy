@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>火影忍者手游 - 网页高仿版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            width: 1000px;
+            height: 600px;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://pic.17qq.com/uploads/2025-01-29/58f9a4c6204a44209282305667898732.jpeg');
+            background-size: cover;
+            background-position: center;
+            border: 4px solid #d4af37;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 30px #000;
+        }
+
+        /* 血条UI */
+        .hp-bar {
+            position: absolute;
+            top: 20px;
+            width: 350px;
+            height: 30px;
+            background: #333;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .player-hp { left: 30px; }
+        .enemy-hp { right: 30px; }
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff3333, #cc0000);
+            transition: width 0.2s;
+        }
+        .hp-text {
+            position: absolute;
+            top: -25px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* 角色 */
+        .character {
+            width: 120px;
+            height: 180px;
+            position: absolute;
+            bottom: 120px;
+            transition: all 0.1s;
+            z-index: 10;
+        }
+        .player { left: 200px; background: url('https://pic.17qq.com/uploads/2024-04-12/87f9a9c1204a44209282305667898731.png') no-repeat center; background-size: contain; }
+        .enemy { right: 200px; background: url('https://pic.17qq.com/uploads/2024-04-12/97f9a9c1204a44209282305667898730.png') no-repeat center; background-size: contain; }
+
+        /* 技能按钮 */
+        .skill-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+        }
+        .skill-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid #d4af37;
+            background: #222;
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+        .skill-btn:active { transform: scale(0.9); background: #444; }
+        .skill-cooldown {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 18px;
+        }
+
+        /* 奥义大招按钮 */
+        .ultimate-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: 4px solid #ff4444;
+            background: #880000;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .ultimate-btn:disabled { background: #333; border-color: #666; cursor: not-allowed; }
+
+        /* 特效 */
+        .effect {
+            position: absolute;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .hit-effect {
+            width: 80px;
+            height: 80px;
+            background: url('https://pic.17qq.com/uploads/2025-01-29/68f9a4c6204a44209282305667898733.png') no-repeat center;
+            background-size: contain;
+            animation: hit 0.3s forwards;
+        }
+        .ultimate-effect {
+            width: 100%;
+            height: 100%;
+            background: url('https://pic.17qq.com/uploads/2025-01-29/78f9a4c6204a44209282305667898734.png') no-repeat center;
+            background-size: cover;
+            animation: ultimate 1s forwards;
+        }
+
+        /* 动画 */
+        @keyframes hit {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        @keyframes ultimate {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 移动按钮 */
+        .move-buttons {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            gap: 15px;
+        }
+        .move-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            background: #222;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 血条 -->
+        <div class="hp-bar player-hp">
+            <div class="hp-text">漩涡鸣人</div>
+            <div class="hp-fill" style="width:100%"></div>
+        </div>
+        <div class="hp-bar enemy-hp">
+            <div class="hp-text" style="right:0">宇智波佐助</div>
+            <div class="hp-fill" style="width:100%"></div>
+        </div>
+
+        <!-- 角色 -->
+        <div class="character player" id="player"></div>
+        <div class="character enemy" id="enemy"></div>
+
+        <!-- 移动按钮 -->
+        <div class="move-buttons">
+            <button class="move-btn" onclick="moveLeft">←</button>
+            <button class="move-btn" onclick="moveRight">→</button>
+        </div>
+
+        <!-- 技能面板 -->
+        <div class="skill-panel">
+            <button class="skill-btn" onclick="normalAttack()">普攻</button>
+            <button class="skill-btn" onclick="skill1()">
+                技能1
+                <div class="skill-cooldown" id="cd1"></div>
+            </button>
+            <button class="skill-btn" onclick="skill2()">
+                技能2
+                <div class="skill-cooldown" id="cd2"></div>
+            </button>
+            <button class="ultimate-btn" id="ultimateBtn" onclick="ultimateSkill()" disabled>奥义</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏数据
+        let playerHP = 100;
+        let enemyHP = 100;
+        let ultimateEnergy = 0;
+        const player = document.getElementById('player');
+        const enemy = document.getElementById('enemy');
+        const ultimateBtn = document.getElementById('ultimateBtn');
+
+        // 移动
+        function moveLeft() {
+            let left = parseInt(window.getComputedStyle(player).left);
+            if (left > 50) player.style.left = left - 30 + 'px';
+        }
+        function moveRight() {
+            let left = parseInt(window.getComputedStyle(player).left);
+            if (left < 700) player.style.left = left + 30 + 'px';
+        }
+
+        // 普攻
+        function normalAttack() {
+            player.style.transform = 'translateX(20px)';
+            createEffect(enemy.offsetLeft + 30, enemy.offsetTop, 'hit-effect');
+            damageEnemy(5);
+            addUltimateEnergy(10);
+            
+            setTimeout(() => {
+                player.style.transform = 'translateX(0)';
+            }, 100);
+        }
+
+        // 技能1
+        function skill1() {
+            if(checkCooldown('cd1')) return;
+            player.style.transform = 'translateX(40px) scale(1.1)';
+            createEffect(enemy.offsetLeft, enemy.offsetTop - 20, 'hit-effect');
+            damageEnemy(15);
+            addUltimateEnergy(20);
+            setCooldown('cd1', 3);
+            
+            setTimeout(() => player.style.transform = 'translateX(0)', 150);
+        }
+
+        // 技能2
+        function skill2() {
+            if(checkCooldown('cd2')) return;
+            player.style.transform = 'translateX(50px) scale(1.2)';
+            createEffect(enemy.offsetLeft - 20, enemy.offsetTop - 40, 'hit-effect');
+            damageEnemy(20);
+            addUltimateEnergy(25);
+            setCooldown('cd2', 5);
+            
+            setTimeout(() => player.style.transform = 'translateX(0)', 200);
+        }
+
+        // 奥义大招
+        function ultimateSkill() {
+            if(ultimateEnergy < 100) return;
+            createEffect(0, 0, 'ultimate-effect');
+            damageEnemy(50);
+            ultimateEnergy = 0;
+            ultimateBtn.disabled = true;
+            
+            // 奥义音效模拟
+            new Audio('https://pic.17qq.com/uploads/2025-01-29/88f9a4c6204a44209282305667898735.mp3').play().catch(e=>{});
+        }
+
+        // 伤害计算
+        function damageEnemy(dmg) {
+            enemyHP = Math.max(0, enemyHP - dmg);
+            document.querySelector('.enemy-hp .hp-fill').style.width = enemyHP + '%';
+            if(enemyHP <= 0) setTimeout(() => alert('胜利！'), 300);
+        }
+
+        // 奥义能量
+        function addUltimateEnergy(num) {
+            ultimateEnergy = Math.min(100, ultimateEnergy + num);
+            if(ultimateEnergy >= 100) ultimateBtn.disabled = false;
+        }
+
+        // 技能冷却
+        function setCooldown(id, time) {
+            const cd = document.getElementById(id);
+            cd.style.display = 'flex';
+            let count = time;
+            cd.innerText = count;
+            
+            const timer = setInterval(() => {
+                count--;
+                cd.innerText = count;
+                if(count <= 0) {
+                    clearInterval(timer);
+                    cd.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        function checkCooldown(id) {
+            return document.getElementById(id).style.display === 'flex';
+        }
+
+        // 创建特效
+        function createEffect(x, y, className) {
+            const effect = document.createElement('div');
+            effect.className = `effect ${className}`;
+            effect.style.left = x + 'px';
+            effect.style.top = y + 'px';
+            document.querySelector('.game-container').appendChild(effect);
+            
+            setTimeout(() => effect.remove(), 1000);
+        }
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'a' || e.key === 'ArrowLeft') moveLeft();
+            if(e.key === 'd' || e.key === 'ArrowRight') moveRight();
+            if(e.key === 'j') normalAttack();
+            if(e.key === 'k') skill1();
+            if(e.key === 'l') skill2();
+            if(e.key === 'u') ultimateSkill();
+        });
+    </script>
+</body>
+</html>
