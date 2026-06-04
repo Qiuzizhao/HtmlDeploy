@@ -1,5 +1,15 @@
 [
   {
+    "id": "3a662fbd",
+    "number": "00104",
+    "title": "原神抽卡",
+    "author": "蔡",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:55:00.083Z"
+  },
+  {
     "id": "95f034aa",
     "number": "00103",
     "title": "无",
