@@ -1,5 +1,35 @@
 [
   {
+    "id": "350cf349",
+    "number": "00126",
+    "title": "吃饭模拟器",
+    "author": "曾锦莘",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:57:11.108Z"
+  },
+  {
+    "id": "081562d2",
+    "number": "00125",
+    "title": "吃饭模拟器",
+    "author": "曾锦莘",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:57:10.769Z"
+  },
+  {
+    "id": "781f4c71",
+    "number": "00124",
+    "title": "刘奕鑫",
+    "author": "刘奕鑫",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:57:09.905Z"
+  },
+  {
     "id": "13171f6d",
     "number": "00123",
     "title": "跟枪游戏",
