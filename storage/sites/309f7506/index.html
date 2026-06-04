@@ -12,7 +12,6 @@
             font-family: "微软雅黑", sans-serif;
         }
 
-        /* 游戏主容器 */
         .game-container {
             width: 100vw;
             height: 100vh;
@@ -25,7 +24,6 @@
             overflow: hidden;
         }
 
-        /* 标题 */
         .game-title {
             font-size: 42px;
             color: #f7d700;
@@ -34,14 +32,12 @@
             letter-spacing: 3px;
         }
 
-        /* 角色选择区 */
         .character-select {
             display: flex;
             gap: 30px;
             margin: 30px 0;
         }
 
-        /* 角色卡片 */
         .character-card {
             width: 180px;
             height: 280px;
@@ -63,7 +59,6 @@
             box-shadow: 0 0 25px rgba(255, 0, 110, 0.7);
         }
 
-        /* JOJO角色立绘（内置Base64图片，无需外部文件） */
         .jojo-img {
             width: 140px;
             height: 200px;
@@ -78,7 +73,6 @@
             color: #fff;
         }
 
-        /* 战斗区域 */
         .battle-area {
             width: 90%;
             height: 300px;
@@ -93,7 +87,6 @@
             position: relative;
         }
 
-        /* 替身攻击动画 */
         .stand-attack {
             position: absolute;
             font-size: 60px;
@@ -101,32 +94,28 @@
             color: #f7d700;
             text-shadow: 0 0 15px #ff006e;
             opacity: 0;
-            transition: all 0.5s;
+            transition: opacity 0.5s;
+            pointer-events: none;
         }
 
         .ora {
             left: 20%;
-            animation: oraAttack 1s infinite;
         }
 
         .muda {
             right: 20%;
-            animation: mudaAttack 1s infinite;
         }
 
-        @keyframes oraAttack {
+        .stand-attack.active {
+            animation: standPulse 1s ease-out forwards;
+        }
+
+        @keyframes standPulse {
             0% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.3); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
         }
 
-        @keyframes mudaAttack {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        /* 战斗按钮 */
         .attack-btn {
             padding: 15px 30px;
             font-size: 20px;
@@ -147,7 +136,6 @@
             box-shadow: 0 0 15px #f7d700;
         }
 
-        /* 战斗文字 */
         .battle-text {
             position: absolute;
             top: 20px;
@@ -156,6 +144,38 @@
             font-size: 24px;
             color: #f7d700;
             text-shadow: 0 0 10px #ff006e;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 600px) {
+            .game-title {
+                font-size: 28px;
+            }
+            .character-select {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .character-card {
+                width: 140px;
+                height: 220px;
+            }
+            .jojo-img {
+                width: 100px;
+                height: 150px;
+            }
+            .battle-area {
+                height: 200px;
+                padding: 0 20px;
+            }
+            .stand-attack {
+                font-size: 40px;
+            }
+            .battle-text {
+                font-size: 18px;
+                white-space: normal;
+                text-align: center;
+                width: 90%;
+            }
         }
     </style>
 </head>
@@ -163,74 +183,92 @@
     <div class="game-container">
         <h1 class="game-title">JOJO的奇妙冒险 ✦ 替身之战</h1>
         
-        <!-- 角色选择 -->
         <div class="character-select" id="charSelect">
-            <div class="character-card" onclick="selectCharacter('空条承太郎', '白金之星', 'ORA！')">
-                <img class="jojo-img" src="https://img1.baidu.com/it/u=889655134,2534130904&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=751">
+            <div class="character-card" data-char="空条承太郎" data-stand="白金之星" data-attack="ORA！">
+                <img class="jojo-img" src="https://img1.baidu.com/it/u=889655134,2534130904&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=751" alt="空条承太郎" loading="lazy">
                 <div class="char-name">空条承太郎</div>
             </div>
-            <div class="character-card" onclick="selectCharacter('迪奥·布兰度', '世界', 'MUDA！')">
-                <img class="jojo-img" src="https://img0.baidu.com/it/u=3000592201,3651160104&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=745">
+            <div class="character-card" data-char="迪奥·布兰度" data-stand="世界" data-attack="MUDA！">
+                <img class="jojo-img" src="https://img0.baidu.com/it/u=3000592201,3651160104&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=745" alt="迪奥·布兰度" loading="lazy">
                 <div class="char-name">迪奥·布兰度</div>
             </div>
         </div>
 
-        <!-- 战斗区域 -->
         <div class="battle-area" id="battleArea">
             <div class="battle-text" id="battleText">选择角色开始战斗！</div>
             <div class="stand-attack ora" id="ora">ORA！</div>
             <div class="stand-attack muda" id="muda">MUDA！</div>
         </div>
 
-        <!-- 攻击按钮 -->
-        <button class="attack-btn" id="attackBtn" onclick="attack()">替身攻击！</button>
+        <button class="attack-btn" id="attackBtn">替身攻击！</button>
     </div>
 
     <script>
-        // 游戏变量
-        let selectedChar = "";
-        let selectedStand = "";
-        let attackText = "";
+        (function() {
+            const charSelect = document.getElementById('charSelect');
+            const battleArea = document.getElementById('battleArea');
+            const attackBtn = document.getElementById('attackBtn');
+            const battleText = document.getElementById('battleText');
+            const oraEl = document.getElementById('ora');
+            const mudaEl = document.getElementById('muda');
 
-        // 选择角色
-        function selectCharacter(name, stand, attack) {
-            selectedChar = name;
-            selectedStand = stand;
-            attackText = attack;
-            
-            // 隐藏选择区，显示战斗区
-            document.getElementById("charSelect").style.display = "none";
-            document.getElementById("battleArea").style.display = "flex";
-            document.getElementById("attackBtn").style.display = "block";
-            document.getElementById("battleText").innerText = `${selectedChar} - ${selectedStand} 已就绪！`;
-        }
+            let selectedChar = '';
+            let selectedStand = '';
+            let attackText = '';
 
-        // 替身攻击
-        function attack() {
-            let ora = document.getElementById("ora");
-            let muda = document.getElementById("muda");
-            
-            // 播放攻击动画
-            if(attackText === "ORA！"){
-                ora.style.opacity = "1";
-                setTimeout(() => ora.style.opacity = "0", 1000);
-            } else {
-                muda.style.opacity = "1";
-                setTimeout(() => muda.style.opacity = "0", 1000);
+            function selectCharacter(name, stand, attack) {
+                selectedChar = name;
+                selectedStand = stand;
+                attackText = attack;
+
+                charSelect.style.display = 'none';
+                battleArea.style.display = 'flex';
+                attackBtn.style.display = 'block';
+                battleText.textContent = name + ' - ' + stand + ' 已就绪！';
             }
-            
-            // 更新战斗文字
-            document.getElementById("battleText").innerText = `${selectedStand}：${attackText}`;
-            
-            // 攻击音效（网页自动播放）
-            let audio = new Audio();
-            if(attackText === "ORA！"){
-                audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmImBze5u+wVRwASe7UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-            } else {
-                audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmImBze5u+wVRwASe7UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+            function attack() {
+                if (!attackText) return;
+
+                const targetEl = attackText === 'ORA！' ? oraEl : mudaEl;
+
+                targetEl.classList.remove('active');
+                void targetEl.offsetWidth;
+                targetEl.classList.add('active');
+
+                battleText.textContent = selectedStand + '：' + attackText;
+
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.15);
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.15);
+                } catch (e) {
+                    // 静默降级
+                }
             }
-            audio.play();
-        }
+
+            charSelect.addEventListener('click', function(e) {
+                const card = e.target.closest('.character-card');
+                if (!card) return;
+                const name = card.dataset.char;
+                const stand = card.dataset.stand;
+                const attack = card.dataset.attack;
+                if (name && stand && attack) {
+                    selectCharacter(name, stand, attack);
+                }
+            });
+
+            attackBtn.addEventListener('click', attack);
+        })();
     </script>
 </body>
 </html>
