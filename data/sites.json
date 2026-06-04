@@ -405,32 +405,35 @@
   {
     "id": "afab1cb0",
     "number": "00111",
-    "title": "HAOWAN",
+    "title": "无畏契约射击模拟",
     "author": ".",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:49.119Z"
+    "createdAt": "2026-06-04T06:55:49.119Z",
+    "updatedAt": "2026-06-04T08:01:51.577Z"
   },
   {
     "id": "29c65a3b",
     "number": "00110",
-    "title": "kards2",
+    "title": "迷你KARDS卡牌对战",
     "author": "1939工作室",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:47.500Z"
+    "createdAt": "2026-06-04T06:55:47.500Z",
+    "updatedAt": "2026-06-04T08:01:52.901Z"
   },
   {
     "id": "2a4f4097",
     "number": "00109",
-    "title": "kards2",
+    "title": "迷你KARDS卡牌对战",
     "author": "1939工作室",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:46.773Z"
+    "createdAt": "2026-06-04T06:55:46.773Z",
+    "updatedAt": "2026-06-04T08:01:53.468Z"
   },
   {
     "id": "a02afaed",
