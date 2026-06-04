@@ -142,9 +142,10 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:57.354Z"
+    "createdAt": "2026-06-04T06:57:57.354Z",
+    "updatedAt": "2026-06-04T07:59:26.235Z"
   },
   {
     "id": "83025d69",
@@ -192,9 +193,10 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:26.269Z"
+    "createdAt": "2026-06-04T06:57:26.269Z",
+    "updatedAt": "2026-06-04T07:59:28.859Z"
   },
   {
     "id": "bbf6450a",
@@ -202,9 +204,10 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:25.838Z"
+    "createdAt": "2026-06-04T06:57:25.838Z",
+    "updatedAt": "2026-06-04T07:59:29.506Z"
   },
   {
     "id": "0b06a016",
