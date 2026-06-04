@@ -351,12 +351,13 @@
   {
     "id": "a6a51842",
     "number": "00116",
-    "title": "FBGARHF",
+    "title": "3D枪战射击游戏",
     "author": "M",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:56:25.208Z"
+    "createdAt": "2026-06-04T06:56:25.208Z",
+    "updatedAt": "2026-06-04T08:01:44.004Z"
   },
   {
     "id": "d896586f",
