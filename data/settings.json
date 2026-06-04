@@ -1,6 +1,6 @@
 {
   "allPassword": "111111",
-  "updatedAt": "2026-06-03T15:35:41.083Z",
+  "updatedAt": "2026-06-04T06:44:11.929Z",
   "lastUsedSiteNumber": 81,
   "forbiddenWords": [
     "福音会",
@@ -51121,5 +51121,5 @@
     "77",
     "导管"
   ],
-  "allPasswordEnabled": false
+  "allPasswordEnabled": true
 }
