@@ -483,9 +483,10 @@
     "title": "无",
     "author": "LCJ",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:49.643Z"
+    "createdAt": "2026-06-04T06:54:49.643Z",
+    "updatedAt": "2026-06-04T07:59:42.812Z"
   },
   {
     "id": "bf84bc88",
