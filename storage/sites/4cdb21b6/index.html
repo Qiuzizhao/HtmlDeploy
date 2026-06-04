@@ -1,0 +1,73 @@
+import random
+import time
+
+# 初始化角色数据
+class Role:
+    def __init__(self, name, hp, atk):
+        self.name = name
+        self.max_hp = hp
+        self.hp = hp
+        self.atk = atk
+
+    # 受伤
+    def hurt(self, damage):
+        self.hp -= damage
+        if self.hp < 0:
+            self.hp = 0
+
+    # 是否存活
+    def is_alive(self):
+        return self.hp > 0
+
+# 游戏开始
+def game_start():
+    print("=====单人回合对战游戏=====")
+    print("规则：每回合选择【攻击】/【回血】，击败怪物即可获胜")
+    player = Role("玩家勇士", 120, 18)
+    monster = Role("暗黑魔兽", 100, 12)
+
+    while player.is_alive() and monster.is_alive():
+        print(f"\n【当前状态】")
+        print(f"{player.name} HP：{player.hp}/{player.max_hp}")
+        print(f"{monster.name} HP：{monster.hp}/{monster.max_hp}")
+        while True:
+            opt = input("\n请选择操作：1=普通攻击  2=回血(恢复30血量)：")
+            if opt in ["1","2"]:
+                break
+            print("输入错误，请输入1或2！")
+
+        # 玩家行动
+        if opt == "1":
+            # 20%暴击，伤害翻倍
+            crit = random.random() < 0.2
+            dmg = player.atk * 2 if crit else player.atk
+            monster.hurt(dmg)
+            if crit:
+                print(f"暴击！你对{monster.name}造成{dmg}点伤害！")
+            else:
+                print(f"你攻击{monster.name}，造成{dmg}点伤害")
+        else:
+            heal = 30
+            player.hp = min(player.hp + heal, player.max_hp)
+            print(f"你使用治疗，恢复{heal}点生命值！")
+
+        if not monster.is_alive():
+            break
+        time.sleep(0.8)
+
+        # BOSS回合
+        print(f"\n{monster.name}发起进攻！")
+        boss_dmg = random.randint(monster.atk-3, monster.atk+3)
+        player.hurt(boss_dmg)
+        print(f"{monster.name}对你造成{boss_dmg}点伤害！")
+        time.sleep(0.5)
+
+    # 结算
+    print("\n=====对战结束=====")
+    if player.is_alive():
+        print(f"恭喜你！成功击败{monster.name}，游戏胜利！")
+    else:
+        print(f"你被{monster.name}击败，游戏失败！")
+
+if __name__ == "__main__":
+    game_start()
