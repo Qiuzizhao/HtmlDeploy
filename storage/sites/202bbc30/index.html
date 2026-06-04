@@ -1,0 +1,195 @@
+import random
+import time
+
+# 初始化角色属性
+student = {
+    "学业": 10,
+    "体力": 10,
+    "人缘": 10,
+    "金钱": 50,
+    "心情": 10
+}
+MAX_ATTR = 30
+MIN_ATTR = 0
+day_total = 7  # 5上学+2周末
+today = 1
+
+
+def clamp(num):
+    """属性限制在0~30之间"""
+    return max(MIN_ATTR, min(MAX_ATTR, num))
+
+
+def show_attr():
+    """展示当前属性面板"""
+    print("\n=========【个人状态面板】========")
+    for k, v in student.items():
+        print(f"{k:^4}：{v:2d}")
+    print("================================\n")
+
+
+def random_event():
+    """随机突发事件"""
+    events = [
+        {"msg": "老师突击小测", "func": lambda: (student.__setitem__("学业", clamp(student["学业"] + 3)) if student["学业"] >= 15 else student.__setitem__("学业", clamp(student["学业"] - 4)), student.__setitem__("心情", clamp(student["心情"] - 3)))},
+        {"msg": "同学过生日邀约！花费15元，人缘+6（输入1参加，0拒绝）", "func": invite_birthday},
+        {"msg": "路上捡到零花钱，金钱+25，心情+2", "func": lambda: (student.__setitem__("金钱", student["金钱"] + 25), student.__setitem__("心情", clamp(student["心情"] + 2)))},
+        {"msg": "被罚打扫卫生，体力-5，人缘+2", "func": lambda: (student.__setitem__("体力", clamp(student["体力"] - 5)), student.__setitem__("人缘", clamp(student["人缘"] + 2)))},
+        {"msg": "暴雨停课半天，今日少一个行动回合，心情+3", "func": lambda: student.__setitem__("心情", clamp(student["心情"] + 3))}
+    ]
+    if random.random() < 0.33:
+        e = random.choice(events)
+        print(f"\n【突发事件】{e['msg']}")
+        e["func"]()
+
+
+def invite_birthday():
+    select = input("你的选择：")
+    if select == "1" and student["金钱"] >= 15:
+        student["金钱"] -= 15
+        student["人缘"] = clamp(student["人缘"] + 6)
+        print("你参加生日聚会，人缘大幅提升！")
+    else:
+        student["人缘"] = clamp(student["人缘"] - 4)
+        print("拒绝邀约，人缘下降")
+
+
+def normal_day():
+    """工作日：早自习、午休、放学、夜晚4阶段"""
+    stage_list = ["早自习", "午休", "放学后", "夜晚"]
+    for stage in stage_list:
+        print(f"\n====={stage}时段=====")
+        if stage == "早自习":
+            print("1.认真早读(学业+3,体力-2)\n2.趴桌睡觉(体力+4,学业-3,30%被抓扣人缘心情)\n3.和同桌闲聊(人缘+3,学业-2,心情+2)")
+            opt = input("请输入选项1/2/3：")
+            if opt == "1":
+                student["学业"] = clamp(student["学业"] + 3)
+                student["体力"] = clamp(student["体力"] - 2)
+            elif opt == "2":
+                student["体力"] = clamp(student["体力"] + 4)
+                student["学业"] = clamp(student["学业"] - 3)
+                if random.random() < 0.3:
+                    student["人缘"] = clamp(student["人缘"] - 2)
+                    student["心情"] = clamp(student["心情"] - 3)
+                    print("被班主任抓到睡觉！被罚！")
+            elif opt == "3":
+                student["人缘"] = clamp(student["人缘"] + 3)
+                student["学业"] = clamp(student["学业"] - 2)
+                student["心情"] = clamp(student["心情"] + 2)
+
+        elif stage == "午休":
+            print("1.图书馆刷题(学业+4,体力-3,金钱-5)\n2.操场运动(体力+5,人缘+2,心情+3)\n3.食堂兼职(金钱+15,体力-4,学业-1)")
+            opt = input("请输入选项1/2/3：")
+            if opt == "1":
+                student["学业"] = clamp(student["学业"] + 4)
+                student["体力"] = clamp(student["体力"] - 3)
+                student["金钱"] -= 5
+            elif opt == "2":
+                student["体力"] = clamp(student["体力"] + 5)
+                student["人缘"] = clamp(student["人缘"] + 2)
+                student["心情"] = clamp(student["心情"] + 3)
+            elif opt == "3":
+                student["金钱"] += 15
+                student["体力"] = clamp(student["体力"] - 4)
+                student["学业"] = clamp(student["学业"] - 1)
+
+        elif stage == "放学后":
+            print("1.参加社团(人缘+4,学业/体力+4,心情+3)\n2.校外打工(金钱+30,体力-6,学业-3)\n3.结伴逛街(金钱-20,人缘+5,心情+5)\n4.在家自习(学业+5,体力-3)")
+            opt = input("请输入选项1/2/3/4：")
+            if opt == "1":
+                student["人缘"] = clamp(student["人缘"] + 4)
+                if random.randint(0,1):
+                    student["学业"] = clamp(student["学业"] + 2)
+                else:
+                    student["体力"] = clamp(student["体力"] + 4)
+                student["心情"] = clamp(student["心情"] + 3)
+            elif opt == "2":
+                student["金钱"] += 30
+                student["体力"] = clamp(student["体力"] - 6)
+                student["学业"] = clamp(student["学业"] - 3)
+            elif opt == "3":
+                student["金钱"] -= 20
+                student["人缘"] = clamp(student["人缘"] + 5)
+                student["心情"] = clamp(student["心情"] + 5)
+            elif opt == "4":
+                student["学业"] = clamp(student["学业"] + 5)
+                student["体力"] = clamp(student["体力"] - 3)
+
+        elif stage == "夜晚":
+            print("1.熬夜刷题(学业+6,体力-8)\n2.玩手机追剧(心情+4,学业-4,体力-3)\n3.早睡休息(体力+7)")
+            opt = input("请输入选项1/2/3：")
+            if opt == "1":
+                student["学业"] = clamp(student["学业"] + 6)
+                student["体力"] = clamp(student["体力"] - 8)
+            elif opt == "2":
+                student["心情"] = clamp(student["心情"] + 4)
+                student["学业"] = clamp(student["学业"] - 4)
+                student["体力"] = clamp(student["体力"] - 3)
+            elif opt == "3":
+                student["体力"] = clamp(student["体力"] + 7)
+    # 每日零花钱
+    student["金钱"] += 10
+    random_event()
+    show_attr()
+
+
+def weekend_day():
+    """周末：3个行动回合，打工收益*1.5，补课加成翻倍"""
+    print("\n=====周末休息日=====")
+    for _ in range(3):
+        print("\n1.全天补课(学业+8,体力-4)\n2.全天兼职(金钱+45,体力-7)\n3.出门游玩(金钱-30,人缘+6,心情+7)\n4.宅家休养(体力+10,心情+3)")
+        opt = input("选择行动：")
+        if opt == "1":
+            student["学业"] = clamp(student["学业"] + 8)
+            student["体力"] = clamp(student["体力"] - 4)
+        elif opt == "2":
+            student["金钱"] += 45
+            student["体力"] = clamp(student["体力"] - 7)
+        elif opt == "3":
+            student["金钱"] -= 30
+            student["人缘"] = clamp(student["人缘"] + 6)
+            student["心情"] = clamp(student["心情"] + 7)
+        elif opt == "4":
+            student["体力"] = clamp(student["体力"] + 10)
+            student["心情"] = clamp(student["心情"] + 3)
+    random_event()
+    show_attr()
+
+
+def end_game():
+    """结局判定"""
+    print("\n=======学期结束，结算结局=======")
+    xue = student["学业"]
+    ren = student["人缘"]
+    qian = student["金钱"]
+    if xue >=25 and ren >=18 and qian >=80:
+        print("【完美学霸结局】成绩优异，保送重点实验班！通关！")
+    elif ren >=25 and student["心情"] >=22:
+        print("【阳光社牛结局】当选学生会干部，人缘爆棚！")
+    elif qian >=150:
+        print("【务实打工结局】攒够巨款，买到心仪数码产品！")
+    elif xue <8 or min(student.values()) <=0:
+        print("【坏结局】挂科过多/状态崩盘，留级退学，游戏失败！")
+    else:
+        print("【普通毕业结局】平稳度过校园生活，正常升学~")
+
+
+if __name__ == "__main__":
+    print("==========校园生活模拟器==========")
+    print("规则：一共7天(5上课+2周末)，合理安排行动，达成不同结局！")
+    show_attr()
+    for d in range(1, day_total+1):
+        today = d
+        if d <=5:
+            print(f"\n------------第{d}天｜上学日------------")
+            normal_day()
+        else:
+            print(f"\n------------第{d}天｜周末------------")
+            weekend_day()
+        # 中途属性归零直接失败
+        if min(student.values()) <= 0:
+            print("某项属性归零，游戏提前结束！")
+            end_game()
+            exit()
+        input("按下回车进入下一天>>>")
+    end_game()
