@@ -312,7 +312,7 @@ function renderAdminLoginPage(errorMessage = '') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>后台登录 - HtmlDeploy</title>
+  <title>后台登录 - 项目站</title>
   <style>
     :root { color-scheme: light; --bg: #f4f6f2; --panel: #fff; --text: #1f2726; --muted: #68736f; --line: #dce3dd; --brand: #24715b; --danger: #b42318; }
     * { box-sizing: border-box; }
@@ -330,7 +330,7 @@ function renderAdminLoginPage(errorMessage = '') {
 </head>
 <body>
   <form class="login" action="/admin-login" method="post">
-    <div class="brand"><span class="brand-mark">H</span><span>HtmlDeploy</span></div>
+    <div class="brand"><span class="brand-mark">项</span><span>项目站</span></div>
     <h1>请输入后台密码</h1>
     <p>验证后进入项目管理后台。</p>
     <label>
