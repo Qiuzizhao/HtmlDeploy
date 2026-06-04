@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>迷你城市经营</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .game-title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .status-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 8px 12px;
+            background: #ecf0f1;
+            border-radius: 6px;
+        }
+
+        .build-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .build-title {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .build-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .build-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .build-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .residential {
+            background: #3498db;
+            color: white;
+        }
+
+        .commercial {
+            background: #f39c12;
+            color: white;
+        }
+
+        .industrial {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .city-map {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 200px;
+        }
+
+        .map-title {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .building-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .building-item {
+            padding: 10px;
+            border-radius: 6px;
+            color: white;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .event-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 6px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="game-title">🏙️ 迷你城市经营</h1>
+
+    <!-- 城市状态面板 -->
+    <div class="status-panel">
+        <div class="status-item">💰 资金：<span id="money">1000</span></div>
+        <div class="status-item">👥 人口：<span id="population">0</span></div>
+        <div class="status-item">🏠 住宅：<span id="resCount">0</span></div>
+        <div class="status-item">🏪 商业：<span id="comCount">0</span></div>
+        <div class="status-item">🏭 工业：<span id="indCount">0</span></div>
+        <div class="status-item">😊 满意度：<span id="satisfaction">50</span>%</div>
+    </div>
+
+    <!-- 建造面板 -->
+    <div class="build-panel">
+        <h2 class="build-title">🏗️ 建造建筑</h2>
+        <div class="build-buttons">
+            <button class="build-btn residential" onclick="build('residential')">
+                住宅（200$）<br>+人口
+            </button>
+            <button class="build-btn commercial" onclick="build('commercial')">
+                商业（300$）<br>+税收
+            </button>
+            <button class="build-btn industrial" onclick="build('industrial')">
+                工业（400$）<br>+高税收
+            </button>
+        </div>
+    </div>
+
+    <!-- 随机事件 -->
+    <div id="eventBox" class="event-box"></div>
+
+    <!-- 城市地图 -->
+    <div class="city-map">
+        <h2 class="map-title">📍 城市建筑</h2>
+        <div id="buildingList" class="building-list"></div>
+    </div>
+
+    <script>
+        // 游戏核心数据
+        let gameData = {
+            money: 1000,
+            population: 0,
+            residential: 0,
+            commercial: 0,
+            industrial: 0,
+            satisfaction: 50
+        };
+
+        // 建筑配置
+        const buildingConfig = {
+            residential: { cost: 200, pop: 50, satisfaction: 5, color: "#3498db", name: "住宅" },
+            commercial: { cost: 300, pop: 20, satisfaction: 3, color: "#f39c12", name: "商业" },
+            industrial: { cost: 400, pop: 30, satisfaction: -2, color: "#2ecc71", name: "工业" }
+        };
+
+        // 随机事件
+        const events = [
+            { text: "🎉 政府补贴！获得 200$", money: 200 },
+            { text: "🌧️ 暴雨天气，满意度-5", satisfaction: -5 },
+            { text: "💼 商业繁荣，税收+150", money: 150 },
+            { text: "🏭 工业污染，满意度-8", satisfaction: -8 },
+            { text: "👨‍👩‍👧‍👦 人口迁入，+30居民", population: 30 },
+            { text: "✨ 城市美化，满意度+10", satisfaction: 10 }
+        ];
+
+        // 初始化游戏
+        window.onload = function() {
+            updateUI();
+            // 自动税收（每2秒）
+            setInterval(autoTax, 2000);
+            // 随机事件（每8秒）
+            setInterval(randomEvent, 8000);
+        };
+
+        // 建造建筑
+        function build(type) {
+            const config = buildingConfig[type];
+            if (gameData.money >= config.cost) {
+                // 扣除资金
+                gameData.money -= config.cost;
+                // 增加建筑数量
+                gameData[type]++;
+                // 增加人口
+                gameData.population += config.pop;
+                // 修改满意度
+                gameData.satisfaction += config.satisfaction;
+                // 满意度限制 0-100
+                gameData.satisfaction = Math.max(0, Math.min(100, gameData.satisfaction));
+                
+                updateUI();
+                showEvent(`✅ 建造了${config.name}！`);
+            } else {
+                showEvent("❌ 资金不足！");
+            }
+        }
+
+        // 自动税收
+        function autoTax() {
+            const tax = (gameData.commercial * 20) + (gameData.industrial * 40);
+            gameData.money += tax;
+            updateUI();
+        }
+
+        // 随机事件
+        function randomEvent() {
+            const event = events[Math.floor(Math.random() * events.length)];
+            // 应用事件效果
+            for (let key in event) {
+                if (key !== "text" && gameData[key] !== undefined) {
+                    gameData[key] += event[key];
+                }
+            }
+            // 满意度限制
+            gameData.satisfaction = Math.max(0, Math.min(100, gameData.satisfaction));
+            
+            showEvent(event.text);
+            updateUI();
+        }
+
+        // 更新界面
+        function updateUI() {
+            document.getElementById("money").textContent = gameData.money;
+            document.getElementById("population").textContent = gameData.population;
+            document.getElementById("resCount").textContent = gameData.residential;
+            document.getElementById("comCount").textContent = gameData.commercial;
+            document.getElementById("indCount").textContent = gameData.industrial;
+            document.getElementById("satisfaction").textContent = gameData.satisfaction;
+
+            // 渲染建筑列表
+            const list = document.getElementById("buildingList");
+            list.innerHTML = "";
+            
+            // 添加住宅
+            for(let i=0; i<gameData.residential; i++) addBuilding("住宅", "#3498db");
+            // 添加商业
+            for(let i=0; i<gameData.commercial; i++) addBuilding("商业", "#f39c12");
+            // 添加工业
+            for(let i=0; i<gameData.industrial; i++) addBuilding("工业", "#2ecc71");
+        }
+
+        // 添加建筑元素
+        function addBuilding(name, color) {
+            const div = document.createElement("div");
+            div.className = "building-item";
+            div.style.background = color;
+            div.textContent = name;
+            document.getElementById("buildingList").appendChild(div);
+        }
+
+        // 显示事件提示
+        function showEvent(text) {
+            const box = document.getElementById("eventBox");
+            box.textContent = text;
+            box.style.display = "block";
+            setTimeout(() => box.style.display = "none", 3000);
+        }
+    </script>
+</body>
+</html>
