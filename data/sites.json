@@ -1,5 +1,15 @@
 [
   {
+    "id": "56b4e6c6",
+    "number": "00087",
+    "title": "跑酷",
+    "author": "111",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:53:29.954Z"
+  },
+  {
     "id": "ad1ccc24",
     "number": "00086",
     "title": "篮球",
@@ -37,7 +47,8 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:51:26.876Z"
+    "createdAt": "2026-06-04T06:51:26.876Z",
+    "updatedAt": "2026-06-04T06:53:27.775Z"
   },
   {
     "id": "cfaf4708",

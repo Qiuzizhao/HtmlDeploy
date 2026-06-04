@@ -1,73 +1,475 @@
-import random
-import time
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>单人回合对战 · 暗黑魔兽</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: linear-gradient(145deg, #0b1a2e 0%, #1a2f3f 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 16px;
+            margin: 0;
+        }
+        .game-container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(22, 40, 56, 0.85);
+            backdrop-filter: blur(4px);
+            border-radius: 48px 48px 32px 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,240,0.08);
+            padding: 24px 20px 32px;
+            border: 1px solid #4f7a9e;
+            transition: all 0.2s;
+        }
+        h1 {
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 4px;
+            font-size: 1.9rem;
+            color: #f2e9c7;
+            text-shadow: 0 2px 0 #0a1a28, 0 0 12px #b8a06a;
+            margin-top: -6px;
+            margin-bottom: 16px;
+            word-break: keep-all;
+        }
+        .status-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 10px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .status-card {
+            background: #1f3347;
+            border-radius: 60px;
+            padding: 12px 18px;
+            flex: 1 1 180px;
+            min-width: 130px;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.6), 0 2px 0 #3e5f78;
+            border-bottom: 2px solid #5b7f9a;
+            color: #e6f0f5;
+        }
+        .status-card .name {
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-card .name i {
+            font-style: normal;
+            background: #2b4b62;
+            padding: 0 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #bcd3e3;
+        }
+        .hp-bar-wrapper {
+            background: #1f2c38;
+            border-radius: 40px;
+            height: 18px;
+            margin: 8px 0 4px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px #0f1a22;
+        }
+        .hp-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #b1d084, #7fb14a);
+            border-radius: 40px;
+            transition: width 0.25s ease;
+            box-shadow: 0 0 8px #8bc34a;
+        }
+        .hp-fill.monster-hp {
+            background: linear-gradient(90deg, #d48c7c, #b55a4a);
+            box-shadow: 0 0 8px #c76b5a;
+        }
+        .hp-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #d7e5ed;
+            padding: 0 2px;
+        }
+        .action-area {
+            background: #142734;
+            border-radius: 60px;
+            padding: 18px 16px 16px;
+            margin: 10px 0 16px;
+            box-shadow: inset 0 2px 8px #0b1a26, 0 4px 0 #0d1f2b;
+        }
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+        }
+        .btn {
+            background: #2f4d64;
+            border: none;
+            border-radius: 60px;
+            padding: 14px 28px;
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #f2f7fa;
+            box-shadow: 0 6px 0 #14222e, 0 4px 12px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: all 0.08s linear;
+            flex: 1 0 130px;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: 1px solid #5b7e99;
+        }
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #14222e;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #14222e;
+            pointer-events: none;
+            filter: grayscale(0.6);
+        }
+        .btn-attack {
+            background: #7a4a3a;
+            border-color: #b57a64;
+        }
+        .btn-heal {
+            background: #2d6b4f;
+            border-color: #5fa07a;
+        }
+        .log-area {
+            background: #0d1f2b;
+            border-radius: 40px;
+            padding: 16px 18px;
+            min-height: 80px;
+            margin: 16px 0 8px;
+            border: 1px solid #2f5068;
+            box-shadow: inset 0 2px 6px #051016;
+        }
+        .log-text {
+            color: #cbdbe8;
+            font-size: 1rem;
+            line-height: 1.5;
+            word-break: break-word;
+            white-space: pre-wrap;
+            min-height: 2.2em;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+        .log-text .highlight {
+            color: #f5d742;
+            font-weight: 600;
+        }
+        .log-text .damage {
+            color: #ff8a7a;
+        }
+        .log-text .heal {
+            color: #9bde9b;
+        }
+        .reset-area {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        .btn-reset {
+            background: #2c4053;
+            padding: 10px 32px;
+            font-size: 1rem;
+            flex: 0 1 auto;
+            border-radius: 40px;
+            border-color: #5f7d94;
+            box-shadow: 0 4px 0 #14222e;
+        }
+        .btn-reset:active {
+            transform: translateY(3px);
+        }
+        .footer-note {
+            text-align: center;
+            color: #6b8ba3;
+            font-size: 0.75rem;
+            margin-top: 14px;
+            opacity: 0.7;
+        }
+        @media (max-width: 480px) {
+            .game-container { padding: 16px; }
+            .btn { font-size: 1rem; padding: 12px 16px; flex: 1 0 100px; }
+            .status-card { min-width: 110px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="app">
+    <h1>⚔️ 有 · 暗黑魔兽</h1>
 
-# 初始化角色数据
-class Role:
-    def __init__(self, name, hp, atk):
-        self.name = name
-        self.max_hp = hp
-        self.hp = hp
-        self.atk = atk
+    <!-- 状态面板 -->
+    <div class="status-panel">
+        <div class="status-card" id="playerStatus">
+            <div class="name"><span>🧑 玩家勇士</span> <i>Lv.1</i></div>
+            <div class="hp-bar-wrapper">
+                <div class="hp-fill" id="playerHpFill" style="width:100%"></div>
+            </div>
+            <div class="hp-text"><span>❤️ HP</span> <span id="playerHpText">120 / 120</span></div>
+        </div>
+        <div class="status-card" id="monsterStatus">
+            <div class="name"><span>👹 暗黑魔兽</span> <i>BOSS</i></div>
+            <div class="hp-bar-wrapper">
+                <div class="hp-fill monster-hp" id="monsterHpFill" style="width:100%"></div>
+            </div>
+            <div class="hp-text"><span>💀 HP</span> <span id="monsterHpText">100 / 100</span></div>
+        </div>
+    </div>
 
-    # 受伤
-    def hurt(self, damage):
-        self.hp -= damage
-        if self.hp < 0:
-            self.hp = 0
+    <!-- 操作区 -->
+    <div class="action-area">
+        <div class="action-buttons">
+            <button class="btn btn-attack" id="attackBtn" aria-label="普通攻击">⚡ 攻击</button>
+            <button class="btn btn-heal" id="healBtn" aria-label="恢复30血量">💚 回血</button>
+        </div>
+    </div>
 
-    # 是否存活
-    def is_alive(self):
-        return self.hp > 0
+    <!-- 战斗日志 -->
+    <div class="log-area">
+        <div class="log-text" id="logMessage">⚔️ 选择你的行动……</div>
+    </div>
 
-# 游戏开始
-def game_start():
-    print("=====单人回合对战游戏=====")
-    print("规则：每回合选择【攻击】/【回血】，击败怪物即可获胜")
-    player = Role("玩家勇士", 120, 18)
-    monster = Role("暗黑魔兽", 100, 12)
+    <!-- 重置 / 新游戏 -->
+    <div class="reset-area">
+        <button class="btn btn-reset" id="resetBtn">🔄 重新挑战</button>
+    </div>
+    <div class="footer-note">回合制 · 暴击20% 伤害翻倍 · 回血30</div>
+</div>
 
-    while player.is_alive() and monster.is_alive():
-        print(f"\n【当前状态】")
-        print(f"{player.name} HP：{player.hp}/{player.max_hp}")
-        print(f"{monster.name} HP：{monster.hp}/{monster.max_hp}")
-        while True:
-            opt = input("\n请选择操作：1=普通攻击  2=回血(恢复30血量)：")
-            if opt in ["1","2"]:
-                break
-            print("输入错误，请输入1或2！")
+<script>
+    (function() {
+        "use strict";
 
-        # 玩家行动
-        if opt == "1":
-            # 20%暴击，伤害翻倍
-            crit = random.random() < 0.2
-            dmg = player.atk * 2 if crit else player.atk
-            monster.hurt(dmg)
-            if crit:
-                print(f"暴击！你对{monster.name}造成{dmg}点伤害！")
-            else:
-                print(f"你攻击{monster.name}，造成{dmg}点伤害")
-        else:
-            heal = 30
-            player.hp = min(player.hp + heal, player.max_hp)
-            print(f"你使用治疗，恢复{heal}点生命值！")
+        // ---------- DOM 引用 ----------
+        const playerHpFill   = document.getElementById('playerHpFill');
+        const monsterHpFill  = document.getElementById('monsterHpFill');
+        const playerHpText   = document.getElementById('playerHpText');
+        const monsterHpText  = document.getElementById('monsterHpText');
+        const logMessage     = document.getElementById('logMessage');
+        const attackBtn      = document.getElementById('attackBtn');
+        const healBtn        = document.getElementById('healBtn');
+        const resetBtn       = document.getElementById('resetBtn');
 
-        if not monster.is_alive():
-            break
-        time.sleep(0.8)
+        // ---------- 游戏状态 (可变) ----------
+        let gameOver = false;          // 战斗是否结束 (防止重复操作)
+        let lockAction = false;        // 用于模拟BOSS回合的短暂锁定 (防连点)
 
-        # BOSS回合
-        print(f"\n{monster.name}发起进攻！")
-        boss_dmg = random.randint(monster.atk-3, monster.atk+3)
-        player.hurt(boss_dmg)
-        print(f"{monster.name}对你造成{boss_dmg}点伤害！")
-        time.sleep(0.5)
+        // 角色数据 (符合原Python逻辑)
+        const player = {
+            name: '玩家勇士',
+            maxHp: 120,
+            hp: 120,
+            atk: 18
+        };
+        const monster = {
+            name: '暗黑魔兽',
+            maxHp: 100,
+            hp: 100,
+            atk: 12
+        };
 
-    # 结算
-    print("\n=====对战结束=====")
-    if player.is_alive():
-        print(f"恭喜你！成功击败{monster.name}，游戏胜利！")
-    else:
-        print(f"你被{monster.name}击败，游戏失败！")
+        // ---------- 辅助函数 ----------
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
 
-if __name__ == "__main__":
-    game_start()
+        // 更新UI (血量条 + 文字)
+        function updateUI() {
+            // 玩家
+            const playerPercent = (player.hp / player.maxHp) * 100;
+            playerHpFill.style.width = clamp(playerPercent, 0, 100) + '%';
+            playerHpText.textContent = `${player.hp} / ${player.maxHp}`;
+
+            // 怪物
+            const monsterPercent = (monster.hp / monster.maxHp) * 100;
+            monsterHpFill.style.width = clamp(monsterPercent, 0, 100) + '%';
+            monsterHpText.textContent = `${monster.hp} / ${monster.maxHp}`;
+        }
+
+        // 设置日志 (支持简单html标记)
+        function setLog(html) {
+            logMessage.innerHTML = html;
+        }
+
+        // 检查是否有一方死亡，更新gameOver状态，返回胜利者信息 (若有)
+        function checkGameOver() {
+            if (player.hp <= 0) {
+                player.hp = 0;
+                gameOver = true;
+                updateUI();
+                setLog('💀 你被暗黑魔兽击败，游戏失败……<br><span style="color:#b0c7d9;">点击 [重新挑战] 继续</span>');
+                disableButtons(true);
+                return true;
+            }
+            if (monster.hp <= 0) {
+                monster.hp = 0;
+                gameOver = true;
+                updateUI();
+                setLog('🏆 恭喜！你成功击败了暗黑魔兽！<br><span style="color:#b0c7d9;">点击 [重新挑战] 再来一局</span>');
+                disableButtons(true);
+                return true;
+            }
+            return false;
+        }
+
+        // 启用/禁用 攻击+回血按钮 (不操作重置按钮)
+        function disableButtons(disabled) {
+            attackBtn.disabled = disabled;
+            healBtn.disabled = disabled;
+        }
+
+        // ---------- 重置游戏 ----------
+        function resetGame() {
+            // 重置角色状态
+            player.hp = player.maxHp;
+            monster.hp = monster.maxHp;
+            gameOver = false;
+            lockAction = false;
+
+            // 清空锁定，启用按钮
+            disableButtons(false);
+            // 更新UI
+            updateUI();
+            setLog('⚔️ 新的战斗开始！ 选择攻击或回血');
+            // 移除任何正在进行的延时 (如果有)
+            if (window._bossTimer) {
+                clearTimeout(window._bossTimer);
+                window._bossTimer = null;
+            }
+        }
+
+        // ---------- BOSS回合 (延迟模拟) ----------
+        function bossTurn() {
+            // 如果战斗已经结束，不再执行BOSS行动
+            if (gameOver) return;
+
+            // 怪物攻击 (与原逻辑一致: atk-3 ~ atk+3)
+            const baseAtk = monster.atk;
+            const bossDamage = Math.floor(Math.random() * 7) + (baseAtk - 3); // 等价 random.randint(atk-3, atk+3)
+            const actualDamage = clamp(bossDamage, 0, 999); // 避免负数
+
+            player.hp = Math.max(player.hp - actualDamage, 0);
+            updateUI();
+
+            // 显示怪物伤害日志
+            setLog(`👹 暗黑魔兽发起进攻，对你造成 <span class="damage">${actualDamage}</span> 点伤害！`);
+
+            // 检查玩家是否死亡
+            const over = checkGameOver();
+            if (!over) {
+                // 如果战斗继续，解锁按钮，让玩家操作
+                lockAction = false;
+                disableButtons(false);
+                // 追加提示 (但保留日志)
+                const currentLog = logMessage.innerHTML;
+                setLog(currentLog + '<br>⚡ 轮到你了');
+            } else {
+                // 游戏结束，按钮已被禁用，lockAction 重置
+                lockAction = false;
+            }
+            window._bossTimer = null;
+        }
+
+        // ---------- 玩家行动处理 ----------
+        function handlePlayerAction(actionType) {
+            // 防御: 游戏结束 / 锁定中 / 按钮disabled状态 (但防止直接调用)
+            if (gameOver || lockAction) return;
+
+            // 锁定按钮，防止连点
+            lockAction = true;
+            disableButtons(true);
+
+            // 根据行动类型处理
+            if (actionType === 'attack') {
+                // 暴击判定 20%
+                const isCrit = Math.random() < 0.2;
+                const damage = isCrit ? player.atk * 2 : player.atk;
+                monster.hp = Math.max(monster.hp - damage, 0);
+                updateUI();
+
+                if (isCrit) {
+                    setLog(`✨ 暴击！你对暗黑魔兽造成 <span class="damage">${damage}</span> 点伤害！`);
+                } else {
+                    setLog(`⚔️ 你攻击暗黑魔兽，造成 <span class="damage">${damage}</span> 点伤害`);
+                }
+            } else if (actionType === 'heal') {
+                const healAmount = 30;
+                const oldHp = player.hp;
+                player.hp = Math.min(player.hp + healAmount, player.maxHp);
+                const realHeal = player.hp - oldHp;
+                updateUI();
+                setLog(`💚 你使用治疗，恢复 <span class="heal">${realHeal}</span> 点生命值！`);
+            }
+
+            // 检查怪物是否死亡 (玩家行动后立即判断)
+            const monsterDead = (monster.hp <= 0);
+            if (monsterDead) {
+                monster.hp = 0;
+                updateUI();
+                gameOver = true;
+                disableButtons(true);
+                setLog('🏆 恭喜！你成功击败了暗黑魔兽！<br><span style="color:#b0c7d9;">点击 [重新挑战] 再来一局</span>');
+                lockAction = false;  // 解锁标记 (但按钮已禁用)
+                if (window._bossTimer) {
+                    clearTimeout(window._bossTimer);
+                    window._bossTimer = null;
+                }
+                return;
+            }
+
+            // 怪物未死 → 延迟执行BOSS回合 (0.8s 符合原版time.sleep(0.8))
+            if (window._bossTimer) {
+                clearTimeout(window._bossTimer);
+                window._bossTimer = null;
+            }
+            window._bossTimer = setTimeout(function() {
+                bossTurn();
+            }, 800);
+        }
+
+        // ---------- 事件绑定 ----------
+        attackBtn.addEventListener('click', function() {
+            handlePlayerAction('attack');
+        });
+
+        healBtn.addEventListener('click', function() {
+            handlePlayerAction('heal');
+        });
+
+        resetBtn.addEventListener('click', function() {
+            // 清除任何等待中的BOSS回合
+            if (window._bossTimer) {
+                clearTimeout(window._bossTimer);
+                window._bossTimer = null;
+            }
+            resetGame();
+        });
+
+        // ---------- 初始化 ----------
+        resetGame();
+
+        // 额外：如果用户快速双击重置，保证状态干净
+        // 键盘辅助 (无干扰)
+    })();
+</script>
+</body>
+</html>
