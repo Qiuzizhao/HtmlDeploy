@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JOJO的奇妙冒险 - 替身之战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 标题样式 */
+        .game-title {
+            text-align: center;
+            padding: 20px;
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e;
+            background: rgba(0,0,0,0.5);
+            border-bottom: 3px solid #ff006e;
+        }
+
+        /* 游戏主容器 */
+        .game-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 0 20px;
+        }
+
+        /* 角色选择区 */
+        .character-select {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #8338ec;
+        }
+
+        .character-card {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .character-card:hover {
+            border-color: #ffbe0b;
+            transform: translateY(-5px);
+        }
+
+        .character-card.active {
+            border-color: #ff006e;
+            background: rgba(255,0,110,0.2);
+        }
+
+        /* 战斗区域 */
+        .battle-area {
+            flex: 2;
+            min-width: 500px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #ff006e;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 替身面板 */
+        .stand-panel {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .player-panel, .enemy-panel {
+            width: 45%;
+            background: rgba(0,0,0,0.6);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #3a86ff;
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            color: #ffbe0b;
+            margin-bottom: 10px;
+        }
+
+        .hp-bar {
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #06d6a0, #118ab2);
+            transition: width 0.5s;
+        }
+
+        /* 技能按钮 */
+        .skill-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .skill-btn {
+            padding: 12px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            background: #ff006e;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .skill-btn:hover {
+            background: #ff5c8d;
+            transform: scale(1.05);
+        }
+
+        .skill-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 战斗动画 */
+        .attack-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ffbe0b;
+            text-shadow: 0 0 15px #ffbe0b;
+            opacity: 0;
+            z-index: 10;
+        }
+
+        .ora-animation {
+            animation: ora 0.8s ease forwards;
+        }
+
+        @keyframes ora {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* 战斗日志 */
+        .battle-log {
+            margin-top: 20px;
+            height: 150px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 10px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+        }
+
+        .log-text {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        .player-log { color: #3a86ff; }
+        .enemy-log { color: #e63946; }
+        .system-log { color: #ffbe0b; }
+    </style>
+</head>
+<body>
+    <h1 class="game-title">JOJO的奇妙冒险 · 替身之战</h1>
+
+    <div class="game-container">
+        <!-- 角色选择区 -->
+        <div class="character-select">
+            <h2 style="color:#ffbe0b; margin-bottom:15px;">选择你的替身使者</h2>
+            
+            <div class="character-card active" data-char="jotaro">
+                <h3>空条承太郎</h3>
+                <p>替身：白金之星</p>
+                <p>技能：欧拉拳 · 时间停止</p>
+            </div>
+
+            <div class="character-card" data-char="josuke">
+                <h3>东方仗助</h3>
+                <p>替身：疯狂钻石</p>
+                <p>技能：修复 · 强力殴打</p>
+            </div>
+
+            <div class="character-card" data-char="giorno">
+                <h3>乔鲁诺·乔巴拿</h3>
+                <p>替身：黄金体验</p>
+                <p>技能：生命赋予 · 反伤</p>
+            </div>
+        </div>
+
+        <!-- 战斗区域 -->
+        <div class="battle-area">
+            <div class="stand-panel">
+                <!-- 玩家面板 -->
+                <div class="player-panel">
+                    <div class="panel-title">空条承太郎 - 白金之星</div>
+                    <div>生命值：</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="playerHp" style="width:100%"></div>
+                    </div>
+                    <div>攻击力：★★★★★</div>
+                </div>
+
+                <!-- 敌人面板 -->
+                <div class="enemy-panel">
+                    <div class="panel-title">迪奥·布兰度 - 世界</div>
+                    <div>生命值：</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="enemyHp" style="width:100%"></div>
+                    </div>
+                    <div>攻击力：★★★★☆</div>
+                </div>
+            </div>
+
+            <!-- 攻击动画 -->
+            <div class="attack-animation" id="attackAnim">ORA!</div>
+
+            <!-- 技能按钮 -->
+            <div class="skill-buttons">
+                <button class="skill-btn" onclick="playerAttack()">普通攻击</button>
+                <button class="skill-btn" onclick="oraAttack()">欧拉连打</button>
+                <button class="skill-btn" onclick="timeStop()">时间停止</button>
+                <button class="skill-btn" onclick="heal()">自我修复</button>
+            </div>
+
+            <!-- 战斗日志 -->
+            <div class="battle-log" id="battleLog">
+                <div class="system-log log-text">系统：战斗开始！选择你的技能击败DIO！</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏数据
+        let playerHp = 100;
+        let enemyHp = 100;
+        const playerMaxHp = 100;
+        const enemyMaxHp = 100;
+
+        // DOM元素
+        const playerHpBar = document.getElementById('playerHp');
+        const enemyHpBar = document.getElementById('enemyHp');
+        const battleLog = document.getElementById('battleLog');
+        const attackAnim = document.getElementById('attackAnim');
+
+        // 角色切换
+        const charCards = document.querySelectorAll('.character-card');
+        charCards.forEach(card => {
+            card.addEventListener('click', () => {
+                charCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                
+                const char = card.dataset.char;
+                const panelTitle = document.querySelector('.player-panel .panel-title');
+                
+                if(char === 'jotaro') panelTitle.innerHTML = '空条承太郎 - 白金之星';
+                if(char === 'josuke') panelTitle.innerHTML = '东方仗助 - 疯狂钻石';
+                if(char === 'giorno') panelTitle.innerHTML = '乔鲁诺·乔巴拿 - 黄金体验';
+                
+                addLog(`系统：切换角色为 ${panelTitle.textContent.split(' - ')[0]}`, 'system');
+            });
+        });
+
+        // 普通攻击
+        function playerAttack() {
+            const damage = Math.floor(Math.random() * 15) + 10;
+            enemyHp = Math.max(0, enemyHp - damage);
+            enemyHpBar.style.width = enemyHp + '%';
+            
+            addLog(`白金之星 对 DIO 造成 ${damage} 点伤害！`, 'player');
+            playAnimation('ORA!');
+            checkGameOver();
+            setTimeout(enemyAttack, 1000);
+        }
+
+        // 欧拉连打
+        function oraAttack() {
+            const damage = Math.floor(Math.random() * 25) + 20;
+            enemyHp = Math.max(0, enemyHp - damage);
+            enemyHpBar.style.width = enemyHp + '%';
+            
+            addLog(`白金之星 欧拉连打！造成 ${damage} 点巨额伤害！`, 'player');
+            playAnimation('ORAORAORA!');
+            checkGameOver();
+            setTimeout(enemyAttack, 1200);
+        }
+
+        // 时间停止
+        function timeStop() {
+            addLog(`空条承太郎：THE WORLD！时间停止吧！`, 'system');
+            playAnimation('时间停止!');
+            setTimeout(() => {
+                const damage = 30;
+                enemyHp = Math.max(0, enemyHp - damage);
+                enemyHpBar.style.width = enemyHp + '%';
+                addLog(`时间停止中！对 DIO 造成 ${damage} 点伤害！`, 'player');
+                checkGameOver();
+            }, 800);
+        }
+
+        // 自我修复
+        function heal() {
+            const healAmount = Math.floor(Math.random() * 20) + 15;
+            playerHp = Math.min(100, playerHp + healAmount);
+            playerHpBar.style.width = playerHp + '%';
+            
+            addLog(`疯狂钻石 修复！恢复 ${healAmount} 点生命值！`, 'player');
+            playAnimation('修复!');
+            setTimeout(enemyAttack, 1000);
+        }
+
+        // 敌人攻击
+        function enemyAttack() {
+            if(enemyHp <= 0) return;
+            
+            const damage = Math.floor(Math.random() * 18) + 10;
+            playerHp = Math.max(0, playerHp - damage);
+            playerHpBar.style.width = playerHp + '%';
+            
+            addLog(`DIO 木大拳！造成 ${damage} 点伤害！`, 'enemy');
+            checkGameOver();
+        }
+
+        // 播放动画
+        function playAnimation(text) {
+            attackAnim.textContent = text;
+            attackAnim.classList.add('ora-animation');
+            setTimeout(() => {
+                attackAnim.classList.remove('ora-animation');
+            }, 800);
+        }
+
+        // 添加战斗日志
+        function addLog(text, type) {
+            const log = document.createElement('div');
+            log.className = `log-text ${type}-log`;
+            log.textContent = text;
+            battleLog.appendChild(log);
+            battleLog.scrollTop = battleLog.scrollHeight;
+        }
+
+        // 游戏结束判断
+        function checkGameOver() {
+            if(playerHp <= 0) {
+                addLog('系统：你被DIO击败了！游戏结束！', 'system');
+                disableButtons();
+            }
+            if(enemyHp <= 0) {
+                addLog('系统：你击败了DIO！JOJO胜利！', 'system');
+                disableButtons();
+            }
+        }
+
+        // 禁用按钮
+        function disableButtons() {
+            document.querySelectorAll('.skill-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            });
+        }
+    </script>
+</body>
+</html>
