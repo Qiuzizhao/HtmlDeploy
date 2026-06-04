@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>高中校园模拟器（纯学业考试版）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .title {
+            text-align: center;
+            color: #2d8cf0;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            background: #e8f3ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .status {
+            font-weight: bold;
+            color: #333;
+        }
+        .time {
+            color: #ff7d40;
+        }
+        .exam-info {
+            background: #fff6f6;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff4d4f;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: #2d8cf0;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #1b7acc;
+        }
+        .log-box {
+            border: 1px solid #eee;
+            height: 240px;
+            padding: 12px;
+            overflow-y: auto;
+            background: #fafbfc;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+        .score-level {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #52c41a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🏫 高中校园模拟器（纯考试版）</div>
+
+        <div class="status-bar">
+            <div class="status">心情：<span id="mood">80</span></div>
+            <div class="status">体力：<span id="energy">80</span></div>
+            <div class="status">总分：<span id="score">60</span></div>
+            <div class="status">金钱：<span id="money">100</span> 元</div>
+            <div class="status time">
+                <span id="week">周一</span> | <span id="time">白天</span>
+            </div>
+        </div>
+
+        <div class="exam-info">
+            📢 <b>考试提示：</b>每周一 <b>周考</b>，每月（4周）<b>月考</b>，成绩决定评价！
+            <div class="score-level">当前评价：<span id="level">及格</span></div>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="goClass()">📖 上课听讲</button>
+            <button onclick="study()">📝 刷题自习</button>
+            <button onclick="doHomework()">📚 写作业</button>
+            <button onclick="review()">🔍 复习重点</button>
+            <button onclick="eat()">🍚 食堂吃饭</button>
+            <button onclick="sleep()">🛏️ 宿舍睡觉</button>
+            <button onclick="sport()">🏃 锻炼身体</button>
+            <button onclick="askTeacher()">❓ 问老师问题</button>
+            <button onclick="examNow()">📄 立即考试</button>
+        </div>
+
+        <h3 style="margin:15px 0 10px;">📰 校园日志</h3>
+        <div class="log-box" id="log"></div>
+    </div>
+
+    <script>
+        // 基础属性（移除所有恋爱/好感度）
+        let status = {
+            mood: 80, energy: 80, score: 60, money: 100,
+            week: "周一", time: "白天", weekCount: 1
+        };
+
+        // 星期列表
+        const weeks = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+        let weekIndex = 0;
+
+        // 更新界面
+        function updateUI() {
+            document.getElementById("mood").innerText = status.mood;
+            document.getElementById("energy").innerText = status.energy;
+            document.getElementById("score").innerText = status.score;
+            document.getElementById("money").innerText = status.money;
+            document.getElementById("week").innerText = status.week;
+            document.getElementById("time").innerText = status.time;
+            updateLevel();
+        }
+
+        // 更新成绩评价
+        function updateLevel() {
+            let s = status.score;
+            let level = "";
+            if(s >= 90) level = "学霸";
+            else if(s >= 80) level = "优秀";
+            else if(s >= 70) level = "良好";
+            else if(s >= 60) level = "及格";
+            else level = "不及格";
+            document.getElementById("level").innerText = level;
+        }
+
+        // 记录日志
+        function log(msg) {
+            let box = document.getElementById("log");
+            box.innerHTML += "• " + msg + "<br>";
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // 时间流逝
+        function nextTime() {
+            if (status.time === "白天") {
+                status.time = "晚上";
+            } else {
+                status.time = "白天";
+                weekIndex = (weekIndex + 1) % 7;
+                status.week = weeks[weekIndex];
+                
+                // 每周一 周考
+                if (status.week === "周一") {
+                    status.weekCount++;
+                    weekExam();
+                }
+                // 每月（4周）月考
+                if(status.weekCount % 4 === 0 && status.week === "周一"){
+                    monthExam();
+                }
+            }
+            // 自然消耗
+            status.energy = Math.max(0, status.energy - 5);
+            status.mood = Math.max(0, status.mood - 2);
+            randomEvent();
+            updateUI();
+        }
+
+        // 随机学业事件
+        function randomEvent() {
+            let r = Math.random();
+            if (r < 0.12) {
+                let add = Math.floor(Math.random() * 15) + 5;
+                status.money += add;
+                log("🎉 家长奖励生活费 +" + add + " 元");
+            } else if (r < 0.22) {
+                status.mood += 5;
+                log("☀️ 学习状态不错，心情提升");
+            } else if (r < 0.28) {
+                status.score += 3;
+                log("📖 突然想通一道难题，成绩+3");
+            }
+        }
+
+        // ========== 考试系统 ==========
+        // 周考
+        function weekExam() {
+            let add = Math.floor(Math.random() * 15) + 5 + (status.score * 0.05);
+            status.score = Math.min(100, status.score + add);
+            log("--------------------------------");
+            log("📝 【周考】成绩 +" + add.toFixed(1));
+            log("📊 当前总分：" + status.score);
+            log("--------------------------------");
+        }
+
+        // 月考（重要考试）
+        function monthExam() {
+            let add = Math.floor(Math.random() * 25) + 10 + (status.score * 0.08);
+            status.score = Math.min(100, status.score + add);
+            log("=================================");
+            log("🔥 【月考】成绩 +" + add.toFixed(1));
+            log("🏆 月考总分：" + status.score);
+            log("=================================");
+        }
+
+        // 手动立即考试
+        function examNow() {
+            if(status.energy < 20){
+                log("❌ 体力不足，无法集中考试！");
+                return;
+            }
+            let add = Math.floor(Math.random() * 20) + 5;
+            status.score = Math.min(100, status.score + add);
+            status.energy -= 15;
+            log("--------------------------------");
+            log("✍️ 【模拟考试】成绩 +" + add);
+            log("📊 当前总分：" + status.score);
+            log("--------------------------------");
+            nextTime();
+        }
+
+        // ========== 学业行动 ==========
+        function goClass() {
+            if (status.time !== "白天") { log("❌ 只有白天才能上课！"); return; }
+            status.score += 7;
+            status.energy -= 10;
+            status.mood -= 3;
+            log("📖 认真上课，成绩+7，体力-10");
+            nextTime();
+        }
+
+        function study() {
+            status.score += 11;
+            status.energy -= 16;
+            status.mood -= 8;
+            log("📝 高效刷题，成绩+11，体力-16");
+            nextTime();
+        }
+
+        function doHomework() {
+            status.score += 8;
+            status.energy -= 12;
+            log("📚 完成作业，成绩+8，体力-12");
+            nextTime();
+        }
+
+        function review() {
+            status.score += 14;
+            status.energy -= 20;
+            status.mood -= 12;
+            log("🔍 重点复习，成绩+14，体力-20");
+            nextTime();
+        }
+
+        function askTeacher() {
+            status.score += 9;
+            status.mood += 4;
+            log("❓ 请教老师，成绩+9，心情+4");
+            nextTime();
+        }
+
+        // ========== 生活行动 ==========
+        function eat() {
+            if (status.money < 10) { log("💸 钱不够吃饭！"); return; }
+            status.money -= 10;
+            status.energy += 18;
+            status.mood += 6;
+            log("🍚 吃饱饭，体力+18，心情+6，金钱-10");
+            nextTime();
+        }
+
+        function sleep() {
+            status.energy = 100;
+            status.mood += 12;
+            log("🛏️ 充足睡眠，体力回满，心情+12");
+            nextTime();
+        }
+
+        function sport() {
+            status.energy += 10;
+            status.mood += 6;
+            log("🏃 锻炼身体，体力+10，心情+6");
+            nextTime();
+        }
+
+        updateUI();
+        log("🎮 游戏开始！全力冲刺考试高分！");
+        log("📢 每周一周考，每月月考，冲上学霸！");
+    </script>
+</body>
+</html>
