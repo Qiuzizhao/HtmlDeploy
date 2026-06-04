@@ -1,5 +1,15 @@
 [
   {
+    "id": "258897e2",
+    "number": "00140",
+    "title": "刘奕鑫",
+    "author": "刘奕鑫",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:58:25.257Z"
+  },
+  {
     "id": "1be19d08",
     "number": "00139",
     "title": "刘奕鑫",
@@ -403,7 +413,8 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:39.451Z"
+    "createdAt": "2026-06-04T06:54:39.451Z",
+    "updatedAt": "2026-06-04T06:58:23.938Z"
   },
   {
     "id": "b4fe3fef",
