@@ -1,195 +1,771 @@
-import random
-import time
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园生活模拟器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(145deg, #f5f7fa 0%, #e6ecf5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .game-container {
+            max-width: 700px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0, 20, 40, 0.2);
+            padding: 28px 24px 32px;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a2a4a;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #4a5a7a;
+            font-size: 14px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dce3ef;
+            padding-bottom: 12px;
+        }
+        .attr-panel {
+            background: #f0f4fe;
+            border-radius: 18px;
+            padding: 16px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 8px 4px;
+            margin-bottom: 20px;
+            border: 1px solid #cdd9f0;
+        }
+        .attr-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #1f2e4a;
+            background: white;
+            padding: 4px 14px 4px 10px;
+            border-radius: 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .attr-label {
+            color: #3a4e72;
+        }
+        .attr-value {
+            font-weight: 700;
+            min-width: 24px;
+            text-align: center;
+            color: #1a3a6a;
+        }
+        .day-info {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f3a5f;
+            margin: 12px 0 10px;
+            padding-left: 4px;
+        }
+        .stage-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c4a7a;
+            margin: 14px 0 6px;
+            background: #eaf0fc;
+            display: inline-block;
+            padding: 2px 16px;
+            border-radius: 30px;
+        }
+        .action-list {
+            background: #f8faff;
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin: 6px 0 12px;
+            border: 1px solid #dce6f5;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #1f2e4a;
+        }
+        .action-list p {
+            margin: 2px 0;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0 14px;
+            flex-wrap: wrap;
+        }
+        .input-area input {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 16px;
+            border: 2px solid #c8d6ec;
+            border-radius: 40px;
+            font-size: 16px;
+            outline: none;
+            background: white;
+            transition: 0.15s;
+        }
+        .input-area input:focus {
+            border-color: #4a7abf;
+            box-shadow: 0 0 0 3px rgba(74, 122, 191, 0.2);
+        }
+        .btn {
+            background: #2a5a9a;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 4px 8px rgba(42, 90, 154, 0.25);
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: #1e4a82;
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px rgba(42, 90, 154, 0.3);
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-secondary {
+            background: #6a7f9f;
+            box-shadow: 0 4px 8px rgba(60, 80, 110, 0.2);
+        }
+        .btn-secondary:hover {
+            background: #4e6688;
+        }
+        .message-box {
+            background: #f2f7ff;
+            border-left: 5px solid #4a7abf;
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin: 12px 0;
+            font-size: 15px;
+            color: #102a4a;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .event-msg {
+            background: #fff6e5;
+            border-left-color: #d98c2e;
+        }
+        .end-msg {
+            background: #eaf7e8;
+            border-left-color: #3a8a5a;
+            font-weight: 500;
+        }
+        .hidden {
+            display: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 18px;
+            color: #6a7f9a;
+            font-size: 13px;
+        }
+        .flex-center {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 480px) {
+            .game-container { padding: 18px 14px; }
+            .attr-item { font-size: 13px; padding: 3px 10px; }
+            .btn { padding: 8px 18px; font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="app">
+    <h1>🏫 校园生活模拟器</h1>
+    <div class="subtitle">规则：一共7天 (5天上课 + 2天周末)，合理安排行动，达成不同结局！</div>
 
-# 初始化角色属性
-student = {
-    "学业": 10,
-    "体力": 10,
-    "人缘": 10,
-    "金钱": 50,
-    "心情": 10
-}
-MAX_ATTR = 30
-MIN_ATTR = 0
-day_total = 7  # 5上学+2周末
-today = 1
+    <!-- 属性面板 -->
+    <div class="attr-panel" id="attrPanel">
+        <div class="attr-item"><span class="attr-label">📚学业</span><span class="attr-value" id="attr_学业">10</span></div>
+        <div class="attr-item"><span class="attr-label">💪体力</span><span class="attr-value" id="attr_体力">10</span></div>
+        <div class="attr-item"><span class="attr-label">🤝人缘</span><span class="attr-value" id="attr_人缘">10</span></div>
+        <div class="attr-item"><span class="attr-label">💰金钱</span><span class="attr-value" id="attr_金钱">50</span></div>
+        <div class="attr-item"><span class="attr-label">😊心情</span><span class="attr-value" id="attr_心情">10</span></div>
+    </div>
 
+    <!-- 主内容区 -->
+    <div id="mainContent">
+        <div class="day-info" id="dayInfo">第 1 天 · 上学日</div>
+        <div id="stageArea"></div>
+        <div id="messageBox" class="message-box hidden"></div>
+        <div id="inputArea" class="input-area">
+            <input type="text" id="userInput" placeholder="输入选项..." autocomplete="off">
+            <button class="btn" id="submitBtn">确认</button>
+        </div>
+        <div id="extraBtnArea" class="flex-center hidden">
+            <button class="btn btn-secondary" id="nextDayBtn">进入下一天 ▶</button>
+        </div>
+    </div>
 
-def clamp(num):
-    """属性限制在0~30之间"""
-    return max(MIN_ATTR, min(MAX_ATTR, num))
+    <div class="footer">⚡ 合理分配属性，触发随机事件</div>
+</div>
 
+<script>
+    (function() {
+        // ---------- 游戏状态 ----------
+        const student = {
+            学业: 10,
+            体力: 10,
+            人缘: 10,
+            金钱: 50,
+            心情: 10
+        };
+        const MAX_ATTR = 30;
+        const MIN_ATTR = 0;
+        const DAY_TOTAL = 7;
+        let today = 1;
+        let gameOver = false;
 
-def show_attr():
-    """展示当前属性面板"""
-    print("\n=========【个人状态面板】========")
-    for k, v in student.items():
-        print(f"{k:^4}：{v:2d}")
-    print("================================\n")
+        // 当前阶段控制
+        let currentStageIndex = 0;          // 工作日阶段索引 0~3
+        let weekendActionCount = 0;         // 周末已行动次数 0~2
+        let waitingForBirthday = false;     // 是否等待生日邀请输入
+        let waitingForNextDay = false;      // 是否等待"下一天"按钮
+        let pendingEvent = null;            // 存储随机事件函数（暴雨停课等）
 
+        // DOM 引用
+        const dayInfo = document.getElementById('dayInfo');
+        const stageArea = document.getElementById('stageArea');
+        const messageBox = document.getElementById('messageBox');
+        const inputArea = document.getElementById('inputArea');
+        const userInput = document.getElementById('userInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const extraBtnArea = document.getElementById('extraBtnArea');
+        const nextDayBtn = document.getElementById('nextDayBtn');
 
-def random_event():
-    """随机突发事件"""
-    events = [
-        {"msg": "老师突击小测", "func": lambda: (student.__setitem__("学业", clamp(student["学业"] + 3)) if student["学业"] >= 15 else student.__setitem__("学业", clamp(student["学业"] - 4)), student.__setitem__("心情", clamp(student["心情"] - 3)))},
-        {"msg": "同学过生日邀约！花费15元，人缘+6（输入1参加，0拒绝）", "func": invite_birthday},
-        {"msg": "路上捡到零花钱，金钱+25，心情+2", "func": lambda: (student.__setitem__("金钱", student["金钱"] + 25), student.__setitem__("心情", clamp(student["心情"] + 2)))},
-        {"msg": "被罚打扫卫生，体力-5，人缘+2", "func": lambda: (student.__setitem__("体力", clamp(student["体力"] - 5)), student.__setitem__("人缘", clamp(student["人缘"] + 2)))},
-        {"msg": "暴雨停课半天，今日少一个行动回合，心情+3", "func": lambda: student.__setitem__("心情", clamp(student["心情"] + 3))}
-    ]
-    if random.random() < 0.33:
-        e = random.choice(events)
-        print(f"\n【突发事件】{e['msg']}")
-        e["func"]()
+        // 属性显示更新
+        function updateAttrDisplay() {
+            for (const key in student) {
+                const el = document.getElementById('attr_' + key);
+                if (el) el.textContent = student[key];
+            }
+        }
 
+        // 数值钳制
+        function clamp(num) {
+            return Math.max(MIN_ATTR, Math.min(MAX_ATTR, num));
+        }
 
-def invite_birthday():
-    select = input("你的选择：")
-    if select == "1" and student["金钱"] >= 15:
-        student["金钱"] -= 15
-        student["人缘"] = clamp(student["人缘"] + 6)
-        print("你参加生日聚会，人缘大幅提升！")
-    else:
-        student["人缘"] = clamp(student["人缘"] - 4)
-        print("拒绝邀约，人缘下降")
+        // 修改属性并更新显示
+        function changeAttr(key, delta) {
+            if (gameOver) return;
+            student[key] = clamp(student[key] + delta);
+            updateAttrDisplay();
+            // 检查归零
+            for (const k in student) {
+                if (student[k] <= 0) {
+                    gameOver = true;
+                    showMessage('⚠️ 属性 ' + k + ' 归零，游戏提前结束！', 'end-msg');
+                    endGame();
+                    return;
+                }
+            }
+        }
 
+        // 显示消息
+        function showMessage(text, className = '') {
+            messageBox.classList.remove('hidden', 'event-msg', 'end-msg');
+            messageBox.textContent = text;
+            if (className) {
+                messageBox.classList.add(className);
+            }
+        }
 
-def normal_day():
-    """工作日：早自习、午休、放学、夜晚4阶段"""
-    stage_list = ["早自习", "午休", "放学后", "夜晚"]
-    for stage in stage_list:
-        print(f"\n====={stage}时段=====")
-        if stage == "早自习":
-            print("1.认真早读(学业+3,体力-2)\n2.趴桌睡觉(体力+4,学业-3,30%被抓扣人缘心情)\n3.和同桌闲聊(人缘+3,学业-2,心情+2)")
-            opt = input("请输入选项1/2/3：")
-            if opt == "1":
-                student["学业"] = clamp(student["学业"] + 3)
-                student["体力"] = clamp(student["体力"] - 2)
-            elif opt == "2":
-                student["体力"] = clamp(student["体力"] + 4)
-                student["学业"] = clamp(student["学业"] - 3)
-                if random.random() < 0.3:
-                    student["人缘"] = clamp(student["人缘"] - 2)
-                    student["心情"] = clamp(student["心情"] - 3)
-                    print("被班主任抓到睡觉！被罚！")
-            elif opt == "3":
-                student["人缘"] = clamp(student["人缘"] + 3)
-                student["学业"] = clamp(student["学业"] - 2)
-                student["心情"] = clamp(student["心情"] + 2)
+        function clearMessage() {
+            messageBox.classList.add('hidden');
+            messageBox.textContent = '';
+        }
 
-        elif stage == "午休":
-            print("1.图书馆刷题(学业+4,体力-3,金钱-5)\n2.操场运动(体力+5,人缘+2,心情+3)\n3.食堂兼职(金钱+15,体力-4,学业-1)")
-            opt = input("请输入选项1/2/3：")
-            if opt == "1":
-                student["学业"] = clamp(student["学业"] + 4)
-                student["体力"] = clamp(student["体力"] - 3)
-                student["金钱"] -= 5
-            elif opt == "2":
-                student["体力"] = clamp(student["体力"] + 5)
-                student["人缘"] = clamp(student["人缘"] + 2)
-                student["心情"] = clamp(student["心情"] + 3)
-            elif opt == "3":
-                student["金钱"] += 15
-                student["体力"] = clamp(student["体力"] - 4)
-                student["学业"] = clamp(student["学业"] - 1)
+        // 设置阶段/提示内容
+        function setStageContent(html) {
+            stageArea.innerHTML = html;
+        }
 
-        elif stage == "放学后":
-            print("1.参加社团(人缘+4,学业/体力+4,心情+3)\n2.校外打工(金钱+30,体力-6,学业-3)\n3.结伴逛街(金钱-20,人缘+5,心情+5)\n4.在家自习(学业+5,体力-3)")
-            opt = input("请输入选项1/2/3/4：")
-            if opt == "1":
-                student["人缘"] = clamp(student["人缘"] + 4)
-                if random.randint(0,1):
-                    student["学业"] = clamp(student["学业"] + 2)
-                else:
-                    student["体力"] = clamp(student["体力"] + 4)
-                student["心情"] = clamp(student["心情"] + 3)
-            elif opt == "2":
-                student["金钱"] += 30
-                student["体力"] = clamp(student["体力"] - 6)
-                student["学业"] = clamp(student["学业"] - 3)
-            elif opt == "3":
-                student["金钱"] -= 20
-                student["人缘"] = clamp(student["人缘"] + 5)
-                student["心情"] = clamp(student["心情"] + 5)
-            elif opt == "4":
-                student["学业"] = clamp(student["学业"] + 5)
-                student["体力"] = clamp(student["体力"] - 3)
+        // 显示输入框和按钮
+        function showInput(placeholder = '请输入选项...') {
+            inputArea.classList.remove('hidden');
+            userInput.placeholder = placeholder;
+            userInput.value = '';
+            userInput.focus();
+            extraBtnArea.classList.add('hidden');
+        }
 
-        elif stage == "夜晚":
-            print("1.熬夜刷题(学业+6,体力-8)\n2.玩手机追剧(心情+4,学业-4,体力-3)\n3.早睡休息(体力+7)")
-            opt = input("请输入选项1/2/3：")
-            if opt == "1":
-                student["学业"] = clamp(student["学业"] + 6)
-                student["体力"] = clamp(student["体力"] - 8)
-            elif opt == "2":
-                student["心情"] = clamp(student["心情"] + 4)
-                student["学业"] = clamp(student["学业"] - 4)
-                student["体力"] = clamp(student["体力"] - 3)
-            elif opt == "3":
-                student["体力"] = clamp(student["体力"] + 7)
-    # 每日零花钱
-    student["金钱"] += 10
-    random_event()
-    show_attr()
+        function hideInput() {
+            inputArea.classList.add('hidden');
+        }
 
+        function showNextDayButton() {
+            extraBtnArea.classList.remove('hidden');
+            hideInput();
+            waitingForNextDay = true;
+        }
 
-def weekend_day():
-    """周末：3个行动回合，打工收益*1.5，补课加成翻倍"""
-    print("\n=====周末休息日=====")
-    for _ in range(3):
-        print("\n1.全天补课(学业+8,体力-4)\n2.全天兼职(金钱+45,体力-7)\n3.出门游玩(金钱-30,人缘+6,心情+7)\n4.宅家休养(体力+10,心情+3)")
-        opt = input("选择行动：")
-        if opt == "1":
-            student["学业"] = clamp(student["学业"] + 8)
-            student["体力"] = clamp(student["体力"] - 4)
-        elif opt == "2":
-            student["金钱"] += 45
-            student["体力"] = clamp(student["体力"] - 7)
-        elif opt == "3":
-            student["金钱"] -= 30
-            student["人缘"] = clamp(student["人缘"] + 6)
-            student["心情"] = clamp(student["心情"] + 7)
-        elif opt == "4":
-            student["体力"] = clamp(student["体力"] + 10)
-            student["心情"] = clamp(student["心情"] + 3)
-    random_event()
-    show_attr()
+        // ---------- 随机事件 ----------
+        function triggerRandomEvent() {
+            if (gameOver) return;
+            if (Math.random() >= 0.33) return;
 
+            const events = [
+                {
+                    msg: '📌 老师突击小测！',
+                    action: function() {
+                        if (student.学业 >= 15) {
+                            changeAttr('学业', 3);
+                            showMessage('📌 老师突击小测！你基础扎实，学业+3');
+                        } else {
+                            changeAttr('学业', -4);
+                            changeAttr('心情', -3);
+                            showMessage('📌 老师突击小测！你准备不足，学业-4，心情-3');
+                        }
+                    }
+                },
+                {
+                    msg: '🎂 同学过生日邀约！花费15元，人缘+6（输入1参加，0拒绝）',
+                    action: function() {
+                        waitingForBirthday = true;
+                        showMessage('🎂 同学过生日邀约！花费15元，人缘+6（输入1参加，0拒绝）', 'event-msg');
+                        showInput('输入 1 参加，0 拒绝');
+                    }
+                },
+                {
+                    msg: '💰 路上捡到零花钱，金钱+25，心情+2',
+                    action: function() {
+                        changeAttr('金钱', 25);
+                        changeAttr('心情', 2);
+                        showMessage('💰 路上捡到零花钱，金钱+25，心情+2', 'event-msg');
+                    }
+                },
+                {
+                    msg: '🧹 被罚打扫卫生，体力-5，人缘+2',
+                    action: function() {
+                        changeAttr('体力', -5);
+                        changeAttr('人缘', 2);
+                        showMessage('🧹 被罚打扫卫生，体力-5，人缘+2', 'event-msg');
+                    }
+                },
+                {
+                    msg: '🌧️ 暴雨停课半天，今日少一个行动回合，心情+3',
+                    action: function() {
+                        changeAttr('心情', 3);
+                        showMessage('🌧️ 暴雨停课半天，今日少一个行动回合，心情+3', 'event-msg');
+                        // 标记跳过下一个阶段 (在normalDay中处理)
+                        pendingEvent = 'skipStage';
+                    }
+                }
+            ];
 
-def end_game():
-    """结局判定"""
-    print("\n=======学期结束，结算结局=======")
-    xue = student["学业"]
-    ren = student["人缘"]
-    qian = student["金钱"]
-    if xue >=25 and ren >=18 and qian >=80:
-        print("【完美学霸结局】成绩优异，保送重点实验班！通关！")
-    elif ren >=25 and student["心情"] >=22:
-        print("【阳光社牛结局】当选学生会干部，人缘爆棚！")
-    elif qian >=150:
-        print("【务实打工结局】攒够巨款，买到心仪数码产品！")
-    elif xue <8 or min(student.values()) <=0:
-        print("【坏结局】挂科过多/状态崩盘，留级退学，游戏失败！")
-    else:
-        print("【普通毕业结局】平稳度过校园生活，正常升学~")
+            const chosen = events[Math.floor(Math.random() * events.length)];
+            // 如果是生日邀请，特殊处理（不立即执行action，等待输入）
+            if (chosen.msg.includes('同学过生日')) {
+                chosen.action();
+            } else {
+                chosen.action();
+            }
+        }
 
+        // 处理生日邀请输入
+        function handleBirthdayInput(val) {
+            waitingForBirthday = false;
+            if (val === '1' && student.金钱 >= 15) {
+                changeAttr('金钱', -15);
+                changeAttr('人缘', 6);
+                showMessage('🎉 你参加生日聚会，人缘大幅提升！', 'event-msg');
+            } else {
+                changeAttr('人缘', -4);
+                showMessage('😕 拒绝邀约，人缘下降', 'event-msg');
+            }
+            // 继续当前流程
+            if (!gameOver) {
+                afterEventContinue();
+            }
+        }
 
-if __name__ == "__main__":
-    print("==========校园生活模拟器==========")
-    print("规则：一共7天(5上课+2周末)，合理安排行动，达成不同结局！")
-    show_attr()
-    for d in range(1, day_total+1):
-        today = d
-        if d <=5:
-            print(f"\n------------第{d}天｜上学日------------")
-            normal_day()
-        else:
-            print(f"\n------------第{d}天｜周末------------")
-            weekend_day()
-        # 中途属性归零直接失败
-        if min(student.values()) <= 0:
-            print("某项属性归零，游戏提前结束！")
-            end_game()
-            exit()
-        input("按下回车进入下一天>>>")
-    end_game()
+        // 事件后继续（工作日/周末）
+        function afterEventContinue() {
+            if (today <= 5) {
+                // 工作日：继续下一个阶段
+                currentStageIndex++;
+                if (currentStageIndex < 4) {
+                    renderNormalStage(currentStageIndex);
+                } else {
+                    // 一天结束
+                    finishNormalDay();
+                }
+            } else {
+                // 周末：继续下一个行动
+                weekendActionCount++;
+                if (weekendActionCount < 3) {
+                    renderWeekendAction();
+                } else {
+                    finishWeekendDay();
+                }
+            }
+        }
+
+        // ---------- 工作日阶段渲染 ----------
+        function renderNormalStage(index) {
+            if (gameOver) return;
+            const stages = ['早自习', '午休', '放学后', '夜晚'];
+            const stage = stages[index];
+            if (!stage) return;
+
+            // 如果触发了暴雨停课，跳过当前阶段（但保留夜晚？简化：跳过当前非夜晚阶段）
+            if (pendingEvent === 'skipStage' && stage !== '夜晚') {
+                pendingEvent = null;
+                showMessage('🌧️ 暴雨停课，跳过 ' + stage + ' 时段', 'event-msg');
+                // 直接进入下一阶段
+                currentStageIndex++;
+                if (currentStageIndex < 4) {
+                    renderNormalStage(currentStageIndex);
+                } else {
+                    finishNormalDay();
+                }
+                return;
+            }
+            pendingEvent = null;
+
+            let html = `<div class="stage-title">${stage}</div><div class="action-list">`;
+            let placeholder = '请输入选项...';
+            if (stage === '早自习') {
+                html += `<p>1. 认真早读 (学业+3, 体力-2)</p><p>2. 趴桌睡觉 (体力+4, 学业-3, 30%被抓扣人缘心情)</p><p>3. 和同桌闲聊 (人缘+3, 学业-2, 心情+2)</p>`;
+                placeholder = '输入 1/2/3';
+            } else if (stage === '午休') {
+                html += `<p>1. 图书馆刷题 (学业+4, 体力-3, 金钱-5)</p><p>2. 操场运动 (体力+5, 人缘+2, 心情+3)</p><p>3. 食堂兼职 (金钱+15, 体力-4, 学业-1)</p>`;
+                placeholder = '输入 1/2/3';
+            } else if (stage === '放学后') {
+                html += `<p>1. 参加社团 (人缘+4, 学业/体力+4, 心情+3)</p><p>2. 校外打工 (金钱+30, 体力-6, 学业-3)</p><p>3. 结伴逛街 (金钱-20, 人缘+5, 心情+5)</p><p>4. 在家自习 (学业+5, 体力-3)</p>`;
+                placeholder = '输入 1/2/3/4';
+            } else if (stage === '夜晚') {
+                html += `<p>1. 熬夜刷题 (学业+6, 体力-8)</p><p>2. 玩手机追剧 (心情+4, 学业-4, 体力-3)</p><p>3. 早睡休息 (体力+7)</p>`;
+                placeholder = '输入 1/2/3';
+            }
+            html += `</div>`;
+            setStageContent(html);
+            showInput(placeholder);
+        }
+
+        // 处理工作日阶段输入
+        function handleNormalStageInput(val) {
+            const stage = ['早自习', '午休', '放学后', '夜晚'][currentStageIndex];
+            if (!stage) return;
+
+            if (stage === '早自习') {
+                if (val === '1') {
+                    changeAttr('学业', 3);
+                    changeAttr('体力', -2);
+                    showMessage('📖 认真早读，学业+3，体力-2');
+                } else if (val === '2') {
+                    changeAttr('体力', 4);
+                    changeAttr('学业', -3);
+                    if (Math.random() < 0.3) {
+                        changeAttr('人缘', -2);
+                        changeAttr('心情', -3);
+                        showMessage('😴 被班主任抓到睡觉！人缘-2，心情-3', 'event-msg');
+                    } else {
+                        showMessage('😴 趴桌睡觉，体力+4，学业-3');
+                    }
+                } else if (val === '3') {
+                    changeAttr('人缘', 3);
+                    changeAttr('学业', -2);
+                    changeAttr('心情', 2);
+                    showMessage('💬 和同桌闲聊，人缘+3，学业-2，心情+2');
+                } else {
+                    showMessage('⚠️ 请输入 1、2 或 3', 'event-msg');
+                    showInput('输入 1/2/3');
+                    return;
+                }
+            } else if (stage === '午休') {
+                if (val === '1') {
+                    changeAttr('学业', 4);
+                    changeAttr('体力', -3);
+                    changeAttr('金钱', -5);
+                    showMessage('📚 图书馆刷题，学业+4，体力-3，金钱-5');
+                } else if (val === '2') {
+                    changeAttr('体力', 5);
+                    changeAttr('人缘', 2);
+                    changeAttr('心情', 3);
+                    showMessage('⚽ 操场运动，体力+5，人缘+2，心情+3');
+                } else if (val === '3') {
+                    changeAttr('金钱', 15);
+                    changeAttr('体力', -4);
+                    changeAttr('学业', -1);
+                    showMessage('🍽️ 食堂兼职，金钱+15，体力-4，学业-1');
+                } else {
+                    showMessage('⚠️ 请输入 1、2 或 3', 'event-msg');
+                    showInput('输入 1/2/3');
+                    return;
+                }
+            } else if (stage === '放学后') {
+                if (val === '1') {
+                    changeAttr('人缘', 4);
+                    if (Math.random() < 0.5) {
+                        changeAttr('学业', 2);
+                        showMessage('🎭 参加社团，人缘+4，学业+2，心情+3');
+                    } else {
+                        changeAttr('体力', 4);
+                        showMessage('🎭 参加社团，人缘+4，体力+4，心情+3');
+                    }
+                    changeAttr('心情', 3);
+                } else if (val === '2') {
+                    changeAttr('金钱', 30);
+                    changeAttr('体力', -6);
+                    changeAttr('学业', -3);
+                    showMessage('💼 校外打工，金钱+30，体力-6，学业-3');
+                } else if (val === '3') {
+                    changeAttr('金钱', -20);
+                    changeAttr('人缘', 5);
+                    changeAttr('心情', 5);
+                    showMessage('🛍️ 结伴逛街，金钱-20，人缘+5，心情+5');
+                } else if (val === '4') {
+                    changeAttr('学业', 5);
+                    changeAttr('体力', -3);
+                    showMessage('🏠 在家自习，学业+5，体力-3');
+                } else {
+                    showMessage('⚠️ 请输入 1、2、3 或 4', 'event-msg');
+                    showInput('输入 1/2/3/4');
+                    return;
+                }
+            } else if (stage === '夜晚') {
+                if (val === '1') {
+                    changeAttr('学业', 6);
+                    changeAttr('体力', -8);
+                    showMessage('🌙 熬夜刷题，学业+6，体力-8');
+                } else if (val === '2') {
+                    changeAttr('心情', 4);
+                    changeAttr('学业', -4);
+                    changeAttr('体力', -3);
+                    showMessage('📱 玩手机追剧，心情+4，学业-4，体力-3');
+                } else if (val === '3') {
+                    changeAttr('体力', 7);
+                    showMessage('🛌 早睡休息，体力+7');
+                } else {
+                    showMessage('⚠️ 请输入 1、2 或 3', 'event-msg');
+                    showInput('输入 1/2/3');
+                    return;
+                }
+            }
+
+            // 进入下一阶段或结束一天
+            if (!gameOver) {
+                currentStageIndex++;
+                if (currentStageIndex < 4) {
+                    renderNormalStage(currentStageIndex);
+                } else {
+                    finishNormalDay();
+                }
+            }
+        }
+
+        // 完成工作日
+        function finishNormalDay() {
+            if (gameOver) return;
+            // 每日零花钱
+            changeAttr('金钱', 10);
+            showMessage('💵 每日零花钱 +10', 'end-msg');
+            // 随机事件
+            triggerRandomEvent();
+            if (gameOver) return;
+            if (!waitingForBirthday) {
+                // 显示属性并等待下一天
+                updateAttrDisplay();
+                showNextDayButton();
+            }
+        }
+
+        // ---------- 周末渲染 ----------
+        function renderWeekendAction() {
+            if (gameOver) return;
+            let html = `<div class="stage-title">周末行动 (${weekendActionCount+1}/3)</div><div class="action-list">`;
+            html += `<p>1. 全天补课 (学业+8, 体力-4)</p><p>2. 全天兼职 (金钱+45, 体力-7)</p><p>3. 出门游玩 (金钱-30, 人缘+6, 心情+7)</p><p>4. 宅家休养 (体力+10, 心情+3)</p>`;
+            html += `</div>`;
+            setStageContent(html);
+            showInput('输入 1/2/3/4');
+        }
+
+        function handleWeekendInput(val) {
+            if (val === '1') {
+                changeAttr('学业', 8);
+                changeAttr('体力', -4);
+                showMessage('📚 全天补课，学业+8，体力-4');
+            } else if (val === '2') {
+                changeAttr('金钱', 45);
+                changeAttr('体力', -7);
+                showMessage('💼 全天兼职，金钱+45，体力-7');
+            } else if (val === '3') {
+                changeAttr('金钱', -30);
+                changeAttr('人缘', 6);
+                changeAttr('心情', 7);
+                showMessage('🎢 出门游玩，金钱-30，人缘+6，心情+7');
+            } else if (val === '4') {
+                changeAttr('体力', 10);
+                changeAttr('心情', 3);
+                showMessage('🏡 宅家休养，体力+10，心情+3');
+            } else {
+                showMessage('⚠️ 请输入 1、2、3 或 4', 'event-msg');
+                showInput('输入 1/2/3/4');
+                return;
+            }
+
+            if (!gameOver) {
+                weekendActionCount++;
+                if (weekendActionCount < 3) {
+                    renderWeekendAction();
+                } else {
+                    finishWeekendDay();
+                }
+            }
+        }
+
+        function finishWeekendDay() {
+            if (gameOver) return;
+            // 周末也有随机事件
+            triggerRandomEvent();
+            if (gameOver) return;
+            if (!waitingForBirthday) {
+                updateAttrDisplay();
+                showNextDayButton();
+            }
+        }
+
+        // ---------- 结局 ----------
+        function endGame() {
+            setStageContent('');
+            hideInput();
+            extraBtnArea.classList.add('hidden');
+            let result = '';
+            const xue = student.学业;
+            const ren = student.人缘;
+            const qian = student.金钱;
+            const xin = student.心情;
+
+            if (xue >= 25 && ren >= 18 && qian >= 80) {
+                result = '🏆 【完美学霸结局】成绩优异，保送重点实验班！通关！';
+            } else if (ren >= 25 && xin >= 22) {
+                result = '🌟 【阳光社牛结局】当选学生会干部，人缘爆棚！';
+            } else if (qian >= 150) {
+                result = '💎 【务实打工结局】攒够巨款，买到心仪数码产品！';
+            } else if (xue < 8 || Math.min(...Object.values(student)) <= 0) {
+                result = '💔 【坏结局】挂科过多/状态崩盘，留级退学，游戏失败！';
+            } else {
+                result = '🎓 【普通毕业结局】平稳度过校园生活，正常升学~';
+            }
+            showMessage('======= 学期结束，结算结局 =======\n' + result, 'end-msg');
+            // 禁用输入
+            userInput.disabled = true;
+            submitBtn.disabled = true;
+            nextDayBtn.disabled = true;
+            gameOver = true;
+        }
+
+        // ---------- 进入下一天 ----------
+        function goToNextDay() {
+            if (gameOver) return;
+            if (today >= DAY_TOTAL) {
+                endGame();
+                return;
+            }
+            today++;
+            currentStageIndex = 0;
+            weekendActionCount = 0;
+            waitingForBirthday = false;
+            waitingForNextDay = false;
+            pendingEvent = null;
+            clearMessage();
+            extraBtnArea.classList.add('hidden');
+
+            if (today <= 5) {
+                dayInfo.textContent = '第 ' + today + ' 天 · 上学日';
+                renderNormalStage(0);
+            } else {
+                dayInfo.textContent = '第 ' + today + ' 天 · 周末';
+                renderWeekendAction();
+            }
+            updateAttrDisplay();
+        }
+
+        // ---------- 主输入处理 ----------
+        function handleInput() {
+            if (gameOver) return;
+            const val = userInput.value.trim();
+            if (!val) {
+                showMessage('⚠️ 请输入选项', 'event-msg');
+                return;
+            }
+            userInput.value = '';
+
+            // 生日邀请特殊处理
+            if (waitingForBirthday) {
+                if (val === '1' || val === '0') {
+                    handleBirthdayInput(val);
+                } else {
+                    showMessage('⚠️ 请输入 1 参加，0 拒绝', 'event-msg');
+                    showInput('输入 1 或 0');
+                }
+                return;
+            }
+
+            // 等待下一天按钮时，不接受输入
+            if (waitingForNextDay) {
+                showMessage('⚠️ 请点击 "进入下一天" 按钮', 'event-msg');
+                return;
+            }
+
+            // 工作日/周末
+            if (today <= 5) {
+                handleNormalStageInput(val);
+            } else {
+                handleWeekendInput(val);
+            }
+        }
+
+        // ---------- 初始化 ----------
+        function initGame() {
+            updateAttrDisplay();
+            dayInfo.textContent = '第 1 天 · 上学日';
+            renderNormalStage(0);
+            showInput('输入 1/2/3');
+
+            submitBtn.addEventListener('click', handleInput);
+            userInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleInput();
+                }
+            });
+            nextDayBtn.addEventListener('click', goToNextDay);
+        }
+
+        initGame();
+    })();
+</script>
+</body>
+</html>
