@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诗词雅韵 · 一键作诗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        // 自定义Tailwind配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2A5E4E',      // 墨绿主色
+                        secondary: '#9A7D5D',    // 棕褐辅助色
+                        light: '#F5F2EB',        // 米白底色
+                        dark: '#1A2F2F',         // 深墨色
+                        accent: '#C87953'        // 赭石强调色
+                    },
+                    fontFamily: {
+                        poetic: ['"Ma Shan Zheng"', '"Noto Serif SC"', 'serif'],
+                        classic: ['"ZCOOL XiaoWei"', '"Noto Serif SC"', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            }
+            .poem-shadow {
+                box-shadow: 0 5px 20px rgba(42, 94, 78, 0.15);
+            }
+            .bg-paper {
+                background-image: url('https://images.unsplash.com/photo-1505799764633-42294a309398?q=80&w=1000&auto=format&fit=crop');
+                background-size: cover;
+                background-position: center;
+                background-blend-mode: overlay;
+            }
+            .animate-fade-in {
+                animation: fadeIn 1.2s ease-in-out;
+            }
+            .animate-float {
+                animation: float 3s ease-in-out infinite;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes float {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-5px); }
+            }
+        }
+    </style>
+    <!-- 引入中文字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+</head>
+<body class="bg-light min-h-screen font-classic text-dark relative overflow-x-hidden">
+    <!-- 背景装饰 -->
+    <div class="absolute inset-0 opacity-5 pointer-events-none">
+        <div class="w-full h-full bg-paper"></div>
+    </div>
+    
+    <!-- 顶部装饰 -->
+    <div class="w-full h-8 bg-gradient-to-r from-primary/80 to-secondary/80"></div>
+    
+    <!-- 主容器 -->
+    <div class="container mx-auto px-4 py-10 max-w-4xl relative z-10">
+        <!-- 标题区域 -->
+        <header class="text-center mb-12 animate-fade-in">
+            <h1 class="text-[clamp(2.5rem,5vw,4rem)] font-poetic text-primary mb-3 text-shadow">
+                诗词雅韵
+            </h1>
+            <p class="text-secondary/80 italic text-lg">输入关键词，即刻生成千古佳句</p>
+            <div class="w-40 h-1 bg-gradient-to-r from-primary to-secondary mx-auto mt-4 rounded-full"></div>
+        </header>
+
+        <!-- 游戏主区域 -->
+        <main class="bg-white/80 backdrop-blur-sm rounded-2xl p-8 poem-shadow mb-10 animate-fade-in">
+            <!-- 输入区域 -->
+            <div class="mb-8">
+                <label for="keyword" class="block text-primary font-medium mb-3 text-lg">输入你的关键词</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input 
+                        type="text" 
+                        id="keyword" 
+                        placeholder="例如：春花、明月、青山、烟雨..." 
+                        class="flex-1 px-5 py-3 rounded-lg border border-primary/20 focus:border-primary focus:ring-2 focus:ring-primary/30 outline-none transition-all bg-white/90"
+                    >
+                    <button id="generateBtn" class="px-6 py-3 bg-primary hover:bg-primary/90 text-light rounded-lg transition-all font-medium tracking-wider flex items-center justify-center gap-2">
+                        <i class="fa fa-paint-brush"></i>
+                        <span>生成诗句</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 诗句类型选择 -->
+            <div class="flex gap-4 mb-6 justify-center">
+                <label class="cursor-pointer flex items-center gap-2">
+                    <input type="radio" name="poemType" value="five" checked class="text-primary">
+                    <span>五言绝句</span>
+                </label>
+                <label class="cursor-pointer flex items-center gap-2">
+                    <input type="radio" name="poemType" value="seven" class="text-primary">
+                    <span>七言律诗</span>
+                </label>
+            </div>
+
+            <!-- 结果展示区域 -->
+            <div id="resultArea" class="min-h-[180px] flex flex-col items-center justify-center py-8 px-4 rounded-xl bg-primary/5 border border-dashed border-primary/20 opacity-0 transition-opacity duration-500">
+                <div id="loading" class="hidden text-center">
+                    <i class="fa fa-spinner fa-spin text-primary text-2xl animate-float"></i>
+                    <p class="mt-3 text-secondary">正在构思佳句中...</p>
+                </div>
+                <div id="poemResult" class="text-center hidden">
+                    <h2 class="font-poetic text-[clamp(1.8rem,4vw,2.5rem)] text-dark leading-relaxed tracking-wide mb-4" id="poemContent"></h2>
+                    <p class="text-xs text-secondary/70 italic" id="poemDesc"></p>
+                </div>
+                <div id="emptyState" class="text-center">
+                    <i class="fa fa-leaf text-primary/40 text-3xl mb-3 animate-float"></i>
+                    <p class="text-secondary/60">输入关键词，点击生成按钮，创作你的专属诗句</p>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div id="actionBtns" class="mt-6 flex justify-center gap-4 opacity-0 transition-opacity duration-500">
+                <button id="copyBtn" class="px-5 py-2 bg-secondary hover:bg-secondary/90 text-light rounded-lg transition-all flex items-center gap-2">
+                    <i class="fa fa-copy"></i>
+                    <span>复制诗句</span>
+                </button>
+                <button id="newPoemBtn" class="px-5 py-2 bg-accent hover:bg-accent/90 text-light rounded-lg transition-all flex items-center gap-2">
+                    <i class="fa fa-refresh"></i>
+                    <span>再作一首</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- 古风装饰 -->
+        <div class="flex justify-center gap-8 my-10 opacity-60">
+            <i class="fa fa-cloud text-primary/70 text-2xl animate-float"></i>
+            <i class="fa fa-moon-o text-secondary/70 text-2xl animate-float" style="animation-delay: 0.7s"></i>
+            <i class="fa fa-leaf text-accent/70 text-2xl animate-float" style="animation-delay: 1.3s"></i>
+        </div>
+    </div>
+
+    <!-- 底部 -->
+    <footer class="text-center py-6 text-secondary/60 text-sm">
+        <p>诗词雅韵 © 诗意小游戏</p>
+    </footer>
+
+    <script>
+        // 诗词数据 - 精心编写的诗句库
+        const poemData = {
+            // 五言诗句
+            five: {
+                春: ["春风拂绿野，花香满人间","春雨润万物，生机满乾坤","春归花自落，风静鸟谈天"],
+                夏: ["夏日荷风软，蝉鸣树影深","夏夜星光灿，荷塘月色清","夏木阴阴正可人，风来满袖香"],
+                秋: ["秋风吹落叶，雁过天际遥","秋月明如水，秋思入梦来","秋高气清朗，山水共澄明"],
+                冬: ["冬雪覆山野，寒梅独自开","冬日阳光暖，心静意自安","冬来冰封秀，春来花自红"],
+                花: ["花开香满径，蝶舞影翩跹","花谢花还开，岁月自悠然","花香袭人暖，清风送雅音"],
+                月: ["月移花影动，风送竹声清","月明千里共，相思万里情","月色如水泻，静夜思悠悠"],
+                山: ["山高云为伴，水清石自知","山色四时碧，溪声十里清","山静尘心净，林幽意自闲"],
+                水: ["水流花自去，风静月常明","水天一色净，心远地自偏","水波映月影，清风送微凉"],
+                云: ["云卷天边舒，心随世事悠","云深不知处，山静有清音","云飘风不定，心静意自如"],
+                烟: ["烟雨江南秀，山水诗意浓","烟笼寒水月，风拂落花天","烟云随风散，心清万事宁"],
+                 default: ["清风携雅韵，妙语自成诗","心有凌云志，笔生锦绣词","山水含清趣，风月寄相思"]
+            },
+            // 七言诗句
+            seven: {
+                春: ["春风拂面花含笑，细雨润物草青青","春江潮水连海平，月色朦胧照古今","春来处处花开好，鸟语声声入耳清"],
+                夏: ["夏日荷塘花映水，晚风送爽意悠然","夏夜星空璀璨亮，蛙鸣蝉唱伴清闲","夏木阴浓夏日长，楼台倒影入池塘"],
+                秋: ["秋高气爽云飘逸，月朗风清思念长","秋风落叶飘零去，雁阵南飞寄远情","秋月皎洁照窗前，夜半清风伴我眠"],
+                冬: ["冬雪纷飞覆大地，寒梅傲雪吐芬芳","冬日暖阳照心房，岁月安暖意绵长","冰封千里山河秀，雪落无声诗意浓"],
+                花: ["花开四季香飘远，蝶舞蜂飞意韵悠","繁花似锦春光好，落英缤纷诗意柔","一花一木一世界，一念一思一清幽"],
+                月: ["月色如水洒人间，静夜思乡愁意绵","明月高悬照九州，清风伴我度春秋","月移花影上栏杆，风送清香入梦来"],
+                山: ["山高路远风景秀，水阔天长意境悠","青山不老水长流，岁月无痕意自幽","山峦叠翠烟云绕，溪水潺潺鸟语柔"],
+                水: ["水映蓝天山色秀，风拂碧波涟漪柔","流水潺潺传雅韵，青山隐隐含情悠","水波荡漾星光闪，月色朦胧诗意浓"],
+                云: ["云卷云舒天际阔，花开花落岁月悠","云雾缭绕山峦秀，清风拂面意清闲","云飘万里随风去，心游千峰自在游"],
+                烟: ["烟雨朦胧江南秀，山水清幽诗意浓","烟笼青山如画里，风拂绿水似诗中","烟波浩渺江天阔，月色朦胧古今同"],
+                default: ["清风明月本无价，近水远山皆有情","心有灵犀一点通，情无限处意无穷","岁月如歌人生路，时光若水梦悠悠"]
+            }
+        };
+
+        // DOM元素
+        const keywordInput = document.getElementById('keyword');
+        const generateBtn = document.getElementById('generateBtn');
+        const resultArea = document.getElementById('resultArea');
+        const loading = document.getElementById('loading');
+        const poemResult = document.getElementById('poemResult');
+        const poemContent = document.getElementById('poemContent');
+        const poemDesc = document.getElementById('poemDesc');
+        const emptyState = document.getElementById('emptyState');
+        const actionBtns = document.getElementById('actionBtns');
+        const copyBtn = document.getElementById('copyBtn');
+        const newPoemBtn = document.getElementById('newPoemBtn');
+
+        // 生成诗句
+        generateBtn.addEventListener('click', generatePoem);
+        
+        // 回车生成
+        keywordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') generatePoem();
+        });
+
+        // 复制诗句
+        copyBtn.addEventListener('click', () => {
+            const text = poemContent.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fa fa-check"></i> 复制成功';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 1500);
+            });
+        });
+
+        // 重新作诗
+        newPoemBtn.addEventListener('click', () => {
+            keywordInput.focus();
+            keywordInput.select();
+        });
+
+        // 核心作诗函数
+        function generatePoem() {
+            let keyword = keywordInput.value.trim() || 'default';
+            if (keyword.length > 5) keyword = 'default';
+            
+            // 显示加载
+            emptyState.classList.add('hidden');
+            poemResult.classList.add('hidden');
+            loading.classList.remove('hidden');
+            resultArea.style.opacity = '1';
+            actionBtns.style.opacity = '0';
+            
+            // 模拟思考延迟
+            setTimeout(() => {
+                // 获取诗句类型
+                const poemType = document.querySelector('input[name="poemType"]:checked').value;
+                const typeName = poemType === 'five' ? '五言绝句' : '七言律诗';
+                
+                // 查找匹配的诗句
+                let poems = poemData[poemType][keyword] || poemData[poemType].default;
+                const randomPoem = poems[Math.floor(Math.random() * poems.length)];
+                
+                // 显示结果
+                poemContent.innerText = randomPoem;
+                poemDesc.innerText = `· ${typeName} · 关键词：${keyword === 'default' ? '随机' : keyword}`;
+                
+                loading.classList.add('hidden');
+                poemResult.classList.remove('hidden');
+                actionBtns.style.opacity = '1';
+            }, 1200);
+        }
+    </script>
+</body>
+</html>
