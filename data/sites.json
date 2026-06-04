@@ -606,9 +606,10 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:36.635Z"
+    "createdAt": "2026-06-04T06:53:36.635Z",
+    "updatedAt": "2026-06-04T08:02:23.755Z"
   },
   {
     "id": "f40ae352",
@@ -616,9 +617,10 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:36.472Z"
+    "createdAt": "2026-06-04T06:53:36.472Z",
+    "updatedAt": "2026-06-04T08:02:24.207Z"
   },
   {
     "id": "798ad85c",
@@ -626,9 +628,10 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:36.243Z"
+    "createdAt": "2026-06-04T06:53:36.243Z",
+    "updatedAt": "2026-06-04T08:02:24.758Z"
   },
   {
     "id": "4c7bf496",
@@ -636,9 +639,10 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:35.757Z"
+    "createdAt": "2026-06-04T06:53:35.757Z",
+    "updatedAt": "2026-06-04T08:02:25.939Z"
   },
   {
     "id": "15fc69b5",
@@ -646,9 +650,10 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:34.346Z"
+    "createdAt": "2026-06-04T06:53:34.346Z",
+    "updatedAt": "2026-06-04T08:02:26.387Z"
   },
   {
     "id": "56b4e6c6",
