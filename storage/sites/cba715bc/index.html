@@ -1,0 +1,120 @@
+import random
+import time
+
+# 英雄基础属性
+def init_hero():
+    # 玩家-后羿
+    player = {
+        "name": "后羿",
+        "hp": 3200,
+        "max_hp": 3200,
+        "atk": 380,
+        "skill1": 1.8,  # 一技能伤害倍率
+        "ult": 3.2,     # 大招伤害倍率
+        "cd_ult": 0     # 大招冷却回合
+    }
+    # 敌方-亚瑟
+    enemy = {
+        "name": "亚瑟",
+        "hp": 3500,
+        "max_hp": 3500,
+        "atk": 320,
+        "skill1": 1.6,
+        "ult": 2.9,
+        "cd_ult": 0
+    }
+    return player, enemy
+
+# 伤害计算（暴击25%概率，暴击伤害1.5倍）
+def calc_damage(base_atk, rate):
+    dmg = base_atk * rate
+    crit = random.random() < 0.25
+    if crit:
+        dmg *= 1.5
+        print("💥触发暴击！")
+    return round(dmg)
+
+# 玩家操作菜单
+def player_operate(player, enemy):
+    print("\n=====你的操作面板=====")
+    print("1.普通攻击 | 2.一技能多重箭 | 3.大鸟大招(有冷却) | 4.回城回血(回30%最大血量)")
+    while True:
+        opt = input("请输入序号出招：")
+        if opt == "1":
+            dmg = calc_damage(player["atk"], 1)
+            enemy["hp"] -= dmg
+            print(f"\n后羿普攻射出箭矢，造成【{dmg}】点伤害！")
+            break
+        elif opt == "2":
+            dmg = calc_damage(player["atk"], player["skill1"])
+            enemy["hp"] -= dmg
+            print(f"\n后羿开启一技能分裂箭，造成【{dmg}】点伤害！")
+            break
+        elif opt == "3":
+            if player["cd_ult"] > 0:
+                print(f"大招冷却中，还剩{player['cd_ult']}回合，换技能！")
+                continue
+            dmg = calc_damage(player["atk"], player["ult"])
+            enemy["hp"] -= dmg
+            player["cd_ult"] = 3  # 大招冷却3回合
+            print(f"\n后羿大鸟命中亚瑟，巨额伤害【{dmg}】！大招进入3回合冷却")
+            break
+        elif opt == "4":
+            heal = round(player["max_hp"] * 0.3)
+            player["hp"] = min(player["hp"] + heal, player["max_hp"])
+            print(f"\n后羿原地回城，恢复【{heal}】血量，当前血量{player['hp']}")
+            break
+        else:
+            print("输入错误，请输入1~4数字！")
+
+# AI亚瑟自动出招
+def ai_operate(player, enemy):
+    print("\n👉敌方亚瑟行动中...")
+    time.sleep(1)
+    skill_roll = random.random()
+    if enemy["cd_ult"] > 0:
+        skill_roll = 0.6
+    if skill_roll < 0.35:
+        dmg = calc_damage(enemy["atk"], 1)
+        print(f"亚瑟普攻挥剑，造成{dmg}伤害")
+    elif skill_roll < 0.7:
+        dmg = calc_damage(enemy["atk"], enemy["skill1"])
+        print(f"亚瑟一技能沉默劈砍，造成{dmg}伤害")
+    else:
+        dmg = calc_damage(enemy["atk"], enemy["ult"])
+        enemy["cd_ult"] = 3
+        print(f"亚瑟圣剑大招劈砍！造成{dmg}巨额伤害，大招冷却3回合")
+    player["hp"] -= dmg
+
+# 主游戏循环
+def game_start():
+    print("=========王者1v1单挑小游戏=========")
+    print("你：后羿 VS AI：亚瑟，血量归零即失败")
+    p, e = init_hero()
+    round_cnt = 1
+    while p["hp"] > 0 and e["hp"] > 0:
+        print(f"\n----------第{round_cnt}回合----------")
+        print(f"【{p['name']}】血量：{p['hp']}/{p['max_hp']} | 【{e['name']}】血量：{e['hp']}/{e['max_hp']}")
+        # 玩家回合
+        player_operate(p, e)
+        if e["hp"] <= 0:
+            break
+        # AI回合
+        ai_operate(p, e)
+        # 冷却回合递减
+        if p["cd_ult"] > 0:
+            p["cd_ult"] -= 1
+        if e["cd_ult"] > 0:
+            e["cd_ult"] -= 1
+        round_cnt += 1
+
+    # 结算胜负
+    print("\n=========对局结束=========")
+    if e["hp"] <= 0:
+        print(f"✅胜利！亚瑟血量归零，后羿拿下单挑胜利！")
+    else:
+        print(f"❌战败！后羿被亚瑟击杀，挑战失败！")
+
+# 启动游戏
+if __name__ == "__main__":
+    game_start()
