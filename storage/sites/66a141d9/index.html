@@ -245,7 +245,6 @@
         <span id="gameStatus" style="font-size:0.9rem;">进行中</span>
     </div>
 
-    <!-- 敌方面板 -->
     <div class="player-panel enemy">
         <div class="player-header">
             <span class="player-name" id="enemyName">电脑</span>
@@ -255,7 +254,6 @@
         <div class="field-row" id="enemyField"></div>
     </div>
 
-    <!-- 我方面板 -->
     <div class="player-panel ally">
         <div class="player-header">
             <span class="player-name" id="allyName">玩家</span>
@@ -265,7 +263,6 @@
         <div class="field-row" id="allyField"></div>
     </div>
 
-    <!-- 手牌区 -->
     <div class="hand-area">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>📜 手牌</strong>
@@ -274,14 +271,12 @@
         <div class="hand-cards" id="handContainer"></div>
     </div>
 
-    <!-- 控制区 -->
     <div class="controls">
         <input type="text" id="commandInput" placeholder="指令: play 0 / attack 1 / attack hq / end" autofocus>
         <button id="executeBtn">执行</button>
         <button class="secondary" id="endTurnBtn">结束回合</button>
     </div>
 
-    <!-- 日志 -->
     <div class="log-area" id="logContainer">
         <div>⚡ 游戏启动</div>
     </div>
@@ -289,7 +284,6 @@
 
 <script>
     (function() {
-        // ---------- 纯逻辑 (无 DOM 依赖) ----------
         class UnitCard {
             constructor(name, cost, attack, health, desc = "") {
                 this.name = name;
@@ -346,9 +340,9 @@
             }
         }
 
-        // ---------- 游戏状态 ----------
         let p1, p2, turn, gameOver;
         let logEntries = [];
+        let currentAttacker, currentDefender;
 
         function createDecks() {
             const baseCards = [
@@ -389,12 +383,8 @@
             addLog("=== KARDS 简化卡牌游戏启动 ===");
             p1.draw(4);
             p2.draw(4);
-            // 第一回合开始 (玩家先手)
             startTurn(p1, p2);
         }
-
-        // 当前攻击方 / 防守方
-        let currentAttacker, currentDefender;
 
         function startTurn(attacker, defender) {
             if (gameOver) return;
@@ -407,7 +397,6 @@
             renderAll();
         }
 
-        // 执行指令
         function executeCommand(cmdStr) {
             if (gameOver) {
                 addLog("⚠️ 游戏已结束，请刷新重开");
@@ -476,20 +465,16 @@
                         renderAll();
                         return;
                     }
-                    // 选择目标 (简化: 自动选择第一个敌方单位)
                     if (defender.field.length === 0) {
                         addLog("⚠️ 敌方没有单位可攻击");
                         renderAll();
                         return;
                     }
-                    // 默认攻击第一个敌方单位 (可优化)
                     const defUnit = defender.field[0];
-                    // 互相伤害
                     atkUnit.takeDamage(defUnit.attack);
                     defUnit.takeDamage(atkUnit.attack);
                     atkUnit.canAttack = false;
                     addLog(`⚔️ ${atkUnit.name} ↔ ${defUnit.name} 交换伤害！`);
-                    // 清理死亡
                     attacker.field = attacker.field.filter(u => u.isAlive());
                     defender.field = defender.field.filter(u => u.isAlive());
                     checkGameOver();
@@ -503,12 +488,9 @@
 
         function endCurrentTurn() {
             if (gameOver) return;
-            // 切换回合
             if (currentAttacker === p1) {
-                // 轮到电脑
                 startTurn(p2, p1);
             } else {
-                // 轮到玩家，回合数+1
                 turn++;
                 startTurn(p1, p2);
             }
@@ -527,9 +509,7 @@
             }
         }
 
-        // ---------- DOM 渲染 ----------
         function renderAll() {
-            // 更新玩家信息
             document.getElementById('enemyName').textContent = p2.name;
             document.getElementById('enemyHp').textContent = `❤️ ${p2.hp}`;
             document.getElementById('enemyMana').textContent = `⚡ ${p2.mana}/${p2.maxMana}`;
@@ -539,11 +519,9 @@
             document.getElementById('turnDisplay').textContent = `回合 ${turn}`;
             document.getElementById('gameStatus').textContent = gameOver ? '🏁 已结束' : '进行中';
 
-            // 渲染战场
             renderField('enemyField', p2.field);
             renderField('allyField', p1.field);
 
-            // 渲染手牌
             const handContainer = document.getElementById('handContainer');
             handContainer.innerHTML = '';
             document.getElementById('handCount').textContent = `${p1.hand.length} 张`;
@@ -562,10 +540,8 @@
                 });
             }
 
-            // 日志
             const logContainer = document.getElementById('logContainer');
             logContainer.innerHTML = '';
-            // 显示最近10条
             const recent = logEntries.slice(-12);
             for (const entry of recent) {
                 const div = document.createElement('div');
@@ -573,9 +549,6 @@
                 logContainer.appendChild(div);
             }
             logContainer.scrollTop = logContainer.scrollHeight;
-
-            // 如果游戏结束，禁用输入?
-            // 不强制禁用，但指令会提示
         }
 
         function renderField(elementId, units) {
@@ -610,7 +583,6 @@
             if (logEntries.length > 50) logEntries.shift();
         }
 
-        // ---------- 事件绑定 ----------
         document.addEventListener('DOMContentLoaded', function() {
             initGame();
 
@@ -644,7 +616,6 @@
                 input.focus();
             });
 
-            // 初始渲染
             renderAll();
         });
     })();
