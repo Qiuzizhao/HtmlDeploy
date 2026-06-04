@@ -1,5 +1,35 @@
 [
   {
+    "id": "b32a8c5b",
+    "number": "00097",
+    "title": "方块吃方块",
+    "author": "王梓萱",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:54:17.791Z"
+  },
+  {
+    "id": "1f582346",
+    "number": "00096",
+    "title": "方块吃方块",
+    "author": "王梓萱",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:54:17.455Z"
+  },
+  {
+    "id": "3fd1c7ef",
+    "number": "00095",
+    "title": "恐怖学校",
+    "author": "王靖涵",
+    "classId": "392f3c64",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-04T06:54:15.872Z"
+  },
+  {
     "id": "2b80d611",
     "number": "00094",
     "title": "校园跑酷",
