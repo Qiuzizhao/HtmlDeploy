@@ -120,23 +120,24 @@
   {
     "id": "f8b5f9a0",
     "number": "00138",
-    "title": "AS",
+    "title": "暗区突围控制台小游戏",
     "author": "A",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:07.804Z",
-    "updatedAt": "2026-06-04T07:59:53.351Z"
+    "updatedAt": "2026-06-04T08:01:22.915Z"
   },
   {
     "id": "fd1f4c7f",
     "number": "00137",
-    "title": "黄振航",
+    "title": "多科技战争模拟器",
     "author": "黄振航",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:04.195Z"
+    "createdAt": "2026-06-04T06:58:04.195Z",
+    "updatedAt": "2026-06-04T08:01:20.926Z"
   },
   {
     "id": "b8af3ac4",
