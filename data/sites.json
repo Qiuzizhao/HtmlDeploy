@@ -468,12 +468,13 @@
   {
     "id": "e8ff2b50",
     "number": "00105",
-    "title": "哇",
+    "title": "火影忍者手游高仿版",
     "author": "宇智波斑",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:23.994Z"
+    "createdAt": "2026-06-04T06:55:23.994Z",
+    "updatedAt": "2026-06-04T08:02:02.098Z"
   },
   {
     "id": "3a662fbd",
