@@ -1,0 +1,214 @@
+import random
+
+# 单位卡牌类
+class UnitCard:
+    def __init__(self, name, cost, attack, health, desc=""):
+        self.name = name
+        self.cost = cost
+        self.attack = attack
+        self.health = health
+        self.desc = desc
+        self.can_attack = False  # 出场本回合不能攻击
+
+    def take_damage(self, dmg):
+        self.health -= dmg
+
+    def is_alive(self):
+        return self.health > 0
+
+    def __str__(self):
+        return f"【{self.name}】 费用:{self.cost} | 攻:{self.attack} 血:{self.health} | {self.desc}"
+
+# 玩家类（包含基地、手牌、战场、费用）
+class Player:
+    def __init__(self, name):
+        self.name = name
+        self.hp = 20  # 基地血量
+        self.max_mana = 0
+        self.mana = 0
+        self.deck = []
+        self.hand = []
+        self.field = []  # 战场单位
+
+    # 重置每回合费用
+    def reset_mana(self):
+        self.max_mana = min(self.max_mana + 1, 10)
+        self.mana = self.max_mana
+
+    # 抽牌
+    def draw(self, n=1):
+        for _ in range(n):
+            if self.deck:
+                card = self.deck.pop(0)
+                self.hand.append(card)
+
+    # 打出单位到战场
+    def play_card(self, card_idx):
+        if card_idx < 0 or card_idx >= len(self.hand):
+            return False
+        card = self.hand[card_idx]
+        if self.mana >= card.cost:
+            self.mana -= card.cost
+            self.field.append(card)
+            self.hand.pop(card_idx)
+            card.can_attack = False  # 新上场不能攻击
+            return True
+        return False
+
+    # 战场单位可以攻击
+    def enable_attack(self):
+        for unit in self.field:
+            unit.can_attack = True
+
+    def __str__(self):
+        return f"{self.name} | 基地:{self.hp} | 费用:{self.mana}/{self.max_mana}"
+
+# 游戏主逻辑
+class KardsGame:
+    def __init__(self, p1_name, p2_name):
+        self.p1 = Player(p1_name)
+        self.p2 = Player(p2_name)
+        self.turn = 1
+        self.create_decks()
+
+    # 创建基础卡组
+    def create_decks(self):
+        base_cards = [
+            UnitCard("步兵", 1, 2, 2, "基础步兵"),
+            UnitCard("坦克", 3, 4, 3, "重装甲单位"),
+            UnitCard("侦察兵", 2, 3, 1, "高攻低血"),
+            UnitCard("工程师", 2, 1, 4, "肉盾单位")
+        ]
+        # 每人20张牌
+        self.p1.deck = base_cards * 5
+        self.p2.deck = base_cards * 5
+        random.shuffle(self.p1.deck)
+        random.shuffle(self.p2.deck)
+
+    # 开局抽牌
+    def start_game(self):
+        self.p1.draw(4)
+        self.p2.draw(4)
+        print("=== KARDS 简化卡牌游戏启动 ===")
+
+    # 显示战场状态
+    def show_battlefield(self):
+        print("\n=====================================")
+        print(self.p2)
+        print("敌方战场：" + " | ".join([f"{u.name}({u.attack}/{u.health})" for u in self.p2.field]))
+        print("-------------------------------------")
+        print("我方战场：" + " | ".join([f"{u.name}({u.attack}/{u.health})" for u in self.p1.field]))
+        print(self.p1)
+        print("=====================================\n")
+
+    # 单回合流程
+    def player_turn(self, attacker, defender):
+        print(f"\n===== 【{attacker.name}】 第{self.turn}回合 =====")
+        attacker.reset_mana()
+        attacker.draw()
+        attacker.enable_attack()
+        self.show_battlefield()
+
+        # 出牌阶段
+        while True:
+            print("\n你的手牌：")
+            for i, c in enumerate(attacker.hand):
+                print(f"{i}: {c}")
+            print("\n指令：\nplay [序号] = 出牌\nattack [序号] = 攻击敌方单位\nattack hq = 攻击基地\nend = 结束回合")
+            cmd = input("请输入指令：").strip().split()
+
+            if not cmd:
+                continue
+
+            # 结束回合
+            if cmd[0] == "end":
+                break
+
+            # 出牌
+            if cmd[0] == "play" and len(cmd) >= 2:
+                try:
+                    idx = int(cmd[1])
+                    if attacker.play_card(idx):
+                        print("出牌成功！")
+                        self.show_battlefield()
+                    else:
+                        print("费用不足或无效卡牌")
+                except:
+                    print("输入错误")
+
+            # 攻击
+            if cmd[0] == "attack" and len(cmd) >= 2:
+                if not attacker.field:
+                    print("没有单位可以攻击！")
+                    continue
+
+                # 攻击基地
+                if cmd[1] == "hq":
+                    damage = sum(u.attack for u in attacker.field if u.can_attack)
+                    defender.hp -= damage
+                    print(f"对敌方基地造成 {damage} 点伤害！")
+                    for u in attacker.field:
+                        u.can_attack = False
+                    self.show_battlefield()
+                    if defender.hp <= 0:
+                        return
+
+                # 攻击单位
+                else:
+                    try:
+                        atk_idx = int(cmd[1])
+                        if atk_idx < 0 or atk_idx >= len(attacker.field):
+                            print("无此单位")
+                            continue
+                        atk_unit = attacker.field[atk_idx]
+                        if not atk_unit.can_attack:
+                            print("该单位不能攻击")
+                            continue
+
+                        print("敌方单位：")
+                        for i, u in enumerate(defender.field):
+                            print(f"{i}: {u.name}({u.attack}/{u.health})")
+                        def_idx = int(input("选择目标："))
+                        if def_idx < 0 or def_idx >= len(defender.field):
+                            continue
+                        def_unit = defender.field[def_idx]
+
+                        # 互相造成伤害
+                        atk_unit.take_damage(def_unit.attack)
+                        def_unit.take_damage(atk_unit.attack)
+                        atk_unit.can_attack = False
+                        print(f"{atk_unit.name} ↔ {def_unit.name} 交换伤害！")
+
+                        # 清理死亡单位
+                        attacker.field = [u for u in attacker.field if u.is_alive()]
+                        defender.field = [u for u in defender.field if u.is_alive()]
+                        self.show_battlefield()
+                    except:
+                        print("输入错误")
+
+    # 检查游戏是否结束
+    def is_game_over(self):
+        if self.p1.hp <= 0:
+            print(f"\n{self.p2.name} 胜利！")
+            return True
+        if self.p2.hp <= 0:
+            print(f"\n{self.p1.name} 胜利！")
+            return True
+        return False
+
+    # 主循环
+    def run(self):
+        self.start_game()
+        while True:
+            self.player_turn(self.p1, self.p2)
+            if self.is_game_over():
+                break
+            self.player_turn(self.p2, self.p1)
+            if self.is_game_over():
+                break
+            self.turn += 1
+
+# 启动游戏
+if __name__ == "__main__":
+    game = KardsGame("玩家", "电脑")
+    game.run()
