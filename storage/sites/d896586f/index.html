@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页版3D我的世界体素建造器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: "微软雅黑", sans-serif;
+        }
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        .ui-panel {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            background: rgba(0,0,0,0.65);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            backdrop-filter: blur(6px);
+            z-index: 99;
+        }
+        .tip {
+            font-size: 14px;
+            margin-top: 8px;
+            color: #ccc;
+        }
+        .tool-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 12px;
+            backdrop-filter: blur(6px);
+            z-index: 99;
+        }
+        .block-item {
+            width: 50px;
+            height: 50px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .block-item.active {
+            border-color: #fff;
+        }
+        .generate-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            padding: 10px 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            z-index: 99;
+        }
+        .generate-btn:hover {
+            background: #388E3C;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui-panel">
+        <h3>网页3D方块建造器</h3>
+        <div class="tip">WASD移动 | 鼠标旋转视角 | 空格跳跃 | 右键删除方块 | 滚轮切换方块</div>
+    </div>
+    <button class="generate-btn" id="genTerrain">一键生成精美地形</button>
+    <div class="tool-bar">
+        <div class="block-item active" data-id="grass" style="background:#67C240;"></div>
+        <div class="block-item" data-id="stone" style="background:#888888;"></div>
+        <div class="block-item" data-id="wood" style="background:#8B4513;"></div>
+        <div class="block-item" data-id="glass" style="background:rgba(135,206,235,0.4);"></div>
+        <div class="block-item" data-id="lava" style="background:#FF4500;"></div>
+    </div>
+
+    <!-- 引入Three.js 3D引擎 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script>
+        // 全局基础配置
+        const BLOCK_SIZE = 1;
+        const WORLD_SIZE = 64;
+        let scene, camera, renderer;
+        let player, playerBody;
+        let raycaster = new THREE.Raycaster();
+        let pointer = new THREE.Vector2();
+        let blocks = new Map(); // 存储所有方块坐标：key=x,y,z  value=网格模型
+        let currentBlockId = "grass";
+        let playerMove = { forward: false, backward: false, left: false, right: false, jump: false };
+        let playerVelocity = new THREE.Vector3();
+        let gravity = -0.03;
+        let jumpForce = 0.7;
+        let isOnGround = false;
+
+        // 方块材质定义
+        const blockMaterials = {
+            grass: new THREE.MeshLambertMaterial({ color: 0x67C240 }),
+            stone: new THREE.MeshLambertMaterial({ color: 0x888888 }),
+            wood: new THREE.MeshLambertMaterial({ color: 0x8B4513 }),
+            glass: new THREE.MeshLambertMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.4 }),
+            lava: new THREE.MeshLambertMaterial({ color: 0xFF4500 })
+        };
+
+        // 方块几何体
+        const blockGeo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+        // 初始化场景
+        function init() {
+            // 场景
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 120);
+
+            // 相机（第一人称）
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 20, 0);
+
+            // 渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // 光照
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            sunLight.position.set(50, 80, 30);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            // 天空盒子
+            const skyGeo = new THREE.SphereGeometry(500, 32, 32);
+            const skyMat = new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide });
+            const sky = new THREE.Mesh(skyGeo, skyMat);
+            scene.add(sky);
+
+            // 玩家控制器初始化
+            initPlayerControl();
+            // 绑定UI事件
+            bindUIEvent();
+            // 初始生成基础平原
+            generateFlatTerrain();
+            // 动画循环
+            animate();
+        }
+
+        // 玩家移动、鼠标视角控制
+        function initPlayerControl() {
+            // 锁定鼠标指针
+            renderer.domElement.addEventListener('click', () => {
+                renderer.domElement.requestPointerLock();
+            });
+
+            // 鼠标旋转视角
+            document.addEventListener('mousemove', (e) => {
+                if(document.pointerLockElement !== renderer.domElement) return;
+                const moveX = e.movementX * 0.002;
+                const moveY = e.movementY * 0.002;
+                camera.rotation.y -= moveX;
+                camera.rotation.x -= moveY;
+                camera.rotation.x = THREE.MathUtils.clamp(camera.rotation.x, -Math.PI/2, Math.PI/2);
+            });
+
+            // 键盘移动控制
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': playerMove.forward = true; break;
+                    case 'KeyS': playerMove.backward = true; break;
+                    case 'KeyA': playerMove.left = true; break;
+                    case 'KeyD': playerMove.right = true; break;
+                    case 'Space': playerMove.jump = true; break;
+                    case 'ShiftLeft': gravity = -0.08; break;
+                }
+            });
+            document.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': playerMove.forward = false; break;
+                    case 'KeyS': playerMove.backward = false; break;
+                    case 'KeyA': playerMove.left = false; break;
+                    case 'KeyD': playerMove.right = false; break;
+                    case 'Space': playerMove.jump = false; break;
+                    case 'ShiftLeft': gravity = -0.03; break;
+                }
+            });
+
+            // 鼠标左键放置方块，右键删除方块
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                if(document.pointerLockElement !== renderer.domElement) return;
+                pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+                pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(pointer, camera);
+                const intersects = raycaster.intersectObjects(Array.from(blocks.values()));
+                if(intersects.length > 0) {
+                    const hitBlock = intersects[0].object;
+                    const faceNormal = intersects[0].face.normal;
+                    const pos = hitBlock.position.clone().add(faceNormal);
+                    const key = `${pos.x},${pos.y},${pos.z}`;
+                    if(e.button === 0) { // 左键放置方块
+                        placeBlock(pos, currentBlockId);
+                    } else if(e.button === 2) { // 右键删除方块
+                        removeBlock(hitBlock.position);
+                    }
+                }
+            });
+
+            // 滚轮切换方块
+            renderer.domElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const blocksList = Array.from(document.querySelectorAll('.block-item'));
+                let index = blocksList.findIndex(item => item.classList.contains('active'));
+                index += e.deltaY > 0 ? 1 : -1;
+                if(index < 0) index = blocksList.length - 1;
+                if(index >= blocksList.length) index = 0;
+                blocksList.forEach(item => item.classList.remove('active'));
+                blocksList[index].classList.add('active');
+                currentBlockId = blocksList[index].dataset.id;
+            });
+
+            // 禁止右键菜单
+            renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        // 放置方块
+        function placeBlock(pos, blockId) {
+            const key = `${pos.x},${pos.y},${pos.z}`;
+            if(blocks.has(key)) return;
+            const mat = blockMaterials[blockId];
+            const mesh = new THREE.Mesh(blockGeo, mat);
+            mesh.position.copy(pos);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            blocks.set(key, mesh);
+        }
+
+        // 删除方块
+        function removeBlock(pos) {
+            const key = `${pos.x},${pos.y},${pos.z}`;
+            if(!blocks.has(key)) return;
+            const mesh = blocks.get(key);
+            scene.remove(mesh);
+            blocks.delete(key);
+        }
+
+        // 基础平原地形生成
+        function generateFlatTerrain() {
+            clearAllBlocks();
+            for(let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
+                for(let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
+                    placeBlock(new THREE.Vector3(x, 0, z), "grass");
+                    placeBlock(new THREE.Vector3(x, -1, z), "stone");
+                }
+            }
+        }
+
+        // 一键生成精美随机山地溶洞地形
+        function generateBeautifulTerrain() {
+            clearAllBlocks();
+            const noise = (x,z) => {
+                let h = Math.sin(x*0.15)*8 + Math.cos(z*0.12)*6;
+                h += Math.sin(x*0.06 + z*0.06)*12;
+                return Math.floor(h);
+            };
+            for(let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
+                for(let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
+                    const height = noise(x,z);
+                    // 地表草方块
+                    placeBlock(new THREE.Vector3(x, height, z), "grass");
+                    // 地下石头层
+                    for(let y = height-1; y > height-6; y--) {
+                        placeBlock(new THREE.Vector3(x, y, z), "stone");
+                    }
+                    // 随机溶洞岩浆
+                    if(Math.random() < 0.02 && height < 5) {
+                        placeBlock(new THREE.Vector3(x, height-3, z), "lava");
+                    }
+                    // 随机树木
+                    if(Math.random() < 0.008) {
+                        const treeY = height + 1;
+                        // 树干
+                        for(let y = treeY; y < treeY+6; y++) {
+                            placeBlock(new THREE.Vector3(x, y, z), "wood");
+                        }
+                        // 树叶玻璃方块
+                        for(let ox = -2; ox <=2; ox++) {
+                            for(let oz = -2; oz <=2; oz++) {
+                                if(Math.abs(ox)+Math.abs(oz) <=2) {
+                                    placeBlock(new THREE.Vector3(x+ox, treeY+6, z+oz), "glass");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 清空全部方块
+        function clearAllBlocks() {
+            blocks.forEach(mesh => scene.remove(mesh));
+            blocks.clear();
+        }
+
+        // 绑定UI按钮事件
+        function bindUIEvent() {
+            // 方块快捷栏点击切换
+            document.querySelectorAll('.block-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.block-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    currentBlockId = item.dataset.id;
+                });
+            });
+            // 生成地形按钮
+            document.getElementById('genTerrain').addEventListener('click', generateBeautifulTerrain);
+            // 窗口自适应
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // 玩家物理移动逻辑
+        function updatePlayerPhysics() {
+            const speed = 0.12;
+            playerVelocity.y += gravity;
+            if(playerMove.jump && isOnGround) {
+                playerVelocity.y = jumpForce;
+                isOnGround = false;
+            }
+            // 移动方向计算
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            dir.y = 0;
+            dir.normalize();
+            const rightDir = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+
+            if(playerMove.forward) camera.position.addScaledVector(dir, speed);
+            if(playerMove.backward) camera.position.addScaledVector(dir, -speed);
+            if(playerMove.left) camera.position.addScaledVector(rightDir, -speed);
+            if(playerMove.right) camera.position.addScaledVector(rightDir, speed);
+
+            // 地面检测
+            const groundRay = new THREE.Raycaster(camera.position, new THREE.Vector3(0,-1,0));
+            const groundHit = groundRay.intersectObjects(Array.from(blocks.values()));
+            isOnGround = groundHit.length > 0 && groundHit[0].distance < 1.8;
+            if(isOnGround) playerVelocity.y = Math.max(playerVelocity.y, 0);
+
+            camera.position.y += playerVelocity.y;
+        }
+
+        // 渲染循环
+        function animate() {
+            requestAnimationFrame(animate);
+            updatePlayerPhysics();
+            renderer.render(scene, camera);
+        }
+
+        // 启动程序
+        init();
+    </script>
+</body>
+</html>

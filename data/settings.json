@@ -1,3 +1,6 @@
 {
-  "allPassword": "276238"
+  "allPassword": "276238",
+  "allPasswordEnabled": true,
+  "forbiddenWords": [],
+  "lastUsedSiteNumber": 115
 }
