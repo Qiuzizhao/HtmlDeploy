@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -244,7 +243,6 @@
         ⚔️ 王
         <small>后羿 vs 亚瑟</small>
     </h1>
-    <!-- 状态面板 -->
     <div class="status-board">
         <div class="hero-stat">
             <div class="name"><span>🏹 后羿</span> <span class="tag">玩家</span></div>
@@ -257,8 +255,6 @@
             <div class="hp-text"><span id="enemyHpText">3500/3500</span><span>⚔️ 320</span></div>
         </div>
     </div>
-
-    <!-- 操作按钮 -->
     <div class="action-panel">
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 6px;">
             <span style="color:#c9bda2;">⚡ 你的回合</span>
@@ -271,14 +267,10 @@
             <button class="action-btn heal" data-action="4">🏠 回城</button>
         </div>
     </div>
-
-    <!-- 战斗日志 -->
     <div class="log-area" id="logContainer">
         <div>⚔️ 王者对决 · 后羿 vs 亚瑟</div>
         <div>💬 选择你的行动</div>
     </div>
-
-    <!-- 重置 -->
     <div class="reset-area">
         <button class="reset-btn" id="resetBtn">🔄 重新开局</button>
     </div>
@@ -287,14 +279,11 @@
 
 <script>
     (function() {
-        // ---------- 英雄状态 ----------
         let player = {};
         let enemy = {};
-        let round = 1;
         let gameOver = false;
-        let isProcessing = false;   // 防止连点
+        let isProcessing = false;
 
-        // DOM 元素
         const playerHpFill = document.getElementById('playerHpFill');
         const enemyHpFill = document.getElementById('enemyHpFill');
         const playerHpText = document.getElementById('playerHpText');
@@ -304,7 +293,6 @@
         const actionBtns = document.querySelectorAll('[data-action]');
         const resetBtn = document.getElementById('resetBtn');
 
-        // ---------- 初始化 ----------
         function initHeroes() {
             player = {
                 name: '后羿',
@@ -324,7 +312,6 @@
                 ult: 2.9,
                 cdUlt: 0
             };
-            round = 1;
             gameOver = false;
             isProcessing = false;
             updateUI();
@@ -335,17 +322,13 @@
             addLog('💬 选择你的行动');
         }
 
-        // ---------- UI 更新 ----------
         function updateUI() {
-            // 玩家血量
             const pHpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
             playerHpFill.style.width = pHpPercent + '%';
             playerHpText.textContent = `${Math.max(0, player.hp)}/${player.maxHp}`;
-            // 敌方血量
             const eHpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
             enemyHpFill.style.width = eHpPercent + '%';
             enemyHpText.textContent = `${Math.max(0, enemy.hp)}/${enemy.maxHp}`;
-            // 冷却显示
             updateUltDisplay();
         }
 
@@ -365,7 +348,6 @@
             });
         }
 
-        // ---------- 日志 ----------
         function addLog(message, isCrit = false) {
             const div = document.createElement('div');
             if (isCrit) {
@@ -375,7 +357,6 @@
             }
             logContainer.appendChild(div);
             logContainer.scrollTop = logContainer.scrollHeight;
-            // 限制日志数量
             while (logContainer.children.length > 30) {
                 logContainer.removeChild(logContainer.firstChild);
             }
@@ -385,7 +366,6 @@
             logContainer.innerHTML = '';
         }
 
-        // ---------- 伤害计算 (暴击) ----------
         function calcDamage(baseAtk, rate) {
             let dmg = baseAtk * rate;
             const crit = Math.random() < 0.25;
@@ -396,13 +376,11 @@
             return { damage: Math.round(dmg), crit: false };
         }
 
-        // ---------- AI 行动 ----------
         function aiTurn() {
             if (gameOver) return;
-            // 冷却递减已在外部处理
             let skillRoll = Math.random();
             if (enemy.cdUlt > 0) {
-                skillRoll = 0.6;  // 避免放大招
+                skillRoll = 0.6;
             }
             let dmgObj;
             let actionMsg = '';
@@ -417,22 +395,17 @@
                 enemy.cdUlt = 3;
                 actionMsg = `亚瑟圣剑大招劈砍！造成 ${dmgObj.damage} 巨额伤害，大招冷却3回合`;
             }
-            // 扣血
             player.hp = Math.max(0, player.hp - dmgObj.damage);
             const critTag = dmgObj.crit ? ' 💥暴击！' : '';
             addLog(`👉 敌方亚瑟行动：${actionMsg}${critTag}`, dmgObj.crit);
             updateUI();
-
-            // 检查玩家死亡
             if (player.hp <= 0) {
                 gameOver = true;
                 addLog('❌ 战败！后羿被亚瑟击杀，挑战失败！');
                 enableActions(false);
-                return;
             }
         }
 
-        // ---------- 玩家行动处理 ----------
         function handlePlayerAction(actionId) {
             if (gameOver || isProcessing) return;
             if (player.hp <= 0 || enemy.hp <= 0) {
@@ -440,27 +413,24 @@
                 enableActions(false);
                 return;
             }
-
             isProcessing = true;
             enableActions(false);
 
-            // 根据action执行
             let dmgObj = null;
             let actionMsg = '';
-            let skipAi = false;
 
             switch (actionId) {
-                case 1: // 普攻
+                case 1:
                     dmgObj = calcDamage(player.atk, 1);
                     enemy.hp = Math.max(0, enemy.hp - dmgObj.damage);
                     actionMsg = `后羿普攻射出箭矢，造成 ${dmgObj.damage} 点伤害！`;
                     break;
-                case 2: // 一技能
+                case 2:
                     dmgObj = calcDamage(player.atk, player.skill1);
                     enemy.hp = Math.max(0, enemy.hp - dmgObj.damage);
                     actionMsg = `后羿开启一技能分裂箭，造成 ${dmgObj.damage} 点伤害！`;
                     break;
-                case 3: // 大招
+                case 3:
                     if (player.cdUlt > 0) {
                         addLog(`⛔ 大招冷却中，还剩 ${player.cdUlt} 回合，换技能！`);
                         isProcessing = false;
@@ -472,26 +442,24 @@
                     player.cdUlt = 3;
                     actionMsg = `后羿大鸟命中亚瑟，巨额伤害 ${dmgObj.damage} ！大招进入3回合冷却`;
                     break;
-                case 4: // 回城
+                case 4:
                     const heal = Math.round(player.maxHp * 0.3);
                     player.hp = Math.min(player.hp + heal, player.maxHp);
                     actionMsg = `后羿原地回城，恢复 ${heal} 血量，当前血量 ${player.hp}`;
-                    skipAi = true;  // 回城不触发AI攻击（原版回城后AI不攻击？但原代码回城后AI仍会行动，保留原玩法：回城后AI继续行动）
-                    // 原代码回城后AI仍然行动，所以不skipAi
                     break;
-                default: return;
+                default:
+                    isProcessing = false;
+                    enableActions(true);
+                    return;
             }
 
-            // 暴击附加
             const critTag = (dmgObj && dmgObj.crit) ? ' 💥暴击！' : '';
             if (actionMsg) {
                 addLog(`🏹 ${actionMsg}${critTag}`, dmgObj ? dmgObj.crit : false);
             }
-
             updateUI();
             updateUltDisplay();
 
-            // 检查敌方死亡
             if (enemy.hp <= 0) {
                 gameOver = true;
                 addLog('✅ 胜利！亚瑟血量归零，后羿拿下单挑胜利！');
@@ -500,148 +468,31 @@
                 return;
             }
 
-            // 冷却递减 (玩家回合结束)
             if (player.cdUlt > 0) player.cdUlt -= 1;
             if (enemy.cdUlt > 0) enemy.cdUlt -= 1;
 
-            // AI回合 (除非回血特殊？保留原样：AI总是行动)
             if (!gameOver) {
                 aiTurn();
-                // AI行动后再次检查冷却递减 (原逻辑在AI行动后统一减，但我们已经减过，为避免重复，AI内部已处理cd)
-                // 但原代码在AI行动后统一减，我们调整为：玩家回合结束减一次，AI行动后不再减，保持公平。
-                // 但原代码是每回合结束后统一减，我们改为玩家行动后减，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果AI没有放大，它的cd在上回合已经减过，保持一致。
-                // 但原代码在AI行动后统一减，我们调整为：玩家行动后减一次，AI行动后不减，但AI行动时可能自己设cd。
-                // 为了更贴近原逻辑：AI行动后不再全局减，因为玩家回合结束已经减过。
-                // 同时AI行动内如果放了大会设置cdUlt=3，不影响。
-                // 额外：如果
+            }
+            isProcessing = false;
+            if (!gameOver) {
+                enableActions(true);
+            }
+        }
+
+        actionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const action = parseInt(this.getAttribute('data-action'), 10);
+                handlePlayerAction(action);
+            });
+        });
+
+        resetBtn.addEventListener('click', function() {
+            initHeroes();
+        });
+
+        initHeroes();
+    })();
+</script>
+</body>
+</html>
