@@ -1,0 +1,142 @@
+import random
+import time
+
+class Student:
+    def __init__(self):
+        # 学生基础属性
+        self.name = "新生小明"
+        self.credit = 0        # 学分
+        self.money = 1500      # 生活费
+        self.health = 100      # 健康0~100
+        self.mood = 80         # 心情0~100
+        self.day = 1           # 当前在校天数
+        self.grade = "大一"
+
+    def show_status(self):
+        """展示当前人物状态"""
+        print("\n=====【第{}天 | {}在校生状态】=====".format(self.day, self.grade))
+        print(f"姓名：{self.name}｜学分：{self.credit}")
+        print(f"生活费：{self.money}元｜健康值：{self.health}")
+        print(f"心情值：{self.mood}")
+        print("====================================\n")
+
+    def random_event(self):
+        """校园随机突发事件"""
+        event_list = [
+            ("捡到150元零花钱", 0, 150, 5, 0),
+            ("发烧感冒去校医院", -2, -80, -25, -15),
+            ("社团抽奖中奖200", 0, 200, 10, 8),
+            ("考试挂科扣学分", -4, 0, -5, -20),
+            ("室友请客吃饭", 0, 0, 15, 12),
+            ("丢了200生活费", 0, -200, -10, -18)
+        ]
+        name, c, m, h, mo = random.choice(event_list)
+        print(f"【随机事件】{name}")
+        self.credit += c
+        self.money += m
+        self.health += h
+        self.mood += mo
+        # 属性边界限制
+        self.limit_attr()
+
+    def limit_attr(self):
+        """属性数值封顶保底"""
+        self.health = max(0, min(100, self.health))
+        self.mood = max(0, min(100, self.mood))
+        self.credit = max(0, self.credit)
+        if self.money < 0:
+            self.money = 0
+
+    def study_class(self):
+        """上课学习"""
+        print("\n>>> 前往教学楼上课学习")
+        gain_credit = random.randint(2, 6)
+        cost_health = random.randint(8, 18)
+        self.credit += gain_credit
+        self.health -= cost_health
+        self.mood -= 5
+        print(f"本次上课获得{gain_credit}学分，消耗体力，健康-{cost_health}")
+        self.limit_attr()
+
+    def eat_canteen(self):
+        """食堂吃饭"""
+        print("\n>>> 前往学校食堂就餐")
+        cost = random.randint(12, 35)
+        heal = random.randint(12, 28)
+        self.money -= cost
+        self.health += heal
+        self.mood += 6
+        print(f"食堂消费{cost}元，健康+{heal}")
+        self.limit_attr()
+
+    def join_club(self):
+        """参加社团活动"""
+        print("\n>>> 参加校园社团活动")
+        add_credit = random.randint(1, 3)
+        cost_hp = random.randint(5, 12)
+        self.credit += add_credit
+        self.health -= cost_hp
+        self.mood += 15
+        print(f"社团活动获得{add_credit}学分，心情大幅提升")
+        self.limit_attr()
+
+    def part_time(self):
+        """校内兼职打工"""
+        print("\n>>> 在校内勤工助学打工")
+        earn = random.randint(80, 220)
+        hp_down = random.randint(15, 30)
+        self.money += earn
+        self.health -= hp_down
+        self.mood -= 8
+        print(f"打工赚到{earn}元，但身体疲惫，健康-{hp_down}")
+        self.limit_attr()
+
+    def sleep_dorm(self):
+        """宿舍睡觉休息"""
+        print("\n>>> 返回宿舍睡觉休息")
+        hp_up = random.randint(25, 45)
+        mood_up = random.randint(8, 20)
+        self.health += hp_up
+        self.mood += mood_up
+        print(f"睡饱恢复健康+{hp_up}、心情+{mood_up}")
+        self.limit_attr()
+
+    def next_day(self):
+        """新的一天"""
+        self.day += 1
+        print("\n========= 天亮，新的一天开始 =========")
+        # 每天25%概率触发随机事件
+        if random.random() < 0.25:
+            self.random_event()
+
+def game_start():
+    print("========== 大学校园模拟器 V1.0 ==========")
+    print("操作指令：1上课 | 2吃饭 | 3社团 | 4打工 | 5睡觉 | 0结束当天 | exit退出游戏\n")
+    stu = Student()
+    while True:
+        stu.show_status()
+        if stu.health <= 0:
+            print("健康值归零，生病退学，游戏结束！")
+            break
+        op = input("请输入行动编号：")
+        if op == "1":
+            stu.study_class()
+        elif op == "2":
+            stu.eat_canteen()
+        elif op == "3":
+            stu.join_club()
+        elif op == "4":
+            stu.part_time()
+        elif op == "5":
+            stu.sleep_dorm()
+        elif op == "0":
+            stu.next_day()
+        elif op == "exit":
+            print("退出校园模拟器，本次在校{}天，最终学分：{}".format(stu.day, stu.credit))
+            break
+        else:
+            print("输入错误，请输入数字1~5、0或exit！")
+        time.sleep(0.3)
+
+if __name__ == "__main__":
+    game_start()
