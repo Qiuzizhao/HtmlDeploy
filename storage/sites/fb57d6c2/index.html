@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>地铁跑酷</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .game-title {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #ffcc00;
+            text-shadow: 0 0 5px #000;
+        }
+
+        .score-box {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        /* 游戏主画布 */
+        #game {
+            width: 500px;
+            height: 600px;
+            background: linear-gradient(to bottom, #7db6e7 0%, #4a7c2c 100%);
+            border: 4px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 角色 */
+        #player {
+            width: 50px;
+            height: 50px;
+            background: #ff3333;
+            border-radius: 8px;
+            position: absolute;
+            bottom: 120px;
+            left: 225px;
+            transition: left 0.15s ease;
+            z-index: 10;
+        }
+
+        /* 轨道线 */
+        .lane {
+            width: 100%;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            position: absolute;
+            bottom: 110px;
+        }
+        .lane1 { left: 33%; }
+        .lane2 { left: 66%; }
+
+        /* 障碍物 */
+        .obstacle {
+            width: 50px;
+            height: 50px;
+            background: #666666;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 120px;
+        }
+
+        /* 金币 */
+        .coin {
+            width: 30px;
+            height: 30px;
+            background: #ffdd00;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 130px;
+            box-shadow: 0 0 10px #ffaa00;
+        }
+
+        /* 游戏结束面板 */
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 40px;
+            border: 3px solid red;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 999;
+        }
+
+        .restart {
+            margin-top: 20px;
+            padding: 10px 25px;
+            background: #ff3333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .tips {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-title">地铁跑酷</div>
+    <div class="score-box">分数：<span id="score">0</span></div>
+    <div id="game">
+        <div id="player"></div>
+        <div class="lane lane1"></div>
+        <div class="lane lane2"></div>
+    </div>
+    <div class="tips">操作：↑/W 跳跃 | ↓/S 下蹲 | ←/A 左移 | →/D 右移</div>
+
+    <script>
+        const game = document.getElementById('game');
+        const player = document.getElementById('player');
+        const scoreEl = document.getElementById('score');
+
+        // 游戏数据
+        let score = 0;
+        let gameOver = false;
+        let playerLane = 2; // 1左 2中 3右
+        const lanes = [125, 225, 325]; // 三个轨道位置
+        let isJumping = false;
+        let isRolling = false;
+
+        // 角色移动到对应轨道
+        function moveLane(dir) {
+            if (gameOver || isRolling) return;
+            if (dir === 'left' && playerLane > 1) playerLane--;
+            if (dir === 'right' && playerLane < 3) playerLane++;
+            player.style.left = lanes[playerLane - 1] + 'px';
+        }
+
+        // 跳跃
+        function jump() {
+            if (isJumping || gameOver || isRolling) return;
+            isJumping = true;
+            let count = 0;
+            const jumpInterval = setInterval(() => {
+                if (count >= 15) {
+                    clearInterval(jumpInterval);
+                    const downInterval = setInterval(() => {
+                        if (count <= 0) {
+                            clearInterval(downInterval);
+                            isJumping = false;
+                        } else {
+                            count--;
+                            player.style.bottom = 120 + count * 5 + 'px';
+                        }
+                    }, 10);
+                } else {
+                    count++;
+                    player.style.bottom = 120 + count * 5 + 'px';
+                }
+            }, 10);
+        }
+
+        // 下蹲/翻滚
+        function roll() {
+            if (isRolling || gameOver) return;
+            isRolling = true;
+            player.style.height = '25px';
+            setTimeout(() => {
+                player.style.height = '50px';
+                isRolling = false;
+            }, 600);
+        }
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (gameOver) return;
+            switch (e.key) {
+                case 'ArrowUp': case 'w': case 'W': jump(); break;
+                case 'ArrowDown': case 's': case 'S': roll(); break;
+                case 'ArrowLeft': case 'a': case 'A': moveLane('left'); break;
+                case 'ArrowRight': case 'd': case 'D': moveLane('right'); break;
+            }
+        });
+
+        // 生成障碍物
+        function spawnObstacle() {
+            if (gameOver) return;
+            const obs = document.createElement('div');
+            obs.classList.add('obstacle');
+            const lane = Math.floor(Math.random() * 3) + 1;
+            obs.style.left = lanes[lane - 1] + 'px';
+            game.appendChild(obs);
+
+            // 障碍物移动
+            const obsInterval = setInterval(() => {
+                const top = parseInt(obs.style.top || 0);
+                obs.style.top = top + 6 + 'px';
+
+                // 碰撞检测
+                const pRect = player.getBoundingClientRect();
+                const oRect = obs.getBoundingClientRect();
+                if (!isJumping && !isRolling &&
+                    pRect.left < oRect.right - 5 &&
+                    pRect.right > oRect.left + 5 &&
+                    pRect.top < oRect.bottom - 5 &&
+                    pRect.bottom > oRect.top + 5) {
+                    endGame();
+                    clearInterval(obsInterval);
+                }
+
+                // 超出屏幕移除
+                if (top > 600) {
+                    obs.remove();
+                    clearInterval(obsInterval);
+                }
+            }, 10);
+        }
+
+        // 生成金币
+        function spawnCoin() {
+            if (gameOver) return;
+            const coin = document.createElement('div');
+            coin.classList.add('coin');
+            const lane = Math.floor(Math.random() * 3) + 1;
+            coin.style.left = lanes[lane - 1] + 10 + 'px';
+            game.appendChild(coin);
+
+            const coinInterval = setInterval(() => {
+                const top = parseInt(coin.style.top || 0);
+                coin.style.top = top + 6 + 'px';
+
+                // 吃金币
+                const pRect = player.getBoundingClientRect();
+                const cRect = coin.getBoundingClientRect();
+                if (
+                    pRect.left < cRect.right &&
+                    pRect.right > cRect.left &&
+                    pRect.top < cRect.bottom &&
+                    pRect.bottom > cRect.top
+                ) {
+                    score += 10;
+                    scoreEl.innerText = score;
+                    coin.remove();
+                    clearInterval(coinInterval);
+                }
+
+                if (top > 600) {
+                    coin.remove();
+                    clearInterval(coinInterval);
+                }
+            }, 10);
+        }
+
+        // 自动生成道具
+        setInterval(spawnObstacle, 1200);
+        setInterval(spawnCoin, 500);
+
+        // 自动加分
+        setInterval(() => {
+            if (!gameOver) {
+                score++;
+                scoreEl.innerText = score;
+            }
+        }, 100);
+
+        // 游戏结束
+        function endGame() {
+            gameOver = true;
+            const over = document.createElement('div');
+            over.className = 'game-over';
+            over.innerHTML = `
+                <h2>游戏结束</h2>
+                <p>最终分数：${score}</p>
+                <button class="restart" onclick="location.reload()">重新开始</button>
+            `;
+            document.body.appendChild(over);
+        }
+    </script>
+</body>
+</html>
