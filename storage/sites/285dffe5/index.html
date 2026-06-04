@@ -1,190 +1,545 @@
-import random
-import os
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗区突围 · 控制台小游戏</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0b0e14;
+            color: #c8d6e5;
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .game-container {
+            max-width: 720px;
+            width: 100%;
+            background: #1a1f2b;
+            border-radius: 24px;
+            padding: 24px 20px 32px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+            border: 1px solid #2f3a4a;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px dashed #3e4b5e;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            color: #f5c842;
+            text-shadow: 0 0 6px #b8860b;
+        }
+        .header .sub {
+            color: #8a9bb5;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .status-bar {
+            background: #0f131c;
+            padding: 12px 16px;
+            border-radius: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            border: 1px solid #2f3a4a;
+            margin-bottom: 18px;
+            font-size: 0.95rem;
+        }
+        .status-item {
+            background: #1e2635;
+            padding: 4px 12px;
+            border-radius: 30px;
+            margin: 4px 0;
+        }
+        .status-item span {
+            color: #b3c7e5;
+        }
+        .badge {
+            color: #f5c842;
+            font-weight: bold;
+        }
+        .log-area {
+            background: #0b0e14;
+            border-radius: 16px;
+            padding: 16px 18px;
+            min-height: 180px;
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid #2b3547;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .log-area .highlight {
+            color: #f5c842;
+        }
+        .log-area .danger {
+            color: #e74c5e;
+        }
+        .log-area .success {
+            color: #2ecc71;
+        }
+        .log-area .info {
+            color: #5dade2;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .action-btn {
+            background: #232b3d;
+            border: 1px solid #3a465c;
+            color: #d0def0;
+            padding: 12px 0;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+            font-family: inherit;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 0 #0f131c;
+        }
+        .action-btn:hover:not(:disabled) {
+            background: #2f3b52;
+            border-color: #f5c842;
+            color: #f5c842;
+            transform: scale(0.97);
+        }
+        .action-btn:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.6);
+        }
+        .action-btn.primary {
+            background: #3d4d2b;
+            border-color: #6b8c42;
+            color: #d8f0b0;
+        }
+        .action-btn.primary:hover:not(:disabled) {
+            background: #4f6638;
+            border-color: #a8d46a;
+        }
+        .action-btn.danger {
+            background: #4d2b2b;
+            border-color: #8c4242;
+            color: #f0b0b0;
+        }
+        .action-btn.danger:hover:not(:disabled) {
+            background: #663838;
+            border-color: #d46a6a;
+        }
+        .action-btn.full {
+            grid-column: span 2;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #5b6a7e;
+            border-top: 1px solid #2a3345;
+            padding-top: 14px;
+        }
+        .footer button {
+            background: transparent;
+            border: 1px solid #3e4b5e;
+            color: #b0c4de;
+            padding: 6px 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.1s;
+        }
+        .footer button:hover {
+            background: #2a3345;
+            color: #f5c842;
+            border-color: #f5c842;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f131c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a465c;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="app">
+    <div class="header">
+        <h1>⚔ 暗区突围</h1>
+        <div class="sub">控制台 · 单兵战术</div>
+    </div>
 
-# 清屏函数（适配Windows和Mac/Linux）
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    <!-- 状态栏 -->
+    <div class="status-bar" id="statusBar">
+        <div class="status-item">❤️ <span id="hpDisplay">100</span>/<span id="maxHpDisplay">100</span></div>
+        <div class="status-item">🔫 <span id="weaponDisplay">小刀</span></div>
+        <div class="status-item">🎒 <span id="backpackCount">0</span>件</div>
+        <div class="status-item">📍 <span id="positionDisplay">农场出生点</span></div>
+    </div>
 
-# 游戏数据配置
-WEAPONS = [
-    "小刀", "手枪", "冲锋枪", "步枪", "狙击枪"
-]
-LOOTS = [
-    "医疗包", "止痛药", "子弹", "现金", "高级配件", "加密文档", "金条"
-]
-ENEMIES = [
-    "游荡者", "精英游荡者", "特遣队员"
-]
+    <!-- 日志区域 -->
+    <div class="log-area" id="logArea">
+        <span class="info">🔹 欢迎回来，特遣队员。</span><br>
+        <span>输入指令开始行动。</span>
+    </div>
 
-# 玩家状态
-player = {
-    "hp": 100,
-    "max_hp": 100,
-    "weapon": "小刀",
-    "backpack": [],
-    "warehouse": [],  # 成功撤离后存入仓库
-    "position": "农场出生点"
-}
+    <!-- 操作按钮 (动态启用/禁用) -->
+    <div class="action-grid" id="actionGrid">
+        <button class="action-btn" data-action="move">🚶 移动</button>
+        <button class="action-btn" data-action="search">🔍 搜索</button>
+        <button class="action-btn" data-action="rest">💤 休息</button>
+        <button class="action-btn primary" data-action="evacuate">🏁 撤离</button>
+        <button class="action-btn danger full" data-action="giveup">✖ 放弃本局</button>
+    </div>
 
-# 游戏主菜单
-def main_menu():
-    clear_screen()
-    print("=" * 40)
-    print("     暗区突围 - 控制台小游戏")
-    print("=" * 40)
-    print(f"当前仓库物资数量：{len(player['warehouse'])} 件")
-    print("1. 开始游戏")
-    print("2. 查看仓库")
-    print("3. 退出游戏")
-    print("=" * 40)
-    choice = input("请选择操作：")
-    if choice == "1":
-        start_game()
-    elif choice == "2":
-        check_warehouse()
-    elif choice == "3":
-        print("感谢游玩！")
-        exit()
-    else:
-        input("输入错误，按回车返回...")
-        main_menu()
+    <!-- 底部：仓库 & 重置 -->
+    <div class="footer">
+        <span>🏚 仓库 <strong id="warehouseCount">0</strong> 件</span>
+        <button id="warehouseBtn">📦 查看仓库</button>
+        <button id="resetBtn">🔄 新游戏</button>
+    </div>
+</div>
 
-# 查看仓库
-def check_warehouse():
-    clear_screen()
-    print("=" * 30)
-    print("        个人仓库")
-    print("=" * 30)
-    if not player["warehouse"]:
-        print("仓库空空如也，快去撤离获取物资吧！")
-    else:
-        for i, item in enumerate(player["warehouse"], 1):
-            print(f"{i}. {item}")
-    input("\n按回车返回主菜单...")
-    main_menu()
+<script>
+    (function() {
+        // ---------- 游戏数据 ----------
+        const WEAPONS = ["小刀", "手枪", "冲锋枪", "步枪", "狙击枪"];
+        const LOOTS = ["医疗包", "止痛药", "子弹", "现金", "高级配件", "加密文档", "金条"];
+        const ENEMIES = ["游荡者", "精英游荡者", "特遣队员"];
 
-# 开始游戏
-def start_game():
-    clear_screen()
-    # 重置本局状态
-    player["hp"] = player["max_hp"]
-    player["backpack"] = []
-    player["weapon"] = random.choice(["小刀", "手枪"])
-    player["position"] = "农场平房区"
-    
-    print("=" * 40)
-    print("        游戏开始！")
-    print(f"当前位置：{player['position']}")
-    print(f"生命值：{player['hp']}  武器：{player['weapon']}")
-    print(f"背包：空")
-    print("=" * 40)
-    game_loop()
+        // ---------- 玩家状态 (响应式对象) ----------
+        const player = {
+            hp: 100,
+            max_hp: 100,
+            weapon: "小刀",
+            backpack: [],
+            warehouse: [],
+            position: "农场出生点"
+        };
 
-# 游戏主循环
-def game_loop():
-    while True:
-        print(f"\n【当前位置】{player['position']}")
-        print(f"【状态】HP：{player['hp']} | 武器：{player['weapon']} | 背包物资：{len(player['backpack'])}件")
-        print("1. 移动区域")
-        print("2. 搜索物资")
-        print("3. 休息回血")
-        print("4. 尝试撤离")
-        print("5. 放弃本局")
-        
-        choice = input("请选择行动：")
-        
-        if choice == "1":
-            move()
-        elif choice == "2":
-            search_loot()
-        elif choice == "3":
-            rest()
-        elif choice == "4":
-            evacuate()
-            break
-        elif choice == "5":
-            print("你放弃了本局，背包物资全部丢失！")
-            input("按回车返回主菜单...")
-            main_menu()
-            break
-        else:
-            print("输入错误，请重新选择！")
-        
-        # 随机触发敌人
-        if random.randint(1, 3) == 1:
-            enemy_encounter()
-            if player["hp"] <= 0:
-                print("你被击败了！背包物资全部丢失！")
-                input("按回车返回主菜单...")
-                main_menu()
-                break
+        // ---------- DOM 引用 ----------
+        const logArea = document.getElementById('logArea');
+        const hpDisplay = document.getElementById('hpDisplay');
+        const maxHpDisplay = document.getElementById('maxHpDisplay');
+        const weaponDisplay = document.getElementById('weaponDisplay');
+        const backpackCount = document.getElementById('backpackCount');
+        const positionDisplay = document.getElementById('positionDisplay');
+        const warehouseCount = document.getElementById('warehouseCount');
 
-# 移动区域
-def move():
-    positions = ["农场平房区", "谷物交易站", "装卸区", "民宅区", "撤离点附近"]
-    player["position"] = random.choice(positions)
-    print(f"你移动到了：{player['position']}")
+        const actionBtns = document.querySelectorAll('[data-action]');
+        const warehouseBtn = document.getElementById('warehouseBtn');
+        const resetBtn = document.getElementById('resetBtn');
 
-# 搜索物资
-def search_loot():
-    clear_screen()
-    print("正在搜索物资...")
-    loot = random.choice(LOOTS)
-    player["backpack"].append(loot)
-    print(f"你找到了：【{loot}】，已放入背包！")
-    
-    # 小概率获得武器
-    if random.randint(1, 5) == 1:
-        new_weapon = random.choice(WEAPONS)
-        if WEAPONS.index(new_weapon) > WEAPONS.index(player["weapon"]):
-            player["weapon"] = new_weapon
-            print(f"恭喜！你捡到了更好的武器：{new_weapon}")
+        // ---------- 辅助函数 ----------
+        function clearScreen() {
+            // 视觉清屏：重置日志区域 (保留欢迎语风格)
+            logArea.innerHTML = '';
+        }
 
-# 休息回血
-def rest():
-    if player["hp"] >= player["max_hp"]:
-        print("生命值已满，无需休息！")
-        return
-    heal = random.randint(10, 30)
-    player["hp"] = min(player["hp"] + heal, player["max_hp"])
-    print(f"你休息了一会，恢复了{heal}点生命值！当前HP：{player['hp']}")
+        // 更新所有UI状态
+        function refreshUI() {
+            hpDisplay.textContent = player.hp;
+            maxHpDisplay.textContent = player.max_hp;
+            weaponDisplay.textContent = player.weapon;
+            backpackCount.textContent = player.backpack.length;
+            positionDisplay.textContent = player.position;
+            warehouseCount.textContent = player.warehouse.length;
+        }
 
-# 遭遇敌人
-def enemy_encounter():
-    clear_screen()
-    enemy = random.choice(ENEMIES)
-    print(f"\n⚠️ 遭遇敌人！【{enemy}】向你发起攻击！")
-    
-    # 战斗判定
-    player_power = WEAPONS.index(player["weapon"]) + 1
-    enemy_power = random.randint(1, 4)
-    
-    if player_power > enemy_power:
-        print(f"你击败了{enemy}！")
-        loot = random.choice(LOOTS)
-        player["backpack"].append(loot)
-        print(f"缴获物资：{loot}")
-    else:
-        damage = random.randint(30, 60)
-        player["hp"] -= damage
-        print(f"战斗失败！受到{damage}点伤害！剩余HP：{player['hp']}")
+        // 追加日志 (支持html片段)
+        function addLog(message, className = '') {
+            const line = document.createElement('div');
+            line.innerHTML = message;
+            if (className) {
+                line.className = className;
+            }
+            logArea.appendChild(line);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
 
-# 撤离
-def evacuate():
-    clear_screen()
-    print("正在前往撤离点...")
-    # 撤离成功率70%
-    if random.randint(1, 10) <= 7:
-        print("✅ 撤离成功！")
-        print(f"本局带回物资：{player['backpack']}")
-        # 物资存入仓库
-        player["warehouse"].extend(player["backpack"])
-    else:
-        print("❌ 撤离失败！被埋伏的敌人袭击！")
-        print("背包物资全部丢失！")
-    input("按回车返回主菜单...")
-    main_menu()
+        // 清屏并输出标题 (类似原版clear_screen效果)
+        function resetLogScreen(title) {
+            clearScreen();
+            const sep = document.createElement('div');
+            sep.textContent = '═'.repeat(30);
+            logArea.appendChild(sep);
+            if (title) {
+                const titleEl = document.createElement('div');
+                titleEl.textContent = title;
+                titleEl.style.fontWeight = 'bold';
+                titleEl.style.color = '#f5c842';
+                logArea.appendChild(titleEl);
+            }
+            logArea.appendChild(sep.cloneNode(true));
+        }
 
-# 启动游戏
-if __name__ == "__main__":
-    main_menu()
+        // 重置本局 (不丢失仓库)
+        function resetRound() {
+            player.hp = player.max_hp;
+            player.backpack = [];
+            // 初始武器随机 小刀或手枪
+            player.weapon = Math.random() < 0.5 ? "小刀" : "手枪";
+            player.position = "农场平房区";
+            refreshUI();
+            resetLogScreen('        游戏开始！');
+            addLog(`📍 当前位置：${player.position}`);
+            addLog(`❤️ 生命值：${player.hp}   🔫 武器：${player.weapon}`);
+            addLog(`🎒 背包：空`);
+            addLog('─'.repeat(28));
+            enableActions(true);
+        }
+
+        // 返回主菜单 (重置日志，显示仓库数量)
+        function returnToMainMenu(message) {
+            if (message) {
+                addLog(message);
+            }
+            // 显示主菜单风格
+            resetLogScreen('     暗区突围 · 控制台');
+            addLog(`🏚 当前仓库物资数量：<strong>${player.warehouse.length}</strong> 件`);
+            addLog('1. 开始游戏  2. 查看仓库  3. 退出游戏');
+            addLog('点击下方按钮操作 ↓');
+            // 禁用游戏动作，启用“新游戏”和“仓库”
+            enableActions(false);
+            refreshUI();
+        }
+
+        // 启用/禁用游戏内动作按钮 (移动,搜索,休息,撤离,放弃)
+        function enableActions(active) {
+            actionBtns.forEach(btn => {
+                btn.disabled = !active;
+            });
+        }
+
+        // ---------- 核心游戏逻辑 ----------
+        function move() {
+            const positions = ["农场平房区", "谷物交易站", "装卸区", "民宅区", "撤离点附近"];
+            const newPos = positions[Math.floor(Math.random() * positions.length)];
+            player.position = newPos;
+            refreshUI();
+            addLog(`🚶 你移动到了：<span class="highlight">${newPos}</span>`);
+            // 移动后随机遭遇敌人 (30%概率)
+            if (Math.random() < 0.3) {
+                enemyEncounter();
+            }
+        }
+
+        function searchLoot() {
+            const loot = LOOTS[Math.floor(Math.random() * LOOTS.length)];
+            player.backpack.push(loot);
+            refreshUI();
+            addLog(`🔍 搜索物资... 获得 【<span class="success">${loot}</span>】 已放入背包`);
+
+            // 小概率获得更好武器 (20%)
+            if (Math.random() < 0.2) {
+                const newWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
+                const currentIdx = WEAPONS.indexOf(player.weapon);
+                const newIdx = WEAPONS.indexOf(newWeapon);
+                if (newIdx > currentIdx) {
+                    player.weapon = newWeapon;
+                    refreshUI();
+                    addLog(`🎉 恭喜！你捡到了更好的武器：<span class="highlight">${newWeapon}</span>`);
+                } else {
+                    addLog(`你发现了一把 ${newWeapon}，但不如当前武器。`);
+                }
+            }
+            // 搜索后遭遇敌人 (30%)
+            if (Math.random() < 0.3) {
+                enemyEncounter();
+            }
+        }
+
+        function rest() {
+            if (player.hp >= player.max_hp) {
+                addLog('💤 生命值已满，无需休息！');
+                return;
+            }
+            const heal = Math.floor(Math.random() * 21) + 10; // 10~30
+            const before = player.hp;
+            player.hp = Math.min(player.hp + heal, player.max_hp);
+            const actualHeal = player.hp - before;
+            refreshUI();
+            addLog(`💤 你休息了一会，恢复了 <span class="success">${actualHeal}</span> 点生命值 (HP: ${player.hp})`);
+            // 休息也可能遭遇敌人 (20%)
+            if (Math.random() < 0.2) {
+                enemyEncounter();
+            }
+        }
+
+        function enemyEncounter() {
+            const enemy = ENEMIES[Math.floor(Math.random() * ENEMIES.length)];
+            addLog(`<span class="danger">⚠️ 遭遇敌人！【${enemy}】向你发起攻击！</span>`);
+
+            const playerPower = WEAPONS.indexOf(player.weapon) + 1;
+            const enemyPower = Math.floor(Math.random() * 4) + 1; // 1~4
+
+            if (playerPower > enemyPower) {
+                const loot = LOOTS[Math.floor(Math.random() * LOOTS.length)];
+                player.backpack.push(loot);
+                refreshUI();
+                addLog(`⚔️ 你击败了 ${enemy}！ 缴获物资：<span class="success">${loot}</span>`);
+            } else {
+                const damage = Math.floor(Math.random() * 31) + 30; // 30~60
+                player.hp = Math.max(0, player.hp - damage);
+                refreshUI();
+                addLog(`💥 战斗失败！受到 <span class="danger">${damage}</span> 点伤害！剩余HP：${player.hp}`);
+                if (player.hp <= 0) {
+                    addLog(`<span class="danger">☠️ 你被击败了！背包物资全部丢失！</span>`);
+                    player.backpack = [];
+                    refreshUI();
+                    // 返回主菜单
+                    setTimeout(() => {
+                        returnToMainMenu('你已阵亡，返回主菜单...');
+                    }, 300);
+                    // 由于异步，需要停止后续动作？但调用处会继续，但hp<=0后不再继续游戏循环
+                    // 标记死亡状态，禁用动作
+                    enableActions(false);
+                }
+            }
+        }
+
+        function evacuate() {
+            // 撤离判定 70%成功
+            const success = Math.random() < 0.7;
+            if (success) {
+                addLog(`<span class="success">✅ 撤离成功！</span>`);
+                if (player.backpack.length > 0) {
+                    addLog(`📦 本局带回物资：${player.backpack.join(', ')}`);
+                    player.warehouse.push(...player.backpack);
+                    player.backpack = [];
+                } else {
+                    addLog('背包空空如也，但至少人回来了。');
+                }
+                refreshUI();
+                setTimeout(() => {
+                    returnToMainMenu('撤离成功，返回主菜单...');
+                }, 200);
+                enableActions(false);
+            } else {
+                addLog(`<span class="danger">❌ 撤离失败！被埋伏的敌人袭击！</span>`);
+                addLog('背包物资全部丢失！');
+                player.backpack = [];
+                refreshUI();
+                // 但玩家存活 (不扣血)
+                setTimeout(() => {
+                    returnToMainMenu('撤离点危险，返回主菜单...');
+                }, 200);
+                enableActions(false);
+            }
+        }
+
+        function giveUp() {
+            addLog('🏳️ 你放弃了本局，背包物资全部丢失！');
+            player.backpack = [];
+            refreshUI();
+            setTimeout(() => {
+                returnToMainMenu('已放弃，返回主菜单...');
+            }, 200);
+            enableActions(false);
+        }
+
+        // ---------- 查看仓库 ----------
+        function showWarehouse() {
+            resetLogScreen('        个人仓库');
+            if (player.warehouse.length === 0) {
+                addLog('仓库空空如也，快去撤离获取物资吧！');
+            } else {
+                player.warehouse.forEach((item, index) => {
+                    addLog(`${index + 1}. ${item}`);
+                });
+            }
+            addLog('─'.repeat(20));
+            addLog('点击 "新游戏" 或 "返回" 继续');
+            // 禁用游戏动作
+            enableActions(false);
+        }
+
+        // ---------- 事件绑定 ----------
+        function initEventListeners() {
+            // 动作按钮
+            actionBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const action = this.dataset.action;
+                    if (this.disabled) return;
+                    switch (action) {
+                        case 'move': move(); break;
+                        case 'search': searchLoot(); break;
+                        case 'rest': rest(); break;
+                        case 'evacuate': evacuate(); break;
+                        case 'giveup': giveUp(); break;
+                        default: break;
+                    }
+                    // 如果玩家死亡，动作已被禁用，但额外检查
+                    if (player.hp <= 0) {
+                        enableActions(false);
+                    }
+                });
+            });
+
+            // 仓库按钮
+            warehouseBtn.addEventListener('click', function() {
+                showWarehouse();
+            });
+
+            // 重置 / 新游戏
+            resetBtn.addEventListener('click', function() {
+                // 重置本局，保留仓库
+                resetRound();
+                // 确保启用动作
+                enableActions(true);
+            });
+
+            // 额外：点击“返回主菜单”逻辑集成在returnToMainMenu中，但仓库界面需要返回方式
+            // 增加一个隐藏返回机制：双击日志区域重置？ 但为了体验，仓库界面下点击新游戏即可。
+        }
+
+        // ---------- 初始化 ----------
+        function initGame() {
+            // 初始状态：主菜单
+            player.hp = 100;
+            player.max_hp = 100;
+            player.weapon = "小刀";
+            player.backpack = [];
+            player.warehouse = [];
+            player.position = "农场出生点";
+            refreshUI();
+            returnToMainMenu('');
+            // 默认禁用动作 (主菜单)
+            enableActions(false);
+            // 但新游戏按钮可用
+            initEventListeners();
+        }
+
+        initGame();
+    })();
+</script>
+</body>
+</html>

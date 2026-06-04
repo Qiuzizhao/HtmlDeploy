@@ -62,7 +62,8 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:44.118Z"
+    "createdAt": "2026-06-04T06:58:44.118Z",
+    "updatedAt": "2026-06-04T07:59:47.257Z"
   },
   {
     "id": "fb57d6c2",
@@ -656,9 +657,10 @@
     "title": "篮球",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:52:54.508Z"
+    "createdAt": "2026-06-04T06:52:54.508Z",
+    "updatedAt": "2026-06-04T07:59:49.566Z"
   },
   {
     "id": "66a141d9",
