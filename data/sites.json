@@ -671,7 +671,8 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:52:53.913Z"
+    "createdAt": "2026-06-04T06:52:53.913Z",
+    "updatedAt": "2026-06-04T08:00:25.424Z"
   },
   {
     "id": "db6e28b5",

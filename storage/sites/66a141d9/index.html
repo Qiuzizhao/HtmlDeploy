@@ -1,214 +1,653 @@
-import random
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KARDS 简化卡牌游戏</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+        }
+        .game-container {
+            max-width: 1000px;
+            width: 100%;
+            background: #16213e;
+            border-radius: 32px;
+            padding: 24px 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid #0f3460;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f3460;
+            padding: 12px 20px;
+            border-radius: 40px;
+            margin-bottom: 20px;
+            color: #e0e0ff;
+            font-weight: 600;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .header .turn {
+            background: #e94560;
+            padding: 4px 16px;
+            border-radius: 40px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .player-panel {
+            background: #1a1a40;
+            border-radius: 24px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+            border: 1px solid #2a2a5a;
+        }
+        .player-panel.enemy {
+            background: #1e2a3a;
+        }
+        .player-panel.ally {
+            background: #1e2a3a;
+        }
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            margin-bottom: 8px;
+        }
+        .player-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .mana-badge {
+            background: #533483;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .hp-badge {
+            background: #c0392b;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-weight: 600;
+        }
+        .field-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 70px;
+            padding: 8px 0;
+        }
+        .unit-card {
+            background: #2d2d5e;
+            border-radius: 16px;
+            padding: 8px 14px;
+            border-left: 4px solid #e94560;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+            font-size: 0.9rem;
+        }
+        .unit-card .name {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .unit-card .stats {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+            color: #b0b0ff;
+        }
+        .unit-card .stats span {
+            background: #1a1a3e;
+            padding: 0 8px;
+            border-radius: 20px;
+        }
+        .hand-area {
+            background: #0d1b2a;
+            border-radius: 24px;
+            padding: 14px 16px;
+            margin: 12px 0 8px;
+        }
+        .hand-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .hand-card {
+            background: #233554;
+            border-radius: 16px;
+            padding: 8px 14px;
+            border-left: 4px solid #f0a500;
+            cursor: default;
+            transition: 0.1s ease;
+            font-size: 0.85rem;
+            min-width: 70px;
+        }
+        .hand-card .cost {
+            background: #f0a500;
+            color: #000;
+            font-weight: 700;
+            padding: 0 8px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .controls {
+            background: #0f1a2b;
+            border-radius: 40px;
+            padding: 14px 18px;
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+        .controls input {
+            flex: 2;
+            min-width: 140px;
+            background: #1a2a44;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 40px;
+            color: white;
+            font-size: 0.95rem;
+            outline: 1px solid #2a4a6a;
+        }
+        .controls input:focus {
+            outline: 2px solid #e94560;
+        }
+        .controls button {
+            background: #e94560;
+            border: none;
+            color: white;
+            font-weight: 700;
+            padding: 10px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.15s;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 0 #a02a40;
+        }
+        .controls button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #a02a40;
+        }
+        .controls button.secondary {
+            background: #2a4a6a;
+            box-shadow: 0 4px 0 #1a2a44;
+        }
+        .log-area {
+            background: #0a0f1e;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            border: 1px solid #1e2a4a;
+            color: #b0c4de;
+        }
+        .log-area div {
+            padding: 2px 0;
+            border-bottom: 1px solid #1a1a3a;
+        }
+        .log-area div:last-child {
+            border-bottom: none;
+        }
+        .empty-message {
+            opacity: 0.5;
+            font-style: italic;
+        }
+        .game-over-message {
+            background: #e94560;
+            color: white;
+            font-weight: 700;
+            padding: 12px 20px;
+            border-radius: 40px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        @media (max-width: 600px) {
+            .game-container { padding: 12px; }
+            .unit-card { min-width: 65px; font-size: 0.8rem; }
+            .hand-card { font-size: 0.75rem; min-width: 60px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="app">
+    <div class="header">
+        <span>⚔️ KARDS 简化版</span>
+        <span class="turn" id="turnDisplay">回合 1</span>
+        <span id="gameStatus" style="font-size:0.9rem;">进行中</span>
+    </div>
 
-# 单位卡牌类
-class UnitCard:
-    def __init__(self, name, cost, attack, health, desc=""):
-        self.name = name
-        self.cost = cost
-        self.attack = attack
-        self.health = health
-        self.desc = desc
-        self.can_attack = False  # 出场本回合不能攻击
+    <!-- 敌方面板 -->
+    <div class="player-panel enemy">
+        <div class="player-header">
+            <span class="player-name" id="enemyName">电脑</span>
+            <span class="hp-badge" id="enemyHp">❤️ 20</span>
+            <span class="mana-badge" id="enemyMana">⚡ 0/0</span>
+        </div>
+        <div class="field-row" id="enemyField"></div>
+    </div>
 
-    def take_damage(self, dmg):
-        self.health -= dmg
+    <!-- 我方面板 -->
+    <div class="player-panel ally">
+        <div class="player-header">
+            <span class="player-name" id="allyName">玩家</span>
+            <span class="hp-badge" id="allyHp">❤️ 20</span>
+            <span class="mana-badge" id="allyMana">⚡ 0/0</span>
+        </div>
+        <div class="field-row" id="allyField"></div>
+    </div>
 
-    def is_alive(self):
-        return self.health > 0
+    <!-- 手牌区 -->
+    <div class="hand-area">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>📜 手牌</strong>
+            <span style="font-size:0.8rem; opacity:0.7;" id="handCount">0 张</span>
+        </div>
+        <div class="hand-cards" id="handContainer"></div>
+    </div>
 
-    def __str__(self):
-        return f"【{self.name}】 费用:{self.cost} | 攻:{self.attack} 血:{self.health} | {self.desc}"
+    <!-- 控制区 -->
+    <div class="controls">
+        <input type="text" id="commandInput" placeholder="指令: play 0 / attack 1 / attack hq / end" autofocus>
+        <button id="executeBtn">执行</button>
+        <button class="secondary" id="endTurnBtn">结束回合</button>
+    </div>
 
-# 玩家类（包含基地、手牌、战场、费用）
-class Player:
-    def __init__(self, name):
-        self.name = name
-        self.hp = 20  # 基地血量
-        self.max_mana = 0
-        self.mana = 0
-        self.deck = []
-        self.hand = []
-        self.field = []  # 战场单位
+    <!-- 日志 -->
+    <div class="log-area" id="logContainer">
+        <div>⚡ 游戏启动</div>
+    </div>
+</div>
 
-    # 重置每回合费用
-    def reset_mana(self):
-        self.max_mana = min(self.max_mana + 1, 10)
-        self.mana = self.max_mana
+<script>
+    (function() {
+        // ---------- 纯逻辑 (无 DOM 依赖) ----------
+        class UnitCard {
+            constructor(name, cost, attack, health, desc = "") {
+                this.name = name;
+                this.cost = cost;
+                this.attack = attack;
+                this.health = health;
+                this.desc = desc;
+                this.canAttack = false;
+            }
+            takeDamage(dmg) { this.health -= dmg; }
+            isAlive() { return this.health > 0; }
+            toString() {
+                return `【${this.name}】 费用:${this.cost} | 攻:${this.attack} 血:${this.health} | ${this.desc}`;
+            }
+        }
 
-    # 抽牌
-    def draw(self, n=1):
-        for _ in range(n):
-            if self.deck:
-                card = self.deck.pop(0)
-                self.hand.append(card)
+        class Player {
+            constructor(name) {
+                this.name = name;
+                this.hp = 20;
+                this.maxMana = 0;
+                this.mana = 0;
+                this.deck = [];
+                this.hand = [];
+                this.field = [];
+            }
+            resetMana() {
+                this.maxMana = Math.min(this.maxMana + 1, 10);
+                this.mana = this.maxMana;
+            }
+            draw(n = 1) {
+                for (let i = 0; i < n; i++) {
+                    if (this.deck.length > 0) {
+                        this.hand.push(this.deck.shift());
+                    }
+                }
+            }
+            playCard(cardIdx) {
+                if (cardIdx < 0 || cardIdx >= this.hand.length) return false;
+                const card = this.hand[cardIdx];
+                if (this.mana >= card.cost) {
+                    this.mana -= card.cost;
+                    this.field.push(card);
+                    this.hand.splice(cardIdx, 1);
+                    card.canAttack = false;
+                    return true;
+                }
+                return false;
+            }
+            enableAttack() {
+                for (const unit of this.field) {
+                    unit.canAttack = true;
+                }
+            }
+        }
 
-    # 打出单位到战场
-    def play_card(self, card_idx):
-        if card_idx < 0 or card_idx >= len(self.hand):
-            return False
-        card = self.hand[card_idx]
-        if self.mana >= card.cost:
-            self.mana -= card.cost
-            self.field.append(card)
-            self.hand.pop(card_idx)
-            card.can_attack = False  # 新上场不能攻击
-            return True
-        return False
+        // ---------- 游戏状态 ----------
+        let p1, p2, turn, gameOver;
+        let logEntries = [];
 
-    # 战场单位可以攻击
-    def enable_attack(self):
-        for unit in self.field:
-            unit.can_attack = True
+        function createDecks() {
+            const baseCards = [
+                new UnitCard("步兵", 1, 2, 2, "基础步兵"),
+                new UnitCard("坦克", 3, 4, 3, "重装甲单位"),
+                new UnitCard("侦察兵", 2, 3, 1, "高攻低血"),
+                new UnitCard("工程师", 2, 1, 4, "肉盾单位")
+            ];
+            const deck1 = [];
+            const deck2 = [];
+            for (let i = 0; i < 5; i++) {
+                for (const c of baseCards) {
+                    deck1.push(new UnitCard(c.name, c.cost, c.attack, c.health, c.desc));
+                    deck2.push(new UnitCard(c.name, c.cost, c.attack, c.health, c.desc));
+                }
+            }
+            shuffle(deck1);
+            shuffle(deck2);
+            return [deck1, deck2];
+        }
 
-    def __str__(self):
-        return f"{self.name} | 基地:{self.hp} | 费用:{self.mana}/{self.max_mana}"
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
 
-# 游戏主逻辑
-class KardsGame:
-    def __init__(self, p1_name, p2_name):
-        self.p1 = Player(p1_name)
-        self.p2 = Player(p2_name)
-        self.turn = 1
-        self.create_decks()
+        function initGame() {
+            const [deck1, deck2] = createDecks();
+            p1 = new Player("玩家");
+            p2 = new Player("电脑");
+            p1.deck = deck1;
+            p2.deck = deck2;
+            turn = 1;
+            gameOver = false;
+            logEntries = [];
+            addLog("=== KARDS 简化卡牌游戏启动 ===");
+            p1.draw(4);
+            p2.draw(4);
+            // 第一回合开始 (玩家先手)
+            startTurn(p1, p2);
+        }
 
-    # 创建基础卡组
-    def create_decks(self):
-        base_cards = [
-            UnitCard("步兵", 1, 2, 2, "基础步兵"),
-            UnitCard("坦克", 3, 4, 3, "重装甲单位"),
-            UnitCard("侦察兵", 2, 3, 1, "高攻低血"),
-            UnitCard("工程师", 2, 1, 4, "肉盾单位")
-        ]
-        # 每人20张牌
-        self.p1.deck = base_cards * 5
-        self.p2.deck = base_cards * 5
-        random.shuffle(self.p1.deck)
-        random.shuffle(self.p2.deck)
+        // 当前攻击方 / 防守方
+        let currentAttacker, currentDefender;
 
-    # 开局抽牌
-    def start_game(self):
-        self.p1.draw(4)
-        self.p2.draw(4)
-        print("=== KARDS 简化卡牌游戏启动 ===")
+        function startTurn(attacker, defender) {
+            if (gameOver) return;
+            currentAttacker = attacker;
+            currentDefender = defender;
+            attacker.resetMana();
+            attacker.draw();
+            attacker.enableAttack();
+            addLog(`===== 【${attacker.name}】 第${turn}回合 =====`);
+            renderAll();
+        }
 
-    # 显示战场状态
-    def show_battlefield(self):
-        print("\n=====================================")
-        print(self.p2)
-        print("敌方战场：" + " | ".join([f"{u.name}({u.attack}/{u.health})" for u in self.p2.field]))
-        print("-------------------------------------")
-        print("我方战场：" + " | ".join([f"{u.name}({u.attack}/{u.health})" for u in self.p1.field]))
-        print(self.p1)
-        print("=====================================\n")
+        // 执行指令
+        function executeCommand(cmdStr) {
+            if (gameOver) {
+                addLog("⚠️ 游戏已结束，请刷新重开");
+                renderAll();
+                return;
+            }
+            const parts = cmdStr.trim().split(/\s+/);
+            if (parts.length === 0) return;
+            const cmd = parts[0].toLowerCase();
+            const attacker = currentAttacker;
+            const defender = currentDefender;
+            if (!attacker || !defender) return;
 
-    # 单回合流程
-    def player_turn(self, attacker, defender):
-        print(f"\n===== 【{attacker.name}】 第{self.turn}回合 =====")
-        attacker.reset_mana()
-        attacker.draw()
-        attacker.enable_attack()
-        self.show_battlefield()
+            if (cmd === "end") {
+                endCurrentTurn();
+                return;
+            }
 
-        # 出牌阶段
-        while True:
-            print("\n你的手牌：")
-            for i, c in enumerate(attacker.hand):
-                print(f"{i}: {c}")
-            print("\n指令：\nplay [序号] = 出牌\nattack [序号] = 攻击敌方单位\nattack hq = 攻击基地\nend = 结束回合")
-            cmd = input("请输入指令：").strip().split()
+            if (cmd === "play" && parts.length >= 2) {
+                const idx = parseInt(parts[1], 10);
+                if (isNaN(idx)) {
+                    addLog("❌ 请输入有效序号");
+                } else {
+                    if (attacker.playCard(idx)) {
+                        addLog(`✅ 出牌成功`);
+                    } else {
+                        addLog("❌ 费用不足或无效卡牌");
+                    }
+                }
+                renderAll();
+                return;
+            }
 
-            if not cmd:
-                continue
+            if (cmd === "attack" && parts.length >= 2) {
+                if (attacker.field.length === 0) {
+                    addLog("⚠️ 没有单位可以攻击！");
+                    renderAll();
+                    return;
+                }
+                if (parts[1] === "hq") {
+                    let damage = 0;
+                    for (const u of attacker.field) {
+                        if (u.canAttack) damage += u.attack;
+                    }
+                    if (damage === 0) {
+                        addLog("⚠️ 没有单位可以攻击 (可能已攻击过)");
+                        renderAll();
+                        return;
+                    }
+                    defender.hp -= damage;
+                    for (const u of attacker.field) u.canAttack = false;
+                    addLog(`💥 对敌方基地造成 ${damage} 点伤害！`);
+                    checkGameOver();
+                    renderAll();
+                    return;
+                } else {
+                    const atkIdx = parseInt(parts[1], 10);
+                    if (isNaN(atkIdx) || atkIdx < 0 || atkIdx >= attacker.field.length) {
+                        addLog("❌ 无此攻击单位");
+                        renderAll();
+                        return;
+                    }
+                    const atkUnit = attacker.field[atkIdx];
+                    if (!atkUnit.canAttack) {
+                        addLog("⚠️ 该单位本回合不能攻击");
+                        renderAll();
+                        return;
+                    }
+                    // 选择目标 (简化: 自动选择第一个敌方单位)
+                    if (defender.field.length === 0) {
+                        addLog("⚠️ 敌方没有单位可攻击");
+                        renderAll();
+                        return;
+                    }
+                    // 默认攻击第一个敌方单位 (可优化)
+                    const defUnit = defender.field[0];
+                    // 互相伤害
+                    atkUnit.takeDamage(defUnit.attack);
+                    defUnit.takeDamage(atkUnit.attack);
+                    atkUnit.canAttack = false;
+                    addLog(`⚔️ ${atkUnit.name} ↔ ${defUnit.name} 交换伤害！`);
+                    // 清理死亡
+                    attacker.field = attacker.field.filter(u => u.isAlive());
+                    defender.field = defender.field.filter(u => u.isAlive());
+                    checkGameOver();
+                    renderAll();
+                    return;
+                }
+            }
+            addLog("❌ 未知指令。可用: play [序号], attack [序号/hq], end");
+            renderAll();
+        }
 
-            # 结束回合
-            if cmd[0] == "end":
-                break
+        function endCurrentTurn() {
+            if (gameOver) return;
+            // 切换回合
+            if (currentAttacker === p1) {
+                // 轮到电脑
+                startTurn(p2, p1);
+            } else {
+                // 轮到玩家，回合数+1
+                turn++;
+                startTurn(p1, p2);
+            }
+        }
 
-            # 出牌
-            if cmd[0] == "play" and len(cmd) >= 2:
-                try:
-                    idx = int(cmd[1])
-                    if attacker.play_card(idx):
-                        print("出牌成功！")
-                        self.show_battlefield()
-                    else:
-                        print("费用不足或无效卡牌")
-                except:
-                    print("输入错误")
+        function checkGameOver() {
+            if (p1.hp <= 0) {
+                gameOver = true;
+                addLog(`🏆 ${p2.name} 胜利！`);
+            } else if (p2.hp <= 0) {
+                gameOver = true;
+                addLog(`🏆 ${p1.name} 胜利！`);
+            }
+            if (gameOver) {
+                renderAll();
+            }
+        }
 
-            # 攻击
-            if cmd[0] == "attack" and len(cmd) >= 2:
-                if not attacker.field:
-                    print("没有单位可以攻击！")
-                    continue
+        // ---------- DOM 渲染 ----------
+        function renderAll() {
+            // 更新玩家信息
+            document.getElementById('enemyName').textContent = p2.name;
+            document.getElementById('enemyHp').textContent = `❤️ ${p2.hp}`;
+            document.getElementById('enemyMana').textContent = `⚡ ${p2.mana}/${p2.maxMana}`;
+            document.getElementById('allyName').textContent = p1.name;
+            document.getElementById('allyHp').textContent = `❤️ ${p1.hp}`;
+            document.getElementById('allyMana').textContent = `⚡ ${p1.mana}/${p1.maxMana}`;
+            document.getElementById('turnDisplay').textContent = `回合 ${turn}`;
+            document.getElementById('gameStatus').textContent = gameOver ? '🏁 已结束' : '进行中';
 
-                # 攻击基地
-                if cmd[1] == "hq":
-                    damage = sum(u.attack for u in attacker.field if u.can_attack)
-                    defender.hp -= damage
-                    print(f"对敌方基地造成 {damage} 点伤害！")
-                    for u in attacker.field:
-                        u.can_attack = False
-                    self.show_battlefield()
-                    if defender.hp <= 0:
-                        return
+            // 渲染战场
+            renderField('enemyField', p2.field);
+            renderField('allyField', p1.field);
 
-                # 攻击单位
-                else:
-                    try:
-                        atk_idx = int(cmd[1])
-                        if atk_idx < 0 or atk_idx >= len(attacker.field):
-                            print("无此单位")
-                            continue
-                        atk_unit = attacker.field[atk_idx]
-                        if not atk_unit.can_attack:
-                            print("该单位不能攻击")
-                            continue
+            // 渲染手牌
+            const handContainer = document.getElementById('handContainer');
+            handContainer.innerHTML = '';
+            document.getElementById('handCount').textContent = `${p1.hand.length} 张`;
+            if (p1.hand.length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'empty-message';
+                emptyDiv.textContent = '手牌为空';
+                handContainer.appendChild(emptyDiv);
+            } else {
+                p1.hand.forEach((card, idx) => {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'hand-card';
+                    cardDiv.innerHTML = `<span class="cost">${card.cost}</span> ${card.name} <span style="color:#aaa;">(${card.attack}/${card.health})</span>`;
+                    cardDiv.title = card.desc || card.toString();
+                    handContainer.appendChild(cardDiv);
+                });
+            }
 
-                        print("敌方单位：")
-                        for i, u in enumerate(defender.field):
-                            print(f"{i}: {u.name}({u.attack}/{u.health})")
-                        def_idx = int(input("选择目标："))
-                        if def_idx < 0 or def_idx >= len(defender.field):
-                            continue
-                        def_unit = defender.field[def_idx]
+            // 日志
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = '';
+            // 显示最近10条
+            const recent = logEntries.slice(-12);
+            for (const entry of recent) {
+                const div = document.createElement('div');
+                div.textContent = entry;
+                logContainer.appendChild(div);
+            }
+            logContainer.scrollTop = logContainer.scrollHeight;
 
-                        # 互相造成伤害
-                        atk_unit.take_damage(def_unit.attack)
-                        def_unit.take_damage(atk_unit.attack)
-                        atk_unit.can_attack = False
-                        print(f"{atk_unit.name} ↔ {def_unit.name} 交换伤害！")
+            // 如果游戏结束，禁用输入?
+            // 不强制禁用，但指令会提示
+        }
 
-                        # 清理死亡单位
-                        attacker.field = [u for u in attacker.field if u.is_alive()]
-                        defender.field = [u for u in defender.field if u.is_alive()]
-                        self.show_battlefield()
-                    except:
-                        print("输入错误")
+        function renderField(elementId, units) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            if (units.length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'empty-message';
+                emptyDiv.textContent = '战场为空';
+                container.appendChild(emptyDiv);
+            } else {
+                for (const unit of units) {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'unit-card';
+                    const canAtk = unit.canAttack ? '⚔️' : '🛡️';
+                    cardDiv.innerHTML = `
+                        <div class="name">${unit.name}</div>
+                        <div class="stats">
+                            <span>⚔️${unit.attack}</span>
+                            <span>❤️${unit.health}</span>
+                            <span style="font-size:0.7rem;">${canAtk}</span>
+                        </div>
+                    `;
+                    cardDiv.title = unit.desc || unit.toString();
+                    container.appendChild(cardDiv);
+                }
+            }
+        }
 
-    # 检查游戏是否结束
-    def is_game_over(self):
-        if self.p1.hp <= 0:
-            print(f"\n{self.p2.name} 胜利！")
-            return True
-        if self.p2.hp <= 0:
-            print(f"\n{self.p1.name} 胜利！")
-            return True
-        return False
+        function addLog(msg) {
+            logEntries.push(msg);
+            if (logEntries.length > 50) logEntries.shift();
+        }
 
-    # 主循环
-    def run(self):
-        self.start_game()
-        while True:
-            self.player_turn(self.p1, self.p2)
-            if self.is_game_over():
-                break
-            self.player_turn(self.p2, self.p1)
-            if self.is_game_over():
-                break
-            self.turn += 1
+        // ---------- 事件绑定 ----------
+        document.addEventListener('DOMContentLoaded', function() {
+            initGame();
 
-# 启动游戏
-if __name__ == "__main__":
-    game = KardsGame("玩家", "电脑")
-    game.run()
+            const input = document.getElementById('commandInput');
+            const executeBtn = document.getElementById('executeBtn');
+            const endBtn = document.getElementById('endTurnBtn');
+
+            function handleExecute() {
+                const cmd = input.value.trim();
+                if (cmd) {
+                    executeCommand(cmd);
+                    input.value = '';
+                    input.focus();
+                }
+            }
+
+            executeBtn.addEventListener('click', handleExecute);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleExecute();
+                }
+            });
+            endBtn.addEventListener('click', function() {
+                if (!gameOver) {
+                    executeCommand('end');
+                } else {
+                    addLog('游戏已结束，无法结束回合');
+                    renderAll();
+                }
+                input.focus();
+            });
+
+            // 初始渲染
+            renderAll();
+        });
+    })();
+</script>
+</body>
+</html>
