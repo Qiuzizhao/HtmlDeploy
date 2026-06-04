@@ -319,12 +319,13 @@
   {
     "id": "7dee5414",
     "number": "00121",
-    "title": "攻略",
+    "title": "心动攻略手册",
     "author": "张子玥",
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:56:53.261Z"
+    "createdAt": "2026-06-04T06:56:53.261Z",
+    "updatedAt": "2026-06-04T09:27:25.767Z"
   },
   {
     "id": "badc9200",
