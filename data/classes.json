@@ -4,8 +4,8 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-05T07:31:47.232Z",
-    "uploadEnabled": true,
+    "updatedAt": "2026-06-05T14:40:20.311Z",
+    "uploadEnabled": false,
     "passwordEnabled": true
   },
   {
@@ -23,8 +23,8 @@
     "password": "186559",
     "createdAt": "2026-06-02T12:01:47.337Z",
     "uploadEnabled": false,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-05T09:14:45.195Z"
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-05T14:40:22.065Z"
   },
   {
     "id": "2c2fab13",
@@ -66,9 +66,9 @@
     "id": "767d3252",
     "name": "社团",
     "password": "666666",
-    "uploadEnabled": true,
-    "passwordEnabled": false,
+    "uploadEnabled": false,
+    "passwordEnabled": true,
     "createdAt": "2026-06-04T01:20:15.251Z",
-    "updatedAt": "2026-06-05T07:01:25.125Z"
+    "updatedAt": "2026-06-05T14:40:24.050Z"
   }
 ]
