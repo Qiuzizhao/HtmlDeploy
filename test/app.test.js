@@ -19,9 +19,10 @@ test('public index uses a single HTML file picker', async () => {
 });
 
 test('pages expose a shared favicon', async () => {
-  const indexHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
-  const adminHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
-  const { app } = await makeTestApp();
+  const publicDir = path.join(__dirname, '..', 'public');
+  const indexHtml = await fsp.readFile(path.join(publicDir, 'index.html'), 'utf8');
+  const adminHtml = await fsp.readFile(path.join(publicDir, 'admin.html'), 'utf8');
+  const { app } = await makeTestApp({ publicDir });
 
   assert.match(indexHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
   assert.match(adminHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
