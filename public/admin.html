@@ -784,6 +784,19 @@
       min-width: 150px;
     }
 
+    .project-class-column,
+    .project-class-cell {
+      width: 112px;
+      max-width: 112px;
+    }
+
+    .project-class-cell .class-select {
+      min-width: 0;
+      width: 112px;
+      max-width: 112px;
+      padding-inline: 9px;
+    }
+
     .empty {
       padding: 42px 20px;
       text-align: center;
@@ -1104,7 +1117,7 @@
                   <th>序号</th>
                   <th>网页名字</th>
                   <th>作者</th>
-                  <th>班级</th>
+                  <th class="project-class-column">班级</th>
                   <th>访问链接</th>
                   <th>上传时间</th>
                   <th>存储占用</th>
@@ -2432,6 +2445,7 @@
         authorCell.append(authorInput);
 
         const classCell = document.createElement('td');
+        classCell.className = 'project-class-cell';
         const classSelect = document.createElement('select');
         classSelect.className = 'class-select';
         classSelect.setAttribute('aria-label', `${site.title} 的所属班级`);

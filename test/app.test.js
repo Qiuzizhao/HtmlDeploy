@@ -247,6 +247,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /site\.forbiddenAuditMessage/);
   assert.match(html, /duplicate-audit-note/);
   assert.match(html, /site\.duplicateAuditMessage/);
+  assert.match(html, /project-class-column/);
+  assert.match(html, /project-class-cell/);
   assert.match(html, /<th>存储占用<\/th>/);
   assert.match(html, /className = 'storage-cell'/);
   assert.match(html, /storageCell\.textContent = formatBytes\(site\.storageBytes \|\| 0\)/);
