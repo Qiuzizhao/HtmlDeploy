@@ -9,7 +9,10 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T07:35:47.791Z",
     "updatedAt": "2026-06-05T15:26:36.452Z",
-    "starred": true
+    "starred": true,
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T16:49:15.184Z"
   },
   {
     "id": "69131173",
@@ -100,7 +103,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:17:11.504Z"
   },
   {
     "id": "3cccb5d2",
@@ -460,7 +466,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:13:21.661Z"
+    "createdAt": "2026-06-05T02:13:21.661Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:21:58.830Z"
   },
   {
     "id": "95e47cb5",
@@ -504,7 +513,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:12:53.664Z"
+    "createdAt": "2026-06-05T02:12:53.664Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:23:52.138Z"
   },
   {
     "id": "555e0671",
@@ -608,7 +620,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T09:23:10.200Z",
-    "updatedAt": "2026-06-04T09:29:32.746Z"
+    "updatedAt": "2026-06-04T09:29:32.746Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:24:19.919Z"
   },
   {
     "id": "a60c5981",
@@ -619,7 +634,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T09:14:45.994Z",
-    "updatedAt": "2026-06-04T09:29:33.385Z"
+    "updatedAt": "2026-06-04T09:29:33.385Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:24:17.081Z"
   },
   {
     "id": "f7aa1024",
@@ -727,7 +745,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:28.879Z"
+    "createdAt": "2026-06-04T06:58:28.879Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:24:26.492Z"
   },
   {
     "id": "258897e2",
