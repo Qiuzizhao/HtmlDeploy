@@ -84,6 +84,22 @@ test('public index upload accepts either an HTML file or pasted code', async () 
   assert.match(html, /formData\.append\('htmlContent', htmlContent\)/);
 });
 
+test('public index can preview upload draft before submitting', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /id="previewUpload"[^>]*>预览<\/button>/);
+  assert.ok(html.indexOf('id="previewUpload"') < html.indexOf('type="submit">确定上传'));
+  assert.match(html, /const previewUploadButton = document\.getElementById\('previewUpload'\)/);
+  assert.match(html, /async function getUploadPreviewHtml/);
+  assert.match(html, /fileInput\.files && fileInput\.files\[0\]/);
+  assert.match(html, /await file\.text\(\)/);
+  assert.match(html, /function openUploadDraftPreview/);
+  assert.match(html, /new Blob\(\[htmlContent\], \{ type: 'text\/html' \}\)/);
+  assert.match(html, /URL\.createObjectURL/);
+  assert.match(html, /URL\.revokeObjectURL\(currentPreviewObjectUrl\)/);
+  assert.match(html, /previewUploadButton\.addEventListener\('click', previewUploadDraft\)/);
+});
+
 test('public index renders an all tab before class buttons', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
