@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>恐怖学校 - 躲避妖怪</title>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
     <style>
         * {
             margin: 0;
@@ -15,13 +13,12 @@
         body {
             overflow: hidden;
             background: #000;
-            font-family: 'Arial', sans;
+            font-family: 'Arial', sans-serif;
             color: white;
         }
         canvas {
             display: block;
         }
-        /* UI界面 */
         .ui {
             position: absolute;
             top: 0;
@@ -126,329 +123,352 @@
 </head>
 <body>
     <div class="ui">
-        <!-- 开始界面 -->
         <div class="start-screen" id="startScreen">
             <h1>恐怖学校</h1>
             <p>深夜被遗弃的学校中藏着妖怪<br>WASD移动，鼠标控制视角，躲避妖怪，活下去！</p>
             <button class="start-btn" id="startBtn">开始游戏</button>
         </div>
-
-        <!-- 游戏结束界面 -->
         <div class="game-over" id="gameOver">
             <h2>你被抓住了！</h2>
             <button class="restart-btn" id="restartBtn">重新开始</button>
         </div>
-
-        <!-- 游戏HUD -->
         <div class="hud">
             <div class="health-bar">
                 <div class="health-fill" id="healthFill"></div>
             </div>
         </div>
-
         <div class="tips">
             WASD移动 | 鼠标视角 | 空格跳跃 | 躲避妖怪
         </div>
     </div>
 
     <script>
-        // 核心游戏变量
-        let scene, camera, renderer, controls;
-        let player = { speed: 5, health: 100, isDead: false };
-        let monsters = [];
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let clock = new THREE.Clock();
-        let floor, walls = [];
+        (function() {
+            'use strict';
 
-        // 初始化场景
-        function init() {
-            // 创建场景
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a0a);
-            scene.fog = new THREE.Fog(0x0a0a0a, 10, 40);
+            let scene, camera, renderer, controls;
+            let player = { speed: 5, health: 100, isDead: false };
+            let monsters = [];
+            let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+            let clock = new THREE.Clock();
+            let walls = [];
+            let animationId = null;
+            let damageCooldown = 0;
+            let audioContext = null;
+            let audioBuffer = null;
+            let audioSource = null;
+            let isAudioPlaying = false;
 
-            // 创建相机
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, 0);
+            function init() {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a0a0a);
+                scene.fog = new THREE.Fog(0x0a0a0a, 10, 40);
 
-            // 渲染器
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(renderer.domElement);
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 2, 0);
 
-            // 灯光
-            const ambientLight = new THREE.AmbientLight(0x222222, 0.2);
-            scene.add(ambientLight);
+                renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.body.appendChild(renderer.domElement);
 
-            // 手电筒效果（第一人称）
-            const flashlight = new THREE.SpotLight(0xffffff, 1.5);
-            flashlight.angle = Math.PI / 5;
-            flashlight.penumbra = 0.1;
-            flashlight.distance = 30;
-            flashlight.position.set(0, 2, 0);
-            flashlight.target = camera;
-            flashlight.castShadow = true;
-            scene.add(flashlight);
+                const ambientLight = new THREE.AmbientLight(0x222222, 0.2);
+                scene.add(ambientLight);
 
-            // 创建学校场景
-            createSchool();
+                const flashlight = new THREE.SpotLight(0xffffff, 1.5);
+                flashlight.angle = Math.PI / 5;
+                flashlight.penumbra = 0.1;
+                flashlight.distance = 30;
+                flashlight.position.set(0, 2, 0);
+                flashlight.target = camera;
+                flashlight.castShadow = true;
+                scene.add(flashlight);
 
-            // 创建妖怪
-            createMonsters(4);
+                createSchool();
+                createMonsters(4);
 
-            // 控制器
-            controls = new THREE.PointerLockControls(camera, document.body);
+                controls = new THREE.PointerLockControls(camera, document.body);
 
-            // 事件监听
-            document.getElementById('startBtn').addEventListener('click', startGame);
-            document.getElementById('restartBtn').addEventListener('click', restartGame);
-            window.addEventListener('keydown', onKeyDown);
-            window.addEventListener('keyup', onKeyUp);
-            window.addEventListener('resize', onWindowResize);
-        }
+                document.getElementById('startBtn').addEventListener('click', startGame);
+                document.getElementById('restartBtn').addEventListener('click', restartGame);
+                window.addEventListener('keydown', onKeyDown);
+                window.addEventListener('keyup', onKeyUp);
+                window.addEventListener('resize', onWindowResize);
+            }
 
-        // 创建学校场景（走廊+教室）
-        function createSchool() {
-            // 地面
-            const floorGeometry = new THREE.PlaneGeometry(100, 100);
-            const floorMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x333333,
-                roughness: 0.9,
-                metalness: 0.1
-            });
-            floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            function createSchool() {
+                const floorGeometry = new THREE.PlaneGeometry(100, 100);
+                const floorMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x333333,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true;
+                scene.add(floor);
 
-            // 生成墙壁
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2d });
-            
-            // 外墙
-            createWall(0, 0, 50, 100, 6, 0.5, wallMat);
-            createWall(0, 0, -50, 100, 6, 0.5, wallMat);
-            createWall(50, 0, 0, 100, 6, 0.5, wallMat, true);
-            createWall(-50, 0, 0, 100, 6, 0.5, wallMat, true);
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2d });
+                
+                createWall(0, 0, 50, 100, 6, 0.5, wallMat);
+                createWall(0, 0, -50, 100, 6, 0.5, wallMat);
+                createWall(50, 0, 0, 100, 6, 0.5, wallMat, true);
+                createWall(-50, 0, 0, 100, 6, 0.5, wallMat, true);
 
-            // 内部走廊/教室墙壁
-            for(let i = -40; i <= 40; i += 20) {
-                for(let j = -40; j <= 40; j += 20) {
-                    if(Math.random() > 0.3) {
-                        createWall(i, 0, j+10, 8, 6, 0.5, wallMat);
+                for(let i = -40; i <= 40; i += 20) {
+                    for(let j = -40; j <= 40; j += 20) {
+                        if(Math.random() > 0.3) {
+                            createWall(i, 0, j+10, 8, 6, 0.5, wallMat);
+                        }
                     }
                 }
             }
-        }
 
-        // 墙壁创建工具
-        function createWall(x, y, z, w, h, d, mat, rotate = false) {
-            const geo = rotate ? new THREE.BoxGeometry(d, h, w) : new THREE.BoxGeometry(w, h, d);
-            const wall = new THREE.Mesh(geo, mat);
-            wall.position.set(x, y, z);
-            wall.castShadow = true;
-            wall.receiveShadow = true;
-            scene.add(wall);
-            walls.push(wall);
-        }
-
-        // 创建妖怪
-        function createMonsters(count) {
-            const monsterMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x220000 });
-            
-            for(let i = 0; i < count; i++) {
-                const monsterGroup = new THREE.Group();
-                
-                // 身体
-                const bodyGeo = new THREE.BoxGeometry(1.5, 3, 1);
-                const body = new THREE.Mesh(bodyGeo, monsterMat);
-                body.position.y = 1.5;
-                monsterGroup.add(body);
-                
-                // 头部
-                const headGeo = new THREE.SphereGeometry(0.8);
-                const head = new THREE.Mesh(headGeo, monsterMat);
-                head.position.y = 4;
-                monsterGroup.add(head);
-                
-                // 随机位置
-                monsterGroup.position.set(
-                    (Math.random() - 0.5) * 80,
-                    0,
-                    (Math.random() - 0.5) * 80
-                );
-                
-                monsterGroup.userData = {
-                    speed: 1 + Math.random() * 0.8,
-                    dirX: Math.random() - 0.5,
-                    dirZ: Math.random() - 0.5
-                };
-                
-                scene.add(monsterGroup);
-                monsters.push(monsterGroup);
-            }
-        }
-
-        // 开始游戏
-        function startGame() {
-            controls.lock();
-            document.getElementById('startScreen').style.display = 'none';
-            playBackgroundSound();
-        }
-
-        // 游戏循环
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-
-            if(!player.isDead && controls.isLocked) {
-                // 角色移动
-                let velocity = new THREE.Vector3();
-                if(moveForward) velocity.z -= player.speed * delta;
-                if(moveBackward) velocity.z += player.speed * delta;
-                if(moveLeft) velocity.x -= player.speed * delta;
-                if(moveRight) velocity.x += player.speed * delta;
-                
-                controls.moveRight(velocity.x);
-                controls.moveForward(velocity.z);
-
-                // 限制角色在地图内
-                camera.position.x = THREE.MathUtils.clamp(camera.position.x, -48, 48);
-                camera.position.z = THREE.MathUtils.clamp(camera.position.z, -48, 48);
-
-                // 更新妖怪移动
-                updateMonsters(delta);
-
-                // 碰撞检测
-                checkCollision();
+            function createWall(x, y, z, w, h, d, mat, rotate = false) {
+                const geo = rotate ? new THREE.BoxGeometry(d, h, w) : new THREE.BoxGeometry(w, h, d);
+                const wall = new THREE.Mesh(geo, mat);
+                wall.position.set(x, y, z);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                scene.add(wall);
+                walls.push(wall);
             }
 
-            renderer.render(scene, camera);
-        }
+            function createMonsters(count) {
+                const monsterMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x220000 });
+                
+                for(let i = 0; i < count; i++) {
+                    const monsterGroup = new THREE.Group();
+                    
+                    const bodyGeo = new THREE.BoxGeometry(1.5, 3, 1);
+                    const body = new THREE.Mesh(bodyGeo, monsterMat);
+                    body.position.y = 1.5;
+                    monsterGroup.add(body);
+                    
+                    const headGeo = new THREE.SphereGeometry(0.8);
+                    const head = new THREE.Mesh(headGeo, monsterMat);
+                    head.position.y = 4;
+                    monsterGroup.add(head);
+                    
+                    monsterGroup.position.set(
+                        (Math.random() - 0.5) * 80,
+                        0,
+                        (Math.random() - 0.5) * 80
+                    );
+                    
+                    monsterGroup.userData = {
+                        speed: 1 + Math.random() * 0.8,
+                        dirX: Math.random() - 0.5,
+                        dirZ: Math.random() - 0.5,
+                        changeTimer: 0
+                    };
+                    
+                    scene.add(monsterGroup);
+                    monsters.push(monsterGroup);
+                }
+            }
 
-        // 妖怪AI巡逻
-        function updateMonsters(delta) {
-            monsters.forEach(monster => {
-                // 随机改变方向
-                if(Math.random() < 0.01) {
-                    monster.userData.dirX = (Math.random() - 0.5) * 2;
-                    monster.userData.dirZ = (Math.random() - 0.5) * 2;
+            function startGame() {
+                controls.lock();
+                document.getElementById('startScreen').style.display = 'none';
+                playBackgroundSound();
+            }
+
+            function animate() {
+                animationId = requestAnimationFrame(animate);
+                const delta = Math.min(clock.getDelta(), 0.05);
+
+                if(!player.isDead && controls.isLocked) {
+                    let velocity = new THREE.Vector3();
+                    if(moveForward) velocity.z -= player.speed * delta;
+                    if(moveBackward) velocity.z += player.speed * delta;
+                    if(moveLeft) velocity.x -= player.speed * delta;
+                    if(moveRight) velocity.x += player.speed * delta;
+                    
+                    controls.moveRight(velocity.x);
+                    controls.moveForward(velocity.z);
+
+                    camera.position.x = THREE.MathUtils.clamp(camera.position.x, -48, 48);
+                    camera.position.z = THREE.MathUtils.clamp(camera.position.z, -48, 48);
+
+                    updateMonsters(delta);
+                    checkCollision(delta);
                 }
 
-                // 移动
-                monster.position.x += monster.userData.dirX * monster.userData.speed * delta;
-                monster.position.z += monster.userData.dirZ * monster.userData.speed * delta;
+                renderer.render(scene, camera);
+            }
 
-                // 边界反弹
-                if(Math.abs(monster.position.x) > 45) monster.userData.dirX *= -1;
-                if(Math.abs(monster.position.z) > 45) monster.userData.dirZ *= -1;
+            function updateMonsters(delta) {
+                monsters.forEach(monster => {
+                    monster.userData.changeTimer += delta;
+                    if(monster.userData.changeTimer > 1 + Math.random() * 2) {
+                        monster.userData.dirX = (Math.random() - 0.5) * 2;
+                        monster.userData.dirZ = (Math.random() - 0.5) * 2;
+                        monster.userData.changeTimer = 0;
+                    }
 
-                // 看向移动方向
-                monster.lookAt(
-                    monster.position.x + monster.userData.dirX,
-                    2,
-                    monster.position.z + monster.userData.dirZ
-                );
-            });
-        }
+                    monster.position.x += monster.userData.dirX * monster.userData.speed * delta;
+                    monster.position.z += monster.userData.dirZ * monster.userData.speed * delta;
 
-        // 碰撞检测（碰到妖怪掉血）
-        function checkCollision() {
-            monsters.forEach(monster => {
-                const dist = camera.position.distanceTo(monster.position);
-                if(dist < 2.5) {
-                    takeDamage(15);
+                    if(Math.abs(monster.position.x) > 45) monster.userData.dirX *= -1;
+                    if(Math.abs(monster.position.z) > 45) monster.userData.dirZ *= -1;
+
+                    monster.lookAt(
+                        monster.position.x + monster.userData.dirX,
+                        2,
+                        monster.position.z + monster.userData.dirZ
+                    );
+                });
+            }
+
+            function checkCollision(delta) {
+                damageCooldown -= delta;
+                if(damageCooldown > 0) return;
+
+                monsters.forEach(monster => {
+                    const dist = camera.position.distanceTo(monster.position);
+                    if(dist < 2.5) {
+                        takeDamage(15);
+                        damageCooldown = 0.5;
+                    }
+                });
+            }
+
+            function takeDamage(amount) {
+                if(player.isDead) return;
+                
+                player.health -= amount;
+                player.health = Math.max(0, player.health);
+                document.getElementById('healthFill').style.width = player.health + '%';
+
+                renderer.domElement.style.filter = 'brightness(0.5)';
+                setTimeout(() => {
+                    renderer.domElement.style.filter = 'brightness(1)';
+                }, 100);
+
+                if(player.health <= 0) {
+                    gameOver();
                 }
-            });
-        }
-
-        // 受伤逻辑
-        function takeDamage(amount) {
-            if(player.isDead) return;
-            
-            player.health -= amount;
-            player.health = Math.max(0, player.health);
-            document.getElementById('healthFill').style.width = player.health + '%';
-
-            // 受伤音效震动
-            renderer.domElement.style.filter = 'brightness(0.5)';
-            setTimeout(() => {
-                renderer.domElement.style.filter = 'brightness(1)';
-            }, 100);
-
-            if(player.health <= 0) {
-                gameOver();
             }
-        }
 
-        // 游戏结束
-        function gameOver() {
-            player.isDead = true;
-            controls.unlock();
-            document.getElementById('gameOver').style.display = 'flex';
-        }
-
-        // 重新开始
-        function restartGame() {
-            player.health = 100;
-            player.isDead = false;
-            document.getElementById('healthFill').style.width = '100%';
-            document.getElementById('gameOver').style.display = 'none';
-            camera.position.set(0, 2, 0);
-            
-            // 重置妖怪位置
-            monsters.forEach(monster => {
-                monster.position.set(
-                    (Math.random() - 0.5) * 80,
-                    0,
-                    (Math.random() - 0.5) * 80
-                );
-            });
-            
-            controls.lock();
-        }
-
-        // 键盘控制
-        function onKeyDown(event) {
-            switch(event.code) {
-                case 'KeyW': moveForward = true; break;
-                case 'KeyS': moveBackward = true; break;
-                case 'KeyA': moveLeft = true; break;
-                case 'KeyD': moveRight = true; break;
-                case 'Space': 
-                    if(camera.position.y <= 2.1) camera.position.y += 0.3; 
-                    break;
+            function gameOver() {
+                player.isDead = true;
+                controls.unlock();
+                document.getElementById('gameOver').style.display = 'flex';
+                stopBackgroundSound();
             }
-        }
 
-        function onKeyUp(event) {
-            switch(event.code) {
-                case 'KeyW': moveForward = false; break;
-                case 'KeyS': moveBackward = false; break;
-                case 'KeyA': moveLeft = false; break;
-                case 'KeyD': moveRight = false; break;
+            function restartGame() {
+                player.health = 100;
+                player.isDead = false;
+                damageCooldown = 0;
+                document.getElementById('healthFill').style.width = '100%';
+                document.getElementById('gameOver').style.display = 'none';
+                camera.position.set(0, 2, 0);
+                
+                monsters.forEach(monster => {
+                    monster.position.set(
+                        (Math.random() - 0.5) * 80,
+                        0,
+                        (Math.random() - 0.5) * 80
+                    );
+                    monster.userData.dirX = Math.random() - 0.5;
+                    monster.userData.dirZ = Math.random() - 0.5;
+                    monster.userData.changeTimer = 0;
+                });
+                
+                controls.lock();
+                playBackgroundSound();
             }
-        }
 
-        // 恐怖背景音乐
-        function playBackgroundSound() {
-            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horifice-hum-ambience-967.mp3');
-            audio.loop = true;
-            audio.volume = 0.3;
-            audio.play().catch(err => console.log('音频需要用户交互'));
-        }
+            function onKeyDown(event) {
+                switch(event.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': 
+                        if(camera.position.y <= 2.1) camera.position.y += 0.3; 
+                        break;
+                }
+            }
 
-        // 窗口适配
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+            function onKeyUp(event) {
+                switch(event.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            }
 
-        // 启动游戏
-        init();
-        animate();
+            function playBackgroundSound() {
+                if(isAudioPlaying) return;
+                
+                try {
+                    if(!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(60, audioContext.currentTime);
+                    oscillator.frequency.linearRampToValueAtTime(50, audioContext.currentTime + 2);
+                    
+                    gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 2);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.start();
+                    audioSource = oscillator;
+                    isAudioPlaying = true;
+                    
+                    oscillator.onended = function() {
+                        isAudioPlaying = false;
+                    };
+                } catch(e) {
+                    console.log('音频播放失败:', e);
+                }
+            }
+
+            function stopBackgroundSound() {
+                if(audioSource && audioSource.stop) {
+                    try {
+                        audioSource.stop();
+                    } catch(e) {}
+                    isAudioPlaying = false;
+                }
+            }
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            function cleanup() {
+                if(animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                stopBackgroundSound();
+                if(audioContext) {
+                    audioContext.close().catch(function(){});
+                }
+                renderer.dispose();
+            }
+
+            window.addEventListener('beforeunload', cleanup);
+
+            init();
+            animate();
+        })();
     </script>
 </body>
 </html>
