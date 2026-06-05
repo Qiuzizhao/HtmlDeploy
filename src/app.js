@@ -1135,6 +1135,18 @@ function createApp(options = {}) {
   const idGenerator = options.idGenerator || createDefaultId;
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
   const fallbackAdminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
+  const aiOptimizeJobTimeoutMs = normalizeTimeoutMs(
+    options.llmOptimizeJobTimeoutMs ?? process.env.LLM_OPTIMIZE_JOB_TIMEOUT_MS,
+    300000,
+    600000
+  );
+  const aiOptimizeConcurrency = Math.max(1, Math.min(2, Number.parseInt(
+    options.aiOptimizeConcurrency ?? process.env.AI_OPTIMIZE_CONCURRENCY ?? '1',
+    10
+  ) || 1));
+  const aiOptimizeJobs = new Map();
+  const aiOptimizeQueue = [];
+  let runningAiOptimizeJobs = 0;
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -1226,6 +1238,128 @@ function createApp(options = {}) {
         console.warn(`[Thumbnail] Failed to generate ${id}: ${error.message}`);
       }
     }, 0);
+  }
+
+  function cleanupAiOptimizeJobs() {
+    const maxAgeMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    for (const [jobId, job] of aiOptimizeJobs.entries()) {
+      if (['success', 'error'].includes(job.status) && now - Date.parse(job.finishedAt || job.updatedAt || job.createdAt) > maxAgeMs) {
+        aiOptimizeJobs.delete(jobId);
+      }
+    }
+  }
+
+  function toAiOptimizeJobResponse(job) {
+    return {
+      jobId: job.id,
+      siteId: job.siteId,
+      siteTitle: job.siteTitle,
+      status: job.status,
+      phase: job.phase,
+      message: job.message,
+      error: job.error || '',
+      model: job.model || '',
+      result: job.result || null,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      finishedAt: job.finishedAt || ''
+    };
+  }
+
+  function findActiveAiOptimizeJob(siteId) {
+    return Array.from(aiOptimizeJobs.values()).find((job) => (
+      job.siteId === siteId && ['queued', 'running'].includes(job.status)
+    ));
+  }
+
+  function updateAiOptimizeJob(job, patch) {
+    Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+  }
+
+  function enqueueAiOptimizeJob(job) {
+    aiOptimizeQueue.push(job.id);
+    setTimeout(processAiOptimizeQueue, 0);
+  }
+
+  function processAiOptimizeQueue() {
+    while (runningAiOptimizeJobs < aiOptimizeConcurrency && aiOptimizeQueue.length) {
+      const jobId = aiOptimizeQueue.shift();
+      const job = aiOptimizeJobs.get(jobId);
+      if (!job || job.status !== 'queued') {
+        continue;
+      }
+
+      runningAiOptimizeJobs += 1;
+      runAiOptimizeJob(job).finally(() => {
+        runningAiOptimizeJobs = Math.max(0, runningAiOptimizeJobs - 1);
+        cleanupAiOptimizeJobs();
+        processAiOptimizeQueue();
+      });
+    }
+  }
+
+  async function runAiOptimizeJob(job) {
+    updateAiOptimizeJob(job, {
+      status: 'running',
+      phase: 'calling_ai',
+      message: `正在调用 AI 优化「${job.siteTitle}」`
+    });
+
+    try {
+      const optimizedContent = await optimizeHtmlWithLlm({
+        htmlContent: job.htmlContent,
+        siteTitle: job.siteTitle,
+        instruction: job.instruction,
+        llmConfig: {
+          ...job.llmConfig,
+          timeoutMs: aiOptimizeJobTimeoutMs
+        }
+      });
+
+      updateAiOptimizeJob(job, {
+        phase: 'saving',
+        message: `AI 已返回，正在保存「${job.siteTitle}」`
+      });
+
+      const latestSites = await readSites(dataFile);
+      const latestSiteIndex = latestSites.findIndex((item) => item.id === job.siteId);
+      if (latestSiteIndex === -1) {
+        throw new Error('项目不存在');
+      }
+
+      await fsp.writeFile(path.join(storageDir, job.siteId, 'index.html'), optimizedContent);
+
+      const site = clearDuplicateAudit({
+        ...latestSites[latestSiteIndex],
+        updatedAt: new Date().toISOString()
+      });
+      latestSites[latestSiteIndex] = site;
+      await writeSites(dataFile, latestSites);
+      generateThumbnailLater(job.siteId, job.origin);
+
+      const classes = await readClasses(classesFile);
+      updateAiOptimizeJob(job, {
+        status: 'success',
+        phase: 'done',
+        message: `「${site.title}」AI 优化完成并已保存`,
+        finishedAt: new Date().toISOString(),
+        result: {
+          site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
+          model: job.llmConfig.model
+        }
+      });
+    } catch (error) {
+      updateAiOptimizeJob(job, {
+        status: 'error',
+        phase: 'error',
+        message: `「${job.siteTitle}」AI 优化失败`,
+        error: error.message || 'AI 优化失败',
+        finishedAt: new Date().toISOString()
+      });
+    } finally {
+      job.htmlContent = '';
+    }
   }
 
   app.use(express.json({ limit: maxTotalBytes }));
@@ -1866,7 +2000,7 @@ function createApp(options = {}) {
         id,
         origin: getRequestOrigin(req),
         thumbnailDir,
-        adminToken
+        adminToken: createAdminToken(await getAdminPassword())
       });
       return res.json(result);
     } catch (error) {
@@ -1886,6 +2020,7 @@ function createApp(options = {}) {
       const generated = [];
       const failed = [];
       const origin = getRequestOrigin(req);
+      const adminToken = createAdminToken(await getAdminPassword());
 
       for (const site of targetSites) {
         try {
@@ -2379,37 +2514,49 @@ function createApp(options = {}) {
       }
 
       const llmConfig = await getLlmConfig();
-      const optimizedContent = await optimizeHtmlWithLlm({
-        htmlContent,
-        siteTitle: sites[siteIndex].title,
-        instruction,
-        llmConfig
-      });
-
-      const latestSites = await readSites(dataFile);
-      const latestSiteIndex = latestSites.findIndex((item) => item.id === id);
-      if (latestSiteIndex === -1) {
-        return res.status(404).json({ error: '项目不存在' });
+      if (!llmConfig.apiKey) {
+        return res.status(400).json({ error: '请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY' });
       }
 
-      await fsp.writeFile(indexPath, optimizedContent);
+      const activeJob = findActiveAiOptimizeJob(id);
+      if (activeJob) {
+        return res.status(202).json(toAiOptimizeJobResponse(activeJob));
+      }
 
-      const site = clearDuplicateAudit({
-        ...latestSites[latestSiteIndex],
-        updatedAt: new Date().toISOString()
-      });
-      latestSites[latestSiteIndex] = site;
-      await writeSites(dataFile, latestSites);
-      generateThumbnailLater(id, getRequestOrigin(req));
-
-      const classes = await readClasses(classesFile);
-      return res.json({
-        site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
-        model: llmConfig.model
-      });
+      const now = new Date().toISOString();
+      const job = {
+        id: createDefaultId(),
+        siteId: id,
+        siteTitle: sites[siteIndex].title || id,
+        instruction,
+        htmlContent,
+        llmConfig,
+        origin: getRequestOrigin(req),
+        model: llmConfig.model,
+        status: 'queued',
+        phase: 'queued',
+        message: `「${sites[siteIndex].title || id}」已加入 AI 优化队列`,
+        createdAt: now,
+        updatedAt: now,
+        finishedAt: '',
+        result: null,
+        error: ''
+      };
+      aiOptimizeJobs.set(job.id, job);
+      enqueueAiOptimizeJob(job);
+      return res.status(202).json(toAiOptimizeJobResponse(job));
     } catch (error) {
       return res.status(error.message.includes('配置') ? 400 : 502).json({ error: error.message });
     }
+  });
+
+  app.get('/api/admin/ai-optimize-jobs/:jobId', requireAdmin, async (req, res) => {
+    const job = aiOptimizeJobs.get(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ error: 'AI 优化任务不存在或已过期' });
+    }
+
+    return res.json(toAiOptimizeJobResponse(job));
   });
 
   app.post('/api/sites/:id/ai-name', requireAdmin, async (req, res, next) => {

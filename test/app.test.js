@@ -258,7 +258,9 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /公网代理已超时/);
   assert.match(html, /AI 请求超过/);
   assert.match(html, /await readResponseError\(response, 'AI 优化失败'\)/);
-  assert.match(html, /await fetchWithTimeout\(`\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save`/);
+  assert.match(html, /async function pollAiOptimizeJob/);
+  assert.match(html, /\/api\/admin\/ai-optimize-jobs\/\$\{encodeURIComponent\(jobId\)\}/);
+  assert.match(html, /AI 优化任务已创建，后台会继续执行/);
   assert.match(html, /localStorage\.getItem\(AI_OPTIMIZE_LOG_STORAGE_KEY\)/);
   assert.match(html, /localStorage\.setItem\(AI_OPTIMIZE_LOG_STORAGE_KEY/);
   assert.match(html, /aiOptimizeLogItems = loadAiOptimizeLog\(\)/);
@@ -415,6 +417,22 @@ async function makeTestApp(options = {}) {
   });
 
   return { app, root, dataDir, storageDir, publicDir };
+}
+
+async function waitForAiOptimizeJob(agent, jobId, { status = 'success', attempts = 80 } = {}) {
+  let latest;
+  for (let index = 0; index < attempts; index += 1) {
+    latest = await agent.get(`/api/admin/ai-optimize-jobs/${jobId}`).expect(200);
+    if (latest.body.status === status) {
+      return latest.body;
+    }
+    if (latest.body.status === 'error' && status !== 'error') {
+      throw new Error(latest.body.error || latest.body.message || 'AI optimize job failed');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  throw new Error(`AI optimize job did not reach ${status}; latest status: ${latest?.body?.status}`);
 }
 
 test('GET /api/sites returns an empty list before uploads', async () => {
@@ -1561,11 +1579,16 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
     const response = await agent
       .post('/api/sites/ai-save/ai-optimize-save')
       .send({ instruction: '重点优化移动端性能，减少动画掉帧。' })
-      .expect(200);
+      .expect(202);
 
-    assert.equal(response.body.site.id, 'ai-save');
-    assert.equal(response.body.site.title, 'AI 项目');
-    assert.equal(response.body.model, 'fake-model');
+    assert.equal(response.body.siteId, 'ai-save');
+    assert.equal(response.body.status, 'queued');
+    assert.ok(response.body.jobId);
+
+    const job = await waitForAiOptimizeJob(agent, response.body.jobId);
+    assert.equal(job.result.site.id, 'ai-save');
+    assert.equal(job.result.site.title, 'AI 项目');
+    assert.equal(job.result.model, 'fake-model');
     assert.equal(
       await fsp.readFile(path.join(storageDir, 'ai-save', 'index.html'), 'utf8'),
       optimizedHtml
@@ -1598,7 +1621,7 @@ test('POST /api/sites/:id/ai-optimize-save reports LLM timeout clearly', async (
       llmApiKey: 'test-key',
       llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
       llmModel: 'fake-model',
-      llmTimeoutMs: 1000
+      llmOptimizeJobTimeoutMs: 1000
     });
     const agent = request.agent(app);
     await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
@@ -1614,9 +1637,10 @@ test('POST /api/sites/:id/ai-optimize-save reports LLM timeout clearly', async (
     const response = await agent
       .post('/api/sites/ai-timeout/ai-optimize-save')
       .send({})
-      .expect(502);
+      .expect(202);
 
-    assert.match(response.body.error, /AI 优化服务响应超时/);
+    const job = await waitForAiOptimizeJob(agent, response.body.jobId, { status: 'error' });
+    assert.match(job.error, /AI 优化服务响应超时/);
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));
@@ -1785,20 +1809,10 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
       .attach('file', Buffer.from('<!doctype html><h1>Original</h1>'), { filename: 'old.html' })
       .expect(201);
 
-    const optimizePromise = new Promise((resolve, reject) => {
-      agent
-        .post('/api/sites/ai-race/ai-optimize-save')
-        .send({})
-        .expect(200)
-        .end((error, response) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-
-          resolve(response);
-        });
-    });
+    const optimizeResponse = await agent
+      .post('/api/sites/ai-race/ai-optimize-save')
+      .send({})
+      .expect(202);
     await llmReceivedPromise;
 
     const sitesPath = path.join(dataDir, 'sites.json');
@@ -1811,10 +1825,10 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
     await fsp.writeFile(sitesPath, JSON.stringify(sites, null, 2));
 
     releaseLlm();
-    const response = await optimizePromise;
+    const job = await waitForAiOptimizeJob(agent, optimizeResponse.body.jobId);
 
-    assert.equal(response.body.site.title, '并发修改后的标题');
-    assert.equal(response.body.site.author, '并发修改作者');
+    assert.equal(job.result.site.title, '并发修改后的标题');
+    assert.equal(job.result.site.author, '并发修改作者');
     assert.equal(
       await fsp.readFile(path.join(storageDir, 'ai-race', 'index.html'), 'utf8'),
       optimizedHtml

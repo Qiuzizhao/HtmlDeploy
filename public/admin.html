@@ -1651,6 +1651,56 @@
       return count ? `正在执行 ${count} 个 AI 优化任务` : '';
     }
 
+    function sleep(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function formatAiJobStatus(job, fallbackTitle, isDirected) {
+      const title = job.siteTitle || fallbackTitle || '未命名项目';
+      const prefix = isDirected ? '定向 ' : '';
+      if (job.status === 'queued') {
+        return `「${title}」已加入${prefix}AI 优化队列`;
+      }
+      if (job.phase === 'saving') {
+        return `「${title}」AI 已返回，正在保存`;
+      }
+      if (job.status === 'running') {
+        return `正在${prefix}AI 优化「${title}」`;
+      }
+      return job.message || `正在${prefix}AI 优化「${title}」`;
+    }
+
+    async function pollAiOptimizeJob(jobId, site, options = {}) {
+      const isDirected = options.directed === true;
+      let lastLogKey = '';
+
+      while (true) {
+        const response = await fetch(`/api/admin/ai-optimize-jobs/${encodeURIComponent(jobId)}`);
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '查询 AI 优化任务失败'));
+        }
+
+        const job = await response.json();
+        const logKey = `${job.status}:${job.phase}`;
+        if (logKey !== lastLogKey && !['success', 'error'].includes(job.status)) {
+          const text = formatAiJobStatus(job, site.title, isDirected);
+          addAiOptimizeLog(text, 'running');
+          setMessage(listMessage, text);
+          lastLogKey = logKey;
+        }
+
+        if (job.status === 'success') {
+          return job.result;
+        }
+
+        if (job.status === 'error') {
+          throw new Error(job.error || job.message || 'AI 优化失败');
+        }
+
+        await sleep(2000);
+      }
+    }
+
     function switchView(viewName) {
       navButtons.forEach((button) => {
         button.classList.toggle('is-active', button.dataset.viewTarget === viewName);
@@ -2032,11 +2082,11 @@
         button.disabled = true;
         button.textContent = '优化中...';
       }
-      addAiOptimizeLog(`正在${isDirected ? '定向 ' : ' '}AI 优化「${site.title}」...`, 'running');
-      setMessage(listMessage, getRunningAiText() || `正在${isDirected ? '定向 ' : ' '}AI 优化并保存「${site.title}」...`);
+      addAiOptimizeLog(`正在提交${isDirected ? '定向 ' : ''}AI 优化任务「${site.title}」...`, 'running');
+      setMessage(listMessage, getRunningAiText() || `正在提交${isDirected ? '定向 ' : ''}AI 优化任务「${site.title}」...`);
 
       try {
-        const response = await fetchWithTimeout(`/api/sites/${encodeURIComponent(site.id)}/ai-optimize-save`, {
+        const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/ai-optimize-save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(instruction ? { instruction } : {})
@@ -2049,8 +2099,18 @@
           return;
         }
 
-        const result = await response.json();
-        const updatedSite = result.site;
+        const job = await response.json();
+        if (!job.jobId) {
+          throw new Error('AI 优化任务创建失败');
+        }
+
+        addAiOptimizeLog(`「${site.title}」AI 优化任务已创建，后台会继续执行。`, 'running');
+        const result = await pollAiOptimizeJob(job.jobId, site, { directed: isDirected });
+        const updatedSite = result?.site;
+        if (!updatedSite) {
+          throw new Error('AI 优化任务没有返回项目结果');
+        }
+
         const index = sites.findIndex((item) => item.id === updatedSite.id);
         if (index !== -1) {
           sites[index] = updatedSite;
