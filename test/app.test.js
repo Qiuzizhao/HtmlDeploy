@@ -18,6 +18,21 @@ test('public index uses a single HTML file picker', async () => {
   assert.doesNotMatch(html, /<input[^>]+id="fileInput"[^>]+webkitdirectory/);
 });
 
+test('pages expose a shared favicon', async () => {
+  const indexHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const adminHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const { app } = await makeTestApp();
+
+  assert.match(indexHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+  assert.match(adminHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+
+  const loginPage = await request(app).get('/admin.html').expect(200);
+  assert.match(loginPage.text, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+
+  const favicon = await request(app).get('/favicon.svg').expect(200);
+  assert.match(favicon.text, /<svg[^>]+viewBox="0 0 64 64"/);
+});
+
 test('public index does not show the project list heading or helper copy', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
