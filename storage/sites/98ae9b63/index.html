@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>吃丹修仙</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: #16213e;
+            border: 2px solid #0f3460;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(15, 52, 96, 0.5);
+        }
+
+        .title {
+            font-size: 28px;
+            color: #e94560;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #e94560;
+        }
+
+        .info {
+            margin: 15px 0;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .realm {
+            font-size: 22px;
+            color: #00ffab;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .pill-btn {
+            background: linear-gradient(45deg, #e94560, #ff6b6b);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: 0.2s;
+            box-shadow: 0 0 15px #e94560;
+        }
+
+        .pill-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .break-btn {
+            background: linear-gradient(45deg, #533483, #6a0572);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .tip {
+            color: #aed6f1;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .log {
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 8px;
+            height: 100px;
+            overflow-y: auto;
+            margin-top: 15px;
+            text-align: left;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="title">🧧 吃丹修仙 🧧</div>
+        <div class="realm" id="realm">练气一层</div>
+        <div class="info">
+            修为：<span id="xiulian">0</span><br>
+            灵气：<span id="spirit">0</span>
+        </div>
+
+        <button class="pill-btn" onclick="eatPill()">🍀 吃丹获得修为</button>
+        <br>
+        <button class="break-btn" onclick="breakRealm()">⚡ 突破境界</button>
+
+        <div class="tip">自动每秒获得 5 点灵气 | 灵气可转换为修为</div>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // 游戏数据
+        let game = {
+            xiulian: 0,       // 修为
+            spirit: 0,        // 灵气
+            realmLevel: 0,    // 境界等级
+            realmList: [
+                "练气一层", "练气十层",
+                "筑基初期", "筑基中期", "筑基后期", "筑基大圆满",
+                "金丹初期", "金丹中期", "金丹后期", "金丹大圆满",
+                "元婴初期", "元婴中期", "元婴后期", "元婴大圆满",
+                "化神境", "炼虚境", "合体境", "大乘境",
+                "渡劫境", "飞升境"
+            ]
+        };
+
+        // 初始化显示
+        updateUI();
+
+        // 自动获得灵气
+        setInterval(() => {
+            game.spirit += 5;
+            updateUI();
+        }, 1000);
+
+        // 吃丹
+        function eatPill() {
+            // 1颗丹 = 50修为 + 20灵气
+            let addXiu = 50 + Math.floor(Math.random() * 30);
+            let addLing = 20 + Math.floor(Math.random() * 10);
+            
+            game.xiulian += addXiu;
+            game.spirit += addLing;
+            
+            addLog(`你服用了一枚聚气丹，获得 ${addXiu} 修为，${addLing} 灵气！`);
+            updateUI();
+        }
+
+        // 突破境界
+        function breakRealm() {
+            let needXiu = (game.realmLevel + 1) * 100;
+            
+            if (game.xiulian < needXiu) {
+                addLog(`❌ 突破失败！需要 ${needXiu} 修为`);
+                return;
+            }
+
+            // 突破成功率：境界越低越容易
+            let successRate = 90 - game.realmLevel * 3;
+            if (successRate < 10) successRate = 10;
+            
+            let random = Math.random() * 100;
+            
+            if (random < successRate) {
+                // 突破成功
+                game.realmLevel++;
+                if (game.realmLevel >= game.realmList.length) {
+                    game.realmLevel = game.realmList.length - 1;
+                }
+                game.xiulian -= needXiu;
+                addLog(`✅ 突破成功！进入【${game.realmList[game.realmLevel]}】！`);
+            } else {
+                // 突破失败
+                game.xiulian = Math.floor(game.xiulian * 0.8);
+                addLog(`⚠️ 突破失败！修为受损！`);
+            }
+            
+            updateUI();
+        }
+
+        // 更新界面
+        function updateUI() {
+            document.getElementById("realm").innerText = game.realmList[game.realmLevel];
+            document.getElementById("xiulian").innerText = game.xiulian;
+            document.getElementById("spirit").innerText = game.spirit;
+        }
+
+        // 添加日志
+        function addLog(text) {
+            let log = document.getElementById("log");
+            log.innerHTML += "• " + text + "<br>";
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>
