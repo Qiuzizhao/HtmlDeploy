@@ -241,6 +241,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /const AI_OPTIMIZE_LOG_STORAGE_KEY/);
   assert.match(html, /function loadAiOptimizeLog/);
   assert.match(html, /function saveAiOptimizeLog/);
+  assert.match(html, /async function readResponseError/);
+  assert.match(html, /await readResponseError\(response, 'AI 优化失败'\)/);
   assert.match(html, /localStorage\.getItem\(AI_OPTIMIZE_LOG_STORAGE_KEY\)/);
   assert.match(html, /localStorage\.setItem\(AI_OPTIMIZE_LOG_STORAGE_KEY/);
   assert.match(html, /aiOptimizeLogItems = loadAiOptimizeLog\(\)/);
@@ -1526,6 +1528,46 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
     assert.equal(requestPayload.stream, false);
     assert.match(requestPayload.messages[1].content, /Original/);
     assert.match(requestPayload.messages[1].content, /重点优化移动端性能，减少动画掉帧。/);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('POST /api/sites/:id/ai-optimize-save reports LLM timeout clearly', async () => {
+  const llmServer = http.createServer(async (req, res) => {
+    for await (const chunk of req) {
+      void chunk;
+    }
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'ai-timeout'];
+    const { app } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmTimeoutMs: 1000
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+    await agent
+      .post('/api/sites')
+      .field('title', 'AI 超时项目')
+      .field('author', '测试作者')
+      .field('classId', 'class-a')
+      .attach('file', Buffer.from('<!doctype html><h1>Original</h1>'), { filename: 'old.html' })
+      .expect(201);
+
+    const response = await agent
+      .post('/api/sites/ai-timeout/ai-optimize-save')
+      .send({})
+      .expect(502);
+
+    assert.match(response.body.error, /AI 优化服务响应超时/);
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));
