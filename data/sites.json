@@ -41,7 +41,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:41.719Z",
-    "updatedAt": "2026-06-05T14:37:48.889Z"
+    "updatedAt": "2026-06-05T14:51:34.703Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "牛逼",
+    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
   },
   {
     "id": "ec39275e",
@@ -73,7 +76,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:15.651Z",
-    "updatedAt": "2026-06-05T14:37:48.921Z"
+    "updatedAt": "2026-06-05T14:51:34.734Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "p",
+    "forbiddenAuditMessage": "网页名字包含违禁词「p」"
   },
   {
     "id": "4139a720",
@@ -95,7 +101,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
-    "updatedAt": "2026-06-05T14:37:48.932Z"
+    "updatedAt": "2026-06-05T14:51:34.746Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "冰火",
+    "forbiddenAuditMessage": "网页名字包含违禁词「冰火」"
   },
   {
     "id": "3cccb5d2",
@@ -116,7 +125,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:22:45.330Z",
-    "updatedAt": "2026-06-05T14:37:48.949Z"
+    "updatedAt": "2026-06-05T14:51:34.762Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "买",
+    "forbiddenAuditMessage": "作者署名包含违禁词「买」"
   },
   {
     "id": "908e2ef3",
@@ -157,7 +169,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.250Z",
-    "updatedAt": "2026-06-05T14:37:48.984Z"
+    "updatedAt": "2026-06-05T14:51:34.797Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "牛逼",
+    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
   },
   {
     "id": "59dcd516",
@@ -168,7 +183,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
-    "updatedAt": "2026-06-05T14:37:48.990Z"
+    "updatedAt": "2026-06-05T14:51:34.803Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "牛逼",
+    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
   },
   {
     "id": "fe72fb41",
@@ -211,7 +229,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:50.378Z",
-    "updatedAt": "2026-06-05T14:37:49.021Z"
+    "updatedAt": "2026-06-05T14:51:34.834Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "妈",
+    "forbiddenAuditMessage": "网页名字包含违禁词「妈」"
   },
   {
     "id": "7ffd899e",
@@ -242,7 +263,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:12.351Z",
-    "updatedAt": "2026-06-05T14:37:49.051Z"
+    "updatedAt": "2026-06-05T14:51:34.863Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "p",
+    "forbiddenAuditMessage": "作者署名包含违禁词「p」"
   },
   {
     "id": "56a2aabe",
@@ -273,7 +297,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:50.151Z",
-    "updatedAt": "2026-06-05T14:37:49.071Z"
+    "updatedAt": "2026-06-05T14:51:34.884Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "game",
+    "forbiddenAuditMessage": "网页名字包含违禁词「game」"
   },
   {
     "id": "beb4560e",
@@ -284,7 +311,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:48.275Z",
-    "updatedAt": "2026-06-05T14:37:49.076Z"
+    "updatedAt": "2026-06-05T14:51:34.888Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "浪",
+    "forbiddenAuditMessage": "网页名字包含违禁词「浪」"
   },
   {
     "id": "1d4268ed",
@@ -295,7 +325,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:47.963Z",
-    "updatedAt": "2026-06-05T14:37:49.080Z"
+    "updatedAt": "2026-06-05T14:51:34.893Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "浪",
+    "forbiddenAuditMessage": "网页名字包含违禁词「浪」"
   },
   {
     "id": "af3daa4a",
@@ -306,7 +339,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:37.331Z",
-    "updatedAt": "2026-06-05T14:37:49.081Z"
+    "updatedAt": "2026-06-05T14:51:34.894Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "game",
+    "forbiddenAuditMessage": "网页名字包含违禁词「game」"
   },
   {
     "id": "98ae9b63",
@@ -327,7 +363,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:16:56.191Z",
-    "updatedAt": "2026-06-05T14:37:49.097Z"
+    "updatedAt": "2026-06-05T14:51:34.909Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "牛逼",
+    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
   },
   {
     "id": "31e7be77",
@@ -379,7 +418,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:15:18.794Z",
-    "updatedAt": "2026-06-05T14:37:49.141Z"
+    "updatedAt": "2026-06-05T14:51:34.953Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "p",
+    "forbiddenAuditMessage": "网页名字包含违禁词「p」"
   },
   {
     "id": "15ba87ae",
@@ -410,7 +452,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:42.662Z",
-    "updatedAt": "2026-06-05T14:37:49.166Z"
+    "updatedAt": "2026-06-05T14:51:34.978Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "陈毅",
+    "forbiddenAuditMessage": "作者署名包含违禁词「陈毅」"
   },
   {
     "id": "82af0bd0",
@@ -431,7 +476,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:29.028Z",
-    "updatedAt": "2026-06-05T14:37:49.183Z"
+    "updatedAt": "2026-06-05T14:51:34.995Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "美女",
+    "forbiddenAuditMessage": "作者署名包含违禁词「美女」"
   },
   {
     "id": "b59a51db",
@@ -503,7 +551,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:11:50.263Z",
-    "updatedAt": "2026-06-05T14:37:49.249Z"
+    "updatedAt": "2026-06-05T14:51:35.060Z",
+    "forbiddenAuditField": "作者署名",
+    "forbiddenAuditWord": "牛逼",
+    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
   },
   {
     "id": "17ae3311",
@@ -1087,7 +1138,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
-    "updatedAt": "2026-06-05T14:37:49.794Z"
+    "updatedAt": "2026-06-05T14:51:35.595Z",
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "忍",
+    "forbiddenAuditMessage": "网页名字包含违禁词「忍」"
   },
   {
     "id": "3a662fbd",
@@ -1536,8 +1590,11 @@
     "author": "小语",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:15.370Z",
-    "updatedAt": "2026-06-05T14:37:50.237Z",
-    "enabled": false
+    "updatedAt": "2026-06-05T14:51:36.035Z",
+    "enabled": false,
+    "forbiddenAuditField": "网页名字",
+    "forbiddenAuditWord": "坊",
+    "forbiddenAuditMessage": "网页名字包含违禁词「坊」"
   },
   {
     "id": "c236a467",
