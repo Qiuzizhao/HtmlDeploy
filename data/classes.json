@@ -23,8 +23,8 @@
     "password": "186559",
     "createdAt": "2026-06-02T12:01:47.337Z",
     "uploadEnabled": false,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-05T09:14:41.546Z"
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-05T09:14:45.195Z"
   },
   {
     "id": "2c2fab13",
