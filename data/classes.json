@@ -69,14 +69,5 @@
     "uploadEnabled": true,
     "passwordEnabled": true,
     "createdAt": "2026-06-04T01:20:15.251Z"
-  },
-  {
-    "id": "000286ca",
-    "name": "星标验证班",
-    "password": "123456",
-    "uploadEnabled": true,
-    "passwordEnabled": false,
-    "createdAt": "2026-06-05T09:25:25.754Z",
-    "updatedAt": "2026-06-05T09:25:25.759Z"
   }
 ]
