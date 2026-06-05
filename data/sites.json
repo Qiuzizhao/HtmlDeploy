@@ -620,7 +620,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T09:23:10.200Z",
-    "updatedAt": "2026-06-04T09:29:32.746Z"
+    "updatedAt": "2026-06-04T09:29:32.746Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:24:19.919Z"
   },
   {
     "id": "a60c5981",
@@ -631,7 +634,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T09:14:45.994Z",
-    "updatedAt": "2026-06-04T09:29:33.385Z"
+    "updatedAt": "2026-06-04T09:29:33.385Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:24:17.081Z"
   },
   {
     "id": "f7aa1024",
