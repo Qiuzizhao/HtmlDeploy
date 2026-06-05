@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>2D物理跑酷</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#222;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+#game{border:3px solid #fff;background:#87CEEB}
+.ui{position:absolute;top:10px;left:20px;color:#fff;font-size:22px;text-shadow:2px 2px #000}
+.gameTip{position:absolute;top:40px;left:20px;color:#eee;font-size:14px}
+.overBox{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);display:none;text-align:center}
+#gameOver{font-size:50px;color:#f55;margin-bottom:20px}
+#restart{padding:8px 22px;font-size:18px;cursor:pointer;background:#333;color:#fff;border:2px solid #fff}
+</style>
+</head>
+<body>
+<div class="ui">得分：<span id="score">0</span></div>
+<div class="gameTip">A← D→ | 空格跳跃 | 红框=碰撞箱</div>
+<div class="overBox">
+    <div id="gameOver">游戏结束</div>
+    <button id="restart" onclick="restartGame()">重新开始</button>
+</div>
+<canvas id="game" width="1000" height="500"></canvas>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+let score=0;
+let gameRun=true;
+const GRAVITY=0.55;    //重力
+const JUMP_POWER=-14;  //跳跃力度
+const RUN_SPEED=3.2;   //自动跑速
+
+//按键状态
+const key={A:false,D:false,SPACE:false};
+document.addEventListener("keydown",e=>{
+    if(e.code==="KeyA")key.A=true;
+    if(e.code==="KeyD")key.D=true;
+    if(e.code==="Space")key.SPACE=true;
+})
+document.addEventListener("keyup",e=>{
+    if(e.code==="KeyA")key.A=false;
+    if(e.code==="KeyD")key.D=false;
+    if(e.code==="Space")key.SPACE=false;
+})
+
+//玩家数据（碰撞盒：宽高固定）
+const player={
+    x:120,y:300,w:32,h:48,
+    vx:0,vy:0,onGround:false
+}
+
+//平台&障碍物数组
+let groundList=[];
+let obsList=[];
+let cameraX=0; //镜头偏移=大地图滚动核心
+
+//初始化地图
+function initMap(){
+    groundList=[];obsList=[];
+    //主地面长条（超长地图）
+    for(let i=0;i<120;i++){
+        groundList.push({
+            x:i*180,y:420,w:180,h:80
+        })
+    }
+    //随机浮空平台
+    for(let i=4;i<95;i+=Math.floor(Math.random()*5+3)){
+        groundList.push({
+            x:i*180+Math.random()*60,
+            y:280+Math.random()*80,
+            w:90+Math.random()*70,
+            h:22
+        })
+    }
+    //随机障碍物
+    for(let i=6;i<90;i+=Math.floor(Math.random()*6+3)){
+        obsList.push({
+            x:i*180+Math.random()*80,
+            y:372,w:36,h:48
+        })
+    }
+}
+
+//矩形碰撞检测
+function isCollision(a,b){
+    return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y
+}
+
+//游戏刷新
+function update(){
+    if(!gameRun)return;
+    score+=0.08;
+    document.getElementById("score").innerText=Math.floor(score);
+
+    //自动向右跑→镜头左移实现地图后退
+    cameraX+=RUN_SPEED;
+
+    //左右移动
+    if(key.A)player.vx=-3.8;
+    else if(key.D)player.vx=3.8;
+    else player.vx=0;
+
+    //跳跃（仅落地可跳）
+    if(key.SPACE&&player.onGround){
+        player.vy=JUMP_POWER;
+        player.onGround=false;
+    }
+
+    //重力下落
+    player.vy+=GRAVITY;
+    player.x+=player.vx;
+    player.y+=player.vy;
+
+    //落地判定
+    player.onGround=false;
+    for(let g of groundList){
+        const gx=g.x-cameraX;
+        const rectP={x:player.x,y:player.y,w:player.w,h:player.h};
+        const rectG={x:gx,y:g.y,w:g.w,h:g.h};
+        if(isCollision(rectP,rectG)){
+            //从上方落下踩平台
+            if(player.vy>0&&player.y+player.h-player.vy<=g.y+8){
+                player.y=g.y-player.h;
+                player.vy=0;
+                player.onGround=true;
+            }
+        }
+    }
+
+    //撞障碍物=游戏结束
+    for(let o of obsList){
+        const ox=o.x-cameraX;
+        const rectP={x:player.x,y:player.y,w:player.w,h:player.h};
+        const rectO={x:ox,y:o.y,w:o.w,h:o.h};
+        if(isCollision(rectP,rectO)) gameOver();
+    }
+
+    //掉落出屏幕下方失败
+    if(player.y>canvas.height+50) gameOver();
+    //左右边界限制
+    if(player.x<0)player.x=0;
+    if(player.x+player.w>canvas.width)player.x=canvas.width-player.w;
+}
+
+//渲染画面
+function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    //绘制所有地面
+    ctx.fillStyle="#588c40";
+    for(let g of groundList){
+        const gx=g.x-cameraX;
+        if(gx>-g.w&&gx<canvas.width){
+            ctx.fillRect(gx,g.y,g.w,g.h);
+            ctx.strokeStyle="#335522";
+            ctx.lineWidth=2;
+            ctx.strokeRect(gx,g.y,g.w,g.h);
+        }
+    }
+    //绘制障碍物
+    ctx.fillStyle="#994422";
+    for(let o of obsList){
+        const ox=o.x-cameraX;
+        if(ox>-o.w&&ox<canvas.width){
+            ctx.fillRect(ox,o.y,o.w,o.h);
+        }
+    }
+    //绘制玩家本体
+    ctx.fillStyle="#ff5555";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
+    //=====可视化碰撞箱【红色外框】=====
+    ctx.strokeStyle="#f00";
+    ctx.lineWidth=2;
+    ctx.strokeRect(player.x,player.y,player.w,player.h);
+}
+
+//游戏结束
+function gameOver(){
+    gameRun=false;
+    document.querySelector(".overBox").style.display="block";
+}
+//重启游戏
+function restartGame(){
+    location.reload();
+}
+
+//主循环
+function loop(){
+    update();
+    render();
+    requestAnimationFrame(loop);
+}
+
+//启动
+initMap();
+loop();
+</script>
+</body>
+</html>

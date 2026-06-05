@@ -1,0 +1,273 @@
+预览
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>极速音游</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #1e1545, #3a1c71, #5a2d91, #2d1b69);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        .game-title {
+            font-size: 36px;
+            background: linear-gradient(90deg, #ff6b9d, #c44569, #f8b500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 107, 157, 0.4);
+        }
+        .game-info {
+            display: flex;
+            gap: 30px;
+            margin-bottom:15px;
+            font-size:18px;
+            background:rgba(0,0,0,0.3);
+            padding:10px 25px;
+            border-radius:30px;
+            backdrop-filter: blur(10px);
+            box-shadow:0 4px 20px rgba(0,0,0,0.3);
+        }
+        .info-item .highlight{color:#f8b500;font-weight:bold;}
+        .game-container {
+            width:500px;height:600px;
+            background:rgba(20,20,40,0.7);
+            border-radius:15px;position:relative;overflow:hidden;
+            box-shadow:0 0 40px rgba(120,80,255,0.3);
+            border:2px solid rgba(180,150,255,0.2);
+        }
+        .judge-line {
+            position:absolute;bottom:100px;left:0;width:100%;height:5px;
+            background:linear-gradient(90deg,#ff6b9d,#f8b500);
+            box-shadow:0 0 15px #ff6b9d;z-index:10;
+        }
+        .tracks{display:flex;height:100%;}
+        .track{flex:1;border-left:2px solid rgba(150,120,255,0.2);border-right:2px solid rgba(150,120,255,0.2);position:relative;}
+        .note {
+            width:90%;height:35px;left:5%;
+            background:linear-gradient(135deg,#ff6b9d,#c44569);
+            border-radius:8px;position:absolute;
+            box-shadow:0 0 15px rgba(255,107,157,0.5);
+        }
+        .keys{position:absolute;bottom:0;left:0;width:100%;height:100px;display:flex;}
+        .key {
+            flex:1;background:rgba(80,50,150,0.5);
+            border:none;color:#fff;font-size:22px;font-weight:bold;
+            cursor:pointer;transition:0.2s;border-top:3px solid rgba(255,181,0,0.5);
+        }
+        .key:active{background:rgba(255,107,157,0.6);transform:scale(0.95);}
+        .judge-text {
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            font-size:42px;font-weight:bold;opacity:0;transition:opacity 0.4s,transform 0.4s;z-index:20;
+            text-shadow:0 0 15px currentColor;
+        }
+        .perfect{color:#f8b500;}
+        .good{color:#4cd137;}
+        .miss{color:#e74c3c;}
+        .game-over {
+            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+            background:rgba(0,0,0,0.9);padding:40px;border-radius:20px;text-align:center;
+            z-index:999;display:none;backdrop-filter:blur(15px);
+            box-shadow:0 0 30px rgba(255,107,157,0.3);
+        }
+        .restart-btn {
+            margin-top:25px;padding:12px 30px;
+            background:linear-gradient(90deg,#ff6b9d,#c44569);
+            color:#fff;border:none;border-radius:50px;cursor:pointer;font-size:18px;transition:0.3s;
+        }
+        .restart-btn:hover{transform:scale(1.08);box-shadow:0 0 15px #ff6b9d;}
+        .audio-tip{margin-bottom:8px;color:#ffd270}
+    </style>
+</head>
+<body>
+    <h1 class="game-title">🎵 极速音游</h1>
+    <div class="audio-tip">点击游戏画面自动开启背景音乐！</div>
+    <div class="game-info">
+        <div class="info-item">分数: <span class="highlight" id="score">0</span></div>
+        <div class="info-item">连击: <span class="highlight" id="combo">0</span></div>
+        <div class="info-item">生命: <span class="highlight" id="hp">100</span></div>
+    </div>
+    <div class="game-container" id="gameContainer">
+        <div class="judge-line"></div>
+        <div class="tracks">
+            <div class="track" id="track0"></div>
+            <div class="track" id="track1"></div>
+            <div class="track" id="track2"></div>
+            <div class="track" id="track3"></div>
+        </div>
+        <div class="keys">
+            <button class="key" data-track="0">D</button>
+            <button class="key" data-track="1">F</button>
+            <button class="key" data-track="2">J</button>
+            <button class="key" data-track="3">K</button>
+        </div>
+        <div class="judge-text" id="judgeText"></div>
+    </div>
+    <div class="game-over" id="gameOver">
+        <h2>游戏结束</h2>
+        <h3>最终分数: <span id="finalScore">0</span></h3>
+        <button class="restart-btn" onclick="restartGame()">重新开始</button>
+    </div>
+
+    <!-- BGM音频 -->
+    <audio id="bgm" loop preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-tech-house-vibes-loop-1289.mp3" type="audio/mpeg">
+    
+
+    <script>
+        // 【提速参数】：速度加快、生成间隔缩短
+        const game = {
+            score:0,combo:0,hp:100,notes:[],gameOver:false,
+            noteSpeed:5.5,    // 原3→提速5.5
+            spawnGap:380,     // 原800→缩短生成间隔
+            judgeLineY:500,
+            bgmPlay:false
+        };
+        const scoreEl=document.getElementById('score');
+        const comboEl=document.getElementById('combo');
+        const hpEl=document.getElementById('hp');
+        const judgeText=document.getElementById('judgeText');
+        const gameOver=document.getElementById('gameOver');
+        const finalScoreEl=document.getElementById('finalScore');
+        const tracks=document.querySelectorAll('.track');
+        const keys=document.querySelectorAll('.key');
+        const bgm=document.getElementById('bgm');
+        const gameBox=document.getElementById('gameContainer');
+
+        // 点击页面开启音乐（浏览器策略必须交互才能播放）
+        gameBox.addEventListener('click',()=>{
+            if(!game.bgmPlay){
+                bgm.volume=0.45;
+                bgm.play();
+                game.bgmPlay=true;
+            }
+        })
+
+        // 生成音符
+        function spawnNote(){
+            if(game.gameOver) return;
+            let trackIndex=Math.floor(Math.random()*4);
+            const note=document.createElement('div');
+            note.className='note';
+            note.dataset.track=trackIndex;
+            note.style.top='0px';
+            tracks[trackIndex].appendChild(note);
+            game.notes.push({element:note,track:trackIndex,y:0});
+        }
+
+        // 音符下落刷新
+        function updateNotes(){
+            if(game.gameOver) return;
+            for(let i=game.notes.length-1;i>=0;i--){
+                const note=game.notes[i];
+                note.y+=game.noteSpeed;
+                note.element.style.top=note.y+'px';
+                // 漏键miss
+                if(note.y>game.judgeLineY+52){
+                    note.element.remove();
+                    game.notes.splice(i,1);
+                    showJudge('MISS','miss');
+                    game.combo=0;
+                    game.hp=Math.max(0,game.hp-15);
+                    updateUI();
+                    checkGameOver();
+                }
+            }
+        }
+
+        // 鼠标点击按键
+        keys.forEach(key=>{
+            key.addEventListener('click',()=>{
+                let t=parseInt(key.dataset.track);hitNote(t);
+            })
+        })
+        // 键盘 DFJK
+        document.addEventListener('keydown',e=>{
+            if(game.gameOver)return;
+            switch(e.key.toLowerCase()){
+                case 'd':hitNote(0);break;
+                case 'f':hitNote(1);break;
+                case 'j':hitNote(2);break;
+                case 'k':hitNote(3);break;
+            }
+        })
+
+        // 打击判定
+        function hitNote(trackIdx){
+            let isHit=false;
+            for(let i=game.notes.length-1;i>=0;i--){
+                let n=game.notes[i];
+                if(n.track===trackIdx){
+                    let offset=Math.abs(n.y-game.judgeLineY);
+                    if(offset<38){
+                        game.score+=100;game.combo++;game.hp=Math.min(100,game.hp+5);
+                        showJudge('PERFECT','perfect');
+                    }else if(offset<75){
+                        game.score+=50;game.combo++;game.hp=Math.min(100,game.hp+2);
+                        showJudge('GOOD','good');
+                    }else continue;
+                    n.element.remove();game.notes.splice(i,1);isHit=true;break;
+                }
+            }
+            if(!isHit){game.combo=0;showJudge('MISS','miss');}
+            updateUI();
+        }
+
+        // 弹出判定文字
+        function showJudge(txt,cls){
+            judgeText.textContent=txt;
+            judgeText.className='judge-text '+cls;
+            judgeText.style.opacity=1;judgeText.style.transform='translate(-50%,-60%)';
+            setTimeout(()=>{
+                judgeText.style.opacity=0;judgeText.style.transform='translate(-50%,-50%)';
+            },300)
+        }
+
+        function updateUI(){
+            scoreEl.textContent=game.score;
+            comboEl.textContent=game.combo;
+            hpEl.textContent=game.hp;
+        }
+
+        function checkGameOver(){
+            if(game.hp<=0){
+                game.gameOver=true;
+                bgm.pause();
+                finalScoreEl.textContent=game.score;
+                gameOver.style.display='block';
+            }
+        }
+
+        function restartGame(){location.reload();}
+
+        // 游戏主循环
+        setInterval(updateNotes,18);
+        setInterval(spawnNote,game.spawnGap);
+    </script>
+</body>
+</html>
+更新内容
+提速完成
+音符下落速度：3 → 5.5
+音符生成间隔：800ms → 380ms，音符密集、节奏更快
+自带 BGM
+免费版权电子乐，点击游戏画面自动播放背景音乐（浏览器规则不能进页面自动播放），音量 0.45，循环播放
+判定区间小幅收紧，适配高速游玩
+操作
+键盘：D F J K
+鼠标：点下方四个按键
+进阶可选
+想要更快 / 更慢、换歌曲、自定义谱面我可以一键修改参数。
