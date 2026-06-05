@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>太空射击-排行榜+BGM完整版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",sans-serif}
+body{
+    background:#050518;
+    display:flex;flex-direction:column;align-items:center;padding:15px;
+}
+#wrap{position:relative}
+#game{
+    border:2px solid #3498ff;
+    border-radius:8px;
+    box-shadow:0 0 25px #297bff66;
+}
+#info{
+    display:flex;width:480px;justify-content:space-between;color:#fff;font-size:16px;margin-bottom:8px;gap:3px;
+}
+.score{color:#ffdd44}
+#startBtn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    padding:14px 32px;font-size:22px;border:none;border-radius:30px;
+    background:linear-gradient(45deg,#3498ff,#6c47ff);color:#fff;cursor:pointer;
+    box-shadow:0 0 18px #4285ff88;z-index:99;
+}
+#gameTip{
+    position:absolute;top:52%;left:50%;transform:translate(-50%,-50%);
+    color:#ff5555;font-size:36px;display:none;
+    text-shadow:0 0 12px #ff000077;
+}
+#buffTip{
+    position:absolute;top:80px;left:50%;transform:translateX(-50%);
+    color:#fff;font-size:18px;display:none;
+}
+#levelTip{
+    position:absolute;top:35%;left:50%;transform:translate(-50%,-50%);
+    font-size:32px;color:#ffdd33;display:none;text-align:center;
+    text-shadow:0 0 15px #ffaa00;white-space:pre-line;
+}
+#winTip{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:36px;color:#39ff39;display:none;text-align:center;
+    text-shadow:0 0 20px #22ff22;white-space:pre-line;
+}
+#rankBox{
+    position:absolute;top:10px;right:-130px;width:120px;background:#000822cc;border:1px solid #ffdd44;
+    color:#ffdd44;padding:8px;font-size:13px;
+}
+.rankTitle{text-align:center;margin-bottom:4px;border-bottom:1px solid #ffdd44;padding-bottom:3px;}
+</style>
+</head>
+<body>
+<div id="info">
+    <div>得分：<span class="score" id="scoreNum">0</span></div>
+    <div>难度：<span class="score" id="levelNum">1</span></div>
+    <div>关卡：<span class="score" id="stageNum">1</span></div>
+    <div>生命：<span class="score" id="hpNum">3</span></div>
+</div>
+<div id="wrap">
+    <canvas id="game" width="480" height="650"></canvas>
+    <button id="startBtn">点击开始游戏</button>
+    <div id="gameTip">游戏结束</div>
+    <div id="buffTip" id="buffText"></div>
+    <div id="levelTip" id="stageText"></div>
+    <div id="winTip" id="winText"></div>
+    <div id="rankBox">
+        <div class="rankTitle">排行榜TOP5</div>
+        <div id="rankList"></div>
+    </div>
+</div>
+
+<!-- 音效资源 -->
+<audio id="fireAudio" src="https://assets.mixkit.co/sfx/preview/mixkit-laser-weapon-shot-1011.mp3" preload="auto">
+<audio id="pickAudio" src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" preload="auto">
+<audio id="boomAudio" src="https://assets.mixkit.co/sfx/preview/mixkit-explosion-bomb-769.mp3" preload="auto">
+<!-- BGM -->
+<audio id="bgmNormal" loop preload="auto" src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3">
+<audio id="bgmWin" loop preload="auto" src="https://assets.mixkit.co/music/preview/mixkit-epic-orchestra-short-success-1157.mp3">
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreDom = document.getElementById('scoreNum');
+const levelDom = document.getElementById('levelNum');
+const hpDom = document.getElementById('hpNum');
+const stageDom = document.getElementById('stageNum');
+const startBtn = document.getElementById('startBtn');
+const gameTip = document.getElementById('gameTip');
+const buffText = document.getElementById('buffTip');
+const stageText = document.getElementById('levelTip');
+const winText = document.getElementById('winTip');
+const rankList = document.getElementById('rankList');
+
+const fireAudio = document.getElementById('fireAudio');
+const pickAudio = document.getElementById('pickAudio');
+const boomAudio = document.getElementById('boomAudio');
+const bgmNormal = document.getElementById('bgmNormal');
+const bgmWin = document.getElementById('bgmWin');
+
+const playerImg = new Image();
+// playerImg.src = "player.png";
+const enemyImg = new Image();
+// enemyImg.src = "enemy.png";
+const bossImg = new Image();
+// bossImg.src = "boss.png";
+
+// ========== 本地排行榜配置 localStorage ==========
+const RANK_KEY = "shootGameRank";
+let rankData = JSON.parse(localStorage.getItem(RANK_KEY)) || [];
+// 更新排行榜UI
+function refreshRankUI(){
+    rankList.innerHTML = "";
+    if(rankData.length===0){
+        rankList.innerHTML="暂无记录";
+        return;
+    }
+    rankData.slice(0,5).forEach((s,i)=>{
+        rankList.innerHTML += `${i+1}. ${s}分<br>`;
+    })
+}
+// 保存分数进排行榜
+function saveScoreToRank(score){
+    rankData.push(score);
+    rankData.sort((a,b)=>b-a);
+    rankData = [...new Set(rankData)]; //去重
+    rankData = rankData.slice(0,5); //只存前5
+    localStorage.setItem(RANK_KEY,JSON.stringify(rankData));
+    refreshRankUI();
+}
+refreshRankUI();
+
+// 5大关配置
+const stageConfig = [
+    {score:0, name:"第一关·初入星际"},
+    {score:600, name:"第二关·陨石地带"},
+    {score:1300,name:"第三关·敌舰前哨"},
+    {score:2200,name:"第四关·深空围剿"},
+    {score:3500,name:"第五关·BOSS巢穴"}
+];
+const MAX_STAGE = stageConfig.length;
+let nowStage = 1;
+let isStageWait = false;
+let waitCount = 3;
+
+let score = 0;
+let level = 1;
+let hp = 3;
+let gameStart = false;
+let gameOver = false;
+let gameWin = false;
+
+let buff = {
+    scatter: false,shield: false,big:false,
+    scatterTime:0,shieldTime:0,bigTime:0
+};
+
+let stars = [];
+for(let i=0;i<120;i++){
+    stars.push({
+        x:Math.random()*canvas.width,y:Math.random()*canvas.height,
+        size:Math.random()*2+0.5,speed:Math.random()*1.2+0.2
+    })
+}
+
+const player = {
+    x:canvas.width/2-22,y:canvas.height-60,w:44,h:48,baseW:44,baseH:48
+}
+
+let bullets = [];
+let enemyBullets = [];
+let enemies = [];
+let bossList = [];
+let items = [];
+let boomList = [];
+
+canvas.onmousemove = e=>{
+    if(!gameStart||gameOver||gameWin||isStageWait)return;
+    const rect = canvas.getBoundingClientRect();
+    let mx = e.clientX - rect.left;
+    player.x = Math.max(0,Math.min(mx-player.w/2,canvas.width-player.w));
+}
+
+function getStageAttr(){
+    let spdAdd = nowStage*0.35;
+    let bossHpAdd = nowStage*4;
+    let enemyHp = nowStage>=3?2:1;
+    return {spdAdd,bossHpAdd,enemyHp};
+}
+
+function createEnemy(){
+    if(!gameStart||gameOver||gameWin||isStageWait)return;
+    let attr = getStageAttr();
+    let w = 36,h=36;
+    enemies.push({
+        x:Math.random()*(canvas.width-w),y:-h,w,h,hp:attr.enemyHp,
+        spd:1.8+level*0.4+attr.spdAdd,
+        color:['#ff4757','#ffa502','#2ed573','#a55eea'][Math.floor(Math.random()*4)],
+        shootCd:Math.random()*120+60 - nowStage*8
+    })
+}
+
+function createBoss(){
+    if(!gameStart||gameOver||gameWin||isStageWait)return;
+    let attr = getStageAttr();
+    let bw=90,bh=70;
+    let baseHp = 12+level*3+attr.bossHpAdd;
+    bossList.push({
+        x:canvas.width/2-bw/2,y:-bh,w:bw,h:bh,hp:baseHp,maxHp:baseHp,
+        spd:1.2,color:'#ff2266',shootCd:Math.max(22,40-nowStage*3)
+    })
+}
+
+function enemyShoot(){
+    if(isStageWait||gameWin) return;
+    enemies.forEach(e=>{
+        e.shootCd--;
+        if(e.shootCd<=0){
+            e.shootCd=90+Math.random()*50 - nowStage*5;
+            enemyBullets.push({
+                x:e.x+e.w/2-3,y:e.y+e.h,w:6,h:12,spd:4.5+nowStage*0.4
+            })
+        }
+    })
+    bossList.forEach(b=>{
+        b.shootCd--;
+        if(b.shootCd<=0){
+            b.shootCd=Math.max(20,35-nowStage*2);
+            enemyBullets.push({x:b.x+b.w/2-3,y:b.y+b.h,w:6,h:12,spd:5+nowStage*0.3,ax:-1.1});
+            enemyBullets.push({x:b.x+b.w/2-3,y:b.y+b.h,w:6,h:12,spd:5+nowStage*0.3,ax:0});
+            enemyBullets.push({x:b.x+b.w/2-3,y:b.y+b.h,w:6,h:12,spd:5+nowStage*0.3,ax:1.1});
+        }
+    })
+}
+
+function createItem(x,y){
+    let r = Math.random();
+    let type;
+    if(r<0.2)type='scatter';
+    else if(r<0.4)type='shield';
+    else if(r<0.58)type='bomb';
+    else if(r<0.78)type='hp';
+    else type='big';
+    items.push({x,y,w:26,h:26,type,speed:2.2})
+}
+
+function shoot(){
+    if(!gameStart||gameOver||gameWin||isStageWait)return;
+    fireAudio.currentTime=0;fireAudio.play();
+    let cx = player.x+player.w/2-3;
+    if(buff.scatter){
+        bullets.push({x:cx-12,y:player.y,w:6,h:16,spd:11,ax:-1.2});
+        bullets.push({x:cx,y:player.y,w:6,h:16,spd:11,ax:0});
+        bullets.push({x:cx+12,y:player.y,w:6,h:16,spd:11,ax:1.2});
+    }else{
+        bullets.push({x:cx,y:player.y,w:6,h:16,spd:11,ax:0});
+    }
+}
+
+function createBoom(x,y,color,big=false){
+    let num = big?35:14;
+    for(let i=0;i<num;i++){
+        boomList.push({
+            x,y,sx:(Math.random()-0.5)*6,sy:(Math.random()-0.5)*6,
+            size:Math.random()*4+1,color,life:big?35:22
+        })
+    }
+    boomAudio.currentTime=0;boomAudio.play();
+}
+
+function pickItem(){
+    for(let i=items.length-1;i>=0;i--){
+        let it = items[i];
+        if(player.x<it.x+it.w && player.x+player.w>it.x && player.y<it.y+it.h && player.y+player.h>it.y+it.h){
+            pickAudio.currentTime=0;pickAudio.play();
+            switch(it.type){
+                case 'scatter':
+                    buff.scatter=true;buff.scatterTime=Date.now()+5000;
+                    buffText.innerText='获得散射子弹(5s)';break;
+                case 'shield':
+                    buff.shield=true;buff.shieldTime=Date.now()+6000;
+                    buffText.innerText='获得无敌护盾(6s)';break;
+                case 'bomb':
+                    enemies.forEach(e=>{createBoom(e.x+e.w/2,e.y+e.h/2,e.color);score+=8;});
+                    bossList.forEach(b=>{b.hp-=5;createBoom(b.x+b.w/2,b.y+b.h/2,b.color,true);})
+                    enemies=[];buffText.innerText='全屏炸弹清屏';break;
+                case 'hp':
+                    hp=Math.min(hp+1,5);hpDom.innerText=hp;
+                    buffText.innerText='生命值+1';break;
+                case 'big':
+                    buff.big=true;buff.bigTime=Date.now()+6000;
+                    player.w=player.baseW*1.4;player.h=player.baseH*1.4;
+                    buffText.innerText='机身变大6秒';break;
+            }
+            buffText.style.display='block';
+            setTimeout(()=>buffText.style.display='none',2000);
+            items.splice(i,1);
+        }
+    }
+}
+
+// 通关判定+奖励+切关+胜利
+function checkStageUp(){
+    if(isStageWait||gameWin) return;
+    let newStage=1;
+    for(let i=stageConfig.length-1;i>=0;i--){
+        if(score>=stageConfig[i].score){
+            newStage=i+1;break;
+        }
+    }
+    if(newStage>nowStage){
+        // 全部通关
+        if(newStage>MAX_STAGE){
+            gameWin = true;
+            bgmNormal.pause();
+            bgmWin.currentTime=0;
+            bgmWin.play();
+            saveScoreToRank(score); //存档最高分
+            winText.innerHTML = `🎉恭喜全部通关！\n最终得分：${score}\n点击重新开始`;
+            winText.style.display='block';
+            return;
+        }
+        //单关通关奖励
+        nowStage = newStage;
+        stageDom.innerText=nowStage;
+        isStageWait = true;
+        waitCount = 3;
+        hp = Math.min(hp+1,5);
+        hpDom.innerText = hp;
+        enemies.forEach(e=>{createBoom(e.x+e.w/2,e.y+e.h/2,e.color);score+=8;})
+        enemies = [];
+        bossList.forEach(b=>{b.hp-=6;createBoom(b.x+b.w/2,b.y+b.h/2,b.color,true);})
+
+        stageText.innerText = `${stageConfig[nowStage-2].name}通关！\n${waitCount}秒进入${stageConfig[nowStage-1].name}`;
+        stageText.style.display='block';
+
+        let cd = setInterval(()=>{
+            waitCount--;
+            stageText.innerText = `${stageConfig[nowStage-2].name}通关！\n${waitCount}秒进入${stageConfig[nowStage-1].name}`;
+            if(waitCount<=0){
+                clearInterval(cd);
+                stageText.style.display='none';
+                isStageWait = false;
+            }
+        },1000)
+    }
+}
+
+function collision(){
+    if(isStageWait||gameWin) return;
+    for(let bi=bullets.length-1;bi>=0;bi--){
+        let b=bullets[bi];
+        for(let ei=enemies.length-1;ei>=0;ei--){
+            let e=enemies[ei];
+            if(b.x<b.x+b.w&&b.x+b.w>e.x&&b.y<b.y+b.h&&b.y+b.h>e.y+e.h){
+                e.hp--;
+                bullets.splice(bi,1);
+                if(e.hp<=0){
+                    createBoom(e.x+e.w/2,e.y+e.h/2,e.color);
+                    if(Math.random()<0.38) createItem(e.x,e.y);
+                    enemies.splice(ei,1);score+=15;scoreDom.innerText=score;
+                    let newLv=Math.floor(score/120)+1;
+                    if(newLv!==level){level=newLv;levelDom.innerText=level;}
+                    checkStageUp();
+                }
+                break;
+            }
+        }
+        for(let boi=bossList.length-1;boi>=0;boi--){
+            let bo=bossList[boi];
+            if(b.x<b.x+b.w&&b.x+b.w>bo.x&&b.y<b.y+b.h&&b.y+b.h>bo.y+bo.h){
+                bo.hp--;bullets.splice(bi,1);
+                if(bo.hp<=0){
+                    createBoom(bo.x+bo.w/2,bo.y+bo.h/2,bo.color,true);
+                    score+=180;scoreDom.innerText=score;
+                    checkStageUp();
+                    for(let k=0;k<3;k++) createItem(bo.x+Math.random()*bo.w,bo.y);
+                    bossList.splice(boi,1);
+                }
+                break;
+            }
+        }
+    }
+
+    for(let i=enemyBullets.length-1;i>=0;i--){
+        let eb=enemyBullets[i];
+        if(player.x<eb.x+eb.w&&player.x+player.w>eb.x&&player.y<eb.y+eb.h&&player.y+player.h>eb.y+eb.h){
+            if(buff.shield){enemyBullets.splice(i,1);continue;}
+            enemyBullets.splice(i,1);hp--;hpDom.innerText=hp;
+            if(hp<=0){
+                gameOver=true;
+                saveScoreToRank(score); //失败也存分
+                gameTip.style.display='block';
+                createBoom(player.x+player.w/2,player.y+player.h/2,'#4298ff',true);
+                bgmNormal.pause();
+            }
+        }
+    }
+
+    for(let i=enemies.length-1;i>=0;i--){
+        let e=enemies[i];
+        if(player.x<e.x+e.w&&player.x+player.w>e.x&&player.y<e.y+e.h&&player.y+player.h>e.y+e.h){
+            if(buff.shield){createBoom(e.x+e.w/2,e.y+e.h/2,e.color);enemies.splice(i,1);score+=8;scoreDom.innerText=score;checkStageUp();continue;}
+            hp--;hpDom.innerText=hp;enemies.splice(i,1);
+            if(hp<=0){
+                gameOver=true;
+                saveScoreToRank(score);
+                gameTip.style.display='block';
+                createBoom(player.x+player.w/2,player.y+player.h/2,'#4298ff',true);
+                bgmNormal.pause();
+            }
+        }
+    }
+    pickItem();
+}
+
+function drawStar(){
+    ctx.fillStyle='#fff';
+    stars.forEach(s=>{
+        ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,Math.PI*2);ctx.fill();
+        s.y+=s.speed;if(s.y>canvas.height){s.y=0;s.x=Math.random()*canvas.width;}
+    })
+}
+
+function drawPlayer(){
+    let p=player;
+    if(playerImg.complete){
+        ctx.drawImage(playerImg,p.x,p.y,p.w,p.h);
+    }else{
+        let grad = ctx.createLinearGradient(p.x,p.y,p.x+p.w,p.y+p.h);
+        grad.addColorStop(0,'#5ac8fa');grad.addColorStop(1,'#0066ff');
+        ctx.fillStyle=grad;
+        ctx.beginPath();
+        ctx.moveTo(p.x+p.w/2,p.y);
+        ctx.lineTo(p.x+p.w,p.y+p.h);
+        ctx.lineTo(p.x+p.w*0.72,p.y+p.h*0.75);
+        ctx.lineTo(p.x+p.w*0.28,p.y+p.h*0.75);
+        ctx.lineTo(p.x,p.y+p.h);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#ffdd33';
+        ctx.beginPath();ctx.arc(p.x+p.w/2,p.y+p.h+6,6,0,Math.PI*2);ctx.fill();
+    }
+    if(buff.shield){
+        ctx.strokeStyle='#39ff39';ctx.lineWidth=3;
+        ctx.beginPath();ctx.arc(p.x+p.w/2,p.y+p.h/2,p.w/2+8,0,Math.PI*2);ctx.stroke();
+    }
+}
+
+function drawBullet(){
+    bullets.forEach((b,i)=>{
+        let g=ctx.createLinearGradient(b.x,b.y,b.x,b.y+b.h);
+        g.addColorStop(0,'#fff');g.addColorStop(1,'#ffdd00');
+        ctx.fillStyle=g;ctx.fillRect(b.x,b.y,b.w,b.h);
+        b.y-=b.spd;b.x+=b.ax||0;
+        if(b.y<-b.h)bullets.splice(i,1);
+    })
+}
+
+function drawEnemyBullet(){
+    enemyBullets.forEach((b,i)=>{
+        ctx.fillStyle='#ff5555';
+        ctx.fillRect(b.x,b.y,b.w,b.h);
+        b.y+=b.spd;b.x+=b.ax||0;
+        if(b.y>canvas.height||b.x<0||b.x>canvas.width)enemyBullets.splice(i,1);
+    })
+}
+
+function drawEnemy(){
+    enemies.forEach((e,i)=>{
+        if(enemyImg.complete){
+            ctx.drawImage(enemyImg,e.x,e.y,e.w,e.h);
+        }else{
+            ctx.fillStyle=e.color;
+            ctx.beginPath();ctx.arc(e.x+e.w/2,e.y+e.h/2,e.w/2,0,Math.PI*2);ctx.fill();
+        }
+        e.y+=e.spd;if(e.y>canvas.height)enemies.splice(i,1);
+    })
+}
+
+function drawBoss(){
+    bossList.forEach((b,i)=>{
+        if(bossImg.complete){
+            ctx.drawImage(b.x,b.y,b.w,b.h);
+        }else{
+            ctx.fillStyle=b.color;
+            ctx.fillRect(b.x,b.y,b.w,b.h);
+        }
+        ctx.fillStyle='#333';ctx.fillRect(b.x,b.y-8,b.w,4);
+        ctx.fillStyle='#0f0';ctx.fillRect(b.x,b.y-8,b.w*(b.hp/b.maxHp),4);
+        b.y+=b.spd;
+        if(b.y>120)b.spd=0;
+        if(b.y>canvas.height)bossList.splice(i,1);
+    })
+}
+
+function drawItem(){
+    items.forEach((it,i)=>{
+        let col;
+        switch(it.type){
+            case 'scatter':col='#ffdd22';break;
+            case 'shield':col='#32e962';break;
+            case 'bomb':col='#c76cff';break;
+            case 'hp':col='#ff3333';break;
+            case 'big':col='#ff9922';break;
+        }
+        ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=12;
+        ctx.beginPath();ctx.arc(it.x+it.w/2,it.y+it.h/2,it.w/2,0,Math.PI*2);ctx.fill();
+        ctx.shadowBlur=0;
+        it.y+=it.speed;if(it.y>canvas.height)items.splice(i,1);
+    })
+}
+
+function drawBoom(){
+    boomList.forEach((p,i)=>{
+        ctx.fillStyle=p.color;
+        ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+        p.x+=p.sx;p.y+=p.sy;p.life--;
+        if(p.life<=0)boomList.splice(i,1);
+    })
+}
+
+function updateBuffTime(){
+    let now=Date.now();
+    if(buff.scatter&&now>buff.scatterTime)buff.scatter=false;
+    if(buff.shield&&now>buff.shieldTime)buff.shield=false;
+    if(buff.big&&now>buff.bigTime){
+        buff.big=false;
+        player.w=player.baseW;player.h=player.baseH;
+    }
+}
+
+function gameLoop(){
+    updateBuffTime();
+    let bg = ctx.createLinearGradient(0,0,0,canvas.height);
+    bg.addColorStop(0,'#070022');bg.addColorStop(1,'#000422');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    drawStar();
+    if(gameStart){
+        drawPlayer();
+        drawBullet();
+        drawEnemyBullet();
+        drawEnemy();
+        drawBoss();
+        drawItem();
+        drawBoom();
+        enemyShoot();
+        collision();
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+//开始游戏
+startBtn.onclick=()=>{
+    gameStart=true;gameOver=false;gameWin=false;isStageWait=false;
+    score=0;level=1;hp=3;nowStage=1;
+    scoreDom.innerText=score;levelDom.innerText=level;hpDom.innerText=hp;stageDom.innerText=nowStage;
+    bullets=[];enemyBullets=[];enemies=[];bossList=[];items=[];boomList=[];
+    buff={scatter:false,shield:false,big:false,scatterTime:0,shieldTime:0,bigTime:0};
+    player.w=player.baseW;player.h=player.baseH;
+    gameTip.style.display='none';winText.style.display='none';startBtn.style.display='none';
+
+    //切换BGM
+    bgmWin.pause();
+    bgmNormal.currentTime=0;
+    bgmNormal.play();
+
+    stageText.innerText = stageConfig[0].name;
+    stageText.style.display='block';
+    setTimeout(()=>stageText.style.display='none',2200);
+}
+
+setInterval(()=>{
+    let base = Math.max(320,950-level*60 - nowStage*45);
+    if(!isStageWait&&!gameWin) createEnemy();
+},()=>{return Math.max(320,950-level*60 - nowStage*45);});
+setInterval(shoot,280);
+setInterval(()=>{
+    if(gameStart&&!gameOver&&!gameWin&&!isStageWait&&score>0&&bossList.length<1){
+        let bossNeed = 350 - nowStage*45;
+        if(score%bossNeed<20) createBoss();
+    }
+},1200);
+gameLoop();
+</script>
+</body>
+</html>

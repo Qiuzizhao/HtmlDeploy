@@ -1,5 +1,15 @@
 [
   {
+    "id": "2c0652e5",
+    "number": "00186",
+    "title": "射击游戏",
+    "author": "1",
+    "classId": "f438ed26",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-05T02:19:24.028Z"
+  },
+  {
     "id": "3f4297e9",
     "number": "00185",
     "title": "还我十万美刀",
