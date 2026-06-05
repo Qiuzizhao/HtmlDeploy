@@ -152,6 +152,13 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /id="auditForbiddenSitesButton"[^>]*>违禁词审查<\/button>/);
   assert.match(html, /id="aiOptimizeLog"/);
   assert.match(html, /function addAiOptimizeLog/);
+  assert.match(html, /const AI_OPTIMIZE_LOG_STORAGE_KEY/);
+  assert.match(html, /function loadAiOptimizeLog/);
+  assert.match(html, /function saveAiOptimizeLog/);
+  assert.match(html, /localStorage\.getItem\(AI_OPTIMIZE_LOG_STORAGE_KEY\)/);
+  assert.match(html, /localStorage\.setItem\(AI_OPTIMIZE_LOG_STORAGE_KEY/);
+  assert.match(html, /aiOptimizeLogItems = loadAiOptimizeLog\(\)/);
+  assert.match(html, /async function boot\(\) \{\s+renderAiOptimizeLog\(\);/);
   assert.match(html, /runningAiOptimizations/);
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
