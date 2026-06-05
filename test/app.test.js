@@ -157,6 +157,25 @@ test('public index separates class tabs from the project grid', async () => {
   assert.doesNotMatch(html, /<main>\s*<nav class="class-tabs"/);
 });
 
+test('public index can search projects and filter starred projects', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /id="projectSearchInput"/);
+  assert.match(html, /placeholder="搜索项目名称、作者、编号"/);
+  assert.match(html, /id="starredFilterButton"[^>]*>星标<\/button>/);
+  assert.ok(html.indexOf('id="classTabs"') < html.indexOf('id="projectSearchInput"'));
+  assert.ok(html.indexOf('id="projectSearchInput"') < html.indexOf('id="siteGrid"'));
+  assert.match(html, /let loadedSites = \[\]/);
+  assert.match(html, /let siteSearchQuery = ''/);
+  assert.match(html, /let starredOnly = false/);
+  assert.match(html, /function getFilteredSites/);
+  assert.match(html, /if \(starredOnly && site\.starred !== true\)/);
+  assert.match(html, /function renderFilteredSites/);
+  assert.match(html, /projectSearchInput\.addEventListener\('input'/);
+  assert.match(html, /starredFilterButton\.addEventListener\('click'/);
+  assert.match(html, /starredFilterButton\.setAttribute\('aria-pressed'/);
+});
+
 test('public index only shows the new-page button in the preview header', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 

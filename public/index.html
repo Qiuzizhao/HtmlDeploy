@@ -257,6 +257,48 @@
       box-shadow: 0 8px 16px rgba(14, 165, 233, 0.25);
     }
 
+    .project-filter-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .project-search {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text);
+      padding: 0 14px;
+      font-weight: 600;
+    }
+
+    .project-search::placeholder {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .star-filter-button {
+      flex: 0 0 auto;
+      min-width: 86px;
+      min-height: 42px;
+      border-color: #facc15;
+      background: #fefce8;
+      color: #854d0e;
+      font-weight: 800;
+    }
+
+    .star-filter-button:hover,
+    .star-filter-button.is-active {
+      border-color: transparent;
+      background: linear-gradient(135deg, #facc15, #f59e0b);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(245, 158, 11, 0.28);
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -800,6 +842,15 @@
         gap: 8px;
       }
 
+      .project-filter-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .star-filter-button {
+        width: 100%;
+      }
+
       .class-filter-bar {
         margin-bottom: 16px;
         padding: 10px;
@@ -894,6 +945,10 @@
       <div class="class-filter-row">
         <nav class="class-tabs" id="classTabs" aria-label="班级"></nav>
         <button class="secondary-button class-refresh-button" id="refreshClassSites" type="button">刷新</button>
+      </div>
+      <div class="project-filter-row">
+        <input class="project-search" id="projectSearchInput" type="search" placeholder="搜索项目名称、作者、编号" aria-label="搜索项目">
+        <button class="secondary-button star-filter-button" id="starredFilterButton" type="button" aria-pressed="false">星标</button>
       </div>
       <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
     </section>
@@ -1008,6 +1063,8 @@
     const refreshPreview = document.getElementById('refreshPreview');
     const openUploadButton = document.getElementById('openUpload');
     const refreshClassSitesButton = document.getElementById('refreshClassSites');
+    const projectSearchInput = document.getElementById('projectSearchInput');
+    const starredFilterButton = document.getElementById('starredFilterButton');
     const classProjectCount = document.getElementById('classProjectCount');
     const currentClassLabel = document.getElementById('currentClassLabel');
     const codeTitle = document.getElementById('codeTitle');
@@ -1021,6 +1078,9 @@
     let currentPreviewObjectUrl = '';
     let currentCodeText = '';
     let classes = [];
+    let loadedSites = [];
+    let siteSearchQuery = '';
+    let starredOnly = false;
     let uploadRules = { forbiddenWords: [] };
     let currentClassId = '';
     const unlockedClassIds = new Set();
@@ -1063,6 +1123,12 @@
       const uploadDisabledByClass = Boolean(currentClassId && currentClass && currentClass.uploadEnabled === false);
       openUploadButton.disabled = !classes.length || !currentClassId || !hasCurrentClassAccess() || uploadDisabledByClass;
       openUploadButton.title = uploadDisabledByClass ? '当前班级已禁用上传网页' : '';
+    }
+
+    function updateProjectFilterControls() {
+      starredFilterButton.classList.toggle('is-active', starredOnly);
+      starredFilterButton.setAttribute('aria-pressed', starredOnly ? 'true' : 'false');
+      starredFilterButton.title = starredOnly ? '点击显示全部项目' : '点击只看星标项目';
     }
 
     function openOverlay(overlay) {
@@ -1331,6 +1397,7 @@
     }
 
     function renderClassPasswordPrompt(message = '请输入班级密码后查看项目。', count = 0) {
+      loadedSites = [];
       siteGrid.innerHTML = '';
       emptyState.style.display = 'none';
 
@@ -1385,14 +1452,45 @@
       input.focus();
     }
 
+    function getFilteredSites() {
+      const keyword = siteSearchQuery.trim().toLowerCase();
+      return loadedSites.filter((site) => {
+        if (starredOnly && site.starred !== true) {
+          return false;
+        }
+
+        if (!keyword) {
+          return true;
+        }
+
+        return [
+          site.title,
+          site.author,
+          site.className,
+          site.number,
+          site.id,
+          site.url
+        ].some((value) => String(value || '').toLowerCase().includes(keyword));
+      });
+    }
+
+    function renderFilteredSites() {
+      renderSites(getFilteredSites());
+    }
+
     function renderSites(sites) {
       siteGrid.innerHTML = '';
       
       const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
-      classProjectCount.textContent = `${currentClassName}共有 ${sites.length} 个项目`;
+      const hasFilter = Boolean(siteSearchQuery.trim()) || starredOnly;
+      classProjectCount.textContent = hasFilter
+        ? `${currentClassName}当前显示 ${sites.length} 个 / 共 ${loadedSites.length} 个项目`
+        : `${currentClassName}共有 ${sites.length} 个项目`;
 
       if (!classes.length) {
         emptyState.textContent = '请先到后台创建班级。';
+      } else if (hasFilter && loadedSites.length) {
+        emptyState.textContent = '没有匹配的项目。';
       } else if (!currentClassId) {
         emptyState.textContent = '还没有可查看的项目。';
       } else {
@@ -1544,6 +1642,7 @@
         : '/api/sites';
       const response = await fetch(sitesUrl);
       if (response.status === 401) {
+        loadedSites = [];
         updateUploadButtonState();
         const data = await response.json().catch(() => ({}));
         renderClassPasswordPrompt('请输入班级密码后查看项目。', data.count || 0);
@@ -1556,11 +1655,12 @@
       }
 
       const sites = await response.json();
+      loadedSites = sites;
       if (currentClassId) {
         unlockedClassIds.add(currentClassId);
       }
       updateUploadButtonState();
-      renderSites(sites);
+      renderFilteredSites();
     }
 
     async function refreshCurrentClassSites() {
@@ -1656,6 +1756,15 @@
 
     openUploadButton.addEventListener('click', openUpload);
     refreshClassSitesButton.addEventListener('click', refreshCurrentClassSites);
+    projectSearchInput.addEventListener('input', () => {
+      siteSearchQuery = projectSearchInput.value;
+      renderFilteredSites();
+    });
+    starredFilterButton.addEventListener('click', () => {
+      starredOnly = !starredOnly;
+      updateProjectFilterControls();
+      renderFilteredSites();
+    });
     previewUploadButton.addEventListener('click', previewUploadDraft);
     document.getElementById('closeUpload').addEventListener('click', closeUpload);
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
@@ -1700,6 +1809,7 @@
     });
 
     async function boot() {
+      updateProjectFilterControls();
       await loadUploadRules();
       await loadClasses();
       await loadSites();
