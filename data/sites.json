@@ -103,7 +103,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:17:11.504Z"
   },
   {
     "id": "3cccb5d2",
