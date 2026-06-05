@@ -581,15 +581,46 @@ function getThumbnailUrl(thumbnailDir, id) {
   }
 }
 
-function toPublicSite(site, classes, thumbnailDir) {
+async function getDirectorySize(directory) {
+  let entries;
+  try {
+    entries = await fsp.readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return 0;
+    }
+    throw error;
+  }
+
+  let total = 0;
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      total += await getDirectorySize(entryPath);
+    } else if (entry.isFile()) {
+      const stat = await fsp.stat(entryPath);
+      total += stat.size;
+    }
+  }
+
+  return total;
+}
+
+function toPublicSite(site, classes, thumbnailDir, storageBytes = 0) {
   return {
     ...attachClassName(site, classes),
     starred: site.starred === true,
     enabled: site.enabled !== false,
+    storageBytes,
     url: `/site/${site.id}`,
     previewUrl: `/preview/${site.id}`,
     thumbnailUrl: getThumbnailUrl(thumbnailDir, site.id)
   };
+}
+
+async function toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir) {
+  const storageBytes = await getDirectorySize(path.join(storageDir, site.id));
+  return toPublicSite(site, classes, thumbnailDir, storageBytes);
 }
 
 function getRequestOrigin(req) {
@@ -1006,7 +1037,10 @@ function createApp(options = {}) {
     try {
       const sites = await readSites(dataFile);
       const classes = await readClasses(classesFile);
-      res.json(sites.map((site) => toPublicSite(site, classes, thumbnailDir)));
+      const sitesWithStorage = await Promise.all(
+        sites.map((site) => toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir))
+      );
+      res.json(sitesWithStorage);
     } catch (error) {
       next(error);
     }
@@ -1474,7 +1508,7 @@ function createApp(options = {}) {
 
       generateThumbnailLater(id, getRequestOrigin(req));
 
-      return res.status(201).json(toPublicSite(site, classes, thumbnailDir));
+      return res.status(201).json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }
@@ -1615,7 +1649,7 @@ function createApp(options = {}) {
       await writeSites(dataFile, sites);
 
       const classes = await readClasses(classesFile);
-      return res.json(toPublicSite(site, classes, thumbnailDir));
+      return res.json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }
@@ -1641,7 +1675,7 @@ function createApp(options = {}) {
       await writeSites(dataFile, sites);
 
       const classes = await readClasses(classesFile);
-      return res.json(toPublicSite(site, classes, thumbnailDir));
+      return res.json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }
@@ -1667,7 +1701,7 @@ function createApp(options = {}) {
       await writeSites(dataFile, sites);
 
       const classes = await readClasses(classesFile);
-      return res.json(toPublicSite(site, classes, thumbnailDir));
+      return res.json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }
@@ -1713,7 +1747,7 @@ function createApp(options = {}) {
 
       const htmlContent = await fsp.readFile(indexPath, 'utf8');
       return res.json({
-        ...toPublicSite(site, await readClasses(classesFile), thumbnailDir),
+        ...(await toPublicSiteWithStorage(site, await readClasses(classesFile), thumbnailDir, storageDir)),
         htmlContent
       });
     } catch (error) {
@@ -1795,7 +1829,7 @@ function createApp(options = {}) {
       generateThumbnailLater(id, getRequestOrigin(req));
 
       const classes = await readClasses(classesFile);
-      return res.json(toPublicSite(site, classes, thumbnailDir));
+      return res.json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }
@@ -1879,7 +1913,7 @@ function createApp(options = {}) {
 
       const classes = await readClasses(classesFile);
       return res.json({
-        site: toPublicSite(site, classes, thumbnailDir),
+        site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
         model: llmConfig.model
       });
     } catch (error) {
@@ -1941,7 +1975,7 @@ function createApp(options = {}) {
 
       const classes = await readClasses(classesFile);
       return res.json({
-        site: toPublicSite(site, classes, thumbnailDir),
+        site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
         title,
         model: llmConfig.model
       });
@@ -2008,7 +2042,7 @@ function createApp(options = {}) {
       sites[siteIndex] = site;
       await writeSites(dataFile, sites);
 
-      return res.json(toPublicSite(site, classes, thumbnailDir));
+      return res.json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }

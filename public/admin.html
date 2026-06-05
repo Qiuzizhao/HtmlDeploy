@@ -250,7 +250,7 @@
 
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(110px, 1fr));
+      grid-template-columns: repeat(3, minmax(110px, 1fr));
       gap: 10px;
     }
 
@@ -277,6 +277,12 @@
       color: var(--muted);
       font-size: 12px;
       font-weight: 700;
+    }
+
+    .storage-cell {
+      color: #0f766e;
+      font-weight: 750;
+      white-space: nowrap;
     }
 
     .workspace {
@@ -1006,6 +1012,10 @@
             <span class="summary-value" id="classCount">0</span>
             <span class="summary-label">班级</span>
           </div>
+          <div class="summary-card">
+            <span class="summary-value" id="storageUsage">0 B</span>
+            <span class="summary-label">总存储占用</span>
+          </div>
         </div>
       </header>
 
@@ -1037,6 +1047,7 @@
                   <th>班级</th>
                   <th>访问链接</th>
                   <th>上传时间</th>
+                  <th>存储占用</th>
                   <th>封面</th>
                   <th>操作</th>
                 </tr>
@@ -1235,6 +1246,7 @@
     const activeViewTitle = document.getElementById('activeViewTitle');
     const projectCount = document.getElementById('projectCount');
     const classCount = document.getElementById('classCount');
+    const storageUsage = document.getElementById('storageUsage');
     const codeOverlay = document.getElementById('codeOverlay');
     const codeWindowTitle = document.getElementById('codeWindowTitle');
     const codeWindowMeta = document.getElementById('codeWindowMeta');
@@ -1370,8 +1382,10 @@
     }
 
     function updateSummary() {
+      const totalStorageBytes = sites.reduce((total, site) => total + (site.storageBytes || 0), 0);
       projectCount.textContent = String(sites.length);
       classCount.textContent = String(classes.length);
+      storageUsage.textContent = formatBytes(totalStorageBytes);
     }
 
     function formatDate(value) {
@@ -1385,6 +1399,23 @@
       }
 
       return date.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function formatBytes(value) {
+      const bytes = Number(value) || 0;
+      if (bytes < 1024) {
+        return `${bytes} B`;
+      }
+
+      const units = ['KB', 'MB', 'GB', 'TB'];
+      let size = bytes / 1024;
+      let unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex += 1;
+      }
+
+      return `${size >= 10 ? size.toFixed(1) : size.toFixed(2)} ${units[unitIndex]}`;
     }
 
     function isHtmlFile(file) {
@@ -2210,6 +2241,10 @@
         const createdCell = document.createElement('td');
         createdCell.textContent = formatDate(site.createdAt);
 
+        const storageCell = document.createElement('td');
+        storageCell.className = 'storage-cell';
+        storageCell.textContent = formatBytes(site.storageBytes || 0);
+
         const thumbnailCell = document.createElement('td');
         const thumbnailWrap = document.createElement('div');
         thumbnailWrap.className = 'thumbnail-cell';
@@ -2320,7 +2355,7 @@
         actions.append(saveButton, starButton, enabledButton, whitelistButton, previewLink, codeButton, aiNameButton, aiOptimizeButton, directedAiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
         actionCell.append(actions);
 
-        row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, thumbnailCell, actionCell);
+        row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, storageCell, thumbnailCell, actionCell);
         siteRows.append(row);
       });
     }
