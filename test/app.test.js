@@ -31,7 +31,7 @@ test('pages expose a shared favicon', async () => {
   assert.match(loginPage.text, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
 
   const favicon = await request(app).get('/favicon.svg').expect(200);
-  assert.match(favicon.text, /<svg[^>]+viewBox="0 0 64 64"/);
+  assert.match(favicon.text || favicon.body.toString('utf8'), /<svg[^>]+viewBox="0 0 64 64"/);
 });
 
 test('public index does not show the project list heading or helper copy', async () => {
