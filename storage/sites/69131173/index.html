@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D跑酷 - 二段跳完美版</title>
+    <title>3D跑酷 - 丝滑自动奔跑版</title>
     <style>
         * {
             margin: 0;
@@ -180,9 +180,9 @@
         let gameRunning = true;
         let jumpCount = 0;
         const MAX_JUMP = 2;
-        const MOVE_SPEED = 18;       // 前进速度
-        const SIDE_SPEED = 14;       // 左右移动速度
-        const JUMP_POWER = 13;       // 跳跃力度
+        const MOVE_SPEED = 24;       // 前进速度（调高让跑酷更刺激）
+        const SIDE_SPEED = 16;       // 左右移动速度
+        const JUMP_POWER = 14;       // 跳跃力度
         const PLAYER_HALF = 1;
         const PLAYER_HEIGHT = 4;
         const OBSTACLE_HALF = 2.5;
@@ -191,7 +191,6 @@
         const DESPAWN_Z = 40;
 
         let animFrameId = null;
-        let particleFrameId = null;
         let activeObstacles = [];
         const keys = {};
 
@@ -212,7 +211,7 @@
         renderer.toneMappingExposure = 1.2;
         document.body.prepend(renderer.domElement);
 
-        // ─── 灯光 ──────────────────────────────────────────────────
+        // ─── 灯光（修复阴影方向） ────────────────────────────────────
         const ambient = new THREE.AmbientLight(0x8899bb, 0.6);
         scene.add(ambient);
 
@@ -220,21 +219,22 @@
         scene.add(hemi);
 
         const sun = new THREE.DirectionalLight(0xffeedd, 1.8);
-        sun.position.set(30, 40, 20);
+        // 【优化】将光源放到前方（Z为负），让阴影顺着奔跑方向自然向后倒
+        sun.position.set(25, 45, -35); 
         sun.castShadow = true;
         sun.shadow.mapSize.width = 1024;
         sun.shadow.mapSize.height = 1024;
         sun.shadow.camera.near = 1;
-        sun.shadow.camera.far = 120;
+        sun.shadow.camera.far = 150;
         sun.shadow.camera.left = -40;
         sun.shadow.camera.right = 40;
         sun.shadow.camera.top = 40;
         sun.shadow.camera.bottom = -40;
-        sun.shadow.bias = -0.001;
+        sun.shadow.bias = -0.0008;
         scene.add(sun);
 
-        // ─── 地面 ──────────────────────────────────────────────────
-        const groundGeo = new THREE.PlaneGeometry(600, 1000);
+        // ─── 地面（加宽赛道防止越界穿帮） ─────────────────────────────
+        const groundGeo = new THREE.PlaneGeometry(100, 1000);
         const groundMat = new THREE.MeshStandardMaterial({
             color: 0x4a7c59,
             roughness: 0.85,
@@ -246,7 +246,7 @@
         groundMesh.receiveShadow = true;
         scene.add(groundMesh);
 
-        // 地面条纹（动态复用，防止跑出边界）
+        // 地面条纹（加宽到 40，防止视觉出界）
         const stripeGroup = new THREE.Group();
         scene.add(stripeGroup);
         const stripeMat = new THREE.MeshStandardMaterial({
@@ -254,14 +254,50 @@
             roughness: 0.9,
         });
         for (let i = -20; i <= 60; i++) {
-            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(36, 3), stripeMat);
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(40, 3), stripeMat);
             stripe.rotation.x = -Math.PI / 2;
             stripe.position.set(0, GROUND_Y + 0.02, -i * 14);
             stripe.receiveShadow = true;
             stripeGroup.add(stripe);
         }
 
-        // ─── 玩家 ──────────────────────────────────────────────────
+        // ─── Cannon.js 物理世界 ────────────────────────────────────
+        const world = new CANNON.World();
+        world.gravity.set(0, -38, 0); // 略微调大重力，让下落更有打击感
+        world.broadphase = new CANNON.SAPBroadphase(world);
+
+        // 【新特性】配置零摩擦力材质，彻底解决贴地不走的问题
+        const groundPhysicsMaterial = new CANNON.Material('groundMat');
+        const playerPhysicsMaterial = new CANNON.Material('playerMat');
+
+        // 地面刚体
+        const groundBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Box(new CANNON.Vec3(100, 0.5, 500)),
+            material: groundPhysicsMaterial
+        });
+        groundBody.position.set(0, GROUND_Y - 0.5, 0);
+        world.addBody(groundBody);
+
+        // 玩家刚体
+        const playerBody = new CANNON.Body({
+            mass: 5,
+            shape: new CANNON.Box(new CANNON.Vec3(PLAYER_HALF, PLAYER_HEIGHT / 2, PLAYER_HALF)),
+            position: new CANNON.Vec3(0, 2, 0),
+            fixedRotation: true,
+            linearDamping: 0.0,
+            material: playerPhysicsMaterial
+        });
+        world.addBody(playerBody);
+
+        // 定义接触材质：玩家和地面之间的摩擦力设为 0
+        const contactMat = new CANNON.ContactMaterial(playerPhysicsMaterial, groundPhysicsMaterial, {
+            friction: 0.0,
+            restitution: 0.0
+        });
+        world.addContactMaterial(contactMat);
+
+        // ─── 玩家视觉模型 ──────────────────────────────────────────
         const playerGroup = new THREE.Group();
         scene.add(playerGroup);
 
@@ -275,10 +311,10 @@
         const playerMesh = new THREE.Mesh(new THREE.BoxGeometry(2, PLAYER_HEIGHT, 2), boxMat);
         playerMesh.castShadow = true;
         playerMesh.receiveShadow = true;
-        playerMesh.position.y = PLAYER_HEIGHT / 2; // 中心对齐组内
+        playerMesh.position.y = PLAYER_HEIGHT / 2;
         playerGroup.add(playerMesh);
 
-        // 眼睛装饰
+        // 眼睛
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const pupilMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
         for (let side = -1; side <= 1; side += 2) {
@@ -289,29 +325,6 @@
             pupil.position.set(side * 0.55, PLAYER_HEIGHT * 0.65, -1.13);
             playerGroup.add(pupil);
         }
-
-        // ─── Cannon.js 物理世界 ────────────────────────────────────
-        const world = new CANNON.World();
-        world.gravity.set(0, -35, 0);
-        world.broadphase = new CANNON.SAPBroadphase(world);
-
-        // 地面刚体
-        const groundBody = new CANNON.Body({
-            mass: 0,
-            shape: new CANNON.Box(new CANNON.Vec3(300, 0.5, 500))
-        });
-        groundBody.position.set(0, GROUND_Y - 0.5, 0);
-        world.addBody(groundBody);
-
-        // 玩家刚体
-        const playerBody = new CANNON.Body({
-            mass: 5,
-            shape: new CANNON.Box(new CANNON.Vec3(PLAYER_HALF, PLAYER_HEIGHT / 2, PLAYER_HALF)),
-            position: new CANNON.Vec3(0, 2, 0),
-            fixedRotation: true,
-            linearDamping: 0.0,
-        });
-        world.addBody(playerBody);
 
         // ─── 障碍物系统 ────────────────────────────────────────────
         const obsMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
@@ -334,7 +347,7 @@
         }
 
         function spawnObstacle(z) {
-            const lane = Math.floor(Math.random() * 5) - 2; // -2, -1, 0, 1, 2
+            const lane = Math.floor(Math.random() * 5) - 2; // -2 ~ 2
             const x = lane * 4.5;
             const y = GROUND_Y;
 
@@ -348,17 +361,16 @@
             });
             world.addBody(body);
 
-            const entry = { mesh, body, active: true };
-            activeObstacles.push(entry);
+            activeObstacles.push({ mesh, body });
         }
 
         function buildTrack() {
             for (let i = 0; i < 30; i++) {
-                spawnObstacle(-i * 22 - 30);
+                spawnObstacle(-i * 22 - 35);
             }
         }
 
-        // ─── 核心逻辑 ───────────────────────────────────────────────
+        // ─── 核心逻辑循环 ───────────────────────────────────────────
         let lastTime = performance.now();
 
         function gameLoop(time) {
@@ -367,12 +379,12 @@
             const dt = Math.min((time - lastTime) / 1000, 0.1);
             lastTime = time;
 
-            // 物理步进
             world.step(1 / 60);
 
-            // 玩家物理控制：自动向前 + 左右移动
+            // 1. 【修复】强制保持前进物理速度，零摩擦力下无需跳跃自动丝滑前行
             playerBody.velocity.z = -MOVE_SPEED;
 
+            // 左右移动速度控制
             if (keys['KeyA'] || keys['ArrowLeft']) {
                 playerBody.velocity.x = -SIDE_SPEED;
             } else if (keys['KeyD'] || keys['ArrowRight']) {
@@ -381,55 +393,59 @@
                 playerBody.velocity.x = 0;
             }
 
-            // 边界约束
-            if (playerBody.position.x < -10) playerBody.position.x = -10;
-            if (playerBody.position.x > 10) playerBody.position.x = 10;
+            // 2. 【修复】硬边界死锁，限制在跑道范围内，绝对不会冲出边缘或坠落
+            const MAX_X_BORDER = 9.2;
+            if (playerBody.position.x < -MAX_X_BORDER) {
+                playerBody.position.x = -MAX_X_BORDER;
+                if(playerBody.velocity.x < 0) playerBody.velocity.x = 0;
+            }
+            if (playerBody.position.x > MAX_X_BORDER) {
+                playerBody.position.x = MAX_X_BORDER;
+                if(playerBody.velocity.x > 0) playerBody.velocity.x = 0;
+            }
 
-            // 落地检测（精确判断刚体底部是否接近地面）
+            // 落地状态与二段跳重置
             const isGrounded = playerBody.position.y <= GROUND_Y + PLAYER_HEIGHT / 2 + 0.05;
             if (isGrounded) {
                 jumpCount = 0;
             }
 
-            // 同步玩家视觉
+            // 同步模型
             playerGroup.position.copy(playerBody.position);
-            // 左右移动倾斜特效
             const targetRotZ = -(playerBody.velocity.x / SIDE_SPEED) * 0.08;
             playerGroup.rotation.z += (targetRotZ - playerGroup.rotation.z) * 0.1;
 
-            // 动态循环回收障碍物
+            // 障碍物动态复用
             const playerZ = playerBody.position.z;
             for (let i = 0; i < activeObstacles.length; i++) {
                 const obs = activeObstacles[i];
-                // 如果障碍物已经被玩家抛在脑后
                 if (obs.body.position.z > playerZ + DESPAWN_Z) {
                     const lane = Math.floor(Math.random() * 5) - 2;
-                    obs.body.position.z -= activeObstacles.length * 22; // 循环挪到最前方
+                    obs.body.position.z -= activeObstacles.length * 22;
                     obs.body.position.x = lane * 4.5;
                 }
-                // 让 Mesh 完美同步物理坐标
                 obs.mesh.position.copy(obs.body.position);
                 obs.mesh.position.y = obs.body.position.y - OBSTACLE_HEIGHT / 2;
             }
 
-            // 地面条纹无限循环效果
+            // 地面装饰条纹无限循环
             stripeGroup.children.forEach(stripe => {
                 if (stripe.position.z > playerZ + 40) {
                     stripe.position.z -= stripeGroup.children.length * 14;
                 }
             });
 
-            // 死亡检测：高空坠落或掉落（理论上有了刚体不会掉落，除非被挤出边缘）
+            // 异常坠落兜底检测
             if (playerBody.position.y < GROUND_Y - 2) {
                 endGame();
                 return;
             }
 
             // 计分
-            score += dt * 10;
+            score += dt * 12;
             scoreEl.textContent = Math.floor(score);
 
-            // 平滑相机跟随
+            // 相机动态跟踪
             const targetCamX = playerBody.position.x * 0.5;
             const targetCamY = playerBody.position.y + 10;
             const targetCamZ = playerBody.position.z + 24;
@@ -438,19 +454,22 @@
             camera.position.z += (targetCamZ - camera.position.z) * 0.1;
             camera.lookAt(playerBody.position.x * 0.3, playerBody.position.y * 0.5 + 2, playerBody.position.z - 5);
 
+            // 灯光位置实时跟随玩家，确保大范围奔跑时阴影不崩裂断档
+            sun.position.set(playerBody.position.x + 25, 45, playerBody.position.z - 35);
+            sun.target = playerGroup;
+
             renderer.render(scene, camera);
             animFrameId = requestAnimationFrame(gameLoop);
         }
 
-        // ─── 碰撞触发死亡 ───────────────────────────────────────────
+        // ─── 物理碰撞检测 ───────────────────────────────────────────
         playerBody.addEventListener('collide', (e) => {
-            // 如果撞击的不是地面，说明撞到了障碍物
             if (e.body !== groundBody) {
                 endGame();
             }
         });
 
-        // ─── 跳跃粒子 ──────────────────────────────────────────────
+        // ─── 跳跃粒子效果 ────────────────────────────────────────────
         const particles = [];
 
         function spawnJumpParticles(x, y, z) {
@@ -478,7 +497,7 @@
         function updateParticles(dt) {
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
-                p.vel.y -= 9.8 * dt; // 粒子重力
+                p.vel.y -= 9.8 * dt;
                 p.mesh.position.addScaledVector(p.vel, dt);
                 p.life -= dt * 2.0;
                 p.mesh.material.opacity = Math.max(0, p.life);
@@ -495,8 +514,6 @@
         // ─── 事件监听 ───────────────────────────────────────────────
         function onKeyDown(e) {
             keys[e.code] = true;
-            
-            // 将跳跃逻辑完全移入 KeyDown 单次触发，完美解决无限跳 Bug
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (gameRunning && jumpCount < MAX_JUMP) {
@@ -521,13 +538,11 @@
         }
         window.addEventListener('resize', onResize);
 
-        // ─── 游戏生命周期管理 ────────────────────────────────────────
+        // ─── 游戏结束与重启 ──────────────────────────────────────────
         function endGame() {
             if (!gameRunning) return;
             gameRunning = false;
-            
             if (animFrameId) cancelAnimationFrame(animFrameId);
-            
             finalScoreEl.textContent = Math.floor(score);
             overlayEl.style.display = 'block';
         }
@@ -535,7 +550,6 @@
         function restartGame() {
             overlayEl.style.display = 'none';
             
-            // 清理旧障碍物
             for (const obs of activeObstacles) {
                 scene.remove(obs.mesh);
                 world.removeBody(obs.body);
@@ -548,7 +562,6 @@
             }
             activeObstacles = [];
 
-            // 清理旧粒子
             for (const p of particles) {
                 scene.remove(p.mesh);
                 p.mesh.geometry.dispose();
@@ -556,7 +569,6 @@
             }
             particles.length = 0;
 
-            // 重置玩家状态与物理刚体
             playerBody.position.set(0, 2, 0);
             playerBody.velocity.set(0, 0, 0);
             playerGroup.position.set(0, 2, 0);
@@ -565,10 +577,8 @@
             score = 0;
             scoreEl.textContent = '0';
 
-            // 重新初始化轨道
             buildTrack();
 
-            // 重新启动循环
             gameRunning = true;
             lastTime = performance.now();
             animFrameId = requestAnimationFrame(gameLoop);
@@ -576,19 +586,18 @@
 
         restartBtn.addEventListener('click', restartGame);
 
-        // ─── 启动 ──────────────────────────────────────────────────
+        // ─── 初始化启动 ──────────────────────────────────────────────
         buildTrack();
         lastTime = performance.now();
         animFrameId = requestAnimationFrame(gameLoop);
 
-        // 独立于游戏主循环更新粒子
         function tickParticles() {
             if (gameRunning) updateParticles(1 / 60);
-            particleFrameId = requestAnimationFrame(tickParticles);
+            requestAnimationFrame(tickParticles);
         }
         tickParticles();
 
-        console.log('🏃 3D跑酷已完美启动 — [空格]二段跳 | [A/D]或[左右方向键]控制移动');
+        console.log('🏃 3D跑酷优化版已启动！自动丝滑向前奔跑，无边缘坠落风险。');
     </script>
 </body>
 </html>
