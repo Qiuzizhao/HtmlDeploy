@@ -194,6 +194,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /method: 'PUT'/);
   assert.match(html, /method: 'DELETE'/);
   assert.match(html, /id="auditForbiddenSitesButton"[^>]*>违禁词审查<\/button>/);
+  assert.match(html, /id="dedupeSitesButton"[^>]*>查重<\/button>/);
   assert.match(html, /id="aiOptimizeLog"/);
   assert.match(html, /function addAiOptimizeLog/);
   assert.match(html, /const AI_OPTIMIZE_LOG_STORAGE_KEY/);
@@ -205,6 +206,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /async function boot\(\) \{\s+renderAiOptimizeLog\(\);/);
   assert.match(html, /runningAiOptimizations/);
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
+  assert.match(html, /\/api\/admin\/sites\/dedupe/);
+  assert.match(html, /function dedupeSites/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
   assert.match(html, /textContent = aiOptimizeButton\.disabled \? '优化中\.\.\.' : 'AI优化'/);
@@ -939,6 +942,84 @@ test('admin forbidden audit disables projects with forbidden title or author', a
       ['bad-author-site', false],
       ['bad-title-site', false],
       ['safe-site', true]
+    ]
+  );
+});
+
+test('admin dedupe disables later projects with identical HTML code', async () => {
+  const { app, dataDir, storageDir } = await makeTestApp();
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const sites = [
+    {
+      id: 'keep-original',
+      number: '00001',
+      title: '先上传',
+      author: '作者A',
+      enabled: true,
+      createdAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'disable-later',
+      number: '00002',
+      title: '后上传重复',
+      author: '作者B',
+      enabled: true,
+      createdAt: '2026-01-02T00:00:00.000Z'
+    },
+    {
+      id: 'unique-site',
+      number: '00003',
+      title: '不同代码',
+      author: '作者C',
+      enabled: true,
+      createdAt: '2026-01-03T00:00:00.000Z'
+    },
+    {
+      id: 'already-disabled',
+      number: '00004',
+      title: '已禁用重复',
+      author: '作者D',
+      enabled: false,
+      createdAt: '2026-01-04T00:00:00.000Z'
+    }
+  ];
+  await fsp.writeFile(path.join(dataDir, 'sites.json'), JSON.stringify(sites, null, 2));
+
+  const duplicateHtml = '<!doctype html><html><body><h1>Same</h1></body></html>';
+  const uniqueHtml = '<!doctype html><html><body><h1>Different</h1></body></html>';
+  for (const site of sites) {
+    await fsp.mkdir(path.join(storageDir, site.id), { recursive: true });
+    await fsp.writeFile(
+      path.join(storageDir, site.id, 'index.html'),
+      site.id === 'unique-site' ? uniqueHtml : duplicateHtml
+    );
+  }
+
+  await request(app).post('/api/admin/sites/dedupe').send({}).expect(401);
+
+  const result = await admin.post('/api/admin/sites/dedupe').send({}).expect(200);
+  assert.equal(result.body.checked, 4);
+  assert.equal(result.body.duplicateGroups, 1);
+  assert.equal(result.body.duplicates, 2);
+  assert.equal(result.body.disabled, 1);
+  assert.deepEqual(
+    result.body.matches.map((match) => [match.id, match.keepId, match.wasEnabled]),
+    [
+      ['disable-later', 'keep-original', true],
+      ['already-disabled', 'keep-original', false]
+    ]
+  );
+
+  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.deepEqual(
+    savedSites.map((site) => [site.id, site.enabled]),
+    [
+      ['keep-original', true],
+      ['disable-later', false],
+      ['unique-site', true],
+      ['already-disabled', false]
     ]
   );
 });
