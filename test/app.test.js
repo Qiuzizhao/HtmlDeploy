@@ -257,7 +257,9 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
   assert.match(html, /textContent = forbiddenWhitelisted \? '移出白名单' : '白名单'/);
   assert.match(html, /const starred = site\.starred === true/);
-  assert.match(html, /textContent = starred \? '取消星标' : '星标'/);
+  assert.match(html, /starButton\.className = starred \? 'warning-button' : 'button'/);
+  assert.match(html, /starButton\.textContent = '星标'/);
+  assert.doesNotMatch(html, /starButton\.textContent = starred \? '取消星标' : '星标'/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-name/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/enabled/);

@@ -2501,8 +2501,8 @@
         const starButton = document.createElement('button');
         starButton.className = starred ? 'warning-button' : 'button';
         starButton.type = 'button';
-        starButton.textContent = starred ? '取消星标' : '星标';
-        starButton.title = starred ? '取消前台卡片上的星标展示' : '给优秀作品添加前台星标展示';
+        starButton.textContent = '星标';
+        starButton.title = starred ? '已星标，点击可取消星标' : '给优秀作品添加前台星标展示';
         starButton.addEventListener('click', () => toggleSiteStarred(site, starButton));
 
         const enabledButton = document.createElement('button');
