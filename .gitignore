@@ -3,3 +3,4 @@ storage/thumbnails/
 *.exp
 .env
 .env.*
+data/private-ai-settings.json

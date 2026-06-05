@@ -119,12 +119,75 @@ function normalizeSiteTitle(value) {
     .trim() || '';
 }
 
-function getLlmConfig(options = {}) {
+function normalizeTemperature(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+
+  return Math.min(2, Math.max(0, Math.round(number * 100) / 100));
+}
+
+function getEnvironmentLlmConfig(options = {}) {
   return {
     apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
     baseUrl: options.llmApiBaseUrl || process.env.LLM_API_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || ''
+    thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || '',
+    temperature: normalizeTemperature(options.llmTemperature ?? process.env.LLM_TEMPERATURE, 0.2),
+    nameTemperature: normalizeTemperature(options.llmNameTemperature ?? process.env.LLM_NAME_TEMPERATURE, 0.3)
+  };
+}
+
+function normalizeAiSettings(settings = {}) {
+  return {
+    apiKey: String(settings.apiKey || '').trim(),
+    baseUrl: String(settings.baseUrl || '').trim(),
+    model: String(settings.model || '').trim(),
+    thinkingType: String(settings.thinkingType || '').trim(),
+    temperature: normalizeTemperature(settings.temperature, undefined),
+    nameTemperature: normalizeTemperature(settings.nameTemperature, undefined)
+  };
+}
+
+function mergeLlmConfig(options = {}, aiSettings = {}) {
+  const environment = getEnvironmentLlmConfig(options);
+  const normalized = normalizeAiSettings(aiSettings);
+
+  return {
+    apiKey: normalized.apiKey || environment.apiKey,
+    baseUrl: normalized.baseUrl || environment.baseUrl,
+    model: normalized.model || environment.model,
+    thinkingType: normalized.thinkingType || environment.thinkingType,
+    temperature: normalized.temperature ?? environment.temperature,
+    nameTemperature: normalized.nameTemperature ?? environment.nameTemperature
+  };
+}
+
+function maskSecret(value) {
+  const secret = String(value || '').trim();
+  if (!secret) {
+    return '';
+  }
+
+  if (secret.length <= 8) {
+    return `${secret.slice(0, 2)}...`;
+  }
+
+  return `${secret.slice(0, 3)}...${secret.slice(-4)}`;
+}
+
+function toPublicAiSettings({ aiSettings, llmConfig }) {
+  const hasApiKey = Boolean(llmConfig.apiKey);
+  return {
+    hasApiKey,
+    apiKeyPreview: hasApiKey ? maskSecret(llmConfig.apiKey) : '',
+    apiKeySource: aiSettings.apiKey ? 'settings' : hasApiKey ? 'environment' : 'none',
+    baseUrl: llmConfig.baseUrl,
+    model: llmConfig.model,
+    temperature: llmConfig.temperature,
+    nameTemperature: llmConfig.nameTemperature,
+    thinkingType: llmConfig.thinkingType
   };
 }
 
@@ -137,12 +200,12 @@ function getChatCompletionsUrl(baseUrl) {
 
 async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmConfig }) {
   if (!llmConfig.apiKey) {
-    throw new Error('请先在服务器环境变量中配置 LLM_API_KEY 或 OPENAI_API_KEY');
+    throw new Error('请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY');
   }
 
   const requestBody = {
     model: llmConfig.model,
-    temperature: 0.2,
+    temperature: llmConfig.temperature,
     stream: false,
     messages: [
       {
@@ -194,12 +257,12 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
 
 async function nameSiteWithLlm({ codeSnapshot, currentTitle, author, llmConfig }) {
   if (!llmConfig.apiKey) {
-    throw new Error('请先在服务器环境变量中配置 LLM_API_KEY 或 OPENAI_API_KEY');
+    throw new Error('请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY');
   }
 
   const requestBody = {
     model: llmConfig.model,
-    temperature: 0.3,
+    temperature: llmConfig.nameTemperature,
     stream: false,
     messages: [
       {
@@ -522,6 +585,28 @@ async function readSettings(settingsFile) {
     allPasswordEnabled: settings.allPasswordEnabled !== false,
     forbiddenWords: normalizeForbiddenWords(settings.forbiddenWords)
   };
+}
+
+async function readAiSettings(aiSettingsFile) {
+  await fsp.mkdir(path.dirname(aiSettingsFile), { recursive: true });
+  try {
+    const raw = await fsp.readFile(aiSettingsFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return normalizeAiSettings(parsed);
+    }
+  } catch {
+    // Missing or invalid private AI settings fall back to environment config.
+  }
+
+  return normalizeAiSettings();
+}
+
+async function writeAiSettings(aiSettingsFile, settings) {
+  const normalized = normalizeAiSettings(settings);
+  await fsp.mkdir(path.dirname(aiSettingsFile), { recursive: true });
+  await fsp.writeFile(aiSettingsFile, JSON.stringify(normalized, null, 2));
+  return normalized;
 }
 
 async function writeSites(dataFile, sites) {
@@ -876,6 +961,7 @@ function createApp(options = {}) {
   const dataFile = options.dataFile || path.join(process.cwd(), 'data', 'sites.json');
   const classesFile = options.classesFile || path.join(process.cwd(), 'data', 'classes.json');
   const settingsFile = options.settingsFile || path.join(process.cwd(), 'data', 'settings.json');
+  const aiSettingsFile = options.aiSettingsFile || path.join(process.cwd(), 'data', 'private-ai-settings.json');
   const storageDir = options.storageDir || path.join(process.cwd(), 'storage', 'sites');
   const thumbnailDir = options.thumbnailDir || path.join(process.cwd(), 'storage', 'thumbnails');
   const publicDir = options.publicDir || path.join(process.cwd(), 'public');
@@ -883,7 +969,6 @@ function createApp(options = {}) {
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
   const adminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
   const adminToken = createAdminToken(adminPassword);
-  const llmConfig = getLlmConfig(options);
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -923,6 +1008,17 @@ function createApp(options = {}) {
     }
 
     return next();
+  }
+
+  async function getLlmConfig() {
+    const aiSettings = await readAiSettings(aiSettingsFile);
+    return mergeLlmConfig(options, aiSettings);
+  }
+
+  async function getPublicAiSettings() {
+    const aiSettings = await readAiSettings(aiSettingsFile);
+    const llmConfig = mergeLlmConfig(options, aiSettings);
+    return toPublicAiSettings({ aiSettings, llmConfig });
   }
 
   async function canReadSite(req, id) {
@@ -1189,6 +1285,55 @@ function createApp(options = {}) {
       }
 
       return res.json(settings);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/admin/ai-settings', requireAdmin, async (req, res, next) => {
+    try {
+      return res.json(await getPublicAiSettings());
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/admin/ai-settings', requireAdmin, async (req, res, next) => {
+    try {
+      const previousSettings = await readAiSettings(aiSettingsFile);
+      const nextSettings = {
+        ...previousSettings
+      };
+
+      if (req.body.clearApiKey === true) {
+        nextSettings.apiKey = '';
+      } else if (typeof req.body.apiKey === 'string' && req.body.apiKey.trim()) {
+        nextSettings.apiKey = req.body.apiKey.trim();
+      }
+
+      if (req.body.baseUrl !== undefined) {
+        nextSettings.baseUrl = String(req.body.baseUrl || '').trim();
+      }
+
+      if (req.body.model !== undefined) {
+        nextSettings.model = String(req.body.model || '').trim();
+      }
+
+      if (req.body.temperature !== undefined) {
+        nextSettings.temperature = normalizeTemperature(req.body.temperature, previousSettings.temperature);
+      }
+
+      if (req.body.nameTemperature !== undefined) {
+        nextSettings.nameTemperature = normalizeTemperature(req.body.nameTemperature, previousSettings.nameTemperature);
+      }
+
+      if (req.body.thinkingType !== undefined) {
+        nextSettings.thinkingType = String(req.body.thinkingType || '').trim();
+      }
+
+      const savedSettings = await writeAiSettings(aiSettingsFile, nextSettings);
+      const llmConfig = mergeLlmConfig(options, savedSettings);
+      return res.json(toPublicAiSettings({ aiSettings: savedSettings, llmConfig }));
     } catch (error) {
       next(error);
     }
@@ -1851,6 +1996,7 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '代码不能为空' });
       }
 
+      const llmConfig = await getLlmConfig();
       const optimizedContent = await optimizeHtmlWithLlm({
         htmlContent,
         siteTitle: site.title,
@@ -1888,6 +2034,7 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '代码不能为空' });
       }
 
+      const llmConfig = await getLlmConfig();
       const optimizedContent = await optimizeHtmlWithLlm({
         htmlContent,
         siteTitle: sites[siteIndex].title,
@@ -1941,6 +2088,7 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '项目代码为空' });
       }
 
+      const llmConfig = await getLlmConfig();
       const title = await nameSiteWithLlm({
         codeSnapshot: combinedText,
         currentTitle: sites[siteIndex].title,
