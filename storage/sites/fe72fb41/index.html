@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>3D恐怖学校 · 第一人称逃生</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; font-family: sans-serif; }
+
+        #startUI {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: rgba(5,5,12,0.96);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        #startUI h1 {
+            font-size: 48px;
+            color: #ff3333;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px #ff0000;
+        }
+
+        #startUI .desc {
+            max-width: 620px;
+            font-size: 18px;
+            line-height: 1.8;
+            color: #ccc;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        #startUI .tips {
+            color: #ffaa00;
+            font-size: 22px;
+            animation: blink 1s infinite alternate;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        #gameTips {
+            position: fixed;
+            top:12px;left:12px;
+            color:#fff;background:rgba(0,0,0,0.75);
+            padding:8px 12px;border-radius:5px;
+            z-index:99;display:none;
+        }
+        #clickText{
+            position:fixed;top:65px;left:12px;color:#ff6666;
+            background:rgba(0,0,0,0.7);padding:6px 10px;border-radius:4px;
+            z-index:99;display:none;
+        }
+    </style>
+</head>
+<body>
+<div id="startUI">
+    <h1>恐怖学校 · 午夜逃生</h1>
+    <div class="desc">
+        深夜误入废弃封闭校园，整栋教学楼常年闹鬼。<br>
+        惨白幽灵漂浮在各个走廊，一旦靠近你将遭遇不测。<br>
+        在阴森迷雾中小心躲避游荡鬼魂，活下去！<br><br>
+        【操作说明】<br>
+        WASD控制前后左右移动｜鼠标转动视角｜ESC松开鼠标
+    </div>
+    <div class="tips">按下【空格键】进入游戏</div>
+</div>
+
+<div id="gameTips">WASD移动 | 鼠标转头 | ESC释放鼠标</div>
+<div id="clickText">点击游戏画面锁定鼠标</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
+
+<script>
+    let scene, camera, renderer, controls;
+    let moveForward=false,moveBack=false,moveLeft=false,moveRight=false;
+    const moveSpeed = 3.5;
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    let ghosts = [];
+    const clock = new THREE.Clock();
+    let gameStart = false;
+
+    const startDom = document.getElementById('startUI');
+    const tipDom = document.getElementById('gameTips');
+    const clickDom = document.getElementById('clickText');
+
+    //【单独全局空格监听 关键修复】
+    document.addEventListener('keydown', function(e){
+        if(e.code === 'Space' && !gameStart){
+            gameStart = true;
+            startDom.style.display = 'none';
+            tipDom.style.display = 'block';
+            clickDom.style.display = 'block';
+        }
+    })
+
+    // 初始化场景
+    function init(){
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x08080c);
+        scene.fog = new THREE.Fog(0x08080c,10,65);
+
+        camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,999);
+        camera.position.set(0,2,0);
+
+        renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setSize(innerWidth,innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        controls = new THREE.PointerLockControls(camera,document.body);
+
+        createLight();
+        createSchoolMap();
+        createGhost(10);
+        bindMoveKey();
+
+        window.addEventListener('resize',resizeWin);
+        loop();
+    }
+
+    // 灯光
+    function createLight(){
+        const ambient = new THREE.AmbientLight(0x202028,0.18);
+        scene.add(ambient);
+        const posList = [[0,5,-16],[11,5,-16],[-11,5,-16],[0,5,16],[11,5,16],[-11,5,16]];
+        posList.forEach(p=>{
+            const spot = new THREE.SpotLight(0xff7744,0.38,32,Math.PI/3,0.5);
+            spot.position.set(...p);
+            spot.castShadow=true;
+            scene.add(spot);
+        })
+    }
+
+    // 教学楼地图
+    function createSchoolMap(){
+        const floorMat = new THREE.MeshLambertMaterial({color:0x242424});
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(58,58),floorMat);
+        floor.rotation.x = -Math.PI/2;
+        floor.receiveShadow=true;
+        scene.add(floor);
+
+        const wallMat = new THREE.MeshLambertMaterial({color:0x3a3634});
+        const wallArr = [
+            {w:58,h:7,d:1,x:0,y:3.5,z:-29},
+            {w:58,h:7,d:1,x:0,y:3.5,z:29},
+            {w:1,h:7,d:58,x:-29,y:3.5,z:0},
+            {w:1,h:7,d:58,x:29,y:3.5,z:0},
+        ]
+        wallArr.forEach(item=>{
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(item.w,item.h,item.d),wallMat);
+            wall.position.set(item.x,item.y,item.z);
+            wall.castShadow=true;
+            scene.add(wall);
+        })
+        for(let x=-24;x<=24;x+=10){
+            if(x==0) continue;
+            const midWall = new THREE.Mesh(new THREE.BoxGeometry(1,7,24),wallMat);
+            midWall.position.set(x,3.5,0);
+            scene.add(midWall);
+        }
+    }
+
+    // 生成幽灵
+    function createGhost(num){
+        const gGeo = new THREE.SphereGeometry(0.9,8,8);
+        const gMat = new THREE.MeshBasicMaterial({color:0xff2828,transparent:true,opacity:0.48});
+        for(let i=0;i<num;i++){
+            const gh = new THREE.Mesh(gGeo,gMat);
+            gh.position.set((Math.random()-0.5)*48,1.4,(Math.random()-0.5)*48);
+            gh.userData={spd:Math.random()*0.6+0.35,dir:new THREE.Vector3((Math.random()-0.5),0,(Math.random()-0.5)).normalize()};
+            ghosts.push(gh);
+            scene.add(gh);
+        }
+    }
+
+    // WASD移动按键（和空格分开）
+    function bindMoveKey(){
+        document.addEventListener('keydown',e=>{
+            switch(e.code){
+                case 'KeyW':moveForward=true;break;
+                case 'KeyS':moveBack=true;break;
+                case 'KeyA':moveLeft=true;break;
+                case 'KeyD':moveRight=true;break;
+            }
+        })
+        document.addEventListener('keyup',e=>{
+            switch(e.code){
+                case 'KeyW':moveForward=false;break;
+                case 'KeyS':moveBack=false;break;
+                case 'KeyA':moveLeft=false;break;
+                case 'KeyD':moveRight=false;break;
+            }
+        })
+        // 点击画面锁定鼠标
+        renderer.domElement.addEventListener('click',()=>{
+            if(gameStart&&!controls.isLocked){
+                controls.lock();
+                clickDom.style.display='none';
+            }
+        })
+    }
+
+    function resizeWin(){
+        camera.aspect = innerWidth/innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth,innerHeight);
+    }
+
+    // 渲染循环
+    function loop(){
+        requestAnimationFrame(loop);
+        const dt = clock.getDelta();
+
+        if(gameStart&&controls.isLocked){
+            velocity.x -= velocity.x*10*dt;
+            velocity.z -= velocity.z*10*dt;
+            direction.z = Number(moveForward)-Number(moveBack);
+            direction.x = Number(moveRight)-Number(moveLeft);
+            direction.normalize();
+
+            if(moveForward||moveBack) velocity.z -= direction.z*moveSpeed;
+            if(moveLeft||moveRight) velocity.x -= direction.x*moveSpeed;
+
+            controls.moveRight(-velocity.x*dt);
+            controls.moveForward(-velocity.z*dt);
+        }
+
+        ghosts.forEach(g=>{
+            g.position.addScaledVector(g.userData.dir,g.userData.spd*dt);
+            if(Math.abs(g.position.x)>27||Math.abs(g.position.z)>27){
+                g.userData.dir.multiplyScalar(-1);
+            }
+            g.position.y = 1.4 + Math.sin(Date.now()/950+g.position.x)*0.65;
+        })
+
+        renderer.render(scene,camera);
+    }
+
+    init();
+</script>
+</body>
+</html>
