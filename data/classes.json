@@ -50,8 +50,8 @@
     "password": "978153",
     "createdAt": "2026-06-02T12:01:59.681Z",
     "uploadEnabled": false,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-05T01:45:41.827Z"
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-05T02:00:04.597Z"
   },
   {
     "id": "b4f9025a",
