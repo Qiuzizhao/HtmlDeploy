@@ -61,13 +61,18 @@ test('public index shows the class name tag on project cards', async () => {
   assert.ok(html.indexOf("className = 'site-class-tag'") < html.indexOf("url.className = 'site-url'"));
 });
 
-test('public index shows a star badge on starred project cards', async () => {
+test('public index highlights starred project cards with a star icon', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
-  assert.match(html, /className = 'site-star-badge'/);
+  assert.match(html, /site-card is-starred/);
+  assert.match(html, /\.site-card\.is-starred/);
+  assert.match(html, /className = 'site-star-icon'/);
   assert.match(html, /if \(site\.starred === true\)/);
-  assert.match(html, /starTag\.textContent = '星标作品'/);
-  assert.ok(html.indexOf("className = 'site-star-badge'") < html.indexOf("className = 'site-class-tag'"));
+  assert.match(html, /starIcon\.textContent = '★'/);
+  assert.doesNotMatch(html, /星标作品/);
+  assert.doesNotMatch(html, /site-star-badge/);
+  assert.ok(html.indexOf("heading.append(number, title)") < html.indexOf("className = 'site-star-icon'"));
+  assert.ok(html.indexOf("className = 'site-star-icon'") < html.indexOf("className = 'site-class-tag'"));
 });
 
 test('public index loads class buttons and uploads to the selected class', async () => {

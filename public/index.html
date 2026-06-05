@@ -320,11 +320,24 @@
       transition: all 0.2s ease;
     }
 
+    .site-card.is-starred {
+      border-color: #fcd34d;
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.12);
+    }
+
     .site-card:hover {
       border-color: #7dd3fc;
       transform: translateY(-4px);
       box-shadow: 0 20px 40px rgba(14, 165, 233, 0.12);
       background: #ffffff;
+    }
+
+    .site-card.is-starred:hover {
+      border-color: #f59e0b;
+      background: #fef3c7;
+      box-shadow: 0 20px 40px rgba(245, 158, 11, 0.18);
     }
 
     .site-card-main {
@@ -391,6 +404,15 @@
       overflow-wrap: anywhere;
     }
 
+    .site-star-icon {
+      flex: 0 0 auto;
+      color: #f59e0b;
+      font-size: 21px;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 2px 8px rgba(245, 158, 11, 0.28);
+    }
+
     .site-tags {
       display: flex;
       flex-wrap: wrap;
@@ -410,20 +432,6 @@
       color: #047857;
       font-size: 13px;
       font-weight: 700;
-      overflow-wrap: anywhere;
-    }
-
-    .site-star-badge {
-      display: inline-flex;
-      width: fit-content;
-      max-width: 100%;
-      padding: 5px 9px;
-      border: 1px solid #fde68a;
-      border-radius: 8px;
-      background: #fffbeb;
-      color: #b45309;
-      font-size: 13px;
-      font-weight: 800;
       overflow-wrap: anywhere;
     }
 
@@ -1500,7 +1508,7 @@
 
       sites.forEach((site, index) => {
         const card = document.createElement('article');
-        card.className = 'site-card';
+        card.className = site.starred === true ? 'site-card is-starred' : 'site-card';
 
         const cardMain = document.createElement('div');
         cardMain.className = 'site-card-main';
@@ -1535,16 +1543,17 @@
         title.textContent = site.title;
 
         heading.append(number, title);
+        if (site.starred === true) {
+          const starIcon = document.createElement('span');
+          starIcon.className = 'site-star-icon';
+          starIcon.textContent = '★';
+          starIcon.title = '星标项目';
+          starIcon.setAttribute('aria-label', '星标项目');
+          heading.append(starIcon);
+        }
 
         const tagsContainer = document.createElement('div');
         tagsContainer.className = 'site-tags';
-
-        if (site.starred === true) {
-          const starTag = document.createElement('div');
-          starTag.className = 'site-star-badge';
-          starTag.textContent = '星标作品';
-          tagsContainer.append(starTag);
-        }
 
         const classTag = document.createElement('div');
         classTag.className = 'site-class-tag';
