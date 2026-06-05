@@ -914,6 +914,7 @@
       </div>
       <div class="modal-actions">
         <button class="secondary-button" id="cancelUpload" type="button">取消</button>
+        <button class="secondary-button" id="previewUpload" type="button">预览</button>
         <button class="primary-button" type="submit">确定上传</button>
       </div>
     </form>
@@ -968,6 +969,7 @@
     const authorInput = document.getElementById('authorInput');
     const fileInput = document.getElementById('fileInput');
     const uploadHtmlContent = document.getElementById('uploadHtmlContent');
+    const previewUploadButton = document.getElementById('previewUpload');
     const uploadMessage = document.getElementById('uploadMessage');
     const previewTitle = document.getElementById('previewTitle');
     const previewUrl = document.getElementById('previewUrl');
@@ -986,6 +988,7 @@
 
     let currentPreviewUrl = '';
     let currentPreviewExternalUrl = '';
+    let currentPreviewObjectUrl = '';
     let currentCodeText = '';
     let classes = [];
     let uploadRules = { forbiddenWords: [] };
@@ -1143,7 +1146,15 @@
       openPreview(site);
     }
 
+    function clearPreviewObjectUrl() {
+      if (currentPreviewObjectUrl) {
+        URL.revokeObjectURL(currentPreviewObjectUrl);
+        currentPreviewObjectUrl = '';
+      }
+    }
+
     function openPreview(site) {
+      clearPreviewObjectUrl();
       renderPreviewBackdrop();
       currentPreviewUrl = site.url;
       currentPreviewExternalUrl = site.previewUrl || site.url;
@@ -1155,10 +1166,26 @@
       focusPreviewFrame();
     }
 
+    function openUploadDraftPreview(htmlContent) {
+      clearPreviewObjectUrl();
+      const draftUrl = URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' }));
+      currentPreviewObjectUrl = draftUrl;
+      renderPreviewBackdrop();
+      currentPreviewUrl = draftUrl;
+      currentPreviewExternalUrl = draftUrl;
+      previewTitle.textContent = titleInput.value.trim() || '上传预览';
+      previewUrl.textContent = '上传前预览，不会保存';
+      previewFrame.src = draftUrl;
+      openOverlay(previewOverlay);
+      document.body.classList.add('is-previewing');
+      focusPreviewFrame();
+    }
+
     function closePreview() {
       previewFrame.removeAttribute('src');
       currentPreviewUrl = '';
       currentPreviewExternalUrl = '';
+      clearPreviewObjectUrl();
       closeOverlay(previewOverlay);
       document.body.classList.remove('is-previewing');
       clearPreviewBackdrop();
@@ -1503,6 +1530,35 @@
       }
     }
 
+    async function getUploadPreviewHtml() {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) {
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.html') && !fileName.endsWith('.htm')) {
+          throw new Error('当前版本只支持预览 HTML 文件。');
+        }
+        return await file.text();
+      }
+
+      return uploadHtmlContent.value.trim();
+    }
+
+    async function previewUploadDraft() {
+      uploadMessage.textContent = '';
+
+      try {
+        const htmlContent = await getUploadPreviewHtml();
+        if (!htmlContent) {
+          uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码后再预览。';
+          return;
+        }
+
+        openUploadDraftPreview(htmlContent);
+      } catch (error) {
+        uploadMessage.textContent = error.message || '预览失败';
+      }
+    }
+
     uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       uploadMessage.textContent = '';
@@ -1554,6 +1610,7 @@
 
     openUploadButton.addEventListener('click', openUpload);
     refreshClassSitesButton.addEventListener('click', refreshCurrentClassSites);
+    previewUploadButton.addEventListener('click', previewUploadDraft);
     document.getElementById('closeUpload').addEventListener('click', closeUpload);
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
     document.getElementById('closePreview').addEventListener('click', closePreview);
