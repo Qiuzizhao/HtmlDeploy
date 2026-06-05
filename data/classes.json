@@ -4,8 +4,8 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-05T01:45:38.668Z",
-    "uploadEnabled": false,
+    "updatedAt": "2026-06-05T07:31:47.232Z",
+    "uploadEnabled": true,
     "passwordEnabled": true
   },
   {
