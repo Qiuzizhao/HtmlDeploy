@@ -208,13 +208,10 @@
     "title": "我的妈呀 爱情",
     "author": "大妈",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:50.378Z",
-    "updatedAt": "2026-06-05T15:09:46.453Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "妈",
-    "forbiddenAuditMessage": "网页名字包含违禁词「妈」"
+    "updatedAt": "2026-06-05T15:10:26.711Z"
   },
   {
     "id": "7ffd899e",
@@ -431,13 +428,10 @@
     "title": "练手速",
     "author": "美女",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:29.028Z",
-    "updatedAt": "2026-06-05T15:09:46.660Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "美女",
-    "forbiddenAuditMessage": "作者署名包含违禁词「美女」"
+    "updatedAt": "2026-06-05T15:10:26.711Z"
   },
   {
     "id": "b59a51db",
@@ -1090,13 +1084,10 @@
     "title": "火影忍者手游高仿版",
     "author": "宇智波斑",
     "classId": "392f3c64",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
-    "updatedAt": "2026-06-05T15:09:47.272Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "忍",
-    "forbiddenAuditMessage": "网页名字包含违禁词「忍」"
+    "updatedAt": "2026-06-05T15:10:26.711Z"
   },
   {
     "id": "3a662fbd",
@@ -1545,7 +1536,7 @@
     "author": "小语",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:15.370Z",
-    "updatedAt": "2026-06-05T15:09:47.722Z",
+    "updatedAt": "2026-06-05T15:10:28.883Z",
     "enabled": false,
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "坊",
