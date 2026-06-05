@@ -49,9 +49,10 @@
     "title": "逃离老师",
     "author": "啦啦啦",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:25:24.712Z"
+    "createdAt": "2026-06-05T02:25:24.712Z",
+    "updatedAt": "2026-06-05T14:40:33.414Z"
   },
   {
     "id": "0b5adbb1",
@@ -468,9 +469,10 @@
     "title": "练枪",
     "author": "xxx",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:13:14.034Z"
+    "createdAt": "2026-06-05T02:13:14.034Z",
+    "updatedAt": "2026-06-05T14:40:33.414Z"
   },
   {
     "id": "434695b6",
@@ -858,9 +860,10 @@
     "title": "吃饭模拟器",
     "author": "曾锦莘",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:11.108Z"
+    "createdAt": "2026-06-04T06:57:11.108Z",
+    "updatedAt": "2026-06-05T14:40:33.414Z"
   },
   {
     "id": "081562d2",
@@ -1029,10 +1032,10 @@
     "title": "迷你KARDS卡牌对战",
     "author": "1939工作室",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:47.500Z",
-    "updatedAt": "2026-06-04T08:01:52.901Z"
+    "updatedAt": "2026-06-05T14:40:33.414Z"
   },
   {
     "id": "2a4f4097",
@@ -1165,9 +1168,10 @@
     "title": "方块吃方块",
     "author": "王梓萱",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:17.791Z"
+    "createdAt": "2026-06-04T06:54:17.791Z",
+    "updatedAt": "2026-06-05T14:40:33.414Z"
   },
   {
     "id": "1f582346",
@@ -1403,7 +1407,9 @@
     "title": "音乐",
     "author": "零零",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:55:34.897Z"
+    "createdAt": "2026-06-03T06:55:34.897Z",
+    "enabled": false,
+    "updatedAt": "2026-06-05T14:40:33.414Z"
   },
   {
     "id": "aae90e66",
@@ -1692,7 +1698,8 @@
     "author": "陈洋威ooo",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:44.559Z",
-    "updatedAt": "2026-06-03T15:34:06.473Z"
+    "updatedAt": "2026-06-05T14:40:33.414Z",
+    "enabled": false
   },
   {
     "id": "302dea0c",
