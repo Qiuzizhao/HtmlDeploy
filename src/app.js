@@ -102,6 +102,24 @@ function createForbiddenWordError(match) {
   return `${match.field}不能包含违禁词「${match.word}」`;
 }
 
+function createForbiddenAuditMessage(match) {
+  return `${match.field}包含违禁词「${match.word}」`;
+}
+
+function clearForbiddenAudit(site) {
+  if (!site.forbiddenAuditMessage && !site.forbiddenAuditField && !site.forbiddenAuditWord) {
+    return site;
+  }
+
+  const {
+    forbiddenAuditMessage,
+    forbiddenAuditField,
+    forbiddenAuditWord,
+    ...rest
+  } = site;
+  return rest;
+}
+
 function stripCodeFence(value) {
   const content = String(value || '').trim();
   const fenced = content.match(/^```(?:html)?\s*([\s\S]*?)\s*```$/i)
@@ -1757,7 +1775,11 @@ function createApp(options = {}) {
 
       const nextSites = sites.map((site) => {
         if (site.forbiddenWhitelist === true) {
-          return site;
+          const clearedSite = clearForbiddenAudit(site);
+          if (clearedSite !== site) {
+            changed = true;
+          }
+          return clearedSite;
         }
 
         const match = findForbiddenWordMatch(
@@ -1766,29 +1788,47 @@ function createApp(options = {}) {
         );
 
         if (!match) {
-          return site;
+          const clearedSite = clearForbiddenAudit(site);
+          if (clearedSite !== site) {
+            changed = true;
+          }
+          return clearedSite;
         }
 
+        const auditMessage = createForbiddenAuditMessage(match);
         matches.push({
           id: site.id,
           title: site.title,
           author: site.author || '',
           field: match.field,
           word: match.word,
+          message: auditMessage,
           wasEnabled: site.enabled !== false
         });
 
-        if (site.enabled === false) {
-          return site;
+        const nextSite = {
+          ...site,
+          forbiddenAuditField: match.field,
+          forbiddenAuditWord: match.word,
+          forbiddenAuditMessage: auditMessage
+        };
+
+        if (site.enabled !== false) {
+          disabledCount += 1;
+          nextSite.enabled = false;
         }
 
-        disabledCount += 1;
-        changed = true;
-        return {
-          ...site,
-          enabled: false,
-          updatedAt: new Date().toISOString()
-        };
+        if (
+          site.enabled !== nextSite.enabled
+          || site.forbiddenAuditField !== nextSite.forbiddenAuditField
+          || site.forbiddenAuditWord !== nextSite.forbiddenAuditWord
+          || site.forbiddenAuditMessage !== nextSite.forbiddenAuditMessage
+        ) {
+          changed = true;
+          nextSite.updatedAt = new Date().toISOString();
+        }
+
+        return nextSite;
       });
 
       if (changed) {
@@ -1918,11 +1958,11 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      const site = {
+      const site = clearForbiddenAudit({
         ...sites[siteIndex],
         forbiddenWhitelist,
         updatedAt: new Date().toISOString()
-      };
+      });
       sites[siteIndex] = site;
       await writeSites(dataFile, sites);
 
@@ -2220,11 +2260,11 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      const site = {
+      const site = clearForbiddenAudit({
         ...latestSites[latestSiteIndex],
         title,
         updatedAt: new Date().toISOString()
-      };
+      });
       latestSites[latestSiteIndex] = site;
       await writeSites(dataFile, latestSites);
 
@@ -2279,13 +2319,13 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
       }
 
-      const site = {
+      const site = clearForbiddenAudit({
         ...sites[siteIndex],
         title,
         author,
         classId,
         updatedAt: new Date().toISOString()
-      };
+      });
 
       if (file) {
         const projectDir = path.join(storageDir, id);

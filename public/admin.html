@@ -727,6 +727,15 @@
       vertical-align: middle;
     }
 
+    .forbidden-audit-note {
+      margin-top: 6px;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
     .url {
       display: inline-block;
       max-width: 220px;
@@ -2400,6 +2409,12 @@
           titleInput.style.height = titleInput.scrollHeight + 'px';
         }, 0);
         titleCell.append(titleInput);
+        if (site.forbiddenAuditMessage) {
+          const forbiddenNote = document.createElement('div');
+          forbiddenNote.className = 'forbidden-audit-note';
+          forbiddenNote.textContent = `违禁词：${site.forbiddenAuditMessage}`;
+          titleCell.append(forbiddenNote);
+        }
 
         const authorCell = document.createElement('td');
         const authorInput = document.createElement('input');
