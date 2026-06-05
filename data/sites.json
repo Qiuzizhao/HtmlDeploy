@@ -1,5 +1,15 @@
 [
   {
+    "id": "4bc49135",
+    "number": "00161",
+    "title": "猜数字",
+    "author": "qwq",
+    "classId": "f438ed26",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-05T02:12:53.664Z"
+  },
+  {
     "id": "555e0671",
     "number": "00160",
     "title": "白雪公猪猪",
