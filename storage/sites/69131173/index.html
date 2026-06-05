@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D跑酷 - 无限平整大陆版</title>
+    <title>3D跑酷 - 纯净无限大陆版</title>
     <style>
         * {
             margin: 0;
@@ -190,7 +190,6 @@
         const GROUND_Y = -5;
         const DESPAWN_Z = 40;
 
-        // 【新增机制】无限地板拼接配置
         const CHUNK_LENGTH = 400;    // 单个地板块的长度
         const TRACK_WIDTH = 60;      // 地板网格的视觉宽度
 
@@ -201,7 +200,7 @@
         // ─── Three.js 场景初始化 ──────────────────────────────────────
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 120, 280); // 稍微拉远雾气，让长路看起来更壮观
+        scene.fog = new THREE.Fog(0x87ceeb, 120, 280);
 
         const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 400);
         camera.position.set(0, 14, 28);
@@ -215,7 +214,7 @@
         renderer.toneMappingExposure = 1.2;
         document.body.prepend(renderer.domElement);
 
-        // ─── 精准定向光影 ────────────────────────────────────────────
+        // ─── 环境光与太阳光（定向阴影） ──────────────────────────────────
         const ambient = new THREE.AmbientLight(0x8899bb, 0.6);
         scene.add(ambient);
 
@@ -241,7 +240,7 @@
         world.gravity.set(0, -38, 0); 
         world.broadphase = new CANNON.SAPBroadphase(world);
 
-        // 配置无摩擦材质，实现贴地不减速自动狂奔
+        // 配置无摩擦材质，实现贴地自动狂奔
         const groundPhysicsMaterial = new CANNON.Material('groundMat');
         const playerPhysicsMaterial = new CANNON.Material('playerMat');
 
@@ -251,7 +250,7 @@
         });
         world.addContactMaterial(contactMat);
 
-        // ─── 创建双块无限交替循环地板 ──────────────────────────────────
+        // ─── 创建双块无限交替循环地板（去除了斑马线条纹） ─────────────────────
         const groundGeo = new THREE.PlaneGeometry(TRACK_WIDTH, CHUNK_LENGTH);
         const groundMat = new THREE.MeshStandardMaterial({
             color: 0x4a7c59,
@@ -259,13 +258,13 @@
             metalness: 0.0,
         });
 
-        // 物理碰撞形状 (稍微宽于视觉边界提供稳固支撑)
+        // 物理碰撞形状
         const groundShape = new CANNON.Box(new CANNON.Vec3(TRACK_WIDTH, 0.5, CHUNK_LENGTH / 2));
 
-        // 【地板 1 号】
+        // 地板 1 号
         const groundMesh1 = new THREE.Mesh(groundGeo, groundMat);
         groundMesh1.rotation.x = -Math.PI / 2;
-        groundMesh1.position.set(0, GROUND_Y, -CHUNK_LENGTH / 2); // 0 ~ -400米
+        groundMesh1.position.set(0, GROUND_Y, -CHUNK_LENGTH / 2);
         groundMesh1.receiveShadow = true;
         scene.add(groundMesh1);
 
@@ -273,28 +272,16 @@
         groundBody1.position.set(0, GROUND_Y - 0.5, -CHUNK_LENGTH / 2);
         world.addBody(groundBody1);
 
-        // 【地板 2 号】紧密拼在 1 号屁股后面
+        // 地板 2 号（紧密接龙拼接）
         const groundMesh2 = new THREE.Mesh(groundGeo, groundMat);
         groundMesh2.rotation.x = -Math.PI / 2;
-        groundMesh2.position.set(0, GROUND_Y, -CHUNK_LENGTH * 1.5); // -400 ~ -800米
+        groundMesh2.position.set(0, GROUND_Y, -CHUNK_LENGTH * 1.5);
         groundMesh2.receiveShadow = true;
         scene.add(groundMesh2);
 
         const groundBody2 = new CANNON.Body({ mass: 0, shape: groundShape, material: groundPhysicsMaterial });
         groundBody2.position.set(0, GROUND_Y - 0.5, -CHUNK_LENGTH * 1.5);
         world.addBody(groundBody2);
-
-        // 地面斑马线装饰条纹
-        const stripeGroup = new THREE.Group();
-        scene.add(stripeGroup);
-        const stripeMat = new THREE.MeshStandardMaterial({ color: 0x3d6b4a, roughness: 0.9 });
-        for (let i = 0; i < 60; i++) {
-            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(40, 3), stripeMat);
-            stripe.rotation.x = -Math.PI / 2;
-            stripe.position.set(0, GROUND_Y + 0.02, -i * 14);
-            stripe.receiveShadow = true;
-            stripeGroup.add(stripe);
-        }
 
         // ─── 玩家角色构建 ────────────────────────────────────────────
         const playerGroup = new THREE.Group();
@@ -313,7 +300,7 @@
         playerMesh.position.y = PLAYER_HEIGHT / 2;
         playerGroup.add(playerMesh);
 
-        // 角色萌系大眼睛
+        // 角色大眼睛
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const pupilMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
         for (let side = -1; side <= 1; side += 2) {
@@ -357,7 +344,7 @@
         }
 
         function spawnObstacle(z) {
-            const lane = Math.floor(Math.random() * 5) - 2; // -2, -1, 0, 1, 2 五条车道
+            const lane = Math.floor(Math.random() * 5) - 2; 
             const x = lane * 4.5;
             const y = GROUND_Y;
 
@@ -375,7 +362,6 @@
         }
 
         function buildTrack() {
-            // 初始化先摆放 35 个往前延伸的随机障碍物
             for (let i = 0; i < 35; i++) {
                 spawnObstacle(-i * 22 - 45);
             }
@@ -395,7 +381,7 @@
             // 1. 恒定自动前向冲锋物理速度
             playerBody.velocity.z = -MOVE_SPEED;
 
-            // 左右转向敏捷操纵
+            // 左右转向操纵
             if (keys['KeyA'] || keys['ArrowLeft']) {
                 playerBody.velocity.x = -SIDE_SPEED;
             } else if (keys['KeyD'] || keys['ArrowRight']) {
@@ -404,7 +390,7 @@
                 playerBody.velocity.x = 0;
             }
 
-            // 2. 严密的赛道左右边缘空气墙锁，绝对不给跌入虚空的机会
+            // 2. 严密的赛道左右边缘空气墙锁
             const MAX_X_BORDER = 9.2;
             if (playerBody.position.x < -MAX_X_BORDER) {
                 playerBody.position.x = -MAX_X_BORDER;
@@ -428,13 +414,11 @@
 
             const playerZ = playerBody.position.z;
 
-            // 3. 【核心修复】双块大平板无缝衔接无限倒带、循环向前方拼接
-            // 如果玩家跑过了 1 号地板的重点，把 1 号拔起来挪到 2 号前面去
+            // 3. 双块大平板无缝衔接无限交替拼接逻辑
             if (playerZ < groundMesh1.position.z - CHUNK_LENGTH / 2) {
                 groundMesh1.position.z -= CHUNK_LENGTH * 2;
                 groundBody1.position.z -= CHUNK_LENGTH * 2;
             }
-            // 同理，如果跑过了 2 号地板，就把 2 号挪到 1 号前方
             if (playerZ < groundMesh2.position.z - CHUNK_LENGTH / 2) {
                 groundMesh2.position.z -= CHUNK_LENGTH * 2;
                 groundBody2.position.z -= CHUNK_LENGTH * 2;
@@ -445,19 +429,12 @@
                 const obs = activeObstacles[i];
                 if (obs.body.position.z > playerZ + DESPAWN_Z) {
                     const lane = Math.floor(Math.random() * 5) - 2;
-                    obs.body.position.z -= activeObstacles.length * 22; // 瞬移到最前方
+                    obs.body.position.z -= activeObstacles.length * 22; 
                     obs.body.position.x = lane * 4.5;
                 }
                 obs.mesh.position.copy(obs.body.position);
                 obs.mesh.position.y = obs.body.position.y - OBSTACLE_HEIGHT / 2;
             }
-
-            // 地面装饰线条同步循环无限倒带
-            stripeGroup.children.forEach(stripe => {
-                if (stripe.position.z > playerZ + 40) {
-                    stripe.position.z -= stripeGroup.children.length * 14;
-                }
-            });
 
             // 万一穿模意外落下的坠落兜底
             if (playerBody.position.y < GROUND_Y - 4) {
@@ -478,7 +455,7 @@
             camera.position.z += (targetCamZ - camera.position.z) * 0.1;
             camera.lookAt(playerBody.position.x * 0.3, playerBody.position.y * 0.5 + 2, playerBody.position.z - 5);
 
-            // 太阳光死死锚定玩家前进距离，保证高空投射过来的影子不会因长途跋涉产生断档或崩裂
+            // 太阳光死死锚定玩家前进距离，保证阴影稳定性
             sun.position.set(playerBody.position.x + 25, 45, playerBody.position.z - 35);
             sun.target = playerGroup;
 
@@ -488,7 +465,6 @@
 
         // ─── 物理撞击毁灭判定 ─────────────────────────────────────────
         playerBody.addEventListener('collide', (e) => {
-            // 如果撞击到的不是两个无限循环地板之一，就说明撞上了障碍大木柱子，游戏结束
             if (e.body !== groundBody1 && e.body !== groundBody2) {
                 endGame();
             }
@@ -575,7 +551,7 @@
         function restartGame() {
             overlayEl.style.display = 'none';
             
-            // 彻底销毁并卸载老旧的障碍物资源
+            // 销毁老旧的障碍物资源
             for (const obs of activeObstacles) {
                 scene.remove(obs.mesh);
                 world.removeBody(obs.body);
@@ -588,7 +564,7 @@
             }
             activeObstacles = [];
 
-            // 清理并回收残留粒子
+            // 清理粒子
             for (const p of particles) {
                 scene.remove(p.mesh);
                 p.mesh.geometry.dispose();
@@ -596,13 +572,13 @@
             }
             particles.length = 0;
 
-            // 彻底还原双块物理地板的初始接龙位置
+            // 还原双块物理地板位置
             groundMesh1.position.set(0, GROUND_Y, -CHUNK_LENGTH / 2);
             groundBody1.position.set(0, GROUND_Y - 0.5, -CHUNK_LENGTH / 2);
             groundMesh2.position.set(0, GROUND_Y, -CHUNK_LENGTH * 1.5);
             groundBody2.position.set(0, GROUND_Y - 0.5, -CHUNK_LENGTH * 1.5);
 
-            // 还原玩家的核心位姿与物理动能状态
+            // 还原玩家状态
             playerBody.position.set(0, 2, 0);
             playerBody.velocity.set(0, 0, 0);
             playerGroup.position.set(0, 2, 0);
@@ -611,7 +587,6 @@
             score = 0;
             scoreEl.textContent = '0';
 
-            // 重新初始化前方轨道障碍群
             buildTrack();
 
             gameRunning = true;
@@ -632,7 +607,7 @@
         }
         tickParticles();
 
-        console.log('✨ 终极跑酷引擎启动：纵深无限双地板循环拼接成功！再无踏空绝地。');
+        console.log('🚀 纯净版无限大陆跑酷已启动，横杠装饰已移除！');
     </script>
 </body>
 </html>
