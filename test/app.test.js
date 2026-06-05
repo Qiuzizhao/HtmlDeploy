@@ -329,6 +329,7 @@ async function makeTestApp(options = {}) {
     dataFile: path.join(dataDir, 'sites.json'),
     classesFile: path.join(dataDir, 'classes.json'),
     settingsFile: path.join(dataDir, 'settings.json'),
+    aiSettingsFile: path.join(dataDir, 'private-ai-settings.json'),
     storageDir,
     publicDir,
     ...options
