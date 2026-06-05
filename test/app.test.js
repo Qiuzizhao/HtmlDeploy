@@ -259,6 +259,19 @@ test('public admin can edit the all-projects password in class management', asyn
   assert.match(html, /body: JSON\.stringify\(\{ allPasswordEnabled: nextEnabled \}\)/);
 });
 
+test('public admin can preview edited project code before saving', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /id="previewCodeButton"[^>]*>预览<\/button>/);
+  assert.ok(html.indexOf('id="previewCodeButton"') < html.indexOf('id="saveCodeButton"'));
+  assert.match(html, /const previewCodeButton = document\.getElementById\('previewCodeButton'\)/);
+  assert.match(html, /function previewCurrentCode\(\)/);
+  assert.match(html, /new Blob\(\[htmlContent\], \{ type: 'text\/html' \}\)/);
+  assert.match(html, /window\.URL\.createObjectURL\(previewBlob\)/);
+  assert.match(html, /previewCodeButton\.addEventListener\('click', previewCurrentCode\)/);
+  assert.match(html, /window\.URL\.revokeObjectURL\(previewUrl\)/);
+});
+
 async function makeTestApp(options = {}) {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-'));
   const dataDir = path.join(root, 'data');

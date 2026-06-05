@@ -1163,6 +1163,7 @@
         </div>
         <div class="code-actions-right">
           <button class="button" id="optimizeCodeButton" type="button">AI优化</button>
+          <button class="button" id="previewCodeButton" type="button">预览</button>
           <button class="primary-button" id="saveCodeButton" type="button">保存代码</button>
         </div>
       </footer>
@@ -1242,6 +1243,7 @@
     const codeFileInput = document.getElementById('codeFileInput');
     const reloadCodeButton = document.getElementById('reloadCodeButton');
     const optimizeCodeButton = document.getElementById('optimizeCodeButton');
+    const previewCodeButton = document.getElementById('previewCodeButton');
     const saveCodeButton = document.getElementById('saveCodeButton');
     const directedAiOverlay = document.getElementById('directedAiOverlay');
     const directedAiMeta = document.getElementById('directedAiMeta');
@@ -1495,6 +1497,7 @@
       codeEditor.disabled = isBusy;
       saveCodeButton.disabled = isBusy;
       optimizeCodeButton.disabled = isBusy;
+      previewCodeButton.disabled = isBusy;
       reloadCodeButton.disabled = isBusy;
       codeFileInput.disabled = isBusy;
     }
@@ -1627,6 +1630,36 @@
       renderRows();
       setCodeMessage('代码已保存，封面会在后台自动刷新。');
       setMessage(listMessage, `「${updatedSite.title}」代码已保存`);
+    }
+
+    function previewCurrentCode() {
+      if (!currentCodeSite) {
+        return;
+      }
+
+      const htmlContent = codeEditor.value;
+      if (!htmlContent.trim()) {
+        setCodeMessage('代码不能为空', true);
+        codeEditor.focus();
+        return;
+      }
+
+      const previewBlob = new Blob([htmlContent], { type: 'text/html' });
+      const previewUrl = window.URL.createObjectURL(previewBlob);
+      const opened = openProjectWindow({
+        id: `${currentCodeSite.id}-draft`,
+        url: previewUrl,
+        previewUrl
+      });
+
+      if (!opened) {
+        window.URL.revokeObjectURL(previewUrl);
+        setCodeMessage('预览窗口被浏览器拦截，请允许弹窗后重试。', true);
+        return;
+      }
+
+      window.setTimeout(() => window.URL.revokeObjectURL(previewUrl), 60000);
+      setCodeMessage('已打开临时预览窗口，保存前不会影响线上项目。');
     }
 
     async function optimizeCurrentCode() {
@@ -2844,6 +2877,7 @@
       }
     });
     optimizeCodeButton.addEventListener('click', optimizeCurrentCode);
+    previewCodeButton.addEventListener('click', previewCurrentCode);
     saveCodeButton.addEventListener('click', saveCurrentCode);
     codeFileInput.addEventListener('change', async () => {
       const file = codeFileInput.files && codeFileInput.files[0];
