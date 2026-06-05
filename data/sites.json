@@ -8,7 +8,8 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T07:35:47.791Z",
-    "updatedAt": "2026-06-05T09:34:32.506Z"
+    "updatedAt": "2026-06-05T15:11:33.175Z",
+    "starred": false
   },
   {
     "id": "69131173",
@@ -19,7 +20,8 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:28:25.153Z",
-    "updatedAt": "2026-06-05T09:15:06.085Z"
+    "updatedAt": "2026-06-05T15:15:25.217Z",
+    "starred": true
   },
   {
     "id": "40afa53e",
@@ -38,13 +40,10 @@
     "title": "白雪森林冒险",
     "author": "朔墨牛逼",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:41.719Z",
-    "updatedAt": "2026-06-05T14:51:34.703Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "牛逼",
-    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "ec39275e",
@@ -55,7 +54,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.712Z",
-    "updatedAt": "2026-06-05T14:40:33.414Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "0b5adbb1",
+    "duplicateAuditKeepTitle": "逃离老师",
+    "duplicateAuditMessage": "与「逃离老师（00202）」代码重复"
   },
   {
     "id": "0b5adbb1",
@@ -73,13 +75,10 @@
     "title": "fps",
     "author": "llliao",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:15.651Z",
-    "updatedAt": "2026-06-05T14:51:34.734Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "p",
-    "forbiddenAuditMessage": "网页名字包含违禁词「p」"
+    "updatedAt": "2026-06-05T15:07:47.656Z"
   },
   {
     "id": "4139a720",
@@ -98,13 +97,10 @@
     "title": "森林冰火人",
     "author": "菱",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
-    "updatedAt": "2026-06-05T14:51:34.746Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "冰火",
-    "forbiddenAuditMessage": "网页名字包含违禁词「冰火」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "3cccb5d2",
@@ -122,13 +118,10 @@
     "title": "白雪公猪猪",
     "author": "给我88元助力我买应援棒",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:22:45.330Z",
-    "updatedAt": "2026-06-05T14:51:34.762Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "买",
-    "forbiddenAuditMessage": "作者署名包含违禁词「买」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "908e2ef3",
@@ -166,13 +159,10 @@
     "title": "小方块",
     "author": "qw牛逼666",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.250Z",
-    "updatedAt": "2026-06-05T14:51:34.797Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "牛逼",
-    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "59dcd516",
@@ -180,13 +170,10 @@
     "title": "极速音游",
     "author": "gh牛逼666",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
-    "updatedAt": "2026-06-05T14:51:34.803Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "牛逼",
-    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "fe72fb41",
@@ -226,13 +213,10 @@
     "title": "我的妈呀 爱情",
     "author": "大妈",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:50.378Z",
-    "updatedAt": "2026-06-05T14:51:34.834Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "妈",
-    "forbiddenAuditMessage": "网页名字包含违禁词「妈」"
+    "updatedAt": "2026-06-05T15:10:26.711Z"
   },
   {
     "id": "7ffd899e",
@@ -260,13 +244,10 @@
     "title": "3D我的世界",
     "author": "piggod",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:12.351Z",
-    "updatedAt": "2026-06-05T14:51:34.863Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "p",
-    "forbiddenAuditMessage": "作者署名包含违禁词「p」"
+    "updatedAt": "2026-06-05T15:07:47.656Z"
   },
   {
     "id": "56a2aabe",
@@ -294,13 +275,10 @@
     "title": "game2",
     "author": "cnweb",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:50.151Z",
-    "updatedAt": "2026-06-05T14:51:34.884Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "game",
-    "forbiddenAuditMessage": "网页名字包含违禁词「game」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "beb4560e",
@@ -311,10 +289,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:48.275Z",
-    "updatedAt": "2026-06-05T14:51:34.888Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "浪",
-    "forbiddenAuditMessage": "网页名字包含违禁词「浪」"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "1d4268ed",
+    "duplicateAuditKeepTitle": "满改M7 VS满改巨浪",
+    "duplicateAuditMessage": "与「满改M7 VS满改巨浪（00180）」代码重复"
   },
   {
     "id": "1d4268ed",
@@ -322,13 +300,10 @@
     "title": "满改M7 VS满改巨浪",
     "author": "1",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:47.963Z",
-    "updatedAt": "2026-06-05T14:51:34.893Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "浪",
-    "forbiddenAuditMessage": "网页名字包含违禁词「浪」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "af3daa4a",
@@ -336,13 +311,10 @@
     "title": "game1",
     "author": "cnweb",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:37.331Z",
-    "updatedAt": "2026-06-05T14:51:34.894Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "game",
-    "forbiddenAuditMessage": "网页名字包含违禁词「game」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "98ae9b63",
@@ -360,13 +332,10 @@
     "title": "音游",
     "author": "ps末条牛逼",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:16:56.191Z",
-    "updatedAt": "2026-06-05T14:51:34.909Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "牛逼",
-    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "31e7be77",
@@ -415,13 +384,10 @@
     "title": "fps",
     "author": "llliao",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:15:18.794Z",
-    "updatedAt": "2026-06-05T14:51:34.953Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "p",
-    "forbiddenAuditMessage": "网页名字包含违禁词「p」"
+    "updatedAt": "2026-06-05T15:07:47.656Z"
   },
   {
     "id": "15ba87ae",
@@ -449,13 +415,10 @@
     "title": "射击",
     "author": "陈毅睎",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:42.662Z",
-    "updatedAt": "2026-06-05T14:51:34.978Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "陈毅",
-    "forbiddenAuditMessage": "作者署名包含违禁词「陈毅」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "82af0bd0",
@@ -473,13 +436,10 @@
     "title": "练手速",
     "author": "美女",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:29.028Z",
-    "updatedAt": "2026-06-05T14:51:34.995Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "美女",
-    "forbiddenAuditMessage": "作者署名包含违禁词「美女」"
+    "updatedAt": "2026-06-05T15:10:26.711Z"
   },
   {
     "id": "b59a51db",
@@ -520,7 +480,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:14.034Z",
-    "updatedAt": "2026-06-05T14:40:33.414Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "434695b6",
+    "duplicateAuditKeepTitle": "练枪",
+    "duplicateAuditMessage": "与「练枪（00162）」代码重复"
   },
   {
     "id": "434695b6",
@@ -548,13 +511,10 @@
     "title": "白雪公猪猪",
     "author": "ZH牛逼略略",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:11:50.263Z",
-    "updatedAt": "2026-06-05T14:51:35.060Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "牛逼",
-    "forbiddenAuditMessage": "作者署名包含违禁词「牛逼」"
+    "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
     "id": "17ae3311",
@@ -669,7 +629,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:59:04.345Z",
-    "updatedAt": "2026-06-04T07:59:02.809Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "50620a65",
@@ -677,10 +640,10 @@
     "title": "无",
     "author": "LCJ",
     "classId": "392f3c64",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:57.745Z",
-    "updatedAt": "2026-06-04T07:59:07.168Z"
+    "updatedAt": "2026-06-05T15:07:22.767Z"
   },
   {
     "id": "9c4544ef",
@@ -691,7 +654,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:53.683Z",
-    "updatedAt": "2026-06-04T07:59:07.629Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "53e2562b",
@@ -702,7 +668,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:44.839Z",
-    "updatedAt": "2026-06-04T07:59:09.742Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "4f0542e5",
@@ -713,7 +682,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:44.512Z",
-    "updatedAt": "2026-06-04T07:59:10.244Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "285dffe5",
@@ -765,7 +737,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:25.257Z",
-    "updatedAt": "2026-06-04T07:59:19.654Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "1be19d08",
@@ -776,7 +751,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:11.953Z",
-    "updatedAt": "2026-06-04T07:59:22.447Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "f8b5f9a0",
@@ -809,7 +787,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:57.354Z",
-    "updatedAt": "2026-06-04T07:59:26.235Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "83025d69",
@@ -860,7 +841,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:26.269Z",
-    "updatedAt": "2026-06-04T07:59:28.859Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "bbf6450a",
@@ -871,7 +855,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:25.838Z",
-    "updatedAt": "2026-06-04T07:59:29.506Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "0b06a016",
@@ -914,7 +901,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:11.108Z",
-    "updatedAt": "2026-06-05T14:40:33.414Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "081562d2",
+    "duplicateAuditKeepTitle": "吃饭模拟器",
+    "duplicateAuditMessage": "与「吃饭模拟器（00125）」代码重复"
   },
   {
     "id": "081562d2",
@@ -935,7 +925,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:09.905Z",
-    "updatedAt": "2026-06-04T06:57:47.373Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "13171f6d",
@@ -1042,7 +1035,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.893Z",
-    "updatedAt": "2026-06-04T06:57:42.848Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "16c3dbff",
@@ -1053,7 +1049,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.490Z",
-    "updatedAt": "2026-06-04T06:57:41.739Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "7a0c2118",
@@ -1061,10 +1060,10 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.313Z",
-    "updatedAt": "2026-06-04T06:57:42.351Z"
+    "updatedAt": "2026-06-05T15:07:22.767Z"
   },
   {
     "id": "afab1cb0",
@@ -1086,7 +1085,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:47.500Z",
-    "updatedAt": "2026-06-05T14:40:33.414Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "2a4f4097",
+    "duplicateAuditKeepTitle": "迷你KARDS卡牌对战",
+    "duplicateAuditMessage": "与「迷你KARDS卡牌对战（00109）」代码重复"
   },
   {
     "id": "2a4f4097",
@@ -1135,13 +1137,10 @@
     "title": "火影忍者手游高仿版",
     "author": "宇智波斑",
     "classId": "392f3c64",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
-    "updatedAt": "2026-06-05T14:51:35.595Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "忍",
-    "forbiddenAuditMessage": "网页名字包含违禁词「忍」"
+    "updatedAt": "2026-06-05T15:10:26.711Z"
   },
   {
     "id": "3a662fbd",
@@ -1159,10 +1158,10 @@
     "title": "无",
     "author": "LCJ",
     "classId": "392f3c64",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:49.643Z",
-    "updatedAt": "2026-06-04T07:59:42.812Z"
+    "updatedAt": "2026-06-05T15:07:22.767Z"
   },
   {
     "id": "bf84bc88",
@@ -1225,7 +1224,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:17.791Z",
-    "updatedAt": "2026-06-05T14:40:33.414Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "1f582346",
+    "duplicateAuditKeepTitle": "方块吃方块",
+    "duplicateAuditMessage": "与「方块吃方块（00096）」代码重复"
   },
   {
     "id": "1f582346",
@@ -1278,7 +1280,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:36.635Z",
-    "updatedAt": "2026-06-04T08:02:23.755Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "f40ae352",
@@ -1289,7 +1294,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:36.472Z",
-    "updatedAt": "2026-06-04T08:02:24.207Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "798ad85c",
@@ -1300,7 +1308,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:36.243Z",
-    "updatedAt": "2026-06-04T08:02:24.758Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "4c7bf496",
@@ -1311,7 +1322,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:35.757Z",
-    "updatedAt": "2026-06-04T08:02:25.939Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "15fc69b5",
@@ -1322,7 +1336,10 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:34.346Z",
-    "updatedAt": "2026-06-04T08:02:26.387Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "56b4e6c6",
@@ -1340,10 +1357,10 @@
     "title": "篮球",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:52:54.508Z",
-    "updatedAt": "2026-06-04T07:59:49.566Z"
+    "updatedAt": "2026-06-05T15:07:22.767Z"
   },
   {
     "id": "66a141d9",
@@ -1463,7 +1480,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:34.897Z",
     "enabled": false,
-    "updatedAt": "2026-06-05T14:40:33.414Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "aae90e66",
+    "duplicateAuditKeepTitle": "音乐",
+    "duplicateAuditMessage": "与「音乐（00073）」代码重复"
   },
   {
     "id": "aae90e66",
@@ -1590,11 +1610,8 @@
     "author": "小语",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:15.370Z",
-    "updatedAt": "2026-06-05T14:51:36.035Z",
-    "enabled": false,
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "坊",
-    "forbiddenAuditMessage": "网页名字包含违禁词「坊」"
+    "updatedAt": "2026-06-05T15:10:49.937Z",
+    "enabled": true
   },
   {
     "id": "c236a467",
@@ -1755,8 +1772,11 @@
     "author": "陈洋威ooo",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:44.559Z",
-    "updatedAt": "2026-06-05T14:40:33.414Z",
-    "enabled": false
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "enabled": false,
+    "duplicateAuditKeepId": "302dea0c",
+    "duplicateAuditKeepTitle": "终极枪战",
+    "duplicateAuditMessage": "与「终极枪战（00041）」代码重复"
   },
   {
     "id": "302dea0c",
