@@ -179,9 +179,11 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /data-view-target="projects"/);
   assert.match(html, /data-view-target="create"/);
   assert.match(html, /data-view-target="classes"/);
+  assert.match(html, /data-view-target="settings"/);
   assert.match(html, /data-admin-view="projects"[^>]+class="workspace is-active"/);
   assert.match(html, /data-admin-view="create"[^>]+class="workspace"/);
   assert.match(html, /data-admin-view="classes"[^>]+class="workspace"/);
+  assert.match(html, /data-admin-view="settings"[^>]+class="workspace"/);
   assert.match(html, /function switchView/);
   assert.match(html, /projectCount/);
   assert.match(html, /classCount/);
@@ -235,6 +237,28 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /function generatePassword/);
   assert.match(html, /formData\.append\('classId'/);
   assert.match(html, /formData\.append\('htmlContent'/);
+});
+
+test('public admin exposes AI settings controls', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /data-view-target="settings"[^>]*>设置<\/button>/);
+  assert.match(html, /data-admin-view="settings"[^>]+class="workspace"/);
+  assert.match(html, /AI 功能设置/);
+  assert.match(html, /id="aiSettingsForm"/);
+  assert.match(html, /id="aiApiKeyInput"[^>]+type="password"/);
+  assert.match(html, /id="aiBaseUrlInput"/);
+  assert.match(html, /id="aiModelInput"/);
+  assert.match(html, /id="aiTemperatureInput"/);
+  assert.match(html, /id="aiNameTemperatureInput"/);
+  assert.match(html, /id="aiThinkingTypeInput"/);
+  assert.match(html, /id="clearAiApiKey"/);
+  assert.match(html, /\/api\/admin\/ai-settings/);
+  assert.match(html, /function loadAiSettings/);
+  assert.match(html, /async function saveAiSettings/);
+  assert.match(html, /async function clearAiApiKey/);
+  assert.match(html, /apiKeyPreview/);
+  assert.match(html, /await loadAiSettings\(\)/);
 });
 
 test('public admin class passwords are hidden by default with one show-hide toggle before random', async () => {
@@ -305,6 +329,7 @@ async function makeTestApp(options = {}) {
     dataFile: path.join(dataDir, 'sites.json'),
     classesFile: path.join(dataDir, 'classes.json'),
     settingsFile: path.join(dataDir, 'settings.json'),
+    aiSettingsFile: path.join(dataDir, 'private-ai-settings.json'),
     storageDir,
     publicDir,
     ...options
@@ -358,6 +383,74 @@ test('GET /api/sites assigns five-digit numbers to existing projects by creation
       ['older', '00001']
     ]
   );
+});
+
+test('admin AI settings require admin access and mask saved API keys', async () => {
+  const secretKey = 'sk-test-secret-1234567890';
+  const { app, dataDir } = await makeTestApp();
+  const agent = request.agent(app);
+
+  await agent.get('/api/admin/ai-settings').expect(401);
+  await agent.put('/api/admin/ai-settings').send({ model: 'deepseek-chat' }).expect(401);
+
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  const saved = await agent
+    .put('/api/admin/ai-settings')
+    .send({
+      apiKey: secretKey,
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+      temperature: 0.7,
+      nameTemperature: 0.4,
+      thinkingType: 'disabled'
+    })
+    .expect(200);
+
+  assert.equal(saved.body.hasApiKey, true);
+  assert.notEqual(saved.body.apiKeyPreview, secretKey);
+  assert.match(saved.body.apiKeyPreview, /^sk-/);
+  assert.equal(saved.body.baseUrl, 'https://api.deepseek.com');
+  assert.equal(saved.body.model, 'deepseek-chat');
+  assert.equal(saved.body.temperature, 0.7);
+  assert.equal(saved.body.nameTemperature, 0.4);
+  assert.equal(saved.body.thinkingType, 'disabled');
+
+  const loaded = await agent.get('/api/admin/ai-settings').expect(200);
+  assert.equal(loaded.body.hasApiKey, true);
+  assert.equal(loaded.body.apiKeyPreview, saved.body.apiKeyPreview);
+  assert.equal(loaded.body.apiKey, undefined);
+
+  const settingsPath = path.join(dataDir, 'settings.json');
+  const settingsRaw = fs.existsSync(settingsPath) ? await fsp.readFile(settingsPath, 'utf8') : '{}';
+  assert.doesNotMatch(settingsRaw, /sk-test-secret/);
+  assert.doesNotMatch(settingsRaw, /apiKey/);
+});
+
+test('admin AI settings can keep and clear the private API key', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await agent
+    .put('/api/admin/ai-settings')
+    .send({ apiKey: 'sk-keep-secret-123456', model: 'first-model' })
+    .expect(200);
+
+  const kept = await agent
+    .put('/api/admin/ai-settings')
+    .send({ apiKey: '', model: 'second-model' })
+    .expect(200);
+
+  assert.equal(kept.body.hasApiKey, true);
+  assert.equal(kept.body.model, 'second-model');
+
+  const cleared = await agent
+    .put('/api/admin/ai-settings')
+    .send({ clearApiKey: true })
+    .expect(200);
+
+  assert.equal(cleared.body.hasApiKey, false);
+  assert.equal(cleared.body.apiKeyPreview, '');
 });
 
 test('GET /api/admin/sites includes storage usage for each project', async () => {
