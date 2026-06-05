@@ -167,12 +167,12 @@ function normalizeTemperature(value, fallback) {
   return Math.min(2, Math.max(0, Math.round(number * 100) / 100));
 }
 
-function normalizeTimeoutMs(value, fallback) {
+function normalizeTimeoutMs(value, fallback, max = 60000) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) {
     return fallback;
   }
-  return Math.max(1000, Math.round(number));
+  return Math.min(max, Math.max(1000, Math.round(number)));
 }
 
 function getEnvironmentLlmConfig(options = {}) {
@@ -183,7 +183,7 @@ function getEnvironmentLlmConfig(options = {}) {
     thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || '',
     temperature: normalizeTemperature(options.llmTemperature ?? process.env.LLM_TEMPERATURE, 0.2),
     nameTemperature: normalizeTemperature(options.llmNameTemperature ?? process.env.LLM_NAME_TEMPERATURE, 0.3),
-    timeoutMs: normalizeTimeoutMs(options.llmTimeoutMs ?? process.env.LLM_TIMEOUT_MS, 85000)
+    timeoutMs: normalizeTimeoutMs(options.llmTimeoutMs ?? process.env.LLM_TIMEOUT_MS, 45000)
   };
 }
 

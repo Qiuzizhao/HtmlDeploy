@@ -242,7 +242,13 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /function loadAiOptimizeLog/);
   assert.match(html, /function saveAiOptimizeLog/);
   assert.match(html, /async function readResponseError/);
+  assert.match(html, /const AI_REQUEST_TIMEOUT_MS = 60000/);
+  assert.match(html, /async function fetchWithTimeout/);
+  assert.match(html, /response\.status === 504/);
+  assert.match(html, /公网代理已超时/);
+  assert.match(html, /AI 请求超过/);
   assert.match(html, /await readResponseError\(response, 'AI 优化失败'\)/);
+  assert.match(html, /await fetchWithTimeout\(`\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save`/);
   assert.match(html, /localStorage\.getItem\(AI_OPTIMIZE_LOG_STORAGE_KEY\)/);
   assert.match(html, /localStorage\.setItem\(AI_OPTIMIZE_LOG_STORAGE_KEY/);
   assert.match(html, /aiOptimizeLogItems = loadAiOptimizeLog\(\)/);

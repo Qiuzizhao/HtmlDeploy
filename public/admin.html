@@ -1401,6 +1401,7 @@
     let aiOptimizeLogItems = loadAiOptimizeLog();
     const runningAiOptimizations = new Set();
     const runningAiNaming = new Set();
+    const AI_REQUEST_TIMEOUT_MS = 60000;
     let forbiddenWordsState = {
       query: '',
       offset: 0,
@@ -1438,7 +1439,31 @@
         const result = JSON.parse(text);
         return result.error || fallback;
       } catch {
+        if (response.status === 504) {
+          return `${fallback}：服务器处理时间过长，公网代理已超时，请稍后重试。`;
+        }
+        if (/^\s*</.test(text)) {
+          return `${fallback}：服务器返回 ${response.status}，可能是代理或服务超时。`;
+        }
         return `${fallback}（${response.status}：${text.slice(0, 120)}）`;
+      }
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = AI_REQUEST_TIMEOUT_MS) {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+      } catch (error) {
+        if (error && error.name === 'AbortError') {
+          throw new Error(`AI 请求超过 ${Math.round(timeoutMs / 1000)} 秒未返回，请稍后重试。`);
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
       }
     }
 
@@ -1850,7 +1875,7 @@
       setCodeBusy(true);
       setCodeMessage('正在调用 AI 优化代码...');
 
-      const response = await fetch(`/api/sites/${encodeURIComponent(currentCodeSite.id)}/ai-optimize-code`, {
+      const response = await fetchWithTimeout(`/api/sites/${encodeURIComponent(currentCodeSite.id)}/ai-optimize-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ htmlContent })
@@ -1887,7 +1912,7 @@
       setMessage(listMessage, getRunningAiText() || `正在${isDirected ? '定向 ' : ' '}AI 优化并保存「${site.title}」...`);
 
       try {
-        const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/ai-optimize-save`, {
+        const response = await fetchWithTimeout(`/api/sites/${encodeURIComponent(site.id)}/ai-optimize-save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(instruction ? { instruction } : {})
@@ -1941,7 +1966,7 @@
       setMessage(listMessage, `正在 AI 阅读代码并命名「${site.title}」...`);
 
       try {
-        const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/ai-name`, {
+        const response = await fetchWithTimeout(`/api/sites/${encodeURIComponent(site.id)}/ai-name`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
