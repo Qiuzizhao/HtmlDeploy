@@ -41,7 +41,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:41.719Z",
-    "updatedAt": "2026-06-05T15:07:26.904Z",
+    "updatedAt": "2026-06-05T15:07:48.455Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "逼",
     "forbiddenAuditMessage": "作者署名包含违禁词「逼」"
@@ -73,13 +73,10 @@
     "title": "fps",
     "author": "llliao",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:15.651Z",
-    "updatedAt": "2026-06-05T15:07:26.936Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "p",
-    "forbiddenAuditMessage": "网页名字包含违禁词「p」"
+    "updatedAt": "2026-06-05T15:07:47.656Z"
   },
   {
     "id": "4139a720",
@@ -101,7 +98,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
-    "updatedAt": "2026-06-05T15:07:26.947Z",
+    "updatedAt": "2026-06-05T15:07:48.498Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "冰火",
     "forbiddenAuditMessage": "网页名字包含违禁词「冰火」"
@@ -125,7 +122,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:22:45.330Z",
-    "updatedAt": "2026-06-05T15:07:26.964Z",
+    "updatedAt": "2026-06-05T15:07:48.521Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "买",
     "forbiddenAuditMessage": "作者署名包含违禁词「买」"
@@ -169,7 +166,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.250Z",
-    "updatedAt": "2026-06-05T15:07:27.004Z",
+    "updatedAt": "2026-06-05T15:07:48.560Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "逼",
     "forbiddenAuditMessage": "作者署名包含违禁词「逼」"
@@ -183,7 +180,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
-    "updatedAt": "2026-06-05T15:07:27.013Z",
+    "updatedAt": "2026-06-05T15:07:48.569Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "逼",
     "forbiddenAuditMessage": "作者署名包含违禁词「逼」"
@@ -229,7 +226,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:50.378Z",
-    "updatedAt": "2026-06-05T15:07:27.045Z",
+    "updatedAt": "2026-06-05T15:07:48.601Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "妈",
     "forbiddenAuditMessage": "网页名字包含违禁词「妈」"
@@ -260,13 +257,10 @@
     "title": "3D我的世界",
     "author": "piggod",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:12.351Z",
-    "updatedAt": "2026-06-05T15:07:27.074Z",
-    "forbiddenAuditField": "作者署名",
-    "forbiddenAuditWord": "p",
-    "forbiddenAuditMessage": "作者署名包含违禁词「p」"
+    "updatedAt": "2026-06-05T15:07:47.656Z"
   },
   {
     "id": "56a2aabe",
@@ -297,7 +291,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:50.151Z",
-    "updatedAt": "2026-06-05T15:07:27.095Z",
+    "updatedAt": "2026-06-05T15:07:48.653Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "game",
     "forbiddenAuditMessage": "网页名字包含违禁词「game」"
@@ -311,7 +305,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:48.275Z",
-    "updatedAt": "2026-06-05T15:07:27.099Z",
+    "updatedAt": "2026-06-05T15:07:48.657Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "浪",
     "forbiddenAuditMessage": "网页名字包含违禁词「浪」"
@@ -325,7 +319,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:47.963Z",
-    "updatedAt": "2026-06-05T15:07:27.104Z",
+    "updatedAt": "2026-06-05T15:07:48.662Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "浪",
     "forbiddenAuditMessage": "网页名字包含违禁词「浪」"
@@ -339,7 +333,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:37.331Z",
-    "updatedAt": "2026-06-05T15:07:27.105Z",
+    "updatedAt": "2026-06-05T15:07:48.663Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "game",
     "forbiddenAuditMessage": "网页名字包含违禁词「game」"
@@ -363,7 +357,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:16:56.191Z",
-    "updatedAt": "2026-06-05T15:07:27.124Z",
+    "updatedAt": "2026-06-05T15:07:48.682Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "逼",
     "forbiddenAuditMessage": "作者署名包含违禁词「逼」"
@@ -415,13 +409,10 @@
     "title": "fps",
     "author": "llliao",
     "classId": "f438ed26",
-    "enabled": false,
+    "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:15:18.794Z",
-    "updatedAt": "2026-06-05T15:07:27.168Z",
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "p",
-    "forbiddenAuditMessage": "网页名字包含违禁词「p」"
+    "updatedAt": "2026-06-05T15:07:47.656Z"
   },
   {
     "id": "15ba87ae",
@@ -452,7 +443,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:42.662Z",
-    "updatedAt": "2026-06-05T15:07:27.195Z",
+    "updatedAt": "2026-06-05T15:07:48.758Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "陈毅",
     "forbiddenAuditMessage": "作者署名包含违禁词「陈毅」"
@@ -476,7 +467,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:29.028Z",
-    "updatedAt": "2026-06-05T15:07:27.211Z",
+    "updatedAt": "2026-06-05T15:07:48.775Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "美女",
     "forbiddenAuditMessage": "作者署名包含违禁词「美女」"
@@ -551,7 +542,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:11:50.263Z",
-    "updatedAt": "2026-06-05T15:07:27.280Z",
+    "updatedAt": "2026-06-05T15:07:48.845Z",
     "forbiddenAuditField": "作者署名",
     "forbiddenAuditWord": "逼",
     "forbiddenAuditMessage": "作者署名包含违禁词「逼」"
@@ -1138,7 +1129,7 @@
     "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
-    "updatedAt": "2026-06-05T15:07:27.828Z",
+    "updatedAt": "2026-06-05T15:07:49.390Z",
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "忍",
     "forbiddenAuditMessage": "网页名字包含违禁词「忍」"
@@ -1590,7 +1581,7 @@
     "author": "小语",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:15.370Z",
-    "updatedAt": "2026-06-05T15:07:28.271Z",
+    "updatedAt": "2026-06-05T15:07:49.844Z",
     "enabled": false,
     "forbiddenAuditField": "网页名字",
     "forbiddenAuditWord": "坊",
