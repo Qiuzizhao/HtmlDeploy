@@ -1,5 +1,15 @@
 [
   {
+    "id": "031997c6",
+    "number": "00167",
+    "title": "练手速",
+    "author": "美女",
+    "classId": "f438ed26",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-05T02:13:29.028Z"
+  },
+  {
     "id": "b59a51db",
     "number": "00166",
     "title": "猛鬼宿舍网页小游戏",
