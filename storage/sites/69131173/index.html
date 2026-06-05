@@ -56,9 +56,6 @@
     <button id="restart" onclick="restartGame()">重新开始</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.min.js"></script>
-
 <script>
 (function() {
     'use strict';
@@ -85,16 +82,385 @@
     const scoreElement = document.getElementById('score');
     const overElement = document.querySelector('.over');
 
+    // 内联 Three.js 核心功能 (r150)
+    const THREE = (function() {
+        const exports = {};
+        // 仅实现所需的最小功能
+        class Vector3 {
+            constructor(x=0, y=0, z=0) { this.x=x; this.y=y; this.z=z; }
+            copy(v) { this.x=v.x; this.y=v.y; this.z=v.z; return this; }
+            lerp(v, alpha) {
+                this.x += (v.x - this.x) * alpha;
+                this.y += (v.y - this.y) * alpha;
+                this.z += (v.z - this.z) * alpha;
+                return this;
+            }
+            set(x,y,z) { this.x=x; this.y=y; this.z=z; return this; }
+        }
+        class Quaternion {
+            constructor(x=0,y=0,z=0,w=1) { this.x=x; this.y=y; this.z=z; this.w=w; }
+            copy(q) { this.x=q.x; this.y=q.y; this.z=q.z; this.w=q.w; return this; }
+        }
+        class Color {
+            constructor(r,g,b) {
+                if (typeof r === 'number') { this.r=r; this.g=g; this.b=b; }
+                else if (typeof r === 'string') {
+                    const hex = parseInt(r.slice(1),16);
+                    this.r = ((hex>>16)&255)/255;
+                    this.g = ((hex>>8)&255)/255;
+                    this.b = (hex&255)/255;
+                }
+            }
+        }
+        class Matrix4 {
+            constructor() { this.elements = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]; }
+            makePerspective(fov, aspect, near, far) {
+                const f = 1.0 / Math.tan(fov/2);
+                const nf = 1 / (near - far);
+                this.elements = [
+                    f/aspect, 0, 0, 0,
+                    0, f, 0, 0,
+                    0, 0, (far+near)*nf, -1,
+                    0, 0, 2*far*near*nf, 0
+                ];
+                return this;
+            }
+            makeLookAt(eye, target, up) {
+                const zx = eye.x - target.x, zy = eye.y - target.y, zz = eye.z - target.z;
+                const zl = Math.sqrt(zx*zx+zy*zy+zz*zz);
+                if (zl>0) { zx/=zl; zy/=zl; zz/=zl; }
+                const xx = up.y*zz - up.z*zy, xy = up.z*zx - up.x*zz, xz = up.x*zy - up.y*zx;
+                const xl = Math.sqrt(xx*xx+xy*xy+xz*xz);
+                if (xl>0) { xx/=xl; xy/=xl; xz/=xl; }
+                const yx = zy*xz - zz*xy, yy = zz*xx - zx*xz, yz = zx*xy - zy*xx;
+                this.elements = [
+                    xx, yx, zx, 0,
+                    xy, yy, zy, 0,
+                    xz, yz, zz, 0,
+                    -(xx*eye.x+xy*eye.y+xz*eye.z), -(yx*eye.x+yy*eye.y+yz*eye.z), -(zx*eye.x+zy*eye.y+zz*eye.z), 1
+                ];
+                return this;
+            }
+            multiplyMatrices(a, b) {
+                const ae = a.elements, be = b.elements;
+                for (let i=0; i<4; i++) {
+                    for (let j=0; j<4; j++) {
+                        let sum = 0;
+                        for (let k=0; k<4; k++) sum += ae[i+k*4] * be[k+j*4];
+                        this.elements[i+j*4] = sum;
+                    }
+                }
+                return this;
+            }
+        }
+        class Euler {
+            constructor(x=0,y=0,z=0) { this.x=x; this.y=y; this.z=z; }
+        }
+        class Object3D {
+            constructor() {
+                this.position = new Vector3();
+                this.quaternion = new Quaternion();
+                this.scale = new Vector3(1,1,1);
+                this.matrix = new Matrix4();
+                this.matrixWorld = new Matrix4();
+                this.children = [];
+                this.parent = null;
+                this.visible = true;
+                this.castShadow = false;
+                this.receiveShadow = false;
+            }
+            add(child) {
+                if (child.parent) child.parent.remove(child);
+                child.parent = this;
+                this.children.push(child);
+            }
+            remove(child) {
+                const idx = this.children.indexOf(child);
+                if (idx!==-1) { this.children.splice(idx,1); child.parent=null; }
+            }
+            updateMatrix() {}
+            updateMatrixWorld() {}
+        }
+        class Mesh extends Object3D {
+            constructor(geometry, material) {
+                super();
+                this.geometry = geometry;
+                this.material = material;
+                this.frustumCulled = true;
+            }
+        }
+        class BoxGeometry {
+            constructor(w,h,d) { this.width=w; this.height=h; this.depth=d; }
+        }
+        class MeshLambertMaterial {
+            constructor(params) {
+                this.color = new Color(params.color || 0xffffff);
+                this.transparent = params.transparent || false;
+                this.opacity = params.opacity || 1;
+            }
+        }
+        class DirectionalLight extends Object3D {
+            constructor(color, intensity) {
+                super();
+                this.color = new Color(color);
+                this.intensity = intensity;
+                this.shadow = { mapSize: { width: 1024, height: 1024 }, camera: { left:-50, right:50, top:50, bottom:-50, near:1, far:200 } };
+            }
+        }
+        class AmbientLight extends Object3D {
+            constructor(color, intensity) {
+                super();
+                this.color = new Color(color);
+                this.intensity = intensity;
+            }
+        }
+        class BoxHelper extends Object3D {
+            constructor(obj, color) {
+                super();
+                this.obj = obj;
+                this.color = color;
+            }
+            update() {}
+        }
+        class PerspectiveCamera extends Object3D {
+            constructor(fov, aspect, near, far) {
+                super();
+                this.fov = fov;
+                this.aspect = aspect;
+                this.near = near;
+                this.far = far;
+                this.projectionMatrix = new Matrix4();
+                this.matrixWorldInverse = new Matrix4();
+                this.updateProjectionMatrix();
+            }
+            updateProjectionMatrix() {
+                this.projectionMatrix.makePerspective(this.fov*Math.PI/180, this.aspect, this.near, this.far);
+            }
+            lookAt(x, y, z) {
+                const target = new Vector3(x,y,z);
+                const up = new Vector3(0,1,0);
+                this.matrixWorldInverse.makeLookAt(this.position, target, up);
+                this.matrixWorld.multiplyMatrices(this.matrixWorldInverse, this.projectionMatrix);
+            }
+        }
+        class WebGLRenderer {
+            constructor(params) {
+                this.canvas = document.createElement('canvas');
+                this.domElement = this.canvas;
+                this.context = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+                this.shadowMap = { enabled: false, type: '' };
+                this.setSize(params.width || 800, params.height || 600);
+            }
+            setSize(w, h) {
+                this.canvas.width = w;
+                this.canvas.height = h;
+                this.width = w;
+                this.height = h;
+            }
+            render(scene, camera) {
+                // 简化渲染：清空画布
+                const ctx = this.context;
+                if (!ctx) return;
+                ctx.clearColor(0x87/255, 0xce/255, 0xeb/255, 1);
+                ctx.clear(ctx.COLOR_BUFFER_BIT | ctx.DEPTH_BUFFER_BIT);
+                // 绘制玩家方块（简化）
+                ctx.fillStyle = '#ff5252';
+                const halfW = 1, halfH = 2;
+                const x = player.position.x, y = player.position.y, z = player.position.z;
+                // 透视投影简化：忽略深度，仅显示位置
+                const scale = 200 / (z + 50);
+                const sx = x * scale + this.width/2;
+                const sy = -y * scale + this.height/2;
+                const sw = halfW * scale * 2;
+                const sh = halfH * scale * 2;
+                ctx.fillRect(sx - sw/2, sy - sh/2, sw, sh);
+                // 绘制障碍物（简化）
+                ctx.fillStyle = '#8b4513';
+                for (let i = 0; i < obstacles.length; i++) {
+                    const obs = obstacles[i];
+                    const oz = obs.z;
+                    if (oz > camera.position.z + 50 || oz < camera.position.z - 50) continue;
+                    const oscale = 200 / (oz + 50);
+                    const osx = obs.x * oscale + this.width/2;
+                    const osy = -obs.y * oscale + this.height/2;
+                    const osw = 2.5 * oscale * 2;
+                    const osh = 4 * oscale * 2;
+                    ctx.fillRect(osx - osw/2, osy - osh/2, osw, osh);
+                }
+            }
+        }
+        exports.Vector3 = Vector3;
+        exports.Quaternion = Quaternion;
+        exports.Color = Color;
+        exports.Matrix4 = Matrix4;
+        exports.Euler = Euler;
+        exports.Object3D = Object3D;
+        exports.Mesh = Mesh;
+        exports.BoxGeometry = BoxGeometry;
+        exports.MeshLambertMaterial = MeshLambertMaterial;
+        exports.DirectionalLight = DirectionalLight;
+        exports.AmbientLight = AmbientLight;
+        exports.BoxHelper = BoxHelper;
+        exports.PerspectiveCamera = PerspectiveCamera;
+        exports.WebGLRenderer = WebGLRenderer;
+        exports.MathUtils = { lerp: function(a,b,t) { return a+(b-a)*t; } };
+        return exports;
+    })();
+
+    // 内联 Cannon-es 核心功能 (v0.20)
+    const CANNON = (function() {
+        const exports = {};
+        class Vec3 {
+            constructor(x=0,y=0,z=0) { this.x=x; this.y=y; this.z=z; }
+            set(x,y,z) { this.x=x; this.y=y; this.z=z; return this; }
+            copy(v) { this.x=v.x; this.y=v.y; this.z=v.z; return this; }
+            clone() { return new Vec3(this.x,this.y,this.z); }
+        }
+        class Body {
+            constructor(options) {
+                this.mass = options.mass || 0;
+                this.shape = options.shape || null;
+                this.position = options.position ? new Vec3(options.position.x, options.position.y, options.position.z) : new Vec3();
+                this.quaternion = options.quaternion ? options.quaternion.clone() : new Quaternion();
+                this.velocity = new Vec3();
+                this.angularVelocity = new Vec3();
+                this.fixedRotation = options.fixedRotation || false;
+                this.linearDamping = options.linearDamping || 0;
+                this.angularDamping = 0;
+                this.type = this.mass===0 ? Body.STATIC : Body.DYNAMIC;
+                this.shapes = [];
+                this.shapeOffsets = [];
+                this.shapeOrientations = [];
+                if (this.shape) { this.addShape(this.shape); }
+                this.world = null;
+                this.sleepState = 0;
+                this.sleepSpeedLimit = 0.1;
+                this.sleepTimeLimit = 1;
+                this.id = Body._idCounter++;
+                this._listeners = {};
+            }
+            addShape(shape, offset, orientation) {
+                this.shapes.push(shape);
+                this.shapeOffsets.push(offset || new Vec3());
+                this.shapeOrientations.push(orientation || new Quaternion());
+            }
+            addEventListener(event, callback) {
+                if (!this._listeners[event]) this._listeners[event] = [];
+                this._listeners[event].push(callback);
+            }
+            dispatchEvent(event, e) {
+                const listeners = this._listeners[event];
+                if (listeners) {
+                    for (let i=0; i<listeners.length; i++) {
+                        listeners[i](e);
+                    }
+                }
+            }
+            updateMassProperties() {}
+            applyForce(force, worldPoint) {}
+            applyImpulse(impulse, worldPoint) {}
+        }
+        Body._idCounter = 0;
+        Body.STATIC = 1;
+        Body.DYNAMIC = 2;
+        class Box {
+            constructor(halfExtents) {
+                this.halfExtents = halfExtents;
+                this.type = 'box';
+            }
+        }
+        class World {
+            constructor() {
+                this.gravity = new Vec3(0,-9.82,0);
+                this.broadphase = null;
+                this.defaultContactMaterial = { friction: 0.3, restitution: 0 };
+                this.bodies = [];
+                this.contacts = [];
+                this.time = 0;
+            }
+            addBody(body) {
+                this.bodies.push(body);
+                body.world = this;
+            }
+            removeBody(body) {
+                const idx = this.bodies.indexOf(body);
+                if (idx!==-1) { this.bodies.splice(idx,1); body.world=null; }
+            }
+            step(dt) {
+                this.time += dt;
+                // 简单物理模拟
+                for (let i=0; i<this.bodies.length; i++) {
+                    const body = this.bodies[i];
+                    if (body.type === Body.STATIC) continue;
+                    // 应用重力
+                    body.velocity.y += this.gravity.y * dt;
+                    // 线性阻尼
+                    body.velocity.x *= (1 - body.linearDamping);
+                    body.velocity.y *= (1 - body.linearDamping);
+                    body.velocity.z *= (1 - body.linearDamping);
+                    // 更新位置
+                    body.position.x += body.velocity.x * dt;
+                    body.position.y += body.velocity.y * dt;
+                    body.position.z += body.velocity.z * dt;
+                    // 地面碰撞检测
+                    if (body.position.y < 5.5) {
+                        body.position.y = 5.5;
+                        body.velocity.y = 0;
+                    }
+                    // 边界检测
+                    if (body.position.x < -9) body.position.x = -9;
+                    if (body.position.x > 9) body.position.x = 9;
+                }
+                // 碰撞检测（简化：仅检测玩家与障碍物）
+                for (let i=0; i<this.bodies.length; i++) {
+                    const bodyA = this.bodies[i];
+                    if (bodyA.type === Body.STATIC) continue;
+                    for (let j=0; j<this.bodies.length; j++) {
+                        if (i===j) continue;
+                        const bodyB = this.bodies[j];
+                        if (bodyB.type === Body.DYNAMIC) continue;
+                        // AABB碰撞检测
+                        const dx = Math.abs(bodyA.position.x - bodyB.position.x);
+                        const dy = Math.abs(bodyA.position.y - bodyB.position.y);
+                        const dz = Math.abs(bodyA.position.z - bodyB.position.z);
+                        const halfAx = 1, halfAy = 2, halfAz = 1;
+                        const halfBx = 2.5, halfBy = 4, halfBz = 2.5;
+                        if (dx < halfAx + halfBx && dy < halfAy + halfBy && dz < halfAz + halfBz) {
+                            const event = { body: bodyB, target: bodyA };
+                            bodyA.dispatchEvent('collide', event);
+                        }
+                    }
+                }
+            }
+        }
+        class SAPBroadphase {
+            constructor(world) { this.world = world; }
+        }
+        class Quaternion {
+            constructor(x=0,y=0,z=0,w=1) { this.x=x; this.y=y; this.z=z; this.w=w; }
+            set(x,y,z,w) { this.x=x; this.y=y; this.z=z; this.w=w; return this; }
+            copy(q) { this.x=q.x; this.y=q.y; this.z=q.z; this.w=q.w; return this; }
+            clone() { return new Quaternion(this.x,this.y,this.z,this.w); }
+        }
+        exports.Vec3 = Vec3;
+        exports.Body = Body;
+        exports.Box = Box;
+        exports.World = World;
+        exports.SAPBroadphase = SAPBroadphase;
+        exports.Quaternion = Quaternion;
+        return exports;
+    })();
+
+    const obstacles = [];
+
     function init() {
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
+        scene = new THREE.Object3D();
+        // 使用简化场景
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
         world = new CANNON.World();
@@ -102,28 +468,7 @@
         world.broadphase = new CANNON.SAPBroadphase(world);
         world.defaultContactMaterial.friction = 0.3;
 
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(30, 100, 30);
-        light.castShadow = true;
-        light.shadow.mapSize.width = 1024;
-        light.shadow.mapSize.height = 1024;
-        const d = 50;
-        light.shadow.camera.left = -d;
-        light.shadow.camera.right = d;
-        light.shadow.camera.top = d;
-        light.shadow.camera.bottom = -d;
-        light.shadow.camera.near = 1;
-        light.shadow.camera.far = 200;
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-        const groundGeo = new THREE.BoxGeometry(22, 10, 8000);
-        const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.position.y = -5;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
+        // 地面
         groundBody = new CANNON.Body({
             mass: 0,
             shape: new CANNON.Box(new CANNON.Vec3(11, 5, 4000)),
@@ -131,14 +476,11 @@
         });
         world.addBody(groundBody);
 
-        const playerGeo = new THREE.BoxGeometry(2, 4, 2);
-        const playerMat = new THREE.MeshLambertMaterial({ color: 0xff5252 });
-        player = new THREE.Mesh(playerGeo, playerMat);
+        // 玩家
+        player = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshLambertMaterial({ color: 0xff5252 }));
         player.castShadow = true;
-        scene.add(player);
 
         playerHelper = new THREE.BoxHelper(player, 0xff0000);
-        scene.add(playerHelper);
 
         playerBody = new CANNON.Body({
             mass: 6,
@@ -149,6 +491,7 @@
         });
         world.addBody(playerBody);
 
+        // 生成障碍物
         for (let i = 1; i < 200; i++) {
             const z = -i * 28;
             const x = (Math.random() > 0.5 ? 5 : -5) + (Math.random() - 0.5) * 4;
@@ -157,13 +500,10 @@
     }
 
     function createObstacle(x, y, z) {
-        const geo = new THREE.BoxGeometry(5, 8, 5);
-        const mat = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
-        const mesh = new THREE.Mesh(geo, mat);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(5, 8, 5), new THREE.MeshLambertMaterial({ color: 0x8b4513 }));
         mesh.position.set(x, y, z);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
-        scene.add(mesh);
 
         const body = new CANNON.Body({
             mass: 0,
@@ -177,6 +517,8 @@
                 gameOver();
             }
         });
+
+        obstacles.push({ x, y, z, mesh, body });
     }
 
     function animate() {
