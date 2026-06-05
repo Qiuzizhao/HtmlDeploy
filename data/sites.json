@@ -513,7 +513,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:12:53.664Z"
+    "createdAt": "2026-06-05T02:12:53.664Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:23:52.138Z"
   },
   {
     "id": "555e0671",
