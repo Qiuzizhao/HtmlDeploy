@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>查真人射击</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{overflow:hidden;background:#141428;font-family:Arial;}
+#wrap{width:100vw;height:100vh;position:relative;}
+/* 准星样式 */
+#aim{position:fixed;width:32px;height:32px;border:2px solid #0cf;transform:translate(-50%,-50%);pointer-events:none;z-index:9999;}
+#aim::before{content:"";position:absolute;left:50%;top:-10px;bottom:-10px;width:2px;background:#0cf;}
+#aim::after{content:"";position:absolute;top:50%;left:-10px;right:-10px;height:2px;background:#0cf;}
+/* 人物方块 */
+.people{
+    position:absolute;width:80px;height:130px;border-radius:10px;overflow:hidden;
+    cursor:none;border:4px solid;
+}
+/* 真人绿色边框，AI黄色边框 */
+.real{border-color:#39ff6b;background:#223830;}
+.ai{border-color:#ffdd33;background:#442222;}
+.people img{width:100%;height:100px;object-fit:cover;}
+.people .name{
+    text-align:center;color:#fff;padding:4px 0;font-size:13px;
+}
+/* 左上角UI */
+.info{
+    position:fixed;top:15px;left:15px;color:#fff;
+    background:rgba(0,0,0,0.65);padding:12px;border-radius:8px;z-index:998;
+}
+/* 结束弹窗 */
+.gameover{
+    position:fixed;inset:0;background:rgba(0,0,0,0.85);
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+    z-index:9999;
+}
+button{
+    padding:11px 26px;background:#0cf;border:none;border-radius:6px;font-size:16px;cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<!-- 准星 -->
+<div id="aim"></div>
+<!-- 信息面板 -->
+<div class="info">
+    <div>得分：<span id="score">0</span></div>
+    <div>生命值：<span id="hp">5</span>/5</div>
+    <div style="margin-top:6px;font-size:13px;">✅绿边=真人不能开枪 | ⚠️黄边=AI击杀得分</div>
+</div>
+<!-- 结束弹窗 -->
+<div class="gameover" id="overBox">
+    <h1 style="color:#fff">游戏结束</h1>
+    <p style="color:#fff">最终分数：<span id="final">0</span></p>
+    <button onclick="restartGame()">重新开局</button>
+</div>
+
+<script>
+const wrap = document.getElementById('wrap');
+const aim = document.getElementById('aim');
+let score = 0;
+let hp = 5;
+let gameRunning = true;
+const scoreDom = document.getElementById('score');
+const hpDom = document.getElementById('hp');
+const overBox = document.getElementById('overBox');
+const finalScore = document.getElementById('final');
+
+// 两套人物图片：真人头像、AI机器人头像
+const realImgList = [
+    "https://picsum.photos/id/64/80/100",
+    "https://picsum.photos/id/91/80/100",
+    "https://picsum.photos/id/342/80/100",
+    "https://picsum.photos/id/555/80/100"
+]
+const aiImgList = [
+    "https://picsum.photos/id/237/80/100",
+    "https://picsum.photos/id/160/80/100",
+    "https://picsum.photos/id/401/80/100",
+    "https://picsum.photos/id/711/80/100"
+]
+
+// 鼠标准星跟随
+document.addEventListener('mousemove',e=>{
+    aim.style.left = e.clientX + "px";
+    aim.style.top = e.clientY + "px";
+})
+
+// 随机生成人物
+function createMan(){
+    if(!gameRunning) return;
+    // 50%真人 50%AI
+    let isRealPerson = Math.random()>0.5;
+    let div = document.createElement('div');
+    div.className = isRealPerson ? "people real" : "people ai";
+    div.dataset.type = isRealPerson;
+    // 随机坐标
+    let maxX = window.innerWidth - 90;
+    let maxY = window.innerHeight - 140;
+    div.style.left = Math.random()*maxX + "px";
+    div.style.top = Math.random()*maxY + "px";
+
+    let imgSrc,nameText;
+    if(isRealPerson){
+        imgSrc = realImgList[Math.floor(Math.random()*realImgList.length)];
+        nameText = "【真人】";
+    }else{
+        imgSrc = aiImgList[Math.floor(Math.random()*aiImgList.length)];
+        nameText = "【AI机器人】";
+    }
+    div.innerHTML = `<img src="${imgSrc}"><div class="name">${nameText}</div>`;
+
+    // 点击开枪
+    div.onclick = ()=>{
+        if(!gameRunning)return;
+        if(isRealPerson){
+            // 误打真人扣分扣血
+            hp -= 1;
+            score -=15;
+        }else{
+            // 击杀AI加分
+            score +=12;
+        }
+        updateUI();
+        div.remove();
+        clearTimeout(div.timer);
+        if(hp<=0) gameEnd();
+    }
+
+    // 人物自动消失
+    div.timer = setTimeout(()=>{div.remove()},2400);
+    wrap.appendChild(div);
+}
+
+// 更新分数血量
+function updateUI(){
+    scoreDom.innerText = score;
+    hpDom.innerText = hp;
+}
+
+// 游戏结束
+function gameEnd(){
+    gameRunning = false;
+    finalScore.innerText = score;
+    overBox.style.display = "flex";
+    // 清空场上所有人
+    document.querySelectorAll('.people').forEach(item=>item.remove());
+}
+
+// 重新开始
+function restartGame(){
+    score=0;hp=5;gameRunning=true;
+    overBox.style.display="none";
+    updateUI();
+}
+
+// 每850毫秒刷新一个人物
+setInterval(createMan,850);
+updateUI();
+</script>
+</body>
+</html>
