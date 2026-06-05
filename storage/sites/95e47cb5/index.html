@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使命召唤 - 极简射击版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: #111;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://img0.baidu.com/it/u=891171632,2590850317&fm=253&fmt=auto&app=138&f=JPEG?w=889&h=500');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* 准星 */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 100;
+        }
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #fff;
+            box-shadow: 0 0 5px #f00;
+        }
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
+
+        /* 敌人 */
+        .enemy {
+            position: absolute;
+            width: 60px;
+            height: 120px;
+            background: url('https://img2.baidu.com/it/u=2231381040,2549357107&fm=253&fmt=auto&app=120&f=PNG?w=500&h=500') no-repeat;
+            background-size: 100% 100%;
+            transition: 0.2s;
+        }
+
+        /* UI面板 */
+        .ui-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #000;
+            z-index: 999;
+        }
+
+        /* 血量条 */
+        .health-bar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: #333;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .health-fill {
+            height: 100%;
+            background: #ff3a3a;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        /* 游戏结束 */
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff0000;
+            font-size: 60px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #000;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* 重启按钮 */
+        .restart-btn {
+            position: fixed;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #ff3a3a;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+        }
+        .restart-btn:hover {
+            background: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 准星 -->
+        <div class="crosshair"></div>
+        
+        <!-- UI -->
+        <div class="ui-panel">
+            分数: <span id="score">0</span> | 击杀: <span id="kills">0</span>
+        </div>
+        
+        <!-- 血量 -->
+        <div class="health-bar">
+            <div class="health-fill" id="health"></div>
+        </div>
+        
+        <!-- 游戏结束 -->
+        <div class="game-over" id="gameOver">GAME OVER</div>
+        <button class="restart-btn" id="restartBtn">重新开始</button>
+    </div>
+
+    <script>
+        // 游戏数据
+        let score = 0;
+        let kills = 0;
+        let health = 100;
+        let gameActive = true;
+        const gameContainer = document.querySelector('.game-container');
+        const scoreEl = document.getElementById('score');
+        const killsEl = document.getElementById('kills');
+        const healthEl = document.getElementById('health');
+        const gameOverEl = document.getElementById('gameOver');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // 开火音效
+        function playShootSound() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-rapid-gun-shot-1680.mp3');
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+        }
+
+        // 击中音效
+        function playHitSound() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixti-impact-of-a-bullet-on-metal-1469.mp3');
+            audio.volume = 0.4;
+            audio.play().catch(() => {});
+        }
+
+        // 创建敌人
+        function spawnEnemy() {
+            if (!gameActive) return;
+            
+            const enemy = document.createElement('div');
+            enemy.classList.add('enemy');
+            
+            // 随机位置
+            const x = Math.random() * (window.innerWidth - 60);
+            const y = Math.random() * (window.innerHeight - 200);
+            enemy.style.left = x + 'px';
+            enemy.style.top = y + 'px';
+            
+            // 敌人移动
+            const moveInterval = setInterval(() => {
+                if (!gameActive) clearInterval(moveInterval);
+                const currentX = parseFloat(enemy.style.left);
+                enemy.style.left = (currentX + (Math.random() > 0.5 ? 1 : -1)) + 'px';
+                enemy.style.top = (parseFloat(enemy.style.top) + 1) + 'px';
+                
+                // 敌人攻击玩家
+                if (Math.random() < 0.01) {
+                    health -= 5;
+                    healthEl.style.width = health + '%';
+                    checkGameOver();
+                }
+            }, 50);
+            
+            // 点击射击
+            enemy.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!gameActive) return;
+                
+                playShootSound();
+                playHitSound();
+                
+                // 击杀敌人
+                clearInterval(moveInterval);
+                enemy.remove();
+                score += 100;
+                kills += 1;
+                updateUI();
+            });
+            
+            gameContainer.appendChild(enemy);
+        }
+
+        // 更新UI
+        function updateUI() {
+            scoreEl.textContent = score;
+            killsEl.textContent = kills;
+        }
+
+        // 游戏结束检测
+        function checkGameOver() {
+            if (health <= 0) {
+                health = 0;
+                healthEl.style.width = '0%';
+                gameActive = false;
+                gameOverEl.style.display = 'block';
+                restartBtn.style.display = 'block';
+            }
+        }
+
+        // 重启游戏
+        restartBtn.addEventListener('click', () => {
+            score = 0;
+            kills = 0;
+            health = 100;
+            gameActive = true;
+            healthEl.style.width = '100%';
+            gameOverEl.style.display = 'none';
+            restartBtn.style.display = 'none';
+            
+            // 清空所有敌人
+            document.querySelectorAll('.enemy').forEach(enemy => enemy.remove());
+            updateUI();
+        });
+
+        // 自动生成敌人
+        setInterval(spawnEnemy, 1000);
+
+        // 鼠标点击开火
+        document.addEventListener('click', () => {
+            if (gameActive) playShootSound();
+        });
+    </script>
+</body>
+</html>

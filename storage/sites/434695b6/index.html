@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简易射击小游戏</title>
+    <style>
+        * {margin:0;padding:0;box-sizing:border-box;cursor:none;}
+        body {background:#222;overflow:hidden;}
+        #game {
+            width:100vw;height:100vh;
+            position:relative;background:#355;
+        }
+        .target {
+            width:60px;height:60px;border-radius:50%;
+            background:radial-gradient(circle,#f33,#a00);
+            position:absolute;
+        }
+        #score {
+            position:fixed;top:20px;left:20px;font-size:28px;color:#fff;
+            font-family:Arial;z-index:99;
+        }
+        #cross {
+            width:20px;height:20px;
+            border:2px solid #fff;
+            position:fixed;transform:translate(-50%,-50%);
+            pointer-events:none;z-index:100;
+        }
+    </style>
+</head>
+<body>
+<div id="score">得分：0</div>
+<div id="game"></div>
+<div id="cross"></div>
+
+<script>
+const game = document.getElementById('game');
+const cross = document.getElementById('cross');
+const scoreDom = document.getElementById('score');
+let score = 0;
+let target;
+
+// 准星跟随鼠标
+document.addEventListener('mousemove',e=>{
+    cross.style.left = e.clientX+'px';
+    cross.style.top = e.clientY+'px';
+})
+
+// 生成靶子
+function createTarget(){
+    if(target) target.remove();
+    target = document.createElement('div');
+    target.className = 'target';
+    // 随机位置
+    const maxX = window.innerWidth - 60;
+    const maxY = window.innerHeight - 60;
+    let x = Math.floor(Math.random()*maxX);
+    let y = Math.floor(Math.random()*maxY);
+    target.style.left = x+'px';
+    target.style.top = y+'px';
+    game.appendChild(target);
+}
+
+// 点击射击
+game.addEventListener('click',e=>{
+    if(e.target.classList.contains('target')){
+        score +=10;
+        scoreDom.innerText = '得分：'+score;
+    }
+    createTarget();
+})
+
+// 初始化第一个靶子
+createTarget();
+</script>
+</body>
+</html>
