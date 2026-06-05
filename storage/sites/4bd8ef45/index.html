@@ -1,0 +1,168 @@
+import pygame
+import sys
+
+# 初始化Pygame
+pygame.init()
+
+# ———— 游戏常量配置 ————
+CELL_SIZE = 40    # 每个格子大小
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+FPS = 60
+
+# 颜色定义
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+WALL_COLOR = (50, 50, 150)
+FLOOR_COLOR = (200, 200, 200)
+BOX_COLOR = (200, 150, 0)
+TARGET_COLOR = (0, 200, 0)
+PLAYER_COLOR = (255, 0, 0)
+
+# ———— 游戏地图 ————
+# 0=空地 1=墙壁 2=箱子 3=目的地 4=玩家 5=箱子在目的地
+# 经典推箱子地图布局
+game_map = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 2, 0, 1, 0, 0, 1, 0, 2, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 1, 4, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+]
+
+# ———— 游戏核心变量 ————
+player_x = 0
+player_y = 0
+clock = pygame.time.Clock()
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("经典推箱子")
+
+# 初始化玩家位置
+def init_player():
+    global player_x, player_y
+    for y in range(len(game_map)):
+        for x in range(len(game_map[y])):
+            if game_map[y][x] == 4:
+                player_x = x
+                player_y = y
+                return
+
+# 检查是否胜利
+def check_win():
+    for row in game_map:
+        if 2 in row:  # 还有箱子没推到目的地
+            return False
+    return True
+
+# 绘制游戏画面
+def draw_game():
+    screen.fill(FLOOR_COLOR)
+    for y in range(len(game_map)):
+        for x in range(len(game_map[y])):
+            cell = game_map[y][x]
+            rect = (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE - 2, CELL_SIZE - 2)
+            
+            if cell == 1:  # 墙壁
+                pygame.draw.rect(screen, WALL_COLOR, rect)
+            elif cell == 2:  # 箱子
+                pygame.draw.rect(screen, BOX_COLOR, rect)
+            elif cell == 3:  # 目的地
+                pygame.draw.rect(screen, TARGET_COLOR, rect)
+            elif cell == 5:  # 箱子在目的地
+                pygame.draw.rect(screen, (150, 100, 0), rect)
+    
+    # 绘制玩家
+    pygame.draw.circle(screen, PLAYER_COLOR, 
+                      (player_x * CELL_SIZE + CELL_SIZE//2, 
+                       player_y * CELL_SIZE + CELL_SIZE//2), 
+                      CELL_SIZE//2 - 4)
+
+# 移动函数
+def move(dx, dy):
+    global player_x, player_y
+    new_x = player_x + dx
+    new_y = player_y + dy
+
+    # 撞墙 → 不能移动
+    if game_map[new_y][new_x] == 1:
+        return
+
+    # 推箱子逻辑
+    if game_map[new_y][new_x] == 2 or game_map[new_y][new_x] == 5:
+        box_new_x = new_x + dx
+        box_new_y = new_y + dy
+        
+        # 箱子前面是墙或箱子 → 不能推
+        if game_map[box_new_y][box_new_x] == 1 or game_map[box_new_y][box_new_x] == 2 or game_map[box_new_y][box_new_x] == 5:
+            return
+        
+        # 移动箱子
+        if game_map[box_new_y][box_new_x] == 3:
+            game_map[box_new_y][box_new_x] = 5  # 箱子到目的地
+        else:
+            game_map[box_new_y][box_new_x] = 2  # 箱子移动到空地
+        
+        # 清空原箱子位置
+        game_map[new_y][new_x] = 0 if game_map[new_y][new_x] == 2 else 3
+
+    # 移动玩家
+    player_x = new_x
+    player_y = new_y
+
+# ———— 游戏主循环 ————
+init_player()
+running = True
+win = False
+
+while running:
+    clock.tick(FPS)
+    
+    # 事件处理
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        
+        # 按键控制
+        if event.type == pygame.KEYDOWN:
+            if not win:
+                if event.key == pygame.K_UP:
+                    move(0, -1)
+                elif event.key == pygame.K_DOWN:
+                    move(0, 1)
+                elif event.key == pygame.K_LEFT:
+                    move(-1, 0)
+                elif event.key == pygame.K_RIGHT:
+                    move(1, 0)
+            
+            # 按R重启游戏
+            if event.key == pygame.K_r:
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+
+    # 胜利判断
+    if not win and check_win():
+        win = True
+        print("恭喜你！游戏胜利！")
+
+    # 绘制画面
+    draw_game()
+
+    # 胜利文字
+    if win:
+        font = pygame.font.SysFont(None, 60)
+        text = font.render("YOU WIN!", True, (255, 0, 0))
+        screen.blit(text, (SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 - 30))
+
+    pygame.display.update()
+
+pygame.quit()
+sys.exit()
