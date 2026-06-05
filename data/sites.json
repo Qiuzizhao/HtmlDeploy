@@ -146,12 +146,13 @@
   {
     "id": "59dcd516",
     "number": "00192",
-    "title": "臭音游",
+    "title": "极速音游",
     "author": "gh牛逼666",
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:20:18.078Z"
+    "createdAt": "2026-06-05T02:20:18.078Z",
+    "updatedAt": "2026-06-05T07:13:26.134Z"
   },
   {
     "id": "fe72fb41",
