@@ -317,6 +317,12 @@ test('public admin exposes AI settings controls', async () => {
 
   assert.match(html, /data-view-target="settings"[^>]*>设置<\/button>/);
   assert.match(html, /data-admin-view="settings"[^>]+class="workspace"/);
+  assert.match(html, /后台密码设置/);
+  assert.match(html, /id="adminPasswordForm"/);
+  assert.match(html, /id="adminPasswordInput"[^>]+type="password"/);
+  assert.match(html, /id="adminPasswordConfirmInput"[^>]+type="password"/);
+  assert.match(html, /async function saveAdminPassword/);
+  assert.match(html, /body: JSON\.stringify\(\{ adminPassword \}\)/);
   assert.match(html, /AI 功能设置/);
   assert.match(html, /id="aiSettingsForm"/);
   assert.match(html, /id="aiApiKeyInput"[^>]+type="password"/);
@@ -1426,6 +1432,33 @@ test('GET /admin.html requires the admin password before showing backend page', 
     .expect('Location', '/admin.html');
 
   const unlocked = await agent.get('/admin.html').expect(200);
+  assert.match(unlocked.text, /id="createForm"/);
+});
+
+test('admin can change the backend password from settings', async () => {
+  const { app, dataDir } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const response = await agent
+    .put('/api/admin/settings?includeForbiddenWords=false')
+    .send({ adminPassword: 'newAdmin123' })
+    .expect(200);
+
+  assert.equal(response.body.adminPasswordConfigured, true);
+  assert.equal(Object.hasOwn(response.body, 'adminPassword'), false);
+
+  const settings = JSON.parse(await fsp.readFile(path.join(dataDir, 'settings.json'), 'utf8'));
+  assert.equal(settings.adminPassword, 'newAdmin123');
+
+  await agent.get('/admin.html').expect(200);
+
+  const oldPasswordAgent = request.agent(app);
+  await oldPasswordAgent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(401);
+
+  const newPasswordAgent = request.agent(app);
+  await newPasswordAgent.post('/admin-login').type('form').send({ password: 'newAdmin123' }).expect(303);
+  const unlocked = await newPasswordAgent.get('/admin.html').expect(200);
   assert.match(unlocked.text, /id="createForm"/);
 });
 

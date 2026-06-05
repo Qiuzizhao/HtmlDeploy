@@ -303,6 +303,10 @@
       overflow: hidden;
     }
 
+    .workspace > .panel + .panel {
+      margin-top: 16px;
+    }
+
     .panel-head {
       display: flex;
       align-items: center;
@@ -1311,6 +1315,26 @@
       <section data-admin-view="settings" class="workspace">
         <div class="panel">
           <div class="panel-head">
+            <h2 class="panel-title">后台密码设置</h2>
+            <div class="message" id="adminPasswordMessage"></div>
+          </div>
+          <form class="settings-form" id="adminPasswordForm">
+            <p class="settings-hint">设置新的后台登录密码。保存后当前登录会自动更新，不需要重新登录。</p>
+            <label>
+              新后台密码
+              <input id="adminPasswordInput" name="adminPassword" type="password" autocomplete="new-password" minlength="4" maxlength="40" placeholder="4到40位，不能包含空格" required>
+            </label>
+            <label>
+              确认新密码
+              <input id="adminPasswordConfirmInput" type="password" autocomplete="new-password" minlength="4" maxlength="40" placeholder="再次输入新后台密码" required>
+            </label>
+            <div class="settings-actions">
+              <button class="primary-button" type="submit">保存后台密码</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
             <h2 class="panel-title">AI 功能设置</h2>
             <div class="message" id="aiSettingsMessage"></div>
           </div>
@@ -1423,6 +1447,10 @@
     const prevForbiddenWordsPage = document.getElementById('prevForbiddenWordsPage');
     const nextForbiddenWordsPage = document.getElementById('nextForbiddenWordsPage');
     const forbiddenWordsPageInfo = document.getElementById('forbiddenWordsPageInfo');
+    const adminPasswordForm = document.getElementById('adminPasswordForm');
+    const adminPasswordMessage = document.getElementById('adminPasswordMessage');
+    const adminPasswordInput = document.getElementById('adminPasswordInput');
+    const adminPasswordConfirmInput = document.getElementById('adminPasswordConfirmInput');
     const aiSettingsForm = document.getElementById('aiSettingsForm');
     const aiSettingsMessage = document.getElementById('aiSettingsMessage');
     const aiApiKeyStatus = document.getElementById('aiApiKeyStatus');
@@ -2287,12 +2315,48 @@
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
+      setMessage(adminPasswordMessage, settings.adminPasswordConfigured ? '后台密码已自定义配置' : '当前使用默认后台密码');
       renderAllPasswordEnabledButton();
       forbiddenWordsInput.value = '';
       forbiddenWordsState.allTotal = settings.forbiddenWordsCount || 0;
       forbiddenWordsState.total = settings.forbiddenWordsCount || 0;
       updateForbiddenWordsPagination();
       setMessage(forbiddenWordsMessage, `${settings.forbiddenWordsCount || 0} 个违禁词`);
+    }
+
+    async function saveAdminPassword(event) {
+      event.preventDefault();
+      const adminPassword = adminPasswordInput.value.trim();
+      const adminPasswordConfirm = adminPasswordConfirmInput.value.trim();
+
+      if (!/^\S{4,40}$/.test(adminPassword)) {
+        setMessage(adminPasswordMessage, '后台密码必须是 4 到 40 位，且不能包含空格', true);
+        adminPasswordInput.focus();
+        return;
+      }
+
+      if (adminPassword !== adminPasswordConfirm) {
+        setMessage(adminPasswordMessage, '两次输入的后台密码不一致', true);
+        adminPasswordConfirmInput.focus();
+        return;
+      }
+
+      const response = await fetch('/api/admin/settings?includeForbiddenWords=false', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword })
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存后台密码失败' }));
+        setMessage(adminPasswordMessage, result.error || '保存后台密码失败', true);
+        return;
+      }
+
+      settings = await response.json();
+      adminPasswordInput.value = '';
+      adminPasswordConfirmInput.value = '';
+      setMessage(adminPasswordMessage, '后台密码已保存，当前登录已更新');
     }
 
     function renderAiKeyStatus(aiSettings) {
@@ -3401,6 +3465,7 @@
     });
 
     allPasswordForm.addEventListener('submit', saveAllPassword);
+    adminPasswordForm.addEventListener('submit', saveAdminPassword);
     aiSettingsForm.addEventListener('submit', saveAiSettings);
     clearAiApiKeyButton.addEventListener('click', clearAiApiKey);
     document.getElementById('reloadAiSettings').addEventListener('click', loadAiSettings);

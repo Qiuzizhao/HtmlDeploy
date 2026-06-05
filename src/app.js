@@ -39,6 +39,10 @@ function isValidClassPassword(password) {
   return /^\d{6}$/.test(password);
 }
 
+function isValidAdminPassword(password) {
+  return /^\S{4,40}$/.test(String(password || ''));
+}
+
 function normalizeForbiddenWords(value) {
   const items = Array.isArray(value)
     ? value
@@ -713,6 +717,21 @@ async function writeSettings(settingsFile, settings) {
   syncDataToGithub();
 }
 
+function toAdminSettingsResponse(settings, { includeForbiddenWords = true } = {}) {
+  const { adminPassword, forbiddenWords, ...summarySettings } = settings;
+  const response = {
+    ...summarySettings,
+    adminPasswordConfigured: isValidAdminPassword(adminPassword),
+    forbiddenWordsCount: forbiddenWords?.length || 0
+  };
+
+  if (includeForbiddenWords) {
+    response.forbiddenWords = forbiddenWords;
+  }
+
+  return response;
+}
+
 function attachClassName(site, classes) {
   const classItem = classes.find((item) => item.id === site.classId);
   return {
@@ -1115,8 +1134,7 @@ function createApp(options = {}) {
   const publicDir = options.publicDir || path.join(process.cwd(), 'public');
   const idGenerator = options.idGenerator || createDefaultId;
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
-  const adminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
-  const adminToken = createAdminToken(adminPassword);
+  const fallbackAdminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -1127,9 +1145,14 @@ function createApp(options = {}) {
     }
   });
 
-  function hasAdminAccess(req) {
+  async function getAdminPassword() {
+    const settings = await readSettings(settingsFile);
+    return isValidAdminPassword(settings.adminPassword) ? settings.adminPassword : fallbackAdminPassword;
+  }
+
+  async function hasAdminAccess(req) {
     const cookies = parseCookies(req.headers.cookie);
-    return cookies[ADMIN_COOKIE_NAME] === adminToken;
+    return cookies[ADMIN_COOKIE_NAME] === createAdminToken(await getAdminPassword());
   }
 
   function hasClassAccess(req, classItem) {
@@ -1150,12 +1173,16 @@ function createApp(options = {}) {
     return cookies[ALL_COOKIE_NAME] === createAllToken(settings);
   }
 
-  function requireAdmin(req, res, next) {
-    if (!hasAdminAccess(req)) {
-      return res.status(401).json({ error: '请先输入后台密码' });
-    }
+  async function requireAdmin(req, res, next) {
+    try {
+      if (!(await hasAdminAccess(req))) {
+        return res.status(401).json({ error: '请先输入后台密码' });
+      }
 
-    return next();
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   }
 
   async function getLlmConfig() {
@@ -1176,7 +1203,7 @@ function createApp(options = {}) {
       return true;
     }
 
-    if (hasAdminAccess(req)) {
+    if (await hasAdminAccess(req)) {
       return true;
     }
 
@@ -1191,36 +1218,48 @@ function createApp(options = {}) {
   }
 
   function generateThumbnailLater(id, origin) {
-    setTimeout(() => {
-      generateSiteThumbnail({ id, origin, thumbnailDir, adminToken }).catch((error) => {
+    setTimeout(async () => {
+      try {
+        const adminToken = createAdminToken(await getAdminPassword());
+        await generateSiteThumbnail({ id, origin, thumbnailDir, adminToken });
+      } catch (error) {
         console.warn(`[Thumbnail] Failed to generate ${id}: ${error.message}`);
-      });
+      }
     }, 0);
   }
 
   app.use(express.json({ limit: maxTotalBytes }));
   app.use(express.urlencoded({ extended: false, limit: maxTotalBytes }));
 
-  app.get('/admin.html', (req, res) => {
-    if (!hasAdminAccess(req)) {
-      return res.type('html').send(renderAdminLoginPage());
-    }
+  app.get('/admin.html', async (req, res, next) => {
+    try {
+      if (!(await hasAdminAccess(req))) {
+        return res.type('html').send(renderAdminLoginPage());
+      }
 
-    return res.sendFile(path.join(publicDir, 'admin.html'));
+      return res.sendFile(path.join(publicDir, 'admin.html'));
+    } catch (error) {
+      return next(error);
+    }
   });
 
-  app.post('/admin-login', (req, res) => {
-    const password = String(req.body.password || '');
-    if (password !== adminPassword) {
-      return res.status(401).type('html').send(renderAdminLoginPage('密码不正确'));
-    }
+  app.post('/admin-login', async (req, res, next) => {
+    try {
+      const adminPassword = await getAdminPassword();
+      const password = String(req.body.password || '');
+      if (password !== adminPassword) {
+        return res.status(401).type('html').send(renderAdminLoginPage('密码不正确'));
+      }
 
-    res.cookie(ADMIN_COOKIE_NAME, adminToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000
-    });
-    return res.redirect(303, '/admin.html');
+      res.cookie(ADMIN_COOKIE_NAME, createAdminToken(adminPassword), {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      return res.redirect(303, '/admin.html');
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.use(express.static(publicDir));
@@ -1294,14 +1333,10 @@ function createApp(options = {}) {
     try {
       const settings = await readSettings(settingsFile);
       if (req.query.includeForbiddenWords === 'false') {
-        const { forbiddenWords, ...summarySettings } = settings;
-        return res.json({
-          ...summarySettings,
-          forbiddenWordsCount: forbiddenWords?.length || 0
-        });
+        return res.json(toAdminSettingsResponse(settings, { includeForbiddenWords: false }));
       }
 
-      return res.json(settings);
+      return res.json(toAdminSettingsResponse(settings));
     } catch (error) {
       next(error);
     }
@@ -1408,13 +1443,20 @@ function createApp(options = {}) {
       const allPassword = req.body.allPassword === undefined
         ? previousSettings.allPassword
         : String(req.body.allPassword || '').trim();
+      const adminPassword = req.body.adminPassword === undefined
+        ? previousSettings.adminPassword
+        : String(req.body.adminPassword || '').trim();
       if (!isValidClassPassword(allPassword)) {
         return res.status(400).json({ error: '全部密码必须是 6 位数字' });
+      }
+      if (req.body.adminPassword !== undefined && !isValidAdminPassword(adminPassword)) {
+        return res.status(400).json({ error: '后台密码必须是 4 到 40 位，且不能包含空格' });
       }
 
       const settings = {
         ...previousSettings,
         allPassword,
+        adminPassword,
         allPasswordEnabled: req.body.allPasswordEnabled === undefined
           ? previousSettings.allPasswordEnabled !== false
           : Boolean(req.body.allPasswordEnabled),
@@ -1424,15 +1466,18 @@ function createApp(options = {}) {
         updatedAt: new Date().toISOString()
       };
       await writeSettings(settingsFile, settings);
-      if (req.query.includeForbiddenWords === 'false') {
-        const { forbiddenWords, ...summarySettings } = settings;
-        return res.json({
-          ...summarySettings,
-          forbiddenWordsCount: forbiddenWords?.length || 0
+      if (req.body.adminPassword !== undefined) {
+        res.cookie(ADMIN_COOKIE_NAME, createAdminToken(adminPassword), {
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: 24 * 60 * 60 * 1000
         });
       }
+      if (req.query.includeForbiddenWords === 'false') {
+        return res.json(toAdminSettingsResponse(settings, { includeForbiddenWords: false }));
+      }
 
-      return res.json(settings);
+      return res.json(toAdminSettingsResponse(settings));
     } catch (error) {
       next(error);
     }
@@ -2208,7 +2253,7 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      if (site.enabled === false && !hasAdminAccess(req)) {
+      if (site.enabled === false && !(await hasAdminAccess(req))) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
@@ -2532,7 +2577,7 @@ function createApp(options = {}) {
         return res.status(404).send('Not found');
       }
 
-      if (site.enabled === false && !hasAdminAccess(req)) {
+      if (site.enabled === false && !(await hasAdminAccess(req))) {
         return res.status(404).send('Not found');
       }
 
@@ -2558,7 +2603,7 @@ function createApp(options = {}) {
         return res.status(404).send('Not found');
       }
 
-      if (site.enabled === false && !hasAdminAccess(req)) {
+      if (site.enabled === false && !(await hasAdminAccess(req))) {
         return res.status(404).send('Not found');
       }
 
@@ -2589,7 +2634,7 @@ function createApp(options = {}) {
       return res.status(404).send('Not found');
     }
 
-    if (site.enabled === false && !hasAdminAccess(req)) {
+    if (site.enabled === false && !(await hasAdminAccess(req))) {
       return res.status(404).send('Not found');
     }
 
