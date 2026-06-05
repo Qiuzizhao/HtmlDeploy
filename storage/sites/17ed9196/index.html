@@ -4,181 +4,531 @@
     <meta charset="UTF-8">
     <title>第一人称射击小游戏</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #000; }
-        canvas { display: block; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+
         /* 准星 */
         .crosshair {
-            position: fixed; top: 50%; left: 50%;
-            width: 20px; height: 20px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
             transform: translate(-50%, -50%);
             pointer-events: none;
+            z-index: 20;
         }
-        .crosshair::before, .crosshair::after {
-            content: ''; position: absolute;
-            background: white;
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 1px;
         }
-        .crosshair::before { width: 2px; height: 20px; left: 9px; top: 0; }
-        .crosshair::after { width: 20px; height: 2px; left: 0; top: 9px; }
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
 
         /* UI */
         .ui {
-            position: fixed; top: 15px; left: 15px;
-            color: white; font-size: 18px;
-            text-shadow: 1px 1px #000;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
             z-index: 10;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 加载提示 */
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+            z-index: 30;
+            text-align: center;
+            pointer-events: none;
+        }
+        #loading .hint {
+            font-size: 14px;
+            font-weight: normal;
+            margin-top: 12px;
+            opacity: 0.7;
+        }
+
+        /* 点击提示 */
+        #click-hint {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+            z-index: 10;
+            pointer-events: none;
+            text-align: center;
+            transition: opacity 0.6s ease;
+            user-select: none;
+            -webkit-user-select: none;
         }
     </style>
 </head>
 <body>
     <div class="ui">分数: <span id="score">0</span></div>
     <div class="crosshair"></div>
+    <div id="loading">加载中…<div class="hint">正在准备战场</div></div>
+    <div id="click-hint">点击屏幕开始游戏</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js">
+    </script>
 
     <script>
-        // 基础场景
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 10, 60);
+        (function() {
+            'use strict';
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({antialias:true});
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // 光照
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(10, 20, 10);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-        // 鼠标视角锁定
-        const controls = new THREE.PointerLockControls(camera, document.body);
-        document.body.addEventListener('click', () => controls.lock());
-
-        // 地面
-        const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(100, 100),
-            new THREE.MeshLambertMaterial({ color: 0x555555 })
-        );
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-
-        // 围墙
-        function wall(x, z, w) {
-            const m = new THREE.Mesh(
-                new THREE.BoxGeometry(w, 4, 2),
-                new THREE.MeshLambertMaterial({ color: 0x888888 })
-            );
-            m.position.set(x, 2, z);
-            scene.add(m);
-        }
-        wall(-30, 0, 25);
-        wall(30, 0, 25);
-        wall(0, -30, 25);
-        wall(0, 30, 25);
-
-        camera.position.y = 2;
-
-        // 按键控制
-        const keys = { w: false, a: false, s: false, d: false };
-        document.addEventListener('keydown', e => {
-            const k = e.key.toLowerCase();
-            if (k === 'w') keys.w = true;
-            if (k === 'a') keys.a = true;
-            if (k === 's') keys.s = true;
-            if (k === 'd') keys.d = true;
-        });
-        document.addEventListener('keyup', e => {
-            const k = e.key.toLowerCase();
-            if (k === 'w') keys.w = false;
-            if (k === 'a') keys.a = false;
-            if (k === 's') keys.s = false;
-            if (k === 'd') keys.d = false;
-        });
-
-        // 敌人
-        let enemies = [];
-        let score = 0;
-
-        function spawnEnemy() {
-            const enemy = new THREE.Mesh(
-                new THREE.BoxGeometry(1.5, 2, 1.5),
-                new THREE.MeshLambertMaterial({ color: 0xff3333 })
-            );
-            const angle = Math.random() * Math.PI * 2;
-            const r = 40 + Math.random() * 20;
-            enemy.position.set(Math.cos(angle)*r, 1, Math.sin(angle)*r);
-            enemy.userData.speed = 0.06;
-            enemies.push(enemy);
-            scene.add(enemy);
-        }
-
-        // 生成10个敌人
-        for (let i=0; i<10; i++) spawnEnemy();
-
-        // 射击
-        document.addEventListener('mousedown', () => {
-            const ray = new THREE.Raycaster();
-            ray.setFromCamera(new THREE.Vector2(0,0), camera);
-            const hits = ray.intersectObjects(enemies);
-
-            if (hits.length > 0) {
-                const hit = hits[0].object;
-                scene.remove(hit);
-                enemies = enemies.filter(e => e !== hit);
-                score += 10;
-                document.getElementById('score').innerText = score;
-                spawnEnemy();
+            // ============================================================
+            //  1. 依赖检查 & 加载状态
+            // ============================================================
+            if (typeof THREE === 'undefined' || !THREE.PointerLockControls) {
+                document.getElementById('loading').innerHTML =
+                    '加载失败，请刷新重试<div class="hint">可能需要网络连接以加载 Three.js</div>';
+                return;
             }
-        });
+            var loadingEl = document.getElementById('loading');
+            var hintEl = document.getElementById('click-hint');
 
-        // 移动
-        function movePlayer() {
-            const speed = 0.15;
-            const dir = new THREE.Vector3();
-            camera.getWorldDirection(dir);
-            dir.y = 0;
-            dir.normalize();
-            const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+            // ============================================================
+            //  2. 常量配置
+            // ============================================================
+            var CONFIG = {
+                // 玩家
+                player: {
+                    height: 2,
+                    speed: 9.0, // 单位/秒 (原 0.15 * 60)
+                    radius: 0.4,
+                },
+                // 敌人
+                enemy: {
+                    speed: 3.6, // 单位/秒 (原 0.06 * 60)
+                    size: 0.7,
+                    height: 2,
+                    count: 10,
+                    spawnRadiusMin: 40,
+                    spawnRadiusMax: 60,
+                    color: 0xff3333,
+                },
+                // 围墙
+                wall: {
+                    height: 4,
+                    depth: 2,
+                    color: 0x888888,
+                },
+                // 地面
+                ground: {
+                    size: 100,
+                    color: 0x555555,
+                },
+                // 场景
+                scene: {
+                    bgColor: 0x87ceeb,
+                    fogColor: 0x87ceeb,
+                    fogNear: 10,
+                    fogFar: 60,
+                },
+                // 渲染
+                renderer: {
+                    maxPixelRatio: 2,
+                },
+                // 射击
+                shoot: {
+                    maxDistance: 200,
+                },
+            };
 
-            if (keys.w) camera.position.addScaledVector(dir, speed);
-            if (keys.s) camera.position.addScaledVector(dir, -speed);
-            if (keys.a) camera.position.addScaledVector(right, -speed);
-            if (keys.d) camera.position.addScaledVector(right, speed);
-        }
+            // ============================================================
+            //  3. 场景、相机、渲染器
+            // ============================================================
+            var scene = new THREE.Scene();
+            scene.background = new THREE.Color(CONFIG.scene.bgColor);
+            scene.fog = new THREE.Fog(CONFIG.scene.fogColor, CONFIG.scene.fogNear, CONFIG.scene.fogFar);
 
-        // 敌人追玩家
-        function enemyAI() {
-            enemies.forEach(en => {
-                const dx = camera.position.x - en.position.x;
-                const dz = camera.position.z - en.position.z;
-                const dist = Math.hypot(dx, dz);
-                if (dist > 2) {
-                    en.position.x += dx * en.userData.speed;
-                    en.position.z += dz * en.userData.speed;
+            var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, CONFIG.player.height, 0);
+
+            var renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderer.maxPixelRatio));
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            document.body.appendChild(renderer.domElement);
+
+            // ============================================================
+            //  4. 光照
+            // ============================================================
+            var dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            // ============================================================
+            //  5. 鼠标锁定控制
+            // ============================================================
+            var controls = new THREE.PointerLockControls(camera, document.body);
+
+            var isLocked = false;
+            controls.addEventListener('lock', function() {
+                isLocked = true;
+                if (hintEl) hintEl.style.display = 'none';
+                if (loadingEl) loadingEl.style.display = 'none';
+            });
+            controls.addEventListener('unlock', function() {
+                isLocked = false;
+                if (hintEl) hintEl.style.display = 'block';
+            });
+
+            document.body.addEventListener('click', function() {
+                if (!isLocked) {
+                    controls.lock();
                 }
             });
-        }
 
-        // 窗口自适应
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+            // ============================================================
+            //  6. 地面
+            // ============================================================
+            var groundGeo = new THREE.PlaneGeometry(CONFIG.ground.size, CONFIG.ground.size);
+            var groundMat = new THREE.MeshLambertMaterial({
+                color: CONFIG.ground.color,
+                depthWrite: true,
+            });
+            var ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = 0;
+            scene.add(ground);
 
-        // 游戏循环
-        function loop() {
-            requestAnimationFrame(loop);
-            movePlayer();
-            enemyAI();
-            renderer.render(scene, camera);
-        }
-        loop();
+            // ============================================================
+            //  7. 围墙 + 碰撞数据
+            // ============================================================
+            var wallMat = new THREE.MeshLambertMaterial({ color: CONFIG.wall.color });
+
+            // 每面墙: { mesh, minX, maxX, minZ, maxZ }
+            var wallData = [];
+
+            function createWall(x, z, w) {
+                var geo = new THREE.BoxGeometry(w, CONFIG.wall.height, CONFIG.wall.depth);
+                var mesh = new THREE.Mesh(geo, wallMat);
+                mesh.position.set(x, CONFIG.wall.height / 2, z);
+                scene.add(mesh);
+
+                var halfW = w / 2;
+                var halfD = CONFIG.wall.depth / 2;
+                wallData.push({
+                    mesh: mesh,
+                    minX: x - halfW,
+                    maxX: x + halfW,
+                    minZ: z - halfD,
+                    maxZ: z + halfD,
+                });
+            }
+
+            // 四周围墙 (与原位置一致)
+            createWall(-30, 0, 25);
+            createWall(30, 0, 25);
+            createWall(0, -30, 25);
+            createWall(0, 30, 25);
+
+            // ============================================================
+            //  8. 玩家控制 (键盘)
+            // ============================================================
+            var keys = {
+                w: false,
+                a: false,
+                s: false,
+                d: false,
+            };
+
+            document.addEventListener('keydown', function(e) {
+                var k = e.key.toLowerCase();
+                if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
+                    e.preventDefault();
+                    keys[k] = true;
+                }
+                // 按 Escape 解锁时不要阻止默认
+            });
+
+            document.addEventListener('keyup', function(e) {
+                var k = e.key.toLowerCase();
+                if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
+                    e.preventDefault();
+                    keys[k] = false;
+                }
+            });
+
+            // ============================================================
+            //  9. 碰撞检测 (玩家与围墙, XZ平面)
+            // ============================================================
+            var _tempPos = new THREE.Vector3();
+
+            function checkWallCollision(x, z, radius) {
+                radius = radius || CONFIG.player.radius;
+                for (var i = 0; i < wallData.length; i++) {
+                    var w = wallData[i];
+                    // 将玩家视为半径为 radius 的圆，检测与轴对齐矩形碰撞
+                    var closestX = Math.max(w.minX, Math.min(x, w.maxX));
+                    var closestZ = Math.max(w.minZ, Math.min(z, w.maxZ));
+                    var dx = x - closestX;
+                    var dz = z - closestZ;
+                    if (dx * dx + dz * dz < radius * radius) {
+                        return true; // 碰撞
+                    }
+                }
+                return false;
+            }
+
+            // 尝试移动 (带滑动)
+            function tryMove(dx, dz, radius) {
+                radius = radius || CONFIG.player.radius;
+                var px = camera.position.x;
+                var pz = camera.position.z;
+
+                // 尝试 X 方向
+                var nx = px + dx;
+                if (!checkWallCollision(nx, pz, radius)) {
+                    px = nx;
+                }
+                // 尝试 Z 方向
+                var nz = pz + dz;
+                if (!checkWallCollision(px, nz, radius)) {
+                    pz = nz;
+                }
+                camera.position.x = px;
+                camera.position.z = pz;
+            }
+
+            // ============================================================
+            //  10. 敌人系统
+            // ============================================================
+            var enemies = [];
+            var score = 0;
+            var scoreEl = document.getElementById('score');
+
+            // 共享几何体与材质 (所有敌人一致)
+            var enemyGeo = new THREE.BoxGeometry(
+                CONFIG.enemy.size * 2,
+                CONFIG.enemy.height,
+                CONFIG.enemy.size * 2
+            );
+            var enemyMat = new THREE.MeshLambertMaterial({ color: CONFIG.enemy.color });
+
+            function spawnEnemy() {
+                var enemy = new THREE.Mesh(enemyGeo, enemyMat);
+                var angle = Math.random() * Math.PI * 2;
+                var r = CONFIG.enemy.spawnRadiusMin +
+                    Math.random() * (CONFIG.enemy.spawnRadiusMax - CONFIG.enemy.spawnRadiusMin);
+                enemy.position.set(
+                    Math.cos(angle) * r,
+                    CONFIG.enemy.height / 2,
+                    Math.sin(angle) * r
+                );
+                enemy.userData.speed = CONFIG.enemy.speed;
+                enemies.push(enemy);
+                scene.add(enemy);
+                return enemy;
+            }
+
+            // 初始生成
+            for (var i = 0; i < CONFIG.enemy.count; i++) {
+                spawnEnemy();
+            }
+
+            // 射击检测 (复用对象)
+            var _raycaster = new THREE.Raycaster();
+            var _mouseVec = new THREE.Vector2(0, 0);
+
+            document.addEventListener('mousedown', function(e) {
+                if (!isLocked) return;
+                // 防止右键菜单
+                if (e.button === 0) {
+                    e.preventDefault();
+                } else {
+                    return;
+                }
+
+                _raycaster.setFromCamera(_mouseVec, camera);
+                _raycaster.far = CONFIG.shoot.maxDistance;
+
+                var hits = _raycaster.intersectObjects(enemies);
+                if (hits.length > 0) {
+                    var hit = hits[0].object;
+                    // 从场景移除
+                    scene.remove(hit);
+                    // 从数组移除 (用 splice 避免创建新数组)
+                    var idx = enemies.indexOf(hit);
+                    if (idx !== -1) {
+                        enemies.splice(idx, 1);
+                    }
+                    // 加分
+                    score += 10;
+                    if (scoreEl) {
+                        scoreEl.textContent = score;
+                    }
+                    // 生成新敌人
+                    spawnEnemy();
+                }
+            });
+
+            // 阻止右键菜单
+            document.addEventListener('contextmenu', function(e) {
+                if (isLocked) e.preventDefault();
+            });
+
+            // ============================================================
+            //  11. 游戏循环 (带 Delta Time)
+            // ============================================================
+            var prevTime = performance.now();
+
+            var _dir = new THREE.Vector3();
+            var _right = new THREE.Vector3();
+
+            function loop(time) {
+                requestAnimationFrame(loop);
+
+                // 计算 delta time (秒)
+                var dt = Math.min((time - prevTime) / 1000, 0.05); // 限制最大 50ms
+                prevTime = time;
+
+                // ---- 玩家移动 ----
+                if (isLocked) {
+                    // 获取方向
+                    camera.getWorldDirection(_dir);
+                    _dir.y = 0;
+                    if (_dir.lengthSq() > 0.0001) {
+                        _dir.normalize();
+                    } else {
+                        _dir.set(0, 0, -1);
+                    }
+                    _right.crossVectors(_dir, camera.up).normalize();
+
+                    var speed = CONFIG.player.speed * dt;
+                    var moveX = 0;
+                    var moveZ = 0;
+
+                    if (keys.w) {
+                        moveX += _dir.x * speed;
+                        moveZ += _dir.z * speed;
+                    }
+                    if (keys.s) {
+                        moveX -= _dir.x * speed;
+                        moveZ -= _dir.z * speed;
+                    }
+                    if (keys.a) {
+                        moveX -= _right.x * speed;
+                        moveZ -= _right.z * speed;
+                    }
+                    if (keys.d) {
+                        moveX += _right.x * speed;
+                        moveZ += _right.z * speed;
+                    }
+
+                    if (moveX !== 0 || moveZ !== 0) {
+                        tryMove(moveX, moveZ);
+                    }
+
+                    // 固定高度
+                    camera.position.y = CONFIG.player.height;
+                }
+
+                // ---- 敌人 AI ----
+                var playerPos = camera.position;
+                var speedFactor = dt;
+
+                for (var j = 0; j < enemies.length; j++) {
+                    var en = enemies[j];
+                    var dx = playerPos.x - en.position.x;
+                    var dz = playerPos.z - en.position.z;
+                    var distSq = dx * dx + dz * dz;
+
+                    if (distSq > 0.01) {
+                        var dist = Math.sqrt(distSq);
+                        var moveStep = en.userData.speed * speedFactor;
+                        if (moveStep > dist) {
+                            en.position.x = playerPos.x;
+                            en.position.z = playerPos.z;
+                        } else {
+                            var normX = dx / dist;
+                            var normZ = dz / dist;
+                            en.position.x += normX * moveStep;
+                            en.position.z += normZ * moveStep;
+                        }
+                    }
+
+                    // 保持敌人高度
+                    en.position.y = CONFIG.enemy.height / 2;
+
+                    // 面向玩家 (绕Y轴旋转)
+                    var angle = Math.atan2(dz, dx);
+                    en.rotation.y = -angle + Math.PI / 2;
+                }
+
+                // ---- 渲染 ----
+                renderer.render(scene, camera);
+            }
+
+            // ============================================================
+            //  12. 窗口自适应
+            // ============================================================
+            window.addEventListener('resize', function() {
+                var w = window.innerWidth;
+                var h = window.innerHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+
+            // ============================================================
+            //  13. 启动游戏
+            // ============================================================
+            // 隐藏加载提示
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+
+            // 开始循环
+            prevTime = performance.now();
+            loop(prevTime);
+
+        })();
     </script>
 </body>
 </html>
