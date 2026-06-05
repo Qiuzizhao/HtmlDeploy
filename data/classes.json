@@ -66,9 +66,9 @@
     "id": "767d3252",
     "name": "社团",
     "password": "666666",
-    "uploadEnabled": false,
-    "passwordEnabled": true,
+    "uploadEnabled": true,
+    "passwordEnabled": false,
     "createdAt": "2026-06-04T01:20:15.251Z",
-    "updatedAt": "2026-06-05T01:45:44.037Z"
+    "updatedAt": "2026-06-05T07:01:25.125Z"
   }
 ]
