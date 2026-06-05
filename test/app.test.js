@@ -272,6 +272,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/starred/);
   assert.match(html, /function toggleSiteStarred/);
   assert.match(html, /project-disabled-warning/);
+  assert.match(html, /\.index-cell \{[\s\S]*font-size: 18px;/);
   assert.match(html, /forbidden-audit-note/);
   assert.match(html, /site\.forbiddenAuditMessage/);
   assert.match(html, /duplicate-audit-note/);
