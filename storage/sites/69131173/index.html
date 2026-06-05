@@ -6,7 +6,7 @@
     <title>3D跑酷 - 二段跳版</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #000; font-family: Arial; }
+        body { overflow: hidden; background: #000; font-family: Arial, sans-serif; }
         canvas { display: block; }
 
         .ui {
@@ -14,18 +14,21 @@
             color: white; font-size: 24px;
             text-shadow: 2px 2px 4px #000;
             z-index: 999;
+            pointer-events: none;
         }
 
         .tips {
             position: absolute; top: 55px; left: 20px;
             color: #0ff; font-size: 16px;
             text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
         }
 
         .over {
             position: absolute; top: 45%; left: 50%;
             transform: translate(-50%, -50%);
             text-align: center; display: none;
+            z-index: 1000;
         }
 
         #gameOver {
@@ -38,7 +41,10 @@
             padding: 10px 25px; font-size: 20px;
             background: #222; color: white;
             border: 2px solid white; cursor: pointer;
+            transition: background 0.2s;
         }
+        #restart:hover { background: #444; }
+        #restart:active { background: #555; }
     </style>
 </head>
 <body>
@@ -50,195 +56,195 @@
     <button id="restart" onclick="restartGame()">重新开始</button>
 </div>
 
-<!-- 3D引擎 + 物理引擎 -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.min.js"></script>
 
 <script>
-// 基础游戏配置
-let score = 0;
-let gameRunning = true;
-const moveSpeed = 8;
-const jumpPower = 9;
-let jumpCount = 0;
-const maxJump = 2; // 二段跳
+(function() {
+    'use strict';
 
-// 三大核心
-let scene, camera, renderer;
-let world;
-let player, playerBody;
-let playerHelper; // 碰撞箱可视化
+    let score = 0;
+    let gameRunning = true;
+    const moveSpeed = 8;
+    const jumpPower = 9;
+    let jumpCount = 0;
+    const maxJump = 2;
 
-// 键盘
-const keys = {};
-document.addEventListener('keydown', e => keys[e.code] = true);
-document.addEventListener('keyup', e => keys[e.code] = false);
+    let scene, camera, renderer;
+    let world;
+    let player, playerBody;
+    let playerHelper;
+    let groundBody;
 
-// 启动游戏
-init();
-animate();
+    const keys = {};
+    const keyDownHandler = (e) => { keys[e.code] = true; };
+    const keyUpHandler = (e) => { keys[e.code] = false; };
+    document.addEventListener('keydown', keyDownHandler);
+    document.addEventListener('keyup', keyUpHandler);
 
-// ========== 初始化3D场景 ==========
-function init() {
-    // 场景
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
+    const scoreElement = document.getElementById('score');
+    const overElement = document.querySelector('.over');
 
-    // 相机
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-    
-    // 渲染器
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    document.body.appendChild(renderer.domElement);
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
 
-    // 物理世界
-    world = new CANNON.World();
-    world.gravity.set(0, -25, 0);
-    world.broadphase = new CANNON.SAPBroadphase(world);
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
-    // 灯光
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(30, 100, 30);
-    light.castShadow = true;
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-    // ========== 地面（超大长地图） ==========
-    const groundGeo = new THREE.BoxGeometry(22, 10, 8000);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44 });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.position.y = -5;
-    ground.receiveShadow = true;
-    scene.add(ground);
+        world = new CANNON.World();
+        world.gravity.set(0, -25, 0);
+        world.broadphase = new CANNON.SAPBroadphase(world);
+        world.defaultContactMaterial.friction = 0.3;
 
-    const groundBody = new CANNON.Body({
-        mass: 0,
-        shape: new CANNON.Box(new CANNON.Vec3(11, 5, 4000)),
-        position: new CANNON.Vec3(0, -5, 0)
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(30, 100, 30);
+        light.castShadow = true;
+        light.shadow.mapSize.width = 1024;
+        light.shadow.mapSize.height = 1024;
+        const d = 50;
+        light.shadow.camera.left = -d;
+        light.shadow.camera.right = d;
+        light.shadow.camera.top = d;
+        light.shadow.camera.bottom = -d;
+        light.shadow.camera.near = 1;
+        light.shadow.camera.far = 200;
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+        const groundGeo = new THREE.BoxGeometry(22, 10, 8000);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d44 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.position.y = -5;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        groundBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Box(new CANNON.Vec3(11, 5, 4000)),
+            position: new CANNON.Vec3(0, -5, 0)
+        });
+        world.addBody(groundBody);
+
+        const playerGeo = new THREE.BoxGeometry(2, 4, 2);
+        const playerMat = new THREE.MeshLambertMaterial({ color: 0xff5252 });
+        player = new THREE.Mesh(playerGeo, playerMat);
+        player.castShadow = true;
+        scene.add(player);
+
+        playerHelper = new THREE.BoxHelper(player, 0xff0000);
+        scene.add(playerHelper);
+
+        playerBody = new CANNON.Body({
+            mass: 6,
+            shape: new CANNON.Box(new CANNON.Vec3(1, 2, 1)),
+            position: new CANNON.Vec3(0, 10, 0),
+            fixedRotation: true,
+            linearDamping: 0.1
+        });
+        world.addBody(playerBody);
+
+        for (let i = 1; i < 200; i++) {
+            const z = -i * 28;
+            const x = (Math.random() > 0.5 ? 5 : -5) + (Math.random() - 0.5) * 4;
+            createObstacle(x, 0, z);
+        }
+    }
+
+    function createObstacle(x, y, z) {
+        const geo = new THREE.BoxGeometry(5, 8, 5);
+        const mat = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+
+        const body = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Box(new CANNON.Vec3(2.5, 4, 2.5)),
+            position: new CANNON.Vec3(x, y, z)
+        });
+        world.addBody(body);
+
+        body.addEventListener('collide', (e) => {
+            if (gameRunning && e.body === playerBody) {
+                gameOver();
+            }
+        });
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (!gameRunning) return;
+
+        world.step(1 / 60);
+
+        player.position.copy(playerBody.position);
+        player.quaternion.copy(playerBody.quaternion);
+        playerHelper.update();
+
+        playerBody.position.z -= moveSpeed * 1.1;
+        playerBody.velocity.z = 0;
+
+        if (keys['KeyA'] || keys['ArrowLeft']) {
+            playerBody.position.x = THREE.MathUtils.lerp(playerBody.position.x, -8, 0.12);
+        }
+        if (keys['KeyD'] || keys['ArrowRight']) {
+            playerBody.position.x = THREE.MathUtils.lerp(playerBody.position.x, 8, 0.12);
+        }
+
+        if (keys['Space'] && jumpCount < maxJump) {
+            playerBody.velocity.y = jumpPower;
+            jumpCount++;
+            keys['Space'] = false;
+        }
+
+        if (playerBody.position.y < 5.5) {
+            jumpCount = 0;
+        }
+
+        if (playerBody.position.y < -30) {
+            gameOver();
+        }
+
+        score += 0.1;
+        scoreElement.textContent = Math.floor(score);
+
+        const targetPos = new THREE.Vector3(
+            player.position.x,
+            player.position.y + 9,
+            player.position.z + 24
+        );
+        camera.position.lerp(targetPos, 0.12);
+        camera.lookAt(player.position.x, player.position.y + 2, player.position.z);
+
+        renderer.render(scene, camera);
+    }
+
+    function gameOver() {
+        gameRunning = false;
+        overElement.style.display = 'block';
+    }
+
+    window.restartGame = function() {
+        window.location.reload();
+    };
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     });
-    world.addBody(groundBody);
 
-    // ========== 玩家 + 碰撞箱 ==========
-    const playerGeo = new THREE.BoxGeometry(2, 4, 2);
-    const playerMat = new THREE.MeshLambertMaterial({ color: 0xff5252 });
-    player = new THREE.Mesh(playerGeo, playerMat);
-    player.castShadow = true;
-    scene.add(player);
-
-    // 红色线框 = 可见碰撞箱
-    playerHelper = new THREE.BoxHelper(player, 0xff0000);
-    scene.add(playerHelper);
-
-    playerBody = new CANNON.Body({
-        mass: 6,
-        shape: new CANNON.Box(new CANNON.Vec3(1, 2, 1)),
-        position: new CANNON.Vec3(0, 10, 0),
-        fixedRotation: true
-    });
-    world.addBody(playerBody);
-
-    // ========== 生成障碍物（中等难度） ==========
-    for (let i = 1; i < 200; i++) {
-        const z = -i * 28;
-        const x = (Math.random() > 0.5 ? 5 : -5) + (Math.random() - 0.5) * 4;
-        createObstacle(x, 0, z);
-    }
-}
-
-// 创建障碍物
-function createObstacle(x, y, z) {
-    const geo = new THREE.BoxGeometry(5, 8, 5);
-    const mat = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    scene.add(mesh);
-
-    const body = new CANNON.Body({
-        mass: 0,
-        shape: new CANNON.Box(new CANNON.Vec3(2.5, 4, 2.5)),
-        position: new CANNON.Vec3(x, y, z)
-    });
-    world.addBody(body);
-
-    body.addEventListener('collide', () => {
-        if (gameRunning) gameOver();
-    });
-}
-
-// ========== 游戏主循环 ==========
-function animate() {
-    requestAnimationFrame(animate);
-    if (!gameRunning) return;
-
-    // 物理更新
-    world.step(1 / 60);
-
-    // 同步模型与物理
-    player.position.copy(playerBody.position);
-    player.quaternion.copy(playerBody.quaternion);
-    playerHelper.update();
-
-    // 自动前进
-    playerBody.position.z -= moveSpeed * 1.1;
-    playerBody.velocity.z = 0;
-
-    // 左右移动
-    if (keys['KeyA'] || keys['ArrowLeft']) {
-        playerBody.position.x = THREE.MathUtils.lerp(playerBody.position.x, -8, 0.12);
-    }
-    if (keys['KeyD'] || keys['ArrowRight']) {
-        playerBody.position.x = THREE.MathUtils.lerp(playerBody.position.x, 8, 0.12);
-    }
-
-    // ========== 二段跳逻辑 ==========
-    if (keys['Space'] && jumpCount < maxJump) {
-        playerBody.velocity.y = jumpPower;
-        jumpCount++;
-        keys['Space'] = false;
-    }
-
-    // 落地重置跳跃
-    if (playerBody.position.y < 5.5) {
-        jumpCount = 0;
-    }
-
-    // 掉下去死亡
-    if (playerBody.position.y < -30) gameOver();
-
-    // 分数
-    score += 0.1;
-    document.getElementById('score').innerText = Math.floor(score);
-
-    // 相机跟随
-    camera.position.lerp(
-        new THREE.Vector3(player.position.x, player.position.y + 9, player.position.z + 24),
-        0.12
-    );
-    camera.lookAt(player.position.x, player.position.y + 2, player.position.z);
-
-    renderer.render(scene, camera);
-}
-
-// 游戏结束
-function gameOver() {
-    gameRunning = false;
-    document.querySelector('.over').style.display = 'block';
-}
-
-// 重启
-function restartGame() {
-    window.location.reload();
-}
-
-// 窗口适配
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
+    init();
+    animate();
+})();
 </script>
 </body>
 </html>
