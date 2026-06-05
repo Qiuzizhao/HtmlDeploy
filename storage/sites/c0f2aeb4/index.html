@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精美推箱子小游戏｜多关卡版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+        }
+        .title {
+            font-size: 36px;
+            color: #333;
+            text-align: center;
+            margin-bottom: 16px;
+            background: linear-gradient(90deg,#764ba2,#667eea);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: bold;
+        }
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            font-size: 18px;
+            color: #444;
+            flex-wrap: wrap;
+            gap:10px;
+        }
+        .step-box {
+            background: #f3f4f6;
+            padding:6px 16px;
+            border-radius: 30px;
+        }
+        .btn-group {
+            display: flex;
+            gap:12px;
+            margin-bottom:20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-group button {
+            padding:10px 20px;
+            border: none;
+            border-radius: 30px;
+            font-size:15px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+            color:#fff;
+        }
+        #resetBtn {
+            background: linear-gradient(90deg,#667eea,#764ba2);
+        }
+        #nextBtn{
+            background:linear-gradient(90deg,#38b6ff,#2895d9);
+        }
+        .level-btn{
+            background:linear-gradient(90deg,#2cb978,#1f9e63);
+        }
+        .btn-group button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 12px rgba(102,126,234,0.4);
+        }
+        #gameBox {
+            border:4px solid #775538;
+            border-radius:12px;
+            background:#c9b89c;
+            padding:4px;
+            box-shadow: inset 0 0 12px #947959;
+        }
+        .cell {
+            width:46px;
+            height:46px;
+            display:inline-block;
+            vertical-align: middle;
+            border:1px solid rgba(0,0,0,0.08);
+            position:relative;
+        }
+        /* 墙壁 深石材质感 */
+        .wall {
+            background: linear-gradient(145deg,#555,#333);
+            box-shadow: inset 0 0 0 2px #222;
+        }
+        /* 木纹地板 */
+        .floor {
+            background: linear-gradient(135deg,#e9ddc8,#d9ccb5);
+        }
+        /* 目标圆点 */
+        .target::after {
+            content:"";
+            position:absolute;
+            width:20px;
+            height:20px;
+            background:#ff4757;
+            border-radius:50%;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            box-shadow:0 0 6px #ff2233;
+        }
+        /* 玩家小人 */
+        .player::after {
+            content:"👨";
+            font-size:30px;
+            position:absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+        }
+        /* 木箱 */
+        .box::after {
+            content:"";
+            width:34px;
+            height:34px;
+            background:linear-gradient(145deg,#d49c58,#b27c36);
+            border:2px solid #805525;
+            border-radius:4px;
+            position:absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            box-shadow:inset 0 0 0 1px #e9b87c, 2px 2px 3px rgba(0,0,0,0.3);
+        }
+        /* 箱子在目标点 */
+        .box-on-target::after {
+            width:34px;
+            height:34px;
+            background:linear-gradient(145deg,#ff7676,#e63939);
+            border:2px solid #b82626;
+            border-radius:4px;
+            position:absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            box-shadow:0 0 8px #ff3333;
+            content:"";
+        }
+        .win-tip{
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.6);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            z-index:99;
+        }
+        .win-card{
+            background:#fff;
+            padding:40px 50px;
+            border-radius:16px;
+            text-align:center;
+            box-shadow:0 8px 30px rgba(0,0,0,0.2);
+        }
+        .win-card h2{
+            color:#764ba2;
+            margin-bottom:12px;
+            font-size:28px;
+        }
+        .win-card p{
+            font-size:18px;
+            color:#555;
+            margin-bottom:20px;
+        }
+        .win-card button{
+            padding:9px 26px;
+            border:none;
+            border-radius:25px;
+            background:#764ba2;
+            color:#fff;
+            font-size:16px;
+            cursor:pointer;
+            margin:0 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">经典推箱子</h1>
+        <div class="info-bar">
+            <div class="step-box">关卡：<span id="levelNum">1</span>｜步数：<span id="stepNum">0</span></div>
+            <div>所有箱子推入红色圆点即可过关</div>
+        </div>
+        <div class="btn-group">
+            <button id="resetBtn" onclick="resetGame()">重置本关</button>
+            <button id="nextBtn" onclick="nextLevel()">下一关</button>
+            <button class="level-btn" onclick="changeLevel(1)">第1关</button>
+            <button class="level-btn" onclick="changeLevel(2)">第2关</button>
+            <button class="level-btn" onclick="changeLevel(3)">第3关</button>
+            <button class="level-btn" onclick="changeLevel(4)">第4关</button>
+            <button class="level-btn" onclick="changeLevel(5)">第5关</button>
+        </div>
+        <div id="gameBox"></div>
+    </div>
+
+    <!-- 通关弹窗 -->
+    <div class="win-tip" id="winModal">
+        <div class="win-card">
+            <h2>🎉 恭喜通关！</h2>
+            <p>本关总共走了 <span id="finalStep">0</span> 步</p>
+            <button onclick="closeWinReset()">重玩本关</button>
+            <button onclick="closeWinNext()">挑战下一关</button>
+        </div>
+    </div>
+
+<script>
+//地图说明：0空地 1墙 2目标 3玩家 4箱子 5箱子在目标
+const levels = [
+    //第1关（新手入门）
+    [
+        [1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,0,1],
+        [1,0,3,4,0,2,0,1],
+        [1,0,0,4,4,2,0,1],
+        [1,0,0,0,0,2,0,1],
+        [1,1,1,1,1,1,1,1]
+    ],
+    //第2关
+    [
+        [1,1,1,1,1,1,1,1,1],
+        [1,0,0,1,0,0,0,0,1],
+        [1,0,3,1,4,0,2,0,1],
+        [1,0,0,0,4,4,2,0,1],
+        [1,0,0,0,0,0,2,0,1],
+        [1,1,1,1,1,1,1,1,1]
+    ],
+    //第3关
+    [
+        [1,1,1,1,1,1,1,1,1],
+        [1,1,0,0,0,0,0,1,1],
+        [1,0,0,4,1,4,0,0,1],
+        [1,0,3,4,0,2,2,0,1],
+        [1,0,0,0,0,2,0,0,1],
+        [1,1,1,1,1,1,1,1,1]
+    ],
+    //第4关
+    [
+        [1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,1,0,0,0,0,1],
+        [1,0,3,4,1,4,0,2,0,1],
+        [1,0,0,4,0,4,2,2,0,1],
+        [1,0,0,0,0,0,0,2,0,1],
+        [1,1,1,1,1,1,1,1,1,1]
+    ],
+    //第5关（小难度）
+    [
+        [1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,1],
+        [1,0,0,4,4,4,0,2,0,1],
+        [1,0,3,0,0,0,0,2,0,1],
+        [1,0,0,0,0,0,0,2,0,1],
+        [1,1,1,1,1,1,1,1,1,1]
+    ]
+];
+
+let nowLevel = 1; //当前关卡
+let map = [];
+let originMap = [];
+let playerPos = {x:0,y:0};
+let step = 0;
+
+const gameDom = document.getElementById('gameBox');
+const stepDom = document.getElementById('stepNum');
+const levelDom = document.getElementById('levelNum');
+const winModal = document.getElementById('winModal');
+const finalStepDom = document.getElementById('finalStep');
+
+//加载指定关卡
+function loadLevel(lv){
+    nowLevel = lv;
+    levelDom.innerText = nowLevel;
+    map = JSON.parse(JSON.stringify(levels[lv-1]));
+    originMap = JSON.parse(JSON.stringify(levels[lv-1]));
+    step = 0;
+    //寻找玩家初始坐标
+    for(let y=0;y<map.length;y++){
+        for(let x=0;x<map[y].length;x++){
+            if(map[y][x]===3){
+                playerPos = {x,y};
+                break;
+            }
+        }
+    }
+    renderMap();
+}
+
+//切换关卡
+function changeLevel(num){
+    loadLevel(num);
+}
+//下一关
+function nextLevel(){
+    if(nowLevel<levels.length){
+        loadLevel(nowLevel+1);
+    }else{
+        alert("已经是最后一关！");
+    }
+}
+//重置当前关卡
+function resetGame(){
+    loadLevel(nowLevel);
+}
+//通关弹窗：重玩
+function closeWinReset(){
+    winModal.style.display = 'none';
+    resetGame();
+}
+//通关弹窗：下一关
+function closeWinNext(){
+    winModal.style.display = 'none';
+    nextLevel();
+}
+
+// 渲染地图
+function renderMap(){
+    gameDom.innerHTML = '';
+    for(let y=0;y<map.length;y++){
+        let rowDiv = document.createElement('div');
+        for(let x=0;x<map[y].length;x++){
+            let cell = document.createElement('span');
+            cell.className = 'cell floor';
+            let val = map[y][x];
+            switch(val){
+                case 1: cell.classList.remove('floor');cell.classList.add('wall');break;
+                case 2: cell.classList.add('target');break;
+                case 3: cell.classList.add('player');break;
+                case 4: cell.classList.add('box');break;
+                case 5: cell.classList.add('box-on-target','target');break;
+            }
+            rowDiv.appendChild(cell);
+        }
+        gameDom.appendChild(rowDiv);
+    }
+    stepDom.innerText = step;
+    checkWin();
+}
+
+//检测通关
+function checkWin(){
+    let win = true;
+    for(let y=0;y<map.length;y++){
+        for(let x=0;x<map[y].length;x++){
+            if(map[y][x] ===4) win = false;
+        }
+    }
+    if(win){
+        finalStepDom.innerText = step;
+        winModal.style.display = 'flex';
+    }
+}
+
+//移动逻辑
+function move(dx,dy){
+    const nx = playerPos.x + dx;
+    const ny = playerPos.y + dy;
+    if(map[ny][nx] ===1) return;
+    //碰到箱子
+    if(map[ny][nx]===4 || map[ny][nx]===5){
+        const bx = nx+dx;
+        const by = ny+dy;
+        //箱子前方阻碍
+        if(map[by][bx]===1 || map[by][bx]===4 || map[by][bx]===5) return;
+        //放置箱子
+        map[by][bx] = map[by][bx]===2 ?5:4;
+        //原箱子位还原
+        map[ny][nx] = map[ny][nx]===5 ?2:0;
+    }
+    //玩家旧位置恢复
+    const ox = playerPos.x;
+    const oy = playerPos.y;
+    map[oy][ox] = originMap[oy][ox]===2 ?2:0;
+    //新玩家位置
+    playerPos = {x:nx,y:ny};
+    map[ny][nx] =3;
+    step++;
+    renderMap();
+}
+
+//键盘监听
+document.onkeydown = e=>{
+    switch(e.key){
+        case 'ArrowUp':case 'w':case 'W':move(0,-1);break;
+        case 'ArrowDown':case 's':case 'S':move(0,1);break;
+        case 'ArrowLeft':case 'a':case 'A':move(-1,0);break;
+        case 'ArrowRight':case 'd':case 'D':move(1,0);break;
+    }
+}
+
+//初始化加载第一关
+loadLevel(1);
+</script>
+</body>
+</html>
