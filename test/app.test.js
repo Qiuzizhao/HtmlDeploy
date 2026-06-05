@@ -18,6 +18,22 @@ test('public index uses a single HTML file picker', async () => {
   assert.doesNotMatch(html, /<input[^>]+id="fileInput"[^>]+webkitdirectory/);
 });
 
+test('pages expose a shared favicon', async () => {
+  const publicDir = path.join(__dirname, '..', 'public');
+  const indexHtml = await fsp.readFile(path.join(publicDir, 'index.html'), 'utf8');
+  const adminHtml = await fsp.readFile(path.join(publicDir, 'admin.html'), 'utf8');
+  const { app } = await makeTestApp({ publicDir });
+
+  assert.match(indexHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+  assert.match(adminHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+
+  const loginPage = await request(app).get('/admin.html').expect(200);
+  assert.match(loginPage.text, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+
+  const favicon = await request(app).get('/favicon.svg').expect(200);
+  assert.match(favicon.text || favicon.body.toString('utf8'), /<svg[^>]+viewBox="0 0 64 64"/);
+});
+
 test('public index does not show the project list heading or helper copy', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -227,6 +243,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/starred/);
   assert.match(html, /function toggleSiteStarred/);
   assert.match(html, /project-disabled-warning/);
+  assert.match(html, /forbidden-audit-note/);
+  assert.match(html, /site\.forbiddenAuditMessage/);
   assert.match(html, /<th>存储占用<\/th>/);
   assert.match(html, /className = 'storage-cell'/);
   assert.match(html, /storageCell\.textContent = formatBytes\(site\.storageBytes \|\| 0\)/);
@@ -928,22 +946,34 @@ test('admin forbidden audit disables projects with forbidden title or author', a
   assert.equal(audit.body.matched, 2);
   assert.equal(audit.body.disabled, 2);
   assert.deepEqual(
-    audit.body.matches.map((match) => [match.id, match.field, match.word]),
+    audit.body.matches.map((match) => [match.id, match.field, match.word, match.message]),
     [
-      ['bad-author-site', '作者署名', '坏作者'],
-      ['bad-title-site', '网页名字', '坏词']
+      ['bad-author-site', '作者署名', '坏作者', '作者署名包含违禁词「坏作者」'],
+      ['bad-title-site', '网页名字', '坏词', '网页名字包含违禁词「坏词」']
     ]
   );
 
   const sites = await admin.get('/api/admin/sites').expect(200);
   assert.deepEqual(
-    sites.body.map((site) => [site.id, site.enabled]),
+    sites.body.map((site) => [site.id, site.enabled, site.forbiddenAuditWord || '', site.forbiddenAuditMessage || '']),
     [
-      ['bad-author-site', false],
-      ['bad-title-site', false],
-      ['safe-site', true]
+      ['bad-author-site', false, '坏作者', '作者署名包含违禁词「坏作者」'],
+      ['bad-title-site', false, '坏词', '网页名字包含违禁词「坏词」'],
+      ['safe-site', true, '', '']
     ]
   );
+
+  await admin
+    .put('/api/sites/bad-title-site')
+    .field('title', '修正后的项目')
+    .field('author', '普通作者')
+    .field('classId', 'class-a')
+    .expect(200);
+  const secondAudit = await admin.post('/api/admin/sites/forbidden-audit').send({}).expect(200);
+  assert.equal(secondAudit.body.matched, 1);
+  const refreshedSites = await admin.get('/api/admin/sites').expect(200);
+  const fixedSite = refreshedSites.body.find((site) => site.id === 'bad-title-site');
+  assert.equal(fixedSite.forbiddenAuditMessage, undefined);
 });
 
 test('admin dedupe disables later projects with identical HTML code', async () => {

@@ -102,6 +102,24 @@ function createForbiddenWordError(match) {
   return `${match.field}不能包含违禁词「${match.word}」`;
 }
 
+function createForbiddenAuditMessage(match) {
+  return `${match.field}包含违禁词「${match.word}」`;
+}
+
+function clearForbiddenAudit(site) {
+  if (!site.forbiddenAuditMessage && !site.forbiddenAuditField && !site.forbiddenAuditWord) {
+    return site;
+  }
+
+  const {
+    forbiddenAuditMessage,
+    forbiddenAuditField,
+    forbiddenAuditWord,
+    ...rest
+  } = site;
+  return rest;
+}
+
 function stripCodeFence(value) {
   const content = String(value || '').trim();
   const fenced = content.match(/^```(?:html)?\s*([\s\S]*?)\s*```$/i)
@@ -376,6 +394,7 @@ function renderAdminLoginPage(errorMessage = '') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>后台登录 - 项目站</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     :root { color-scheme: light; --bg: #f4f6f2; --panel: #fff; --text: #1f2726; --muted: #68736f; --line: #dce3dd; --brand: #24715b; --danger: #b42318; }
     * { box-sizing: border-box; }
@@ -908,6 +927,7 @@ async function renderFileList({ id, title, projectDir }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title || id)} - 文件列表</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 32px; color: #172033; }
     h1 { font-size: 22px; margin: 0 0 16px; }
@@ -933,6 +953,7 @@ function renderPreviewPage({ id, title }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(pageTitle)}</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     :root { color-scheme: dark; --bar: #101418; --line: rgba(255, 255, 255, 0.12); --text: #f4f7f8; --muted: #aeb9bd; --button: rgba(255, 255, 255, 0.1); --button-hover: rgba(255, 255, 255, 0.18); }
     * { box-sizing: border-box; }
@@ -1754,7 +1775,11 @@ function createApp(options = {}) {
 
       const nextSites = sites.map((site) => {
         if (site.forbiddenWhitelist === true) {
-          return site;
+          const clearedSite = clearForbiddenAudit(site);
+          if (clearedSite !== site) {
+            changed = true;
+          }
+          return clearedSite;
         }
 
         const match = findForbiddenWordMatch(
@@ -1763,29 +1788,47 @@ function createApp(options = {}) {
         );
 
         if (!match) {
-          return site;
+          const clearedSite = clearForbiddenAudit(site);
+          if (clearedSite !== site) {
+            changed = true;
+          }
+          return clearedSite;
         }
 
+        const auditMessage = createForbiddenAuditMessage(match);
         matches.push({
           id: site.id,
           title: site.title,
           author: site.author || '',
           field: match.field,
           word: match.word,
+          message: auditMessage,
           wasEnabled: site.enabled !== false
         });
 
-        if (site.enabled === false) {
-          return site;
+        const nextSite = {
+          ...site,
+          forbiddenAuditField: match.field,
+          forbiddenAuditWord: match.word,
+          forbiddenAuditMessage: auditMessage
+        };
+
+        if (site.enabled !== false) {
+          disabledCount += 1;
+          nextSite.enabled = false;
         }
 
-        disabledCount += 1;
-        changed = true;
-        return {
-          ...site,
-          enabled: false,
-          updatedAt: new Date().toISOString()
-        };
+        if (
+          site.enabled !== nextSite.enabled
+          || site.forbiddenAuditField !== nextSite.forbiddenAuditField
+          || site.forbiddenAuditWord !== nextSite.forbiddenAuditWord
+          || site.forbiddenAuditMessage !== nextSite.forbiddenAuditMessage
+        ) {
+          changed = true;
+          nextSite.updatedAt = new Date().toISOString();
+        }
+
+        return nextSite;
       });
 
       if (changed) {
@@ -1915,11 +1958,11 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      const site = {
+      const site = clearForbiddenAudit({
         ...sites[siteIndex],
         forbiddenWhitelist,
         updatedAt: new Date().toISOString()
-      };
+      });
       sites[siteIndex] = site;
       await writeSites(dataFile, sites);
 
@@ -2217,11 +2260,11 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      const site = {
+      const site = clearForbiddenAudit({
         ...latestSites[latestSiteIndex],
         title,
         updatedAt: new Date().toISOString()
-      };
+      });
       latestSites[latestSiteIndex] = site;
       await writeSites(dataFile, latestSites);
 
@@ -2276,13 +2319,13 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
       }
 
-      const site = {
+      const site = clearForbiddenAudit({
         ...sites[siteIndex],
         title,
         author,
         classId,
         updatedAt: new Date().toISOString()
-      };
+      });
 
       if (file) {
         const projectDir = path.join(storageDir, id);

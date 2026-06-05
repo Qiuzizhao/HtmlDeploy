@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>后台管理 - 项目站</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     :root {
       color-scheme: light;
@@ -724,6 +725,15 @@
       font-weight: 900;
       line-height: 1;
       vertical-align: middle;
+    }
+
+    .forbidden-audit-note {
+      margin-top: 6px;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
     }
 
     .url {
@@ -2399,6 +2409,12 @@
           titleInput.style.height = titleInput.scrollHeight + 'px';
         }, 0);
         titleCell.append(titleInput);
+        if (site.forbiddenAuditMessage) {
+          const forbiddenNote = document.createElement('div');
+          forbiddenNote.className = 'forbidden-audit-note';
+          forbiddenNote.textContent = `违禁词：${site.forbiddenAuditMessage}`;
+          titleCell.append(forbiddenNote);
+        }
 
         const authorCell = document.createElement('td');
         const authorInput = document.createElement('input');
