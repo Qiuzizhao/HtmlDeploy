@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小公主化妆日记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ffd6e0, #f8c8dc);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            width: 100%;
+            max-width: 900px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .title {
+            text-align: center;
+            color: #ff5e94;
+            font-size: 28px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* 公主形象区域 */
+        .princess-area {
+            width: 300px;
+            height: 500px;
+            background: #fef4f8;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid #ffb6c1;
+        }
+
+        .princess {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* 所有装扮元素默认隐藏，通过类名显示 */
+        .part {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+        }
+
+        .base {
+            display: block;
+            width: 280px;
+            bottom: 0;
+        }
+
+        /* 发型 */
+        .hair1 { display: block; width: 220px; top: 20px; }
+        .hair2 { display: none; width: 230px; top: 20px; }
+        .hair3 { display: none; width: 240px; top: 15px; }
+
+        /* 妆容 */
+        .eyeshadow1 { display: none; width: 80px; top: 145px; left: 95px; }
+        .eyeshadow2 { display: none; width: 80px; top: 145px; left: 210px; }
+        .lipstick1 { display: none; width: 40px; top: 220px; }
+        .blush1 { display: none; width: 100px; top: 180px; }
+
+        /* 饰品 */
+        .crown1 { display: none; width: 120px; top: 10px; }
+        .earring1 { display: none; width: 30px; top: 170px; left: 80px; }
+        .earring2 { display: none; width: 30px; top: 170px; left: 200px; }
+        .necklace1 { display: none; width: 70px; top: 260px; }
+
+        /* 装扮工具栏 */
+        .tool-area {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .tool-group {
+            background: #fff0f6;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #ffc0d0;
+        }
+
+        .tool-title {
+            color: #ff5e94;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .style-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background: #ffb6c1;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .style-btn:hover {
+            background: #ff5e94;
+            transform: scale(1.05);
+        }
+
+        .reset-btn {
+            background: #ff6b6b;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .reset-btn:hover {
+            background: #ff3333;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">💖 小公主化妆日记 💖</h1>
+        
+        <div class="main-content">
+            <!-- 公主形象展示区 -->
+            <div class="princess-area">
+                <div class="princess">
+                    <!-- 基础形象 -->
+                    <img src="https://i.ibb.co/SVxf8tL/princess-base.png" class="part base" alt="基础形象">
+                    <!-- 发型 -->
+                    <img src="https://i.ibb.co/5jvLb4f/hair1.png" class="part hair1" alt="金发">
+                    <img src="https://i.ibb.co/Z2HdR0y/hair2.png" class="part hair2" alt="棕发">
+                    <img src="https://i.ibb.co/44XnBk0/hair3.png" class="part hair3" alt="粉发">
+                    <!-- 妆容 -->
+                    <img src="https://i.ibb.co/9s3vGmP/eyeshadow1.png" class="part eyeshadow1" alt="粉色眼影">
+                    <img src="https://i.ibb.co/5kDvLm7/eyeshadow2.png" class="part eyeshadow2" alt="紫色眼影">
+                    <img src="https://i.ibb.co/4Y7J8tL/lipstick1.png" class="part lipstick1" alt="口红">
+                    <img src="https://i.ibb.co/55vGz4Q/blush1.png" class="part blush1" alt="腮红">
+                    <!-- 饰品 -->
+                    <img src="https://i.ibb.co/2PwVqCn/crown1.png" class="part crown1" alt="皇冠">
+                    <img src="https://i.ibb.co/6XQHf7L/earring1.png" class="part earring1" alt="左耳环">
+                    <img src="https://i.ibb.co/6XQHf7L/earring1.png" class="part earring2" alt="右耳环">
+                    <img src="https://i.ibb.co/7XQpLc0/necklace1.png" class="part necklace1" alt="项链">
+                </div>
+            </div>
+
+            <!-- 装扮工具栏 -->
+            <div class="tool-area">
+                <!-- 发型 -->
+                <div class="tool-group">
+                    <h3 class="tool-title">👑 选择发型</h3>
+                    <div class="btn-group">
+                        <button class="style-btn" onclick="changeHair(1)">金色长发</button>
+                        <button class="style-btn" onclick="changeHair(2)">棕色卷发</button>
+                        <button class="style-btn" onclick="changeHair(3)">粉色短发</button>
+                    </div>
+                </div>
+
+                <!-- 妆容 -->
+                <div class="tool-group">
+                    <h3 class="tool-title">🎨 化妆打扮</h3>
+                    <div class="btn-group">
+                        <button class="style-btn" onclick="toggleMakeup('eyeshadow1')">粉色眼影</button>
+                        <button class="style-btn" onclick="toggleMakeup('eyeshadow2')">紫色眼影</button>
+                        <button class="style-btn" onclick="toggleMakeup('lipstick1')">口红</button>
+                        <button class="style-btn" onclick="toggleMakeup('blush1')">腮红</button>
+                    </div>
+                </div>
+
+                <!-- 饰品 -->
+                <div class="tool-group">
+                    <h3 class="tool-title">✨ 搭配饰品</h3>
+                    <div class="btn-group">
+                        <button class="style-btn" onclick="toggleMakeup('crown1')">皇冠</button>
+                        <button class="style-btn" onclick="toggleEarring()">耳环</button>
+                        <button class="style-btn" onclick="toggleMakeup('necklace1')">项链</button>
+                    </div>
+                </div>
+
+                <!-- 重置 -->
+                <button class="style-btn reset-btn" onclick="resetPrincess()">🔄 一键重置装扮</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切换发型
+        function changeHair(num) {
+            document.querySelector('.hair1').style.display = 'none';
+            document.querySelector('.hair2').style.display = 'none';
+            document.querySelector('.hair3').style.display = 'none';
+            document.querySelector(`.hair${num}`).style.display = 'block';
+        }
+
+        // 切换妆容/单个饰品
+        function toggleMakeup(className) {
+            const element = document.querySelector(`.${className}`);
+            element.style.display = element.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 同时佩戴左右耳环
+        function toggleEarring() {
+            const ear1 = document.querySelector('.earring1');
+            const ear2 = document.querySelector('.earring2');
+            ear1.style.display = ear1.style.display === 'none' ? 'block' : 'none';
+            ear2.style.display = ear2.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 重置所有装扮
+        function resetPrincess() {
+            changeHair(1); // 默认发型
+            const allParts = document.querySelectorAll('.part');
+            allParts.forEach(part => {
+                if(!part.classList.contains('base') && !part.classList.contains('hair1')) {
+                    part.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

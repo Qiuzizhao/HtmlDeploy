@@ -1,0 +1,105 @@
+import random
+
+# 游戏初始化
+print("🎮 欢迎来到 无畏契约 文字小游戏！")
+player_name = input("请输入你的名字：")
+player_hp = 100
+enemy_hp = 100
+coins = 800  # 初始经济
+is_ultimate_ready = False  # 大招是否就绪
+
+# 角色选择
+print("\n===== 可选角色 =====")
+characters = ["捷风", "炼狱", "贤者", "雷兹", "零"]
+for i, char in enumerate(characters, 1):
+    print(f"{i}. {char}")
+
+choice = int(input("请选择角色（输入数字）：")) - 1
+player_character = characters[choice]
+print(f"\n✅ 你选择了：【{player_character}】，准备战斗！")
+
+# 武器商店
+def buy_weapon():
+    global coins
+    print("\n===== 武器商店 =====")
+    weapons = {
+        1: {"name": "标配手枪", "damage": 25, "price": 0},
+        2: {"name": "鬼魅", "damage": 35, "price": 500},
+        3: {"name": "狂徒", "damage": 45, "price": 800}
+    }
+    for k, v in weapons.items():
+        print(f"{k}. {v['name']} | 伤害：{v['damage']} | 价格：{v['price']}")
+    
+    buy_choice = int(input("请购买武器（输入数字）："))
+    weapon = weapons[buy_choice]
+    
+    if coins >= weapon["price"]:
+        coins -= weapon["price"]
+        print(f"✅ 购买成功！剩余金币：{coins}")
+        return weapon["damage"]
+    else:
+        print("❌ 金币不足，自动装备标配手枪")
+        return weapons[1]["damage"]
+
+# 购买武器
+player_damage = buy_weapon()
+
+# 对战开始
+print("\n===== 战斗开始！敌方已出现 =====")
+round_num = 1
+
+# 游戏主循环
+while player_hp > 0 and enemy_hp > 0:
+    print(f"\n--- 第 {round_num} 回合 ---")
+    print(f"🧍你的HP：{player_hp} | 👾敌人HP：{enemy_hp}")
+    
+    # 玩家行动
+    print("\n===== 你的行动 =====")
+    print("1. 普通攻击")
+    print("2. 使用技能（消耗10HP）")
+    print("3. 大招（满能量才能用）")
+    action = input("请选择行动（1/2/3）：")
+
+    # 玩家攻击逻辑
+    if action == "1":
+        damage = random.randint(player_damage-5, player_damage+5)
+        enemy_hp -= damage
+        print(f"🔫 你对敌人造成了 {damage} 点伤害！")
+    
+    elif action == "2":
+        if player_hp > 10:
+            damage = random.randint(40, 60)
+            player_hp -= 10
+            enemy_hp -= damage
+            print(f"✨ 使用技能！造成 {damage} 伤害，自身消耗10HP")
+        else:
+            print("❌ HP不足，无法使用技能！")
+    
+    elif action == "3":
+        if is_ultimate_ready:
+            damage = 100
+            enemy_hp -= damage
+            is_ultimate_ready = False
+            print(f"💥 大招启动！直接造成 {damage} 点秒杀伤害！")
+        else:
+            print("❌ 大招能量不足！")
+            # 每回合积攒大招能量
+            is_ultimate_ready = True
+    
+    # 敌人死亡判断
+    if enemy_hp <= 0:
+        break
+
+    # 敌人攻击
+    enemy_damage = random.randint(20, 40)
+    player_hp -= enemy_damage
+    print(f"👾 敌人攻击了你！造成 {enemy_damage} 点伤害")
+
+    round_num += 1
+
+# 游戏结束
+print("\n===== 游戏结束 =====")
+if player_hp > 0:
+    print(f"🎉 恭喜 {player_name} 使用【{player_character}】获得胜利！")
+else:
+    print(f"💀 你被敌人击败了，再接再厉！")
