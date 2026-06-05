@@ -24,12 +24,13 @@
   {
     "id": "a97f837c",
     "number": "00204",
-    "title": "朔墨牛逼",
+    "title": "白雪森林冒险",
     "author": "朔墨牛逼",
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:25:41.719Z"
+    "createdAt": "2026-06-05T02:25:41.719Z",
+    "updatedAt": "2026-06-05T07:13:12.988Z"
   },
   {
     "id": "ec39275e",
