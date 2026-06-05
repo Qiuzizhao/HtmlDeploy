@@ -920,6 +920,20 @@
     </form>
   </div>
 
+  <div class="overlay" id="uploadSuccessOverlay" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="uploadSuccessTitle">
+      <div class="modal-head">
+        <h2 class="modal-title" id="uploadSuccessTitle">上传成功</h2>
+      </div>
+      <div class="modal-body">
+        <p style="margin: 0; color: var(--text); line-height: 1.7; font-weight: 650;">上传成功，请勿重复上传。</p>
+      </div>
+      <div class="modal-actions">
+        <button class="primary-button" id="closeUploadSuccess" type="button">我知道了</button>
+      </div>
+    </section>
+  </div>
+
   <div class="preview-backdrop" id="previewBackdrop" aria-hidden="true"></div>
 
   <div class="overlay preview-overlay" id="previewOverlay" aria-hidden="true">
@@ -964,6 +978,7 @@
     const previewBackdrop = document.getElementById('previewBackdrop');
     const previewOverlay = document.getElementById('previewOverlay');
     const codeOverlay = document.getElementById('codeOverlay');
+    const uploadSuccessOverlay = document.getElementById('uploadSuccessOverlay');
     const uploadForm = document.getElementById('uploadForm');
     const titleInput = document.getElementById('titleInput');
     const authorInput = document.getElementById('authorInput');
@@ -1074,6 +1089,14 @@
 
     function closeUpload() {
       closeOverlay(uploadOverlay);
+    }
+
+    function openUploadSuccess() {
+      openOverlay(uploadSuccessOverlay);
+    }
+
+    function closeUploadSuccess() {
+      closeOverlay(uploadSuccessOverlay);
     }
 
     function focusPreviewFrame() {
@@ -1606,6 +1629,7 @@
 
       closeUpload();
       await loadSites();
+      openUploadSuccess();
     });
 
     openUploadButton.addEventListener('click', openUpload);
@@ -1613,6 +1637,7 @@
     previewUploadButton.addEventListener('click', previewUploadDraft);
     document.getElementById('closeUpload').addEventListener('click', closeUpload);
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
+    document.getElementById('closeUploadSuccess').addEventListener('click', closeUploadSuccess);
     document.getElementById('closePreview').addEventListener('click', closePreview);
     document.getElementById('closeCode').addEventListener('click', closeCodeWindow);
     copyCodeButton.addEventListener('click', copyProjectCode);
@@ -1631,6 +1656,12 @@
     uploadOverlay.addEventListener('click', (event) => {
       if (event.target === uploadOverlay) {
         closeUpload();
+      }
+    });
+
+    uploadSuccessOverlay.addEventListener('click', (event) => {
+      if (event.target === uploadSuccessOverlay) {
+        closeUploadSuccess();
       }
     });
 

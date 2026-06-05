@@ -100,6 +100,21 @@ test('public index can preview upload draft before submitting', async () => {
   assert.match(html, /previewUploadButton\.addEventListener\('click', previewUploadDraft\)/);
 });
 
+test('public index shows a success dialog after upload completes', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /id="uploadSuccessOverlay"/);
+  assert.match(html, /上传成功，请勿重复上传/);
+  assert.match(html, /id="closeUploadSuccess"[^>]*>我知道了<\/button>/);
+  assert.match(html, /const uploadSuccessOverlay = document\.getElementById\('uploadSuccessOverlay'\)/);
+  assert.match(html, /function openUploadSuccess/);
+  assert.match(html, /openOverlay\(uploadSuccessOverlay\)/);
+  assert.match(html, /function closeUploadSuccess/);
+  assert.match(html, /closeOverlay\(uploadSuccessOverlay\)/);
+  assert.match(html, /await loadSites\(\);\s+openUploadSuccess\(\);/);
+  assert.match(html, /document\.getElementById\('closeUploadSuccess'\)\.addEventListener\('click', closeUploadSuccess\)/);
+});
+
 test('public index renders an all tab before class buttons', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
