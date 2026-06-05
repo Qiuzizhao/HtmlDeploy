@@ -584,6 +584,7 @@ function getThumbnailUrl(thumbnailDir, id) {
 function toPublicSite(site, classes, thumbnailDir) {
   return {
     ...attachClassName(site, classes),
+    starred: site.starred === true,
     enabled: site.enabled !== false,
     url: `/site/${site.id}`,
     previewUrl: `/preview/${site.id}`,
@@ -1461,6 +1462,7 @@ function createApp(options = {}) {
         author,
         classId,
         enabled: true,
+        starred: false,
         forbiddenWhitelist: false,
         createdAt: new Date().toISOString()
       };
@@ -1633,6 +1635,32 @@ function createApp(options = {}) {
       const site = {
         ...sites[siteIndex],
         forbiddenWhitelist,
+        updatedAt: new Date().toISOString()
+      };
+      sites[siteIndex] = site;
+      await writeSites(dataFile, sites);
+
+      const classes = await readClasses(classesFile);
+      return res.json(toPublicSite(site, classes, thumbnailDir));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch('/api/sites/:id/starred', requireAdmin, async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const starred = Boolean(req.body.starred);
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((site) => site.id === id);
+
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const site = {
+        ...sites[siteIndex],
+        starred,
         updatedAt: new Date().toISOString()
       };
       sites[siteIndex] = site;
