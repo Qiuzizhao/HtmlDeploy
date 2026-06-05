@@ -65,12 +65,13 @@
   {
     "id": "4139a720",
     "number": "00200",
-    "title": "123",
+    "title": "双人合作闯关",
     "author": "123",
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:24:18.223Z"
+    "createdAt": "2026-06-05T02:24:18.223Z",
+    "updatedAt": "2026-06-05T07:13:22.762Z"
   },
   {
     "id": "b582c9a6",
