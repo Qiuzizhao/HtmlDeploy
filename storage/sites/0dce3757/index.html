@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多分支甜心恋爱模拟器 💖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        love: {100:'#fff0f3',200:'#ffccd5',300:'#ff8fab',400:'#ff5d8f',500:'#ff0a54',600:'#d90049'},
+                        mood:{normal:'#60a5fa',happy:'#fbbf24',shy:'#f472b6',angry:'#ef4444'}
+                    },
+                    fontFamily: {cute:['"Comic Sans MS"','sans-serif']}
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow{text-shadow:0 2px 4px rgba(0,0,0,0.1)}
+            .animate-float{animation:float 3s ease-in-out infinite}
+            .animate-bounce-light{animation:bounce-light 2s infinite}
+            .bg-gradient-love{background:linear-gradient(135deg,#ffccd5 0%,#ff8fab 100%)}
+        }
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        @keyframes bounce-light{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+    </style>
+</head>
+<body class="bg-love-100 font-cute min-h-screen">
+<div class="max-w-4xl mx-auto p-4 md:p-6">
+    <div class="text-center mb-6">
+        <h1 class="text-[clamp(1.8rem,5vw,3rem)] font-bold text-love-500 text-shadow animate-float">
+            <i class="fa fa-heart animate-bounce-light text-love-400"></i>多分支恋爱模拟器
+            <i class="fa fa-heart animate-bounce-light text-love-400"></i>
+        </h1>
+        <p class="text-gray-600 mt-2">不同选择开启专属支线，三种结局等你解锁~</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-love-200">
+        <!-- 状态栏 -->
+        <div class="bg-love-300 p-3 flex justify-between items-center flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center border-2 border-love-400">
+                    <i class="fa fa-user text-love-500 text-xl"></i>
+                </div>
+                <span class="font-bold text-white text-shadow">小甜</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-white">当前节点：<span id="nodeName">初识约会</span></span>
+                <i class="fa fa-heart text-white"></i>
+                <span id="favor-value" class="font-bold text-white">50</span>
+                <div id="favor-stars" class="text-yellow-300"></div>
+            </div>
+        </div>
+
+        <!-- 场景 -->
+        <div id="scene" class="h-52 md:h-72 bg-cover bg-center transition-all duration-500" style="background-image:url('https://picsum.photos/id/1000/1000/600')">
+            <div class="w-full h-full bg-black/30 flex items-center justify-center">
+                <div id="mood" class="bg-white/80 px-4 py-2 rounded-full text-mood-normal font-bold">
+                    <i class="fa fa-smile-o"></i>心情不错
+                </div>
+            </div>
+        </div>
+
+        <!-- 对话 -->
+        <div class="p-4 bg-gray-50 min-h-[120px]">
+            <p id="dialog" class="text-gray-700 text-lg text-center">你好呀～今天想和我一起做什么呢？</p>
+        </div>
+
+        <!-- 动态选项区（自动根据分支刷新） -->
+        <div id="optionBox" class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-white"></div>
+    </div>
+
+    <!-- 功能按钮 -->
+    <div class="mt-6 flex justify-center gap-3 flex-wrap">
+        <button onclick="changeScene(1)" class="bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded-lg">
+            <i class="fa fa-coffee"></i>咖啡馆
+        </button>
+        <button onclick="changeScene(2)" class="bg-purple-400 hover:bg-purple-500 text-white px-4 py-2 rounded-lg">
+            <i class="fa fa-home"></i>居家
+        </button>
+        <button onclick="changeScene(3)" class="bg-green-400 hover:bg-green-500 text-white px-4 py-2 rounded-lg">
+            <i class="fa fa-gamepad"></i>游乐园
+        </button>
+        <button onclick="resetGame()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg">
+            <i class="fa fa-refresh"></i>重新开局
+        </button>
+        <button onclick="checkEnding()" class="bg-love-400 hover:bg-love-500 text-white px-4 py-2 rounded-lg">
+            <i class="fa fa-gift"></i>查看结局
+        </button>
+    </div>
+
+    <div id="level-tip" class="mt-4 text-center text-love-500 font-bold hidden"></div>
+</div>
+
+<script>
+//=========1、全局游戏数据（新增分支必备变量）=========
+let gameData={
+    favor:50,maxFavor:100,mood:'normal',currentScene:1,
+    storyNode:'start', // 当前剧情节点ID
+    eventList:[],      // 已触发事件，用于解锁隐藏分支
+    secretFlag:false   // 隐藏告白线开关
+};
+//场景图集
+const scenes=['','https://picsum.photos/id/1000/1000/600','https://picsum.photos/id/164/1000/600','https://picsum.photos/id/1036/1000/600'];
+
+//=========2、【核心：全剧情分支配置表】新增/改分支只改这里！=========
+//格式：节点ID:{name:节点名,text:对话,mood:心情,options:[{文案,好感变化,跳转节点,触发条件(可选)},...]}
+const storyData={
+    //初始主线节点
+    start:{
+        name:'初识约会',
+        text:'你好呀～今天想和我一起做什么呢？',
+        mood:'normal',
+        options:[
+            {txt:'温柔夸奖：你今天真好看！✨',addFavor:10,toNode:'praise1'},
+            {txt:'贴心关心：累不累？我去买饮品☕',addFavor:8,toNode:'care1'},
+            {txt:'调皮打趣：是不是偷偷惦记我😜',addFavor:5,toNode:'tease1'},
+            {txt:'邀约游乐园：我们去玩项目吧🎠',addFavor:12,toNode:'parkBranch'}
+        ]
+    },
+    //夸奖支线
+    praise1:{
+        name:'害羞夸奖线',
+        text:'哇！突然被夸奖我耳朵都红了，你好会说话😳',
+        mood:'shy',
+        options:[
+            {txt:'顺势告白：我喜欢你很久了',addFavor:15,toNode:'confess',cond:{favorMin:65}},//好感≥65解锁告白选项
+            {txt:'继续闲聊：就是实话嘛',addFavor:3,toNode:'start'},
+            {txt:'约晚饭：晚上一起吃西餐？',addFavor:7,toNode:'dinnerBranch',cond:{scene:[1,3]}}//仅咖啡馆/游乐园场景可用
+        ]
+    },
+    //关心支线
+    care1:{
+        name:'暖心陪伴线',
+        text:'有你关心真的超幸福，瞬间不累啦🥰',
+        mood:'happy',
+        options:[
+            {txt:'牵手散步',addFavor:10,toNode:'handEvent'},//触发牵手事件，存入eventList
+            {txt:'返回日常聊天',addFavor:2,toNode:'start'}
+        ]
+    },
+    //调皮支线
+    tease1:{
+        name:'打闹支线',
+        text:'讨厌啦谁想你啦…就一点点而已！',
+        mood:'shy',
+        options:[
+            {txt:'逗到底：明明就是想我',addFavor:-5,toNode:'angryBranch'},//扣分进生气坏结局分支
+            {txt:'收敛温柔：开玩笑的啦',addFavor:6,toNode:'start'}
+        ]
+    },
+    //游乐园独立分支
+    parkBranch:{
+        name:'游乐园支线',
+        text:'太好了！过山车还是摩天轮？我都可以！',
+        mood:'happy',
+        options:[
+            {txt:'坐摩天轮（隐藏事件）',addFavor:18,toNode:'wheelEvent'},
+            {txt:'玩过山车',addFavor:9,toNode:'start'}
+        ]
+    },
+    //生气扣分分支（坏走向）
+    angryBranch:{
+        name:'闹别扭分支',
+        text:'你太过分了！老是取笑我，我有点生气了😤',
+        mood:'angry',
+        options:[
+            {txt:'诚恳道歉哄人',addFavor:12,toNode:'start'},
+            {txt:'不以为然继续调侃',addFavor:-15,toNode:'badEndPre'}
+        ]
+    },
+    //牵手事件（解锁隐藏线必备）
+    handEvent:{
+        name:'牵手事件',
+        text:'被你牵住手心跳超快…第一次和异性牵手',
+        mood:'shy',
+        options:[{txt:'借机约定下次见面',addFavor:10,toNode:'start'}],
+        event:'handDone'//标记已触发牵手
+    },
+    //摩天轮隐藏事件（解锁告白隐藏线）
+    wheelEvent:{
+        name:'高空摩天轮',
+        text:'升到最高点啦！晚风好温柔，此刻只想和你待在一起',
+        mood:'happy',
+        options:[{txt:'高空告白（开启隐藏结局线）',addFavor:20,toNode:'secretOpen'}],
+        event:'wheelDone'
+    },
+    //开启隐藏告白线
+    secretOpen:{
+        name:'隐藏告白线开启',
+        text:'我等这句话好久啦！我们正式交往吧❤️',
+        mood:'happy',
+        options:[{txt:'确定交往',addFavor:15,toNode:'start'}],
+        setSecret:true//开启secretFlag=true
+    },
+    //西餐约会支线
+    dinnerBranch:{
+        name:'晚餐支线',
+        text:'收到晚餐邀约！精心打扮赴约，烛光晚餐氛围感拉满',
+        mood:'happy',
+        options:[{txt:'晚餐结束散步',addFavor:8,toNode:'start'}]
+    },
+    //提前坏结局前置
+    badEndPre:{
+        name:'冷淡前置',
+        text:'一直不尊重我，我不想继续约会了，准备分开',
+        mood:'angry',
+        options:[{txt:'结束约会',addFavor:0,toNode:'ending'}]
+    },
+    //正式告白主线
+    confess:{
+        name:'正式告白',
+        text:'突如其来的告白…我考虑好了，愿意和你在一起！',
+        mood:'happy',
+        options:[{txt:'确定恋爱关系',addFavor:18,toNode:'start'}]
+    },
+    //结局汇总节点（根据数值自动分3结局）
+    ending:{name:'结局判定',text:'',mood:'normal',options:[]}
+};
+
+//=========3、渲染当前剧情（自动筛选符合条件的选项，分支核心函数）=========
+function renderStory(){
+    const now=storyData[gameData.storyNode];
+    document.getElementById('nodeName').innerText=now.name;
+    document.getElementById('dialog').innerText=now.text;
+    gameData.mood=now.mood;
+    updateMood();
+    //清空选项区
+    const optBox=document.getElementById('optionBox');
+    optBox.innerHTML='';
+    //遍历选项，判断【解锁条件】再渲染（好感/场景/事件限制）
+    now.options.forEach(opt=>{
+        //条件判断：cond存在才校验
+        let canShow=true;
+        if(opt.cond){
+            //好感下限判断
+            if(opt.cond.favorMin&&gameData.favor<opt.cond.favorMin) canShow=false;
+            //场景限制：仅指定场景可用
+            if(opt.cond.scene&&!opt.cond.scene.includes(gameData.currentScene)) canShow=false;
+        }
+        //满足条件才生成按钮
+        if(canShow){
+            const btn=document.createElement('button');
+            btn.className='option-btn bg-love-200 hover:bg-love-300 text-love-600 font-bold py-3 px-4 rounded-xl transition-all transform hover:scale-105';
+            btn.innerText=opt.txt;
+            btn.onclick=()=>selectOption(opt);
+            optBox.appendChild(btn);
+        }
+    });
+    //触发节点自带事件
+    if(now.event&&!gameData.eventList.includes(now.event)){
+        gameData.eventList.push(now.event);
+    }
+    //开启隐藏开关
+    if(now.setSecret) gameData.secretFlag=true;
+}
+
+//=========4、选择选项，跳转分支节点=========
+function selectOption(opt){
+    //增减好感
+    gameData.favor+=opt.addFavor;
+    gameData.favor=Math.max(0,Math.min(gameData.favor,gameData.maxFavor));
+    //切换剧情节点（分支跳转核心）
+    gameData.storyNode=opt.toNode;
+    //刷新界面
+    updateUI();
+    renderStory();
+    createHearts();
+}
+
+//=========5、结局判定：3种结局【甜蜜HE/普通结局/遗憾BE】=========
+function checkEnding(){
+    gameData.storyNode='ending';
+    let endText='';
+    //分支判定条件
+    if(gameData.favor>=85&&gameData.secretFlag&&gameData.eventList.includes('wheelDone')){
+        endText='【完美甜蜜结局❤️】正式确定恋人，往后每个节日都相伴约会！';
+    }else if(gameData.favor>=50){
+        endText='【普通恋爱结局💛】成为暧昧好友，慢慢发展恋爱关系';
+    }else{
+        endText='【遗憾分手结局💔】好感过低，这次约会结束后不再联系';
+    }
+    document.getElementById('dialog').innerText=endText;
+    document.getElementById('optionBox').innerHTML='<button onclick="resetGame()" class="bg-love-400 text-white p-3 rounded-lg">重新开局解锁其他结局</button>';
+}
+
+//=========6、原有基础函数（好感、场景、爱心、重置）=========
+function updateUI(){
+    document.getElementById('favor-value').innerText=gameData.favor;
+    updateStars();
+    if(gameData.favor>=gameData.maxFavor) document.getElementById('level-tip').classList.remove('hidden');
+    else document.getElementById('level-tip').classList.add('hidden');
+}
+function updateStars(){
+    const starNum=Math.floor(gameData.favor/20);
+    let s='';for(let i=1;i<=5;i++)s+=i<=starNum?'<i class="fa fa-star"></i>':'<i class="fa fa-star-o"></i>';
+    document.getElementById('favor-stars').innerHTML=s;
+}
+function updateMood(){
+    const moodEl=document.getElementById('mood');
+    const moodMap={normal:'fa-smile-o|心情不错',happy:'fa-smile-o|超开心',shy:'fa-heart|害羞啦',angry:'fa-angry|生气了'};
+    let [icon,txt]=moodMap[gameData.mood].split('|');
+    moodEl.className=`bg-white/80 px-4 py-2 rounded-full text-mood-${gameData.mood} font-bold`;
+    moodEl.innerHTML=`<i class="fa ${icon}"></i> ${txt}`;
+}
+function changeScene(num){
+    gameData.currentScene=num;
+    document.getElementById('scene').style.backgroundImage=`url(${scenes[num]})`;
+    renderStory();
+}
+function resetGame(){
+    gameData={favor:50,maxFavor:100,mood:'normal',currentScene:1,storyNode:'start',eventList:[],secretFlag:false};
+    updateUI();
+    changeScene(1);
+}
+//爱心飘落
+function createHearts(){
+    for(let i=0;i<15;i++){
+        const h=document.createElement('div');
+        let size=Math.random()*20+10;
+        let x=Math.random()*window.innerWidth;
+        let c=['#ff5d8f','#ff0a54','#f472b6','#fbbf24'][Math.floor(Math.random()*4)];
+        h.innerHTML='<i class="fa fa-heart"></i>';
+        h.style=`position:fixed;left:${x}px;top:0;font-size:${size}px;color:${c};opacity:0.8;pointer-events:none;z-index:1000;animation:fall 2s linear forwards;`;
+        document.body.appendChild(h);
+        setTimeout(()=>h.remove(),2000);
+    }
+}
+const fallCss=document.createElement('style');
+fallCss.textContent=`@keyframes fall{0%{transform:translateY(0) rotate(0deg);opacity:0.8}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}`;
+document.head.appendChild(fallCss);
+
+//初始化
+renderStory();
+updateUI();
+</script>
+</body>
+</html>
