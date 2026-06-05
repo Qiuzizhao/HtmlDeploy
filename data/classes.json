@@ -69,5 +69,14 @@
     "uploadEnabled": true,
     "passwordEnabled": true,
     "createdAt": "2026-06-04T01:20:15.251Z"
+  },
+  {
+    "id": "9fd405c7",
+    "name": "星标验证pwlo3",
+    "password": "123456",
+    "uploadEnabled": true,
+    "passwordEnabled": false,
+    "createdAt": "2026-06-05T09:24:22.373Z",
+    "updatedAt": "2026-06-05T09:24:22.378Z"
   }
 ]
