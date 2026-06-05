@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>萌宠小猫 - 饲养小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #fdf6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: linear-gradient(to top, #ffebf2, #f9fcff);
+        }
+
+        .game-box {
+            width: 380px;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .title {
+            font-size: 24px;
+            color: #ff5e94;
+            margin-bottom: 10px;
+        }
+
+        .cat-img {
+            width: 160px;
+            margin: 15px 0;
+        }
+
+        .status-bar {
+            margin: 10px 0;
+        }
+
+        .status-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .bar-bg {
+            width: 100%;
+            height: 12px;
+            background: #eee;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: #7cc1ff;
+            border-radius: 6px;
+            transition: width 0.4s;
+        }
+
+        .btn-group {
+            margin-top: 25px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            background: #ff9dbb;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #ff739e;
+            transform: scale(1.03);
+        }
+
+        .tip {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-box">
+        <div class="title">🐱 我的小猫咪</div>
+        <img class="cat-img" src="https://s1.imagehub.cc/images/2025/04/12/v5ycat.png" alt="小猫">
+        
+        <!-- 饱食度 -->
+        <div class="status-bar">
+            <div class="status-text">
+                <span>饱食度</span>
+                <span id="food">100</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="food-bar" style="width:100%"></div></div>
+        </div>
+
+        <!-- 心情 -->
+        <div class="status-bar">
+            <div class="status-text">
+                <span>心情</span>
+                <span id="happy">100</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="happy-bar" style="width:100%"></div></div>
+        </div>
+
+        <!-- 清洁 -->
+        <div class="status-bar">
+            <div class="status-text">
+                <span>清洁</span>
+                <span id="clean">100</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="clean-bar" style="width:100%"></div></div>
+        </div>
+
+        <!-- 能量 -->
+        <div class="status-bar">
+            <div class="status-text">
+                <span>能量</span>
+                <span id="energy">100</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="energy-bar" style="width:100%"></div></div>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="feed()">喂食 🍖</button>
+            <button onclick="play()">玩耍 🧶</button>
+            <button onclick="clean()">清洁 🧹</button>
+            <button onclick="sleep()">睡觉 😴</button>
+        </div>
+
+        <div class="tip">属性会随时间下降，要好好照顾小猫哦～</div>
+    </div>
+
+    <script>
+        // 初始状态
+        let food = 100;    // 饱食
+        let happy = 100;   // 心情
+        let clean = 100;   // 清洁
+        let energy = 100;  // 能量
+
+        // 更新界面显示
+        function updateUI() {
+            document.getElementById("food").innerText = food;
+            document.getElementById("food-bar").style.width = food + "%";
+
+            document.getElementById("happy").innerText = happy;
+            document.getElementById("happy-bar").style.width = happy + "%";
+
+            document.getElementById("clean").innerText = clean;
+            document.getElementById("clean-bar").style.width = clean + "%";
+
+            document.getElementById("energy").innerText = energy;
+            document.getElementById("energy-bar").style.width = energy + "%";
+        }
+
+        // 喂食
+        function feed() {
+            food = Math.min(food + 20, 100);
+            energy = Math.max(energy - 5, 0);
+            updateUI();
+        }
+
+        // 玩耍
+        function play() {
+            happy = Math.min(happy + 25, 100);
+            food = Math.max(food - 8, 0);
+            energy = Math.max(energy - 10, 0);
+            updateUI();
+        }
+
+        // 清洁
+        function clean() {
+            clean = Math.min(clean + 30, 100);
+            energy = Math.max(energy - 5, 0);
+            updateUI();
+        }
+
+        // 睡觉
+        function sleep() {
+            energy = Math.min(energy + 40, 100);
+            updateUI();
+        }
+
+        // 自动下降系统
+        setInterval(() => {
+            food = Math.max(food - 1, 0);
+            happy = Math.max(happy - 1, 0);
+            clean = Math.max(clean - 1, 0);
+            energy = Math.max(energy - 1, 0);
+            updateUI();
+        }, 1000);
+
+        updateUI();
+    </script>
+</body>
+</html>
