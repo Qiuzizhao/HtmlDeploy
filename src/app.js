@@ -120,6 +120,27 @@ function clearForbiddenAudit(site) {
   return rest;
 }
 
+function createDuplicateAuditMessage(keepSite) {
+  const keepTitle = String(keepSite.title || '').trim() || keepSite.id;
+  const keepNumber = String(keepSite.number || '').trim();
+  const keepLabel = keepNumber ? `${keepTitle}（${keepNumber}）` : keepTitle;
+  return `与「${keepLabel}」代码重复`;
+}
+
+function clearDuplicateAudit(site) {
+  if (!site.duplicateAuditMessage && !site.duplicateAuditKeepId && !site.duplicateAuditKeepTitle) {
+    return site;
+  }
+
+  const {
+    duplicateAuditMessage,
+    duplicateAuditKeepId,
+    duplicateAuditKeepTitle,
+    ...rest
+  } = site;
+  return rest;
+}
+
 function stripCodeFence(value) {
   const content = String(value || '').trim();
   const fenced = content.match(/^```(?:html)?\s*([\s\S]*?)\s*```$/i)
@@ -1867,7 +1888,7 @@ function createApp(options = {}) {
       let disabledCount = 0;
       let duplicateGroups = 0;
       const matches = [];
-      const disabledIds = new Set();
+      const duplicateAuditById = new Map();
 
       for (const groupSites of groups.values()) {
         if (groupSites.length < 2) {
@@ -1877,35 +1898,57 @@ function createApp(options = {}) {
         duplicateGroups += 1;
         const orderedSites = [...groupSites].sort(compareSitesByCreatedAt);
         const keepSite = orderedSites[0];
+        const auditMessage = createDuplicateAuditMessage(keepSite);
         for (const duplicateSite of orderedSites.slice(1)) {
+          duplicateAuditById.set(duplicateSite.id, {
+            duplicateAuditKeepId: keepSite.id,
+            duplicateAuditKeepTitle: keepSite.title || '',
+            duplicateAuditMessage: auditMessage
+          });
           matches.push({
             id: duplicateSite.id,
             title: duplicateSite.title || '',
             keepId: keepSite.id,
             keepTitle: keepSite.title || '',
+            message: auditMessage,
             wasEnabled: duplicateSite.enabled !== false
           });
-
-          if (duplicateSite.enabled !== false) {
-            disabledIds.add(duplicateSite.id);
-          }
         }
       }
 
-      if (disabledIds.size) {
-        const now = new Date().toISOString();
-        const nextSites = sites.map((site) => {
-          if (!disabledIds.has(site.id)) {
-            return site;
-          }
+      const now = new Date().toISOString();
+      const nextSites = sites.map((site) => {
+        const duplicateAudit = duplicateAuditById.get(site.id);
+        if (!duplicateAudit) {
+          return clearDuplicateAudit(site);
+        }
 
+        const nextSite = {
+          ...site,
+          ...duplicateAudit,
+          enabled: false
+        };
+
+        if (site.enabled !== false) {
           disabledCount += 1;
+        }
+
+        if (
+          site.enabled !== nextSite.enabled
+          || site.duplicateAuditKeepId !== nextSite.duplicateAuditKeepId
+          || site.duplicateAuditKeepTitle !== nextSite.duplicateAuditKeepTitle
+          || site.duplicateAuditMessage !== nextSite.duplicateAuditMessage
+        ) {
           return {
-            ...site,
-            enabled: false,
+            ...nextSite,
             updatedAt: now
           };
-        });
+        }
+
+        return site;
+      });
+
+      if (JSON.stringify(nextSites) !== JSON.stringify(sites)) {
         await writeSites(dataFile, nextSites);
       }
 
@@ -2112,10 +2155,10 @@ function createApp(options = {}) {
       await fsp.mkdir(projectDir, { recursive: true });
       await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
 
-      const site = {
+      const site = clearDuplicateAudit({
         ...sites[siteIndex],
         updatedAt: new Date().toISOString()
-      };
+      });
       sites[siteIndex] = site;
       await writeSites(dataFile, sites);
       generateThumbnailLater(id, getRequestOrigin(req));
@@ -2197,10 +2240,10 @@ function createApp(options = {}) {
 
       await fsp.writeFile(indexPath, optimizedContent);
 
-      const site = {
+      const site = clearDuplicateAudit({
         ...latestSites[latestSiteIndex],
         updatedAt: new Date().toISOString()
-      };
+      });
       latestSites[latestSiteIndex] = site;
       await writeSites(dataFile, latestSites);
       generateThumbnailLater(id, getRequestOrigin(req));
@@ -2319,7 +2362,13 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
       }
 
-      const site = clearForbiddenAudit({
+      const site = clearForbiddenAudit(file ? clearDuplicateAudit({
+        ...sites[siteIndex],
+        title,
+        author,
+        classId,
+        updatedAt: new Date().toISOString()
+      }) : {
         ...sites[siteIndex],
         title,
         author,

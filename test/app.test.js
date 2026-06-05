@@ -245,6 +245,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /project-disabled-warning/);
   assert.match(html, /forbidden-audit-note/);
   assert.match(html, /site\.forbiddenAuditMessage/);
+  assert.match(html, /duplicate-audit-note/);
+  assert.match(html, /site\.duplicateAuditMessage/);
   assert.match(html, /<th>存储占用<\/th>/);
   assert.match(html, /className = 'storage-cell'/);
   assert.match(html, /storageCell\.textContent = formatBytes\(site\.storageBytes \|\| 0\)/);
@@ -1035,23 +1037,33 @@ test('admin dedupe disables later projects with identical HTML code', async () =
   assert.equal(result.body.duplicates, 2);
   assert.equal(result.body.disabled, 1);
   assert.deepEqual(
-    result.body.matches.map((match) => [match.id, match.keepId, match.wasEnabled]),
+    result.body.matches.map((match) => [match.id, match.keepId, match.wasEnabled, match.message]),
     [
-      ['disable-later', 'keep-original', true],
-      ['already-disabled', 'keep-original', false]
+      ['disable-later', 'keep-original', true, '与「先上传（00001）」代码重复'],
+      ['already-disabled', 'keep-original', false, '与「先上传（00001）」代码重复']
     ]
   );
 
   const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
   assert.deepEqual(
-    savedSites.map((site) => [site.id, site.enabled]),
+    savedSites.map((site) => [site.id, site.enabled, site.duplicateAuditMessage || '']),
     [
-      ['keep-original', true],
-      ['disable-later', false],
-      ['unique-site', true],
-      ['already-disabled', false]
+      ['keep-original', true, ''],
+      ['disable-later', false, '与「先上传（00001）」代码重复'],
+      ['unique-site', true, ''],
+      ['already-disabled', false, '与「先上传（00001）」代码重复']
     ]
   );
+
+  await fsp.writeFile(
+    path.join(storageDir, 'disable-later', 'index.html'),
+    '<!doctype html><html><body><h1>Changed</h1></body></html>'
+  );
+  const secondResult = await admin.post('/api/admin/sites/dedupe').send({}).expect(200);
+  assert.equal(secondResult.body.duplicateGroups, 1);
+  const savedSitesAfterSecondRun = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const changedSite = savedSitesAfterSecondRun.find((site) => site.id === 'disable-later');
+  assert.equal(changedSite.duplicateAuditMessage, undefined);
 });
 
 test('admin can whitelist a project from forbidden audits and edits', async () => {

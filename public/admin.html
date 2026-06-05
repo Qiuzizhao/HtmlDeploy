@@ -727,7 +727,7 @@
       vertical-align: middle;
     }
 
-    .forbidden-audit-note {
+    .audit-note {
       margin-top: 6px;
       color: var(--danger);
       font-size: 12px;
@@ -2411,9 +2411,15 @@
         titleCell.append(titleInput);
         if (site.forbiddenAuditMessage) {
           const forbiddenNote = document.createElement('div');
-          forbiddenNote.className = 'forbidden-audit-note';
+          forbiddenNote.className = 'audit-note forbidden-audit-note';
           forbiddenNote.textContent = `违禁词：${site.forbiddenAuditMessage}`;
           titleCell.append(forbiddenNote);
+        }
+        if (site.duplicateAuditMessage) {
+          const duplicateNote = document.createElement('div');
+          duplicateNote.className = 'audit-note duplicate-audit-note';
+          duplicateNote.textContent = `重复：${site.duplicateAuditMessage}`;
+          titleCell.append(duplicateNote);
         }
 
         const authorCell = document.createElement('td');
