@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D跑酷 - 二段跳版</title>
+    <title>3D跑酷 - 二段跳完美版</title>
     <style>
         * {
             margin: 0;
@@ -147,7 +147,7 @@
 
     <div class="ui">🏆 分数 <span id="score">0</span></div>
     <div class="tips">
-        <kbd>A</kbd> <kbd>D</kbd> 左右移动 &nbsp;·&nbsp; <kbd>空格</kbd> 二段跳 &nbsp;·&nbsp; <span style="color:#ffd93d;">⬤</span> 碰撞箱
+        <kbd>A</kbd> <kbd>D</kbd> 左右移动 &nbsp;·&nbsp; <kbd>空格</kbd> 二段跳
     </div>
     <div class="over" id="overlay">
         <div id="gameOver">游戏结束</div>
@@ -168,7 +168,6 @@
     <script type="module">
         import * as THREE from 'three';
         import * as CANNON from 'cannon-es';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         // ─── DOM 引用 ───────────────────────────────────────────────
         const scoreEl = document.getElementById('score');
@@ -181,18 +180,20 @@
         let gameRunning = true;
         let jumpCount = 0;
         const MAX_JUMP = 2;
-        const MOVE_SPEED = 10;
-        const JUMP_POWER = 11;
+        const MOVE_SPEED = 18;       // 前进速度
+        const SIDE_SPEED = 14;       // 左右移动速度
+        const JUMP_POWER = 13;       // 跳跃力度
         const PLAYER_HALF = 1;
         const PLAYER_HEIGHT = 4;
         const OBSTACLE_HALF = 2.5;
         const OBSTACLE_HEIGHT = 8;
         const GROUND_Y = -5;
-        const DESPAWN_Z = 50;
+        const DESPAWN_Z = 40;
 
         let animFrameId = null;
-        let obstaclePool = [];
+        let particleFrameId = null;
         let activeObstacles = [];
+        const keys = {};
 
         // ─── Three.js 场景 ──────────────────────────────────────────
         const scene = new THREE.Scene();
@@ -201,7 +202,6 @@
 
         const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 400);
         camera.position.set(0, 14, 28);
-        camera.lookAt(0, 2, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -213,10 +213,10 @@
         document.body.prepend(renderer.domElement);
 
         // ─── 灯光 ──────────────────────────────────────────────────
-        const ambient = new THREE.AmbientLight(0x8899bb, 0.5);
+        const ambient = new THREE.AmbientLight(0x8899bb, 0.6);
         scene.add(ambient);
 
-        const hemi = new THREE.HemisphereLight(0x87ceeb, 0x3e2a1e, 0.7);
+        const hemi = new THREE.HemisphereLight(0x87ceeb, 0x3e2a1e, 0.6);
         scene.add(hemi);
 
         const sun = new THREE.DirectionalLight(0xffeedd, 1.8);
@@ -233,40 +233,32 @@
         sun.shadow.bias = -0.001;
         scene.add(sun);
 
-        const fill = new THREE.DirectionalLight(0x8888ff, 0.3);
-        fill.position.set(-20, 10, -30);
-        scene.add(fill);
-
         // ─── 地面 ──────────────────────────────────────────────────
-        const groundGeo = new THREE.PlaneGeometry(600, 600);
+        const groundGeo = new THREE.PlaneGeometry(600, 1000);
         const groundMat = new THREE.MeshStandardMaterial({
             color: 0x4a7c59,
             roughness: 0.85,
             metalness: 0.0,
-            side: THREE.DoubleSide,
         });
         const groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.rotation.x = -Math.PI / 2;
-        groundMesh.position.y = GROUND_Y + 0.05;
+        groundMesh.position.y = GROUND_Y;
         groundMesh.receiveShadow = true;
         scene.add(groundMesh);
 
-        // 地面条纹（帮助感知速度）
+        // 地面条纹（动态复用，防止跑出边界）
+        const stripeGroup = new THREE.Group();
+        scene.add(stripeGroup);
         const stripeMat = new THREE.MeshStandardMaterial({
             color: 0x3d6b4a,
             roughness: 0.9,
-            metalness: 0.0,
-            side: THREE.DoubleSide,
         });
-        for (let i = -20; i <= 20; i++) {
-            const stripe = new THREE.Mesh(
-                new THREE.PlaneGeometry(32, 2.5),
-                stripeMat
-            );
+        for (let i = -20; i <= 60; i++) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(36, 3), stripeMat);
             stripe.rotation.x = -Math.PI / 2;
-            stripe.position.set(0, GROUND_Y + 0.04, i * 14);
+            stripe.position.set(0, GROUND_Y + 0.02, -i * 14);
             stripe.receiveShadow = true;
-            scene.add(stripe);
+            stripeGroup.add(stripe);
         }
 
         // ─── 玩家 ──────────────────────────────────────────────────
@@ -280,298 +272,203 @@
             emissive: 0xff2222,
             emissiveIntensity: 0.08,
         });
-        const playerMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(2, PLAYER_HEIGHT, 2),
-            boxMat
-        );
+        const playerMesh = new THREE.Mesh(new THREE.BoxGeometry(2, PLAYER_HEIGHT, 2), boxMat);
         playerMesh.castShadow = true;
         playerMesh.receiveShadow = true;
+        playerMesh.position.y = PLAYER_HEIGHT / 2; // 中心对齐组内
         playerGroup.add(playerMesh);
 
-        // 碰撞箱线框 (红框)
-        const helperMat = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.7 });
-        const helperGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, PLAYER_HEIGHT, 2));
-        const helperLine = new THREE.LineSegments(helperGeo, helperMat);
-        playerGroup.add(helperLine);
-
         // 眼睛装饰
-        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const pupilMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
         for (let side = -1; side <= 1; side += 2) {
             const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), eyeMat);
-            eye.position.set(side * 0.55, 0.5, -1.01);
+            eye.position.set(side * 0.55, PLAYER_HEIGHT * 0.65, -1.01);
             playerGroup.add(eye);
             const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.10, 6, 6), pupilMat);
-            pupil.position.set(side * 0.55, 0.5, -1.15);
+            pupil.position.set(side * 0.55, PLAYER_HEIGHT * 0.65, -1.13);
             playerGroup.add(pupil);
         }
 
         // ─── Cannon.js 物理世界 ────────────────────────────────────
         const world = new CANNON.World();
-        world.gravity.set(0, -30, 0);
+        world.gravity.set(0, -35, 0);
         world.broadphase = new CANNON.SAPBroadphase(world);
-        world.defaultContactMaterial.friction = 0.3;
-        world.defaultContactMaterial.restitution = 0.05;
 
         // 地面刚体
-        const groundShape = new CANNON.Box(new CANNON.Vec3(300, 0.5, 300));
-        const groundBody = new CANNON.Body({ mass: 0, shape: groundShape });
-        groundBody.position.set(0, GROUND_Y, 0);
+        const groundBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Box(new CANNON.Vec3(300, 0.5, 500))
+        });
+        groundBody.position.set(0, GROUND_Y - 0.5, 0);
         world.addBody(groundBody);
 
         // 玩家刚体
-        const playerShape = new CANNON.Box(new CANNON.Vec3(PLAYER_HALF, PLAYER_HEIGHT / 2, PLAYER_HALF));
         const playerBody = new CANNON.Body({
             mass: 5,
-            shape: playerShape,
-            position: new CANNON.Vec3(0, 10, 0),
+            shape: new CANNON.Box(new CANNON.Vec3(PLAYER_HALF, PLAYER_HEIGHT / 2, PLAYER_HALF)),
+            position: new CANNON.Vec3(0, 2, 0),
             fixedRotation: true,
-            linearDamping: 0.08,
+            linearDamping: 0.0,
         });
-        playerBody.updateMassProperties();
         world.addBody(playerBody);
 
         // ─── 障碍物系统 ────────────────────────────────────────────
-        const obsMat = new THREE.MeshStandardMaterial({
-            color: 0x8b5a2b,
-            roughness: 0.7,
-            metalness: 0.1,
-        });
-        const obsMatDark = new THREE.MeshStandardMaterial({
-            color: 0x6b3f1a,
-            roughness: 0.8,
-            metalness: 0.05,
-        });
+        const obsMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+        const obsMatDark = new THREE.MeshStandardMaterial({ color: 0x6b3f1a, roughness: 0.8 });
 
-        function createObstacleMesh(x, y, z) {
+        function createObstacleMesh() {
             const group = new THREE.Group();
-
-            const main = new THREE.Mesh(
-                new THREE.BoxGeometry(OBSTACLE_HALF * 2, OBSTACLE_HEIGHT, OBSTACLE_HALF * 2),
-                obsMat
-            );
+            const main = new THREE.Mesh(new THREE.BoxGeometry(OBSTACLE_HALF * 2, OBSTACLE_HEIGHT, OBSTACLE_HALF * 2), obsMat);
             main.castShadow = true;
             main.receiveShadow = true;
             main.position.y = OBSTACLE_HEIGHT / 2;
             group.add(main);
 
-            // 顶部装饰
-            const top = new THREE.Mesh(
-                new THREE.BoxGeometry(OBSTACLE_HALF * 2.2, 0.6, OBSTACLE_HALF * 2.2),
-                obsMatDark
-            );
+            const top = new THREE.Mesh(new THREE.BoxGeometry(OBSTACLE_HALF * 2.2, 0.6, OBSTACLE_HALF * 2.2), obsMatDark);
             top.castShadow = true;
             top.position.y = OBSTACLE_HEIGHT + 0.3;
             group.add(top);
 
-            // 碰撞箱线框
-            const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(OBSTACLE_HALF * 2, OBSTACLE_HEIGHT, OBSTACLE_HALF *
-            2));
-            const edgeLine = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({
-                color: 0xff6600,
-                transparent: true,
-                opacity: 0.25
-            }));
-            edgeLine.position.y = OBSTACLE_HEIGHT / 2;
-            group.add(edgeLine);
-
-            group.position.set(x, y, z);
             return group;
         }
 
         function spawnObstacle(z) {
-            const lane = Math.floor(Math.random() * 5) - 2;
-            const x = lane * 3.6;
+            const lane = Math.floor(Math.random() * 5) - 2; // -2, -1, 0, 1, 2
+            const x = lane * 4.5;
             const y = GROUND_Y;
 
-            const mesh = createObstacleMesh(x, y, z);
+            const mesh = createObstacleMesh();
             scene.add(mesh);
 
             const body = new CANNON.Body({
                 mass: 0,
                 shape: new CANNON.Box(new CANNON.Vec3(OBSTACLE_HALF, OBSTACLE_HEIGHT / 2, OBSTACLE_HALF)),
-                position: new CANNON.Vec3(x, y + OBSTACLE_HEIGHT / 2, z),
+                position: new CANNON.Vec3(x, y + OBSTACLE_HEIGHT / 2, z)
             });
             world.addBody(body);
 
-            const entry = { mesh, body, z, active: true };
+            const entry = { mesh, body, active: true };
             activeObstacles.push(entry);
-            return entry;
         }
 
-        // ─── 生成初始障碍物 ─────────────────────────────────────────
         function buildTrack() {
-            for (let i = 0; i < 160; i++) {
-                const z = -i * 14 - 20;
-                spawnObstacle(z);
+            for (let i = 0; i < 30; i++) {
+                spawnObstacle(-i * 22 - 30);
             }
         }
-        buildTrack();
 
-        // ─── 碰撞检测 ──────────────────────────────────────────────
-        function checkCollisions() {
-            const px = playerBody.position.x;
-            const py = playerBody.position.y;
-            const pz = playerBody.position.z;
-
-            const pHalfX = PLAYER_HALF;
-            const pHalfY = PLAYER_HEIGHT / 2;
-            const pHalfZ = PLAYER_HALF;
-
-            for (let i = activeObstacles.length - 1; i >= 0; i--) {
-                const obs = activeObstacles[i];
-                if (!obs.active) continue;
-
-                const bx = obs.body.position.x;
-                const by = obs.body.position.y;
-                const bz = obs.body.position.z;
-
-                const bHalfX = OBSTACLE_HALF;
-                const bHalfY = OBSTACLE_HEIGHT / 2;
-                const bHalfZ = OBSTACLE_HALF;
-
-                const dx = Math.abs(px - bx);
-                const dy = Math.abs(py - by);
-                const dz = Math.abs(pz - bz);
-
-                if (dx < pHalfX + bHalfX && dy < pHalfY + bHalfY && dz < pHalfZ + bHalfZ) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // ─── 游戏核心逻辑 ───────────────────────────────────────────
-        let lastTime = 0;
-        let accumulator = 0;
-        const FIXED_DT = 1 / 60;
+        // ─── 核心逻辑 ───────────────────────────────────────────────
+        let lastTime = performance.now();
 
         function gameLoop(time) {
             if (!gameRunning) return;
 
-            const dt = Math.min((time - lastTime) / 1000, 0.05);
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
             lastTime = time;
 
-            // 固定步长物理
-            accumulator += dt;
-            while (accumulator >= FIXED_DT) {
-                world.step(FIXED_DT);
-                accumulator -= FIXED_DT;
-            }
+            // 物理步进
+            world.step(1 / 60);
 
-            // 玩家自动前进
-            playerBody.position.z -= MOVE_SPEED * dt;
+            // 玩家物理控制：自动向前 + 左右移动
+            playerBody.velocity.z = -MOVE_SPEED;
 
-            // 左右移动 (A/D)
             if (keys['KeyA'] || keys['ArrowLeft']) {
-                playerBody.position.x = Math.max(-9.5, playerBody.position.x - 16 * dt);
-            }
-            if (keys['KeyD'] || keys['ArrowRight']) {
-                playerBody.position.x = Math.min(9.5, playerBody.position.x + 16 * dt);
-            }
-
-            // 二段跳
-            if (keys['Space'] && jumpCount < MAX_JUMP) {
-                playerBody.velocity.y = JUMP_POWER;
-                jumpCount++;
-                keys['Space'] = false;
-                // 跳起粒子效果
-                spawnJumpParticles(playerBody.position.x, playerBody.position.y - PLAYER_HEIGHT / 2, playerBody.position
-                .z);
+                playerBody.velocity.x = -SIDE_SPEED;
+            } else if (keys['KeyD'] || keys['ArrowRight']) {
+                playerBody.velocity.x = SIDE_SPEED;
+            } else {
+                playerBody.velocity.x = 0;
             }
 
-            // 落地重置跳跃次数
-            if (playerBody.position.y <= GROUND_Y + PLAYER_HEIGHT / 2 + 0.3) {
-                playerBody.position.y = GROUND_Y + PLAYER_HEIGHT / 2;
-                if (playerBody.velocity.y < 0) {
-                    playerBody.velocity.y = 0;
-                }
+            // 边界约束
+            if (playerBody.position.x < -10) playerBody.position.x = -10;
+            if (playerBody.position.x > 10) playerBody.position.x = 10;
+
+            // 落地检测（精确判断刚体底部是否接近地面）
+            const isGrounded = playerBody.position.y <= GROUND_Y + PLAYER_HEIGHT / 2 + 0.05;
+            if (isGrounded) {
                 jumpCount = 0;
             }
 
-            // 掉落检测
-            if (playerBody.position.y < -30) {
-                endGame();
-                return;
-            }
-
-            // 碰撞检测
-            if (checkCollisions()) {
-                endGame();
-                return;
-            }
-
-            // 更新玩家视觉位置
+            // 同步玩家视觉
             playerGroup.position.copy(playerBody.position);
-            playerGroup.position.y = playerBody.position.y - PLAYER_HEIGHT / 2;
-            // 轻微倾斜效果
-            const targetRotZ = (playerBody.position.x / 12) * 0.06;
+            // 左右移动倾斜特效
+            const targetRotZ = -(playerBody.velocity.x / SIDE_SPEED) * 0.08;
             playerGroup.rotation.z += (targetRotZ - playerGroup.rotation.z) * 0.1;
 
-            // 更新障碍物（回收超出视野的）
+            // 动态循环回收障碍物
             const playerZ = playerBody.position.z;
-            for (let i = activeObstacles.length - 1; i >= 0; i--) {
+            for (let i = 0; i < activeObstacles.length; i++) {
                 const obs = activeObstacles[i];
-                const dzObs = obs.body.position.z - playerZ;
-                if (dzObs > DESPAWN_Z + 20) {
-                    // 移到后方复用
-                    const newZ = playerZ - 180 - Math.random() * 80;
-                    obs.body.position.z = newZ;
-                    obs.body.position.x = (Math.floor(Math.random() * 5) - 2) * 3.6;
-                    obs.mesh.position.copy(obs.body.position);
-                    obs.mesh.position.y = GROUND_Y;
-                    obs.z = newZ;
-                } else {
-                    // 同步mesh位置 (body位置可能因物理而变)
-                    obs.mesh.position.copy(obs.body.position);
-                    obs.mesh.position.y = GROUND_Y;
+                // 如果障碍物已经被玩家抛在脑后
+                if (obs.body.position.z > playerZ + DESPAWN_Z) {
+                    const lane = Math.floor(Math.random() * 5) - 2;
+                    obs.body.position.z -= activeObstacles.length * 22; // 循环挪到最前方
+                    obs.body.position.x = lane * 4.5;
                 }
+                // 让 Mesh 完美同步物理坐标
+                obs.mesh.position.copy(obs.body.position);
+                obs.mesh.position.y = obs.body.position.y - OBSTACLE_HEIGHT / 2;
             }
 
-            // 分数
-            score += 0.12 * dt * 60;
+            // 地面条纹无限循环效果
+            stripeGroup.children.forEach(stripe => {
+                if (stripe.position.z > playerZ + 40) {
+                    stripe.position.z -= stripeGroup.children.length * 14;
+                }
+            });
+
+            // 死亡检测：高空坠落或掉落（理论上有了刚体不会掉落，除非被挤出边缘）
+            if (playerBody.position.y < GROUND_Y - 2) {
+                endGame();
+                return;
+            }
+
+            // 计分
+            score += dt * 10;
             scoreEl.textContent = Math.floor(score);
 
-            // 相机跟随 (平滑)
-            const targetCamX = playerBody.position.x * 0.35;
-            const targetCamZ = playerBody.position.z + 26;
-            const targetCamY = 14 + Math.max(0, (playerBody.position.y - 6) * 0.15);
-            camera.position.x += (targetCamX - camera.position.x) * 0.08;
-            camera.position.y += (targetCamY - camera.position.y) * 0.08;
-            camera.position.z += (targetCamZ - camera.position.z) * 0.08;
-            camera.lookAt(
-                playerBody.position.x * 0.4,
-                2 + Math.max(0, (playerBody.position.y - 6) * 0.1),
-                playerBody.position.z + 6
-            );
+            // 平滑相机跟随
+            const targetCamX = playerBody.position.x * 0.5;
+            const targetCamY = playerBody.position.y + 10;
+            const targetCamZ = playerBody.position.z + 24;
+            camera.position.x += (targetCamX - camera.position.x) * 0.1;
+            camera.position.y += (targetCamY - camera.position.y) * 0.1;
+            camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+            camera.lookAt(playerBody.position.x * 0.3, playerBody.position.y * 0.5 + 2, playerBody.position.z - 5);
 
             renderer.render(scene, camera);
             animFrameId = requestAnimationFrame(gameLoop);
         }
 
+        // ─── 碰撞触发死亡 ───────────────────────────────────────────
+        playerBody.addEventListener('collide', (e) => {
+            // 如果撞击的不是地面，说明撞到了障碍物
+            if (e.body !== groundBody) {
+                endGame();
+            }
+        });
+
         // ─── 跳跃粒子 ──────────────────────────────────────────────
         const particles = [];
 
         function spawnJumpParticles(x, y, z) {
-            const count = 12;
-            const color = 0xffd93d;
+            const count = 15;
             for (let i = 0; i < count; i++) {
-                const geo = new THREE.SphereGeometry(0.08, 4, 4);
+                const geo = new THREE.SphereGeometry(0.1, 4, 4);
                 const mat = new THREE.MeshBasicMaterial({
-                    color: color,
+                    color: 0xffd93d,
                     transparent: true,
                     opacity: 0.9,
                 });
                 const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(
-                    x + (Math.random() - 0.5) * 1.2,
-                    y + 0.2,
-                    z + (Math.random() - 0.5) * 1.2
-                );
+                mesh.position.set(x + (Math.random() - 0.5), y, z + (Math.random() - 0.5));
+                
                 const vel = new THREE.Vector3(
                     (Math.random() - 0.5) * 6,
-                    Math.random() * 5 + 2,
-                    (Math.random() - 0.5) * 6
+                    Math.random() * 4 + 2,
+                    (Math.random() - 0.5) * 4
                 );
                 scene.add(mesh);
                 particles.push({ mesh, vel, life: 1.0 });
@@ -581,13 +478,11 @@
         function updateParticles(dt) {
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
-                p.vel.y -= 12 * dt;
-                p.mesh.position.x += p.vel.x * dt;
-                p.mesh.position.y += p.vel.y * dt;
-                p.mesh.position.z += p.vel.z * dt;
-                p.life -= dt * 1.6;
+                p.vel.y -= 9.8 * dt; // 粒子重力
+                p.mesh.position.addScaledVector(p.vel, dt);
+                p.life -= dt * 2.0;
                 p.mesh.material.opacity = Math.max(0, p.life);
-                p.mesh.scale.setScalar(0.5 + p.life * 0.5);
+                p.mesh.scale.setScalar(p.life);
                 if (p.life <= 0) {
                     scene.remove(p.mesh);
                     p.mesh.geometry.dispose();
@@ -597,50 +492,53 @@
             }
         }
 
-        // ─── 游戏结束 ──────────────────────────────────────────────
+        // ─── 事件监听 ───────────────────────────────────────────────
+        function onKeyDown(e) {
+            keys[e.code] = true;
+            
+            // 将跳跃逻辑完全移入 KeyDown 单次触发，完美解决无限跳 Bug
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameRunning && jumpCount < MAX_JUMP) {
+                    playerBody.velocity.y = JUMP_POWER;
+                    jumpCount++;
+                    spawnJumpParticles(playerBody.position.x, playerBody.position.y - PLAYER_HEIGHT / 2, playerBody.position.z);
+                }
+            }
+        }
+
+        function onKeyUp(e) {
+            keys[e.code] = false;
+        }
+
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', onResize);
+
+        // ─── 游戏生命周期管理 ────────────────────────────────────────
         function endGame() {
             if (!gameRunning) return;
             gameRunning = false;
-            if (animFrameId) {
-                cancelAnimationFrame(animFrameId);
-                animFrameId = null;
-            }
+            
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            
             finalScoreEl.textContent = Math.floor(score);
             overlayEl.style.display = 'block';
-            document.removeEventListener('keydown', onKeyDown);
-            document.removeEventListener('keyup', onKeyUp);
         }
 
-        // ─── 重新开始 ──────────────────────────────────────────────
         function restartGame() {
-            // 清理场景
             overlayEl.style.display = 'none';
-            if (animFrameId) {
-                cancelAnimationFrame(animFrameId);
-                animFrameId = null;
-            }
-
-            // 清除粒子
-            for (const p of particles) {
-                scene.remove(p.mesh);
-                p.mesh.geometry.dispose();
-                p.mesh.material.dispose();
-            }
-            particles.length = 0;
-
-            // 重置玩家
-            playerBody.position.set(0, 10, 0);
-            playerBody.velocity.set(0, 0, 0);
-            playerBody.angularVelocity.set(0, 0, 0);
-            playerGroup.position.set(0, 10, 0);
-            playerGroup.rotation.set(0, 0, 0);
-            jumpCount = 0;
-
-            // 重置障碍物
+            
+            // 清理旧障碍物
             for (const obs of activeObstacles) {
                 scene.remove(obs.mesh);
                 world.removeBody(obs.body);
-                // 递归处理子mesh
                 obs.mesh.traverse((child) => {
                     if (child.isMesh) {
                         child.geometry.dispose();
@@ -650,75 +548,47 @@
             }
             activeObstacles = [];
 
-            // 重新生成
-            for (let i = 0; i < 160; i++) {
-                const z = -i * 14 - 20;
-                spawnObstacle(z);
+            // 清理旧粒子
+            for (const p of particles) {
+                scene.remove(p.mesh);
+                p.mesh.geometry.dispose();
+                p.mesh.material.dispose();
             }
+            particles.length = 0;
 
-            // 重置相机
-            camera.position.set(0, 14, 28);
-            camera.lookAt(0, 2, 0);
-
+            // 重置玩家状态与物理刚体
+            playerBody.position.set(0, 2, 0);
+            playerBody.velocity.set(0, 0, 0);
+            playerGroup.position.set(0, 2, 0);
+            playerGroup.rotation.set(0, 0, 0);
+            jumpCount = 0;
             score = 0;
             scoreEl.textContent = '0';
+
+            // 重新初始化轨道
+            buildTrack();
+
+            // 重新启动循环
             gameRunning = true;
-
-            // 重新绑定事件
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-
-            // 启动循环
             lastTime = performance.now();
-            accumulator = 0;
             animFrameId = requestAnimationFrame(gameLoop);
         }
 
-        // ─── 键盘输入 ──────────────────────────────────────────────
-        const keys = {};
-
-        function onKeyDown(e) {
-            keys[e.code] = true;
-            if (e.code === 'Space') e.preventDefault();
-        }
-
-        function onKeyUp(e) {
-            keys[e.code] = false;
-        }
-        document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('keyup', onKeyUp);
-
-        // ─── 窗口自适应 ─────────────────────────────────────────────
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        window.addEventListener('resize', onResize);
-
-        // ─── 启动游戏 ──────────────────────────────────────────────
         restartBtn.addEventListener('click', restartGame);
-        window.restartGame = restartGame;
 
-        // 启动
+        // ─── 启动 ──────────────────────────────────────────────────
+        buildTrack();
         lastTime = performance.now();
         animFrameId = requestAnimationFrame(gameLoop);
 
-        // 额外粒子更新循环 (与游戏循环独立)
-        function particleLoop() {
-            if (gameRunning) {
-                updateParticles(1 / 60);
-            }
-            requestAnimationFrame(particleLoop);
-        }
-        // 用独立的 rAF 更新粒子
-        let paf = requestAnimationFrame(function ptick() {
+        // 独立于游戏主循环更新粒子
+        function tickParticles() {
             if (gameRunning) updateParticles(1 / 60);
-            paf = requestAnimationFrame(ptick);
-        });
+            particleFrameId = requestAnimationFrame(tickParticles);
+        }
+        tickParticles();
 
-        // ─── 暴露给全局 (用于调试/重启) ─────────────────────────────
-        console.log('🏃 3D跑酷已启动 — 空格二段跳 | A/D 左右移动');
+        console.log('🏃 3D跑酷已完美启动 — [空格]二段跳 | [A/D]或[左右方向键]控制移动');
     </script>
 </body>
 </html>
