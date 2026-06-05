@@ -1,5 +1,15 @@
 [
   {
+    "id": "9deda895",
+    "number": "00083",
+    "title": "春风小站星标",
+    "author": "春风作者",
+    "classId": "e4ad6b6d",
+    "enabled": true,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-05T09:24:45.695Z"
+  },
+  {
     "id": "42b2ae5a",
     "number": "00081",
     "title": "崩坏星穹铁道网页版",
