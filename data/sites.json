@@ -8,7 +8,7 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T07:35:47.791Z",
-    "updatedAt": "2026-06-05T09:18:27.839Z"
+    "updatedAt": "2026-06-05T09:34:32.506Z"
   },
   {
     "id": "69131173",
@@ -567,10 +567,11 @@
     "number": "00152",
     "title": "经典推箱子",
     "author": "邱老师",
-    "classId": "f438ed26",
+    "classId": "db3ff2b2",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:08:32.916Z"
+    "createdAt": "2026-06-05T02:08:32.916Z",
+    "updatedAt": "2026-06-05T09:34:31.668Z"
   },
   {
     "id": "309f7506",
@@ -1312,10 +1313,11 @@
     "number": "00082",
     "title": "学校模拟器",
     "author": "邱老师",
-    "classId": "392f3c64",
+    "classId": "db3ff2b2",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:47:50.998Z"
+    "createdAt": "2026-06-04T06:47:50.998Z",
+    "updatedAt": "2026-06-05T09:34:31.347Z"
   },
   {
     "id": "42b2ae5a",
@@ -1423,9 +1425,9 @@
     "number": "00070",
     "title": "赛车小游戏",
     "author": "邱老师",
-    "classId": "b3f7dd30",
+    "classId": "db3ff2b2",
     "createdAt": "2026-06-03T06:55:18.085Z",
-    "updatedAt": "2026-06-03T14:01:59.436Z"
+    "updatedAt": "2026-06-05T09:34:30.502Z"
   },
   {
     "id": "48bf777d",
@@ -1630,8 +1632,9 @@
     "number": "00047",
     "title": "种树",
     "author": "邱老师",
-    "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:49:32.800Z"
+    "classId": "db3ff2b2",
+    "createdAt": "2026-06-03T06:49:32.800Z",
+    "updatedAt": "2026-06-05T09:34:30.092Z"
   },
   {
     "id": "0f86bb47",
