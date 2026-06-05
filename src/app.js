@@ -641,6 +641,36 @@ function createDownloadFileName(site) {
   return /\.(html|htm)$/i.test(safeTitle) ? safeTitle : `${safeTitle}.html`;
 }
 
+function compareSitesByCreatedAt(left, right) {
+  const leftTime = Date.parse(left.createdAt || '');
+  const rightTime = Date.parse(right.createdAt || '');
+  const leftHasTime = Number.isFinite(leftTime);
+  const rightHasTime = Number.isFinite(rightTime);
+
+  if (leftHasTime && rightHasTime && leftTime !== rightTime) {
+    return leftTime - rightTime;
+  }
+
+  if (leftHasTime !== rightHasTime) {
+    return leftHasTime ? -1 : 1;
+  }
+
+  return String(left.id || '').localeCompare(String(right.id || ''));
+}
+
+async function getSiteHtmlFingerprint(storageDir, siteId) {
+  const indexPath = path.join(storageDir, siteId, 'index.html');
+  try {
+    const content = await fsp.readFile(indexPath);
+    return crypto
+      .createHash('sha256')
+      .update(content)
+      .digest('hex');
+  } catch {
+    return '';
+  }
+}
+
 function toPublicClass(classItem) {
   return {
     id: classItem.id,
@@ -1766,6 +1796,80 @@ function createApp(options = {}) {
         checked: sites.filter((site) => site.forbiddenWhitelist !== true).length,
         skipped: sites.filter((site) => site.forbiddenWhitelist === true).length,
         matched: matches.length,
+        disabled: disabledCount,
+        matches
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/admin/sites/dedupe', requireAdmin, async (req, res, next) => {
+    try {
+      const sites = await readSites(dataFile);
+      const groups = new Map();
+
+      for (const site of sites) {
+        const fingerprint = await getSiteHtmlFingerprint(storageDir, site.id);
+        if (!fingerprint) {
+          continue;
+        }
+
+        if (!groups.has(fingerprint)) {
+          groups.set(fingerprint, []);
+        }
+        groups.get(fingerprint).push(site);
+      }
+
+      let disabledCount = 0;
+      let duplicateGroups = 0;
+      const matches = [];
+      const disabledIds = new Set();
+
+      for (const groupSites of groups.values()) {
+        if (groupSites.length < 2) {
+          continue;
+        }
+
+        duplicateGroups += 1;
+        const orderedSites = [...groupSites].sort(compareSitesByCreatedAt);
+        const keepSite = orderedSites[0];
+        for (const duplicateSite of orderedSites.slice(1)) {
+          matches.push({
+            id: duplicateSite.id,
+            title: duplicateSite.title || '',
+            keepId: keepSite.id,
+            keepTitle: keepSite.title || '',
+            wasEnabled: duplicateSite.enabled !== false
+          });
+
+          if (duplicateSite.enabled !== false) {
+            disabledIds.add(duplicateSite.id);
+          }
+        }
+      }
+
+      if (disabledIds.size) {
+        const now = new Date().toISOString();
+        const nextSites = sites.map((site) => {
+          if (!disabledIds.has(site.id)) {
+            return site;
+          }
+
+          disabledCount += 1;
+          return {
+            ...site,
+            enabled: false,
+            updatedAt: now
+          };
+        });
+        await writeSites(dataFile, nextSites);
+      }
+
+      return res.json({
+        checked: sites.length,
+        duplicateGroups,
+        duplicates: matches.length,
         disabled: disabledCount,
         matches
       });

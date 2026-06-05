@@ -1080,6 +1080,7 @@
               <select id="filterClassId" class="class-select" aria-label="按班级筛选"></select>
             </div>
             <div class="toolbar-right">
+              <button class="button" id="dedupeSitesButton" type="button">查重</button>
               <button class="warning-button" id="auditForbiddenSitesButton" type="button">违禁词审查</button>
               <button class="button" id="generateThumbnailsButton" type="button">刷新全部封面</button>
               <button class="button" id="reloadButton" type="button">刷新列表</button>
@@ -1339,6 +1340,7 @@
     const emptyState = document.getElementById('emptyState');
     const searchInput = document.getElementById('searchInput');
     const filterClassId = document.getElementById('filterClassId');
+    const dedupeSitesButton = document.getElementById('dedupeSitesButton');
     const auditForbiddenSitesButton = document.getElementById('auditForbiddenSitesButton');
     const generateThumbnailsButton = document.getElementById('generateThumbnailsButton');
     const aiOptimizeLog = document.getElementById('aiOptimizeLog');
@@ -2641,6 +2643,33 @@
         : `审查完成：命中 ${result.matched} 个项目，没有新增禁用`);
     }
 
+    async function dedupeSites() {
+      dedupeSitesButton.disabled = true;
+      dedupeSitesButton.textContent = '查重中...';
+      setMessage(listMessage, '正在查找代码完全一样的项目...');
+
+      const response = await fetch('/api/admin/sites/dedupe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      dedupeSitesButton.disabled = false;
+      dedupeSitesButton.textContent = '查重';
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '查重失败' }));
+        setMessage(listMessage, result.error || '查重失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      await loadSites();
+      setMessage(listMessage, result.disabled
+        ? `查重完成：发现 ${result.duplicateGroups} 组重复，新增禁用 ${result.disabled} 个后上传项目`
+        : `查重完成：发现 ${result.duplicateGroups} 组重复，没有新增禁用`);
+    }
+
     async function createSite(event) {
       event.preventDefault();
       setMessage(createMessage, '');
@@ -3118,6 +3147,7 @@
       await loadSites();
     });
     auditForbiddenSitesButton.addEventListener('click', auditForbiddenSites);
+    dedupeSitesButton.addEventListener('click', dedupeSites);
     generateThumbnailsButton.addEventListener('click', generateAllThumbnails);
     document.getElementById('closeCodeWindow').addEventListener('click', closeCodeWindow);
     document.getElementById('closeDirectedAiWindow').addEventListener('click', closeDirectedAiWindow);
