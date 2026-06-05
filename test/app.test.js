@@ -185,6 +185,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /function switchView/);
   assert.match(html, /projectCount/);
   assert.match(html, /classCount/);
+  assert.match(html, /storageUsage/);
+  assert.match(html, /function formatBytes/);
   assert.match(html, /id="createForm"/);
   assert.match(html, /fetch\('\/api\/admin\/sites'/);
   assert.match(html, /method: 'PUT'/);
@@ -220,6 +222,9 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/starred/);
   assert.match(html, /function toggleSiteStarred/);
   assert.match(html, /project-disabled-warning/);
+  assert.match(html, /<th>存储占用<\/th>/);
+  assert.match(html, /className = 'storage-cell'/);
+  assert.match(html, /storageCell\.textContent = formatBytes\(site\.storageBytes \|\| 0\)/);
   assert.match(html, /搜索项目名称、ID 或序号/);
   assert.match(html, /id="classForm"/);
   assert.match(html, /id="classPasswordInput"/);
@@ -351,6 +356,33 @@ test('GET /api/sites assigns five-digit numbers to existing projects by creation
     [
       ['newer', '00002'],
       ['older', '00001']
+    ]
+  );
+});
+
+test('GET /api/admin/sites includes storage usage for each project', async () => {
+  const { app, dataDir, storageDir } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await fsp.writeFile(
+    path.join(dataDir, 'sites.json'),
+    JSON.stringify([
+      { id: 'with-files', title: '有文件', author: '作者', classId: 'class-a', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'missing-files', title: '无文件', author: '作者', classId: 'class-a', createdAt: '2026-01-02T00:00:00.000Z' }
+    ], null, 2)
+  );
+  await fsp.mkdir(path.join(storageDir, 'with-files', 'assets'), { recursive: true });
+  await fsp.writeFile(path.join(storageDir, 'with-files', 'index.html'), '12345');
+  await fsp.writeFile(path.join(storageDir, 'with-files', 'assets', 'style.css'), '1234567');
+
+  const response = await agent.get('/api/admin/sites').expect(200);
+
+  assert.deepEqual(
+    response.body.map((site) => [site.id, site.storageBytes]),
+    [
+      ['with-files', 12],
+      ['missing-files', 0]
     ]
   );
 });
