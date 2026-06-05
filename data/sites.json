@@ -745,7 +745,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:28.879Z"
+    "createdAt": "2026-06-04T06:58:28.879Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-05T17:24:26.492Z"
   },
   {
     "id": "258897e2",
