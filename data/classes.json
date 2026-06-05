@@ -49,9 +49,9 @@
     "name": "六9",
     "password": "978153",
     "createdAt": "2026-06-02T12:01:59.681Z",
-    "uploadEnabled": false,
+    "uploadEnabled": true,
     "passwordEnabled": false,
-    "updatedAt": "2026-06-05T02:00:04.597Z"
+    "updatedAt": "2026-06-05T02:06:58.263Z"
   },
   {
     "id": "b4f9025a",
