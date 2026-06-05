@@ -38,10 +38,10 @@
     "title": "白雪森林冒险",
     "author": "朔墨牛逼",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:41.719Z",
-    "updatedAt": "2026-06-05T07:13:12.988Z"
+    "updatedAt": "2026-06-05T14:37:48.889Z"
   },
   {
     "id": "ec39275e",
@@ -69,10 +69,10 @@
     "title": "fps",
     "author": "llliao",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:15.651Z",
-    "updatedAt": "2026-06-05T09:33:33.456Z"
+    "updatedAt": "2026-06-05T14:37:48.921Z"
   },
   {
     "id": "4139a720",
@@ -91,9 +91,10 @@
     "title": "森林冰火人",
     "author": "菱",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:23:16.644Z"
+    "createdAt": "2026-06-05T02:23:16.644Z",
+    "updatedAt": "2026-06-05T14:37:48.932Z"
   },
   {
     "id": "3cccb5d2",
@@ -111,9 +112,10 @@
     "title": "白雪公猪猪",
     "author": "给我88元助力我买应援棒",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:22:45.330Z"
+    "createdAt": "2026-06-05T02:22:45.330Z",
+    "updatedAt": "2026-06-05T14:37:48.949Z"
   },
   {
     "id": "908e2ef3",
@@ -151,9 +153,10 @@
     "title": "小方块",
     "author": "qw牛逼666",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:20:18.250Z"
+    "createdAt": "2026-06-05T02:20:18.250Z",
+    "updatedAt": "2026-06-05T14:37:48.984Z"
   },
   {
     "id": "59dcd516",
@@ -161,10 +164,10 @@
     "title": "极速音游",
     "author": "gh牛逼666",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
-    "updatedAt": "2026-06-05T07:13:26.134Z"
+    "updatedAt": "2026-06-05T14:37:48.990Z"
   },
   {
     "id": "fe72fb41",
@@ -204,9 +207,10 @@
     "title": "我的妈呀 爱情",
     "author": "大妈",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:19:50.378Z"
+    "createdAt": "2026-06-05T02:19:50.378Z",
+    "updatedAt": "2026-06-05T14:37:49.021Z"
   },
   {
     "id": "7ffd899e",
@@ -234,10 +238,10 @@
     "title": "3D我的世界",
     "author": "piggod",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:12.351Z",
-    "updatedAt": "2026-06-05T07:14:55.843Z"
+    "updatedAt": "2026-06-05T14:37:49.051Z"
   },
   {
     "id": "56a2aabe",
@@ -265,9 +269,10 @@
     "title": "game2",
     "author": "cnweb",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:17:50.151Z"
+    "createdAt": "2026-06-05T02:17:50.151Z",
+    "updatedAt": "2026-06-05T14:37:49.071Z"
   },
   {
     "id": "beb4560e",
@@ -275,9 +280,10 @@
     "title": "满改M7 VS满改巨浪",
     "author": "1",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:17:48.275Z"
+    "createdAt": "2026-06-05T02:17:48.275Z",
+    "updatedAt": "2026-06-05T14:37:49.076Z"
   },
   {
     "id": "1d4268ed",
@@ -285,9 +291,10 @@
     "title": "满改M7 VS满改巨浪",
     "author": "1",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:17:47.963Z"
+    "createdAt": "2026-06-05T02:17:47.963Z",
+    "updatedAt": "2026-06-05T14:37:49.080Z"
   },
   {
     "id": "af3daa4a",
@@ -295,9 +302,10 @@
     "title": "game1",
     "author": "cnweb",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:17:37.331Z"
+    "createdAt": "2026-06-05T02:17:37.331Z",
+    "updatedAt": "2026-06-05T14:37:49.081Z"
   },
   {
     "id": "98ae9b63",
@@ -315,10 +323,10 @@
     "title": "音游",
     "author": "ps末条牛逼",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:16:56.191Z",
-    "updatedAt": "2026-06-05T02:28:08.513Z"
+    "updatedAt": "2026-06-05T14:37:49.097Z"
   },
   {
     "id": "31e7be77",
@@ -367,9 +375,10 @@
     "title": "fps",
     "author": "llliao",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:15:18.794Z"
+    "createdAt": "2026-06-05T02:15:18.794Z",
+    "updatedAt": "2026-06-05T14:37:49.141Z"
   },
   {
     "id": "15ba87ae",
@@ -397,9 +406,10 @@
     "title": "射击",
     "author": "陈毅睎",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:13:42.662Z"
+    "createdAt": "2026-06-05T02:13:42.662Z",
+    "updatedAt": "2026-06-05T14:37:49.166Z"
   },
   {
     "id": "82af0bd0",
@@ -417,9 +427,10 @@
     "title": "练手速",
     "author": "美女",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:13:29.028Z"
+    "createdAt": "2026-06-05T02:13:29.028Z",
+    "updatedAt": "2026-06-05T14:37:49.183Z"
   },
   {
     "id": "b59a51db",
@@ -487,9 +498,10 @@
     "title": "白雪公猪猪",
     "author": "ZH牛逼略略",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:11:50.263Z"
+    "createdAt": "2026-06-05T02:11:50.263Z",
+    "updatedAt": "2026-06-05T14:37:49.249Z"
   },
   {
     "id": "17ae3311",
@@ -1069,10 +1081,10 @@
     "title": "火影忍者手游高仿版",
     "author": "宇智波斑",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
-    "updatedAt": "2026-06-04T08:02:02.098Z"
+    "updatedAt": "2026-06-05T14:37:49.794Z"
   },
   {
     "id": "3a662fbd",
@@ -1518,7 +1530,8 @@
     "author": "小语",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:15.370Z",
-    "updatedAt": "2026-06-05T01:54:11.153Z"
+    "updatedAt": "2026-06-05T14:37:50.237Z",
+    "enabled": false
   },
   {
     "id": "c236a467",
