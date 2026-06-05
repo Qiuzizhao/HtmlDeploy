@@ -49,10 +49,13 @@
     "title": "逃离老师",
     "author": "啦啦啦",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.712Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "0b5adbb1",
+    "duplicateAuditKeepTitle": "逃离老师",
+    "duplicateAuditMessage": "与「逃离老师（00202）」代码重复"
   },
   {
     "id": "0b5adbb1",
@@ -281,10 +284,13 @@
     "title": "满改M7 VS满改巨浪",
     "author": "1",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:48.275Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "1d4268ed",
+    "duplicateAuditKeepTitle": "满改M7 VS满改巨浪",
+    "duplicateAuditMessage": "与「满改M7 VS满改巨浪（00180）」代码重复"
   },
   {
     "id": "1d4268ed",
@@ -469,10 +475,13 @@
     "title": "练枪",
     "author": "xxx",
     "classId": "f438ed26",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:14.034Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "434695b6",
+    "duplicateAuditKeepTitle": "练枪",
+    "duplicateAuditMessage": "与「练枪（00162）」代码重复"
   },
   {
     "id": "434695b6",
@@ -615,10 +624,13 @@
     "title": "l'y'x",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:59:04.345Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "50620a65",
@@ -637,10 +649,13 @@
     "title": "l'y'x",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:53.683Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "53e2562b",
@@ -648,10 +663,13 @@
     "title": "l'y'x",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:44.839Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "4f0542e5",
@@ -659,10 +677,13 @@
     "title": "l'y'x",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:44.512Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "285dffe5",
@@ -711,10 +732,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:25.257Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "1be19d08",
@@ -722,10 +746,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:11.953Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "f8b5f9a0",
@@ -755,10 +782,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:57.354Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "83025d69",
@@ -806,10 +836,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:26.269Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "bbf6450a",
@@ -817,10 +850,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:25.838Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "0b06a016",
@@ -860,10 +896,13 @@
     "title": "吃饭模拟器",
     "author": "曾锦莘",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:11.108Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "081562d2",
+    "duplicateAuditKeepTitle": "吃饭模拟器",
+    "duplicateAuditMessage": "与「吃饭模拟器（00125）」代码重复"
   },
   {
     "id": "081562d2",
@@ -881,10 +920,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:09.905Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "13171f6d",
@@ -988,10 +1030,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.893Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "16c3dbff",
@@ -999,10 +1044,13 @@
     "title": "刘奕鑫",
     "author": "刘奕鑫",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.490Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "7a0c2118",
+    "duplicateAuditKeepTitle": "刘奕鑫",
+    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
   },
   {
     "id": "7a0c2118",
@@ -1032,10 +1080,13 @@
     "title": "迷你KARDS卡牌对战",
     "author": "1939工作室",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:47.500Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "2a4f4097",
+    "duplicateAuditKeepTitle": "迷你KARDS卡牌对战",
+    "duplicateAuditMessage": "与「迷你KARDS卡牌对战（00109）」代码重复"
   },
   {
     "id": "2a4f4097",
@@ -1168,10 +1219,13 @@
     "title": "方块吃方块",
     "author": "王梓萱",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:17.791Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "1f582346",
+    "duplicateAuditKeepTitle": "方块吃方块",
+    "duplicateAuditMessage": "与「方块吃方块（00096）」代码重复"
   },
   {
     "id": "1f582346",
@@ -1221,10 +1275,13 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:36.635Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "f40ae352",
@@ -1232,10 +1289,13 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:36.472Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "798ad85c",
@@ -1243,10 +1303,13 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:36.243Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "4c7bf496",
@@ -1254,10 +1317,13 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:35.757Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "15fc69b5",
@@ -1265,10 +1331,13 @@
     "title": "跑酷",
     "author": "111",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:34.346Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "56b4e6c6",
+    "duplicateAuditKeepTitle": "跑酷",
+    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
   },
   {
     "id": "56b4e6c6",
@@ -1408,8 +1477,11 @@
     "author": "零零",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:34.897Z",
-    "enabled": true,
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "enabled": false,
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "duplicateAuditKeepId": "aae90e66",
+    "duplicateAuditKeepTitle": "音乐",
+    "duplicateAuditMessage": "与「音乐（00073）」代码重复"
   },
   {
     "id": "aae90e66",
@@ -1536,11 +1608,8 @@
     "author": "小语",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:15.370Z",
-    "updatedAt": "2026-06-05T15:10:28.883Z",
-    "enabled": false,
-    "forbiddenAuditField": "网页名字",
-    "forbiddenAuditWord": "坊",
-    "forbiddenAuditMessage": "网页名字包含违禁词「坊」"
+    "updatedAt": "2026-06-05T15:10:49.937Z",
+    "enabled": true
   },
   {
     "id": "c236a467",
@@ -1701,8 +1770,11 @@
     "author": "陈洋威ooo",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:44.559Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z",
-    "enabled": true
+    "updatedAt": "2026-06-05T15:10:52.629Z",
+    "enabled": false,
+    "duplicateAuditKeepId": "302dea0c",
+    "duplicateAuditKeepTitle": "终极枪战",
+    "duplicateAuditMessage": "与「终极枪战（00041）」代码重复"
   },
   {
     "id": "302dea0c",
