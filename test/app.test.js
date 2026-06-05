@@ -158,6 +158,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /localStorage\.getItem\(AI_OPTIMIZE_LOG_STORAGE_KEY\)/);
   assert.match(html, /localStorage\.setItem\(AI_OPTIMIZE_LOG_STORAGE_KEY/);
   assert.match(html, /aiOptimizeLogItems = loadAiOptimizeLog\(\)/);
+  assert.match(html, /async function boot\(\) \{\s+renderAiOptimizeLog\(\);/);
   assert.match(html, /runningAiOptimizations/);
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);

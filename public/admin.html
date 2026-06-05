@@ -1248,6 +1248,7 @@
     const directedAiInstruction = document.getElementById('directedAiInstruction');
     const directedAiMessage = document.getElementById('directedAiMessage');
     const startDirectedAi = document.getElementById('startDirectedAi');
+    const AI_OPTIMIZE_LOG_STORAGE_KEY = 'project-site-ai-optimize-log';
 
     let sites = [];
     let classes = [];
@@ -1255,7 +1256,7 @@
     let currentCodeSite = null;
     let currentDirectedAiSite = null;
     let currentDirectedAiButton = null;
-    let aiOptimizeLogItems = [];
+    let aiOptimizeLogItems = loadAiOptimizeLog();
     const runningAiOptimizations = new Set();
     const runningAiNaming = new Set();
     let forbiddenWordsState = {
@@ -1288,6 +1289,35 @@
       return date.toLocaleTimeString('zh-CN', { hour12: false });
     }
 
+    function loadAiOptimizeLog() {
+      try {
+        const rawLogs = localStorage.getItem(AI_OPTIMIZE_LOG_STORAGE_KEY);
+        const parsedLogs = JSON.parse(rawLogs || '[]');
+        if (!Array.isArray(parsedLogs)) {
+          return [];
+        }
+
+        return parsedLogs
+          .filter((item) => item && typeof item.text === 'string' && typeof item.time === 'string')
+          .map((item) => ({
+            text: item.text,
+            status: ['running', 'success', 'error'].includes(item.status) ? item.status : 'running',
+            time: item.time
+          }))
+          .slice(0, 30);
+      } catch {
+        return [];
+      }
+    }
+
+    function saveAiOptimizeLog() {
+      try {
+        localStorage.setItem(AI_OPTIMIZE_LOG_STORAGE_KEY, JSON.stringify(aiOptimizeLogItems.slice(0, 30)));
+      } catch {
+        // localStorage may be unavailable in restricted browser contexts.
+      }
+    }
+
     function renderAiOptimizeLog() {
       aiOptimizeLog.innerHTML = '';
       aiOptimizeLog.classList.toggle('has-logs', aiOptimizeLogItems.length > 0);
@@ -1316,6 +1346,7 @@
         time: formatLogTime()
       });
       aiOptimizeLogItems = aiOptimizeLogItems.slice(0, 30);
+      saveAiOptimizeLog();
       renderAiOptimizeLog();
     }
 
@@ -2861,6 +2892,7 @@
     });
 
     async function boot() {
+      renderAiOptimizeLog();
       await loadSettings();
       await loadForbiddenWords({ offset: 0 });
       await loadClasses();
