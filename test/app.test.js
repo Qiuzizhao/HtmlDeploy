@@ -45,6 +45,15 @@ test('public index shows the class name tag on project cards', async () => {
   assert.ok(html.indexOf("className = 'site-class-tag'") < html.indexOf("url.className = 'site-url'"));
 });
 
+test('public index shows a star badge on starred project cards', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /className = 'site-star-badge'/);
+  assert.match(html, /if \(site\.starred === true\)/);
+  assert.match(html, /starTag\.textContent = '星标作品'/);
+  assert.ok(html.indexOf("className = 'site-star-badge'") < html.indexOf("className = 'site-class-tag'"));
+});
+
 test('public index loads class buttons and uploads to the selected class', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -202,10 +211,14 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /function nameSiteWithAi/);
   assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
   assert.match(html, /textContent = forbiddenWhitelisted \? '移出白名单' : '白名单'/);
+  assert.match(html, /const starred = site\.starred === true/);
+  assert.match(html, /textContent = starred \? '取消星标' : '星标'/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-name/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-optimize-save/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/enabled/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/forbidden-whitelist/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/starred/);
+  assert.match(html, /function toggleSiteStarred/);
   assert.match(html, /project-disabled-warning/);
   assert.match(html, /搜索项目名称、ID 或序号/);
   assert.match(html, /id="classForm"/);
@@ -697,6 +710,53 @@ test('admin can disable a project so public lists and pages hide it', async () =
       ['visible-site', true]
     ]
   );
+});
+
+test('admin can star a project and public APIs expose the star state', async () => {
+  const ids = ['class-a', 'starred-site'];
+  const { app, dataDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const admin = request.agent(app);
+  const visitor = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await admin.patch('/api/classes/class-a/password-enabled').send({ passwordEnabled: false }).expect(200);
+
+  const created = await request(app)
+    .post('/api/sites')
+    .field('title', '优秀作品')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><title>优秀作品</title>')
+    .expect(201);
+  assert.equal(created.body.starred, false);
+
+  await request(app)
+    .patch('/api/sites/starred-site/starred')
+    .send({ starred: true })
+    .expect(401);
+
+  const starred = await admin
+    .patch('/api/sites/starred-site/starred')
+    .send({ starred: true })
+    .expect(200);
+  assert.equal(starred.body.starred, true);
+
+  const publicSites = await visitor.get('/api/sites?classId=class-a').expect(200);
+  assert.deepEqual(
+    publicSites.body.map((site) => [site.id, site.starred]),
+    [['starred-site', true]]
+  );
+
+  const unstarred = await admin
+    .patch('/api/sites/starred-site/starred')
+    .send({ starred: false })
+    .expect(200);
+  assert.equal(unstarred.body.starred, false);
+
+  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.equal(savedSites.find((site) => site.id === 'starred-site').starred, false);
 });
 
 test('admin forbidden audit disables projects with forbidden title or author', async () => {
