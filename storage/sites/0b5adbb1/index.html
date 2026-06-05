@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逃离老师！收集作业</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/PointerLockControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #111;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        #game {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            color: white;
+            z-index: 100;
+            pointer-events: none;
+        }
+        #gameTips {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff3d3d;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 0 0 10px black;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        #startScreen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+        #startScreen p {
+            font-size: 18px;
+            margin: 8px 0;
+        }
+        #startBtn {
+            margin-top: 30px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #ff3d3d;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        #startBtn:hover {
+            background: #ff6b6b;
+        }
+        #winScreen, #loseScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            color: white;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        #winScreen h1 {
+            color: #4ecdc4;
+            font-size: 60px;
+        }
+        #loseScreen h1 {
+            color: #ff3d3d;
+            font-size: 60px;
+        }
+        .restartBtn {
+            margin-top: 30px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #4ecdc4;
+            border: none;
+            color: black;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="ui">
+            <h2>已收集作业：<span id="homeworkCount">0</span>/8</h2>
+            <p id="statusText">状态：安全</p>
+        </div>
+        <div id="gameTips">快躲进柜子！老师发现你了！</div>
+        
+        <div id="startScreen">
+            <h1>🏃‍♂️ 逃离老师 🏫</h1>
+            <p>🎯 游戏目标：收集散落的8份作业即可通关</p>
+            <p>🎮 操作说明：</p>
+            <p>WASD - 移动 | 鼠标 - 视角 | Shift - 奔跑 | E - 躲进/离开柜子</p>
+            <p>🚪 躲进柜子可以躲避老师的追捕</p>
+            <p>👨‍🏫 被老师抓到游戏结束</p>
+            <button id="startBtn">开始游戏</button>
+        </div>
+        
+        <div id="winScreen">
+            <h1>🎉 恭喜通关！</h1>
+            <p>你成功收集了所有作业，逃离了老师的追捕！</p>
+            <button class="restartBtn">再来一局</button>
+        </div>
+        
+        <div id="loseScreen">
+            <h1>😱 被老师抓住了！</h1>
+            <p>作业没收集完就被抓到了，下次加油！</p>
+            <button class="restartBtn">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        // 基础游戏变量
+        let scene, camera, renderer, controls;
+        let player, teacher;
+        let homeworkList = [];
+        let cabinets = [];
+        let collectedHomework = 0;
+        let isGameOver = false;
+        let isHiding = false;
+        let hidingCabinet = null;
+        
+        // 老师AI变量
+        let teacherChasing = false;
+        let teacherVisionDistance = 15;
+        let teacherVisionAngle = Math.PI / 3; // 60度视野
+        let teacherSpeed = 0.08;
+        let playerSpeed = 0.15;
+        let runSpeed = 0.25;
+        
+        // 移动控制
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let isRunning = false;
+        
+        // 音效对象
+        const sounds = {
+            collect: createAudio(1),
+            hide: createAudio(0.5),
+            caught: createAudio(1),
+            win: createAudio(1),
+            chase: createAudio(0.3, true)
+        };
+
+        // 创建音频函数
+        function createAudio(volume, loop = false) {
+            const audio = new Audio();
+            audio.volume = volume;
+            audio.loop = loop;
+            return audio;
+        }
+
+        // 初始化游戏
+        function init() {
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 20, 50);
+            
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 2, 0);
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game').appendChild(renderer.domElement);
+            
+            // 添加灯光
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // 创建地图
+            createMap();
+            
+            // 创建玩家
+            createPlayer();
+            
+            // 创建老师
+            createTeacher();
+            
+            // 创建作业
+            createHomework();
+            
+            // 创建柜子
+            createCabinets();
+            
+            // 添加控制
+            addControls();
+            
+            // 窗口调整
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // 创建地图
+        function createMap() {
+            // 地面
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshLambertMaterial({color: 0x55aa55});
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // 墙壁
+            const wallMaterial = new THREE.MeshLambertMaterial({color: 0xaaaaaa});
+            
+            // 四面围墙
+            const walls = [
+                {pos: [0, 3, -50], size: [100, 6, 1]},
+                {pos: [0, 3, 50], size: [100, 6, 1]},
+                {pos: [-50, 3, 0], size: [1, 6, 100]},
+                {pos: [50, 3, 0], size: [1, 6, 100]}
+            ];
+            
+            walls.forEach(w => {
+                const geo = new THREE.BoxGeometry(w.size[0], w.size[1], w.size[2]);
+                const mesh = new THREE.Mesh(geo, wallMaterial);
+                mesh.position.set(w.pos[0], w.pos[1], w.pos[2]);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+            });
+        }
+
+        // 创建玩家
+        function createPlayer() {
+            player = new THREE.Group();
+            player.position.set(0, 0, 0);
+            
+            const bodyGeo = new THREE.BoxGeometry(1, 2, 1);
+            const bodyMat = new THREE.MeshLambertMaterial({color: 0x3498db});
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.castShadow = true;
+            player.add(body);
+            
+            scene.add(player);
+        }
+
+        // 创建老师
+        function createTeacher() {
+            teacher = new THREE.Group();
+            teacher.position.set(20, 0, 20);
+            
+            const bodyGeo = new THREE.BoxGeometry(1.2, 2.2, 1);
+            const bodyMat = new THREE.MeshLambertMaterial({color: 0xe74c3c});
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.castShadow = true;
+            teacher.add(body);
+            
+            scene.add(teacher);
+        }
+
+        // 创建作业
+        function createHomework() {
+            const homeworkMat = new THREE.MeshLambertMaterial({color: 0xf1c40f});
+            
+            for(let i = 0; i < 8; i++) {
+                const homework = new THREE.Group();
+                
+                const paperGeo = new THREE.BoxGeometry(0.8, 0.05, 0.6);
+                const paper = new THREE.Mesh(paperGeo, homeworkMat);
+                homework.add(paper);
+                
+                // 随机位置
+                const x = (Math.random() - 0.5) * 80;
+                const z = (Math.random() - 0.5) * 80;
+                homework.position.set(x, 0.5, z);
+                
+                scene.add(homework);
+                homeworkList.push(homework);
+            }
+        }
+
+        // 创建柜子
+        function createCabinets() {
+            const cabinetMat = new THREE.MeshLambertMaterial({color: 0x8b4513});
+            
+            // 6个柜子随机位置
+            for(let i = 0; i < 6; i++) {
+                const cabinet = new THREE.Group();
+                cabinet.isCabinet = true;
+                cabinet.isHiding = false;
+                
+                const mainGeo = new THREE.BoxGeometry(3, 4, 2);
+                const main = new THREE.Mesh(mainGeo, cabinetMat);
+                main.castShadow = true;
+                cabinet.add(main);
+                
+                const x = (Math.random() - 0.5) * 70;
+                const z = (Math.random() - 0.5) * 70;
+                cabinet.position.set(x, 2, z);
+                
+                scene.add(cabinet);
+                cabinets.push(cabinet);
+            }
+        }
+
+        // 添加控制
+        function addControls() {
+            controls = new THREE.PointerLockControls(camera, document.body);
+            
+            // 开始游戏按钮
+            document.getElementById('startBtn').addEventListener('click', () => {
+                controls.lock();
+                document.getElementById('startScreen').style.display = 'none';
+            });
+            
+            // 重启按钮
+            document.querySelectorAll('.restartBtn').forEach(btn => {
+                btn.addEventListener('click', restartGame);
+            });
+            
+            // 键盘控制
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'ShiftLeft': isRunning = true; break;
+                    case 'KeyE': toggleHide(); break;
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                    case 'ShiftLeft': isRunning = false; break;
+                }
+            });
+        }
+
+        // 躲进/离开柜子
+        function toggleHide() {
+            if(isGameOver) return;
+            
+            // 寻找附近的柜子
+            let nearCabinet = null;
+            cabinets.forEach(cabinet => {
+                const distance = player.position.distanceTo(cabinet.position);
+                if(distance < 3) nearCabinet = cabinet;
+            });
+            
+            if(!nearCabinet) return;
+            
+            isHiding = !isHiding;
+            hidingCabinet = nearCabinet;
+            
+            sounds.hide.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJmKRZwVx2FfNZ1VMMw2HjQ1L09sNUE9N0IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+            sounds.hide.play();
+            
+            if(isHiding) {
+                player.visible = false;
+                showTip('已躲进柜子，老师无法发现你！');
+            } else {
+                player.visible = true;
+                showTip('已离开柜子');
+            }
+        }
+
+        // 显示提示
+        function showTip(text) {
+            const tip = document.getElementById('gameTips');
+            tip.textContent = text;
+            tip.style.opacity = 1;
+            setTimeout(() => tip.style.opacity = 0, 2000);
+        }
+
+        // 老师视野检测
+        function checkTeacherVision() {
+            if(isHiding || isGameOver) return false;
+            
+            const teacherPos = new THREE.Vector3();
+            teacher.getWorldPosition(teacherPos);
+            
+            const playerPos = new THREE.Vector3();
+            player.getWorldPosition(playerPos);
+            
+            // 距离检测
+            const distance = teacherPos.distanceTo(playerPos);
+            if(distance > teacherVisionDistance) return false;
+            
+            // 角度检测
+            const direction = new THREE.Vector3().subVectors(playerPos, teacherPos).normalize();
+            const teacherForward = new THREE.Vector3(0, 0, -1).applyQuaternion(teacher.quaternion);
+            
+            const angle = teacherForward.angleTo(direction);
+            if(angle > teacherVisionAngle) return false;
+            
+            return true;
+        }
+
+        // 老师AI逻辑
+        function updateTeacher() {
+            if(isGameOver) return;
+            
+            const canSeePlayer = checkTeacherVision();
+            
+            if(canSeePlayer) {
+                teacherChasing = true;
+                document.getElementById('statusText').textContent = '状态：危险！老师在追你！';
+                document.getElementById('statusText').style.color = '#ff3d3d';
+                
+                // 追逐玩家
+                const direction = new THREE.Vector3().subVectors(player.position, teacher.position).normalize();
+                teacher.position.addScaledVector(direction, teacherSpeed);
+                
+                // 播放追逐音效
+                if(sounds.chase.paused) {
+                    sounds.chase.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJmKRZwVx2FfNZ1VMMw2HjQ1L09sNUE9N0IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+                    sounds.chase.play();
+                }
+                
+                // 被抓到
+                if(teacher.position.distanceTo(player.position) < 1.5) {
+                    gameOver(false);
+                }
+            } else {
+                teacherChasing = false;
+                document.getElementById('statusText').textContent = '状态：安全';
+                document.getElementById('statusText').style.color = '#4ecdc4';
+                
+                if(!sounds.chase.paused) sounds.chase.pause();
+            }
+        }
+
+        // 碰撞检测与收集作业
+        function checkCollisions() {
+            if(isHiding || isGameOver) return;
+            
+            homeworkList.forEach((homework, index) => {
+                if(player.position.distanceTo(homework.position) < 2) {
+                    // 收集作业
+                    scene.remove(homework);
+                    homeworkList.splice(index, 1);
+                    collectedHomework++;
+                    document.getElementById('homeworkCount').textContent = collectedHomework;
+                    
+                    sounds.collect.src = 'data:audio/wav;base64,UklGRl9KAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQcGAACDoKeFbF1fdJmKRZzIbnw2HjQ1L09sNUE9N0IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+                    sounds.collect.play();
+                    
+                    // 通关检测
+                    if(collectedHomework >= 8) {
+                        gameOver(true);
+                    }
+                }
+            });
+        }
+
+        // 游戏结束
+        function gameOver(isWin) {
+            isGameOver = true;
+            controls.unlock();
+            
+            if(!sounds.chase.paused) sounds.chase.pause();
+            
+            if(isWin) {
+                sounds.win.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJmKRZwVx2FfNZ1VMMw2HjQ1L09sNUE9N0IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+                sounds.win.play();
+                document.getElementById('winScreen').style.display = 'flex';
+            } else {
+                sounds.caught.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJmKRZwVx2FfNZ1VMMw2HjQ1L09sNUE9N0IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+                sounds.caught.play();
+                document.getElementById('loseScreen').style.display = 'flex';
+            }
+        }
+
+        // 重启游戏
+        function restartGame() {
+            window.location.reload();
+        }
+
+        // 更新玩家移动
+        function updatePlayer(delta) {
+            if(isGameOver || isHiding) return;
+            
+            const speed = isRunning ? runSpeed : playerSpeed;
+            
+            if(moveForward) controls.moveForward(speed);
+            if(moveBackward) controls.moveForward(-speed);
+            if(moveLeft) controls.moveRight(-speed);
+            if(moveRight) controls.moveRight(speed);
+            
+            // 同步玩家位置
+            player.position.copy(camera.position);
+            player.position.y = 0;
+        }
+
+        // 窗口调整
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 游戏循环
+        let clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            updatePlayer(delta);
+            updateTeacher();
+            checkCollisions();
+            
+            renderer.render(scene, camera);
+        }
+
+        // 启动游戏
+        init();
+        animate();
+    </script>
+</body>
+</html>
