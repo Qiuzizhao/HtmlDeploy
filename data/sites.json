@@ -640,10 +640,10 @@
     "title": "无",
     "author": "LCJ",
     "classId": "392f3c64",
-    "enabled": true,
+    "enabled": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:57.745Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:26:50.925Z"
   },
   {
     "id": "9c4544ef",
