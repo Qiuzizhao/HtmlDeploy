@@ -808,10 +808,17 @@ async function getDirectorySize(directory) {
 }
 
 function toPublicSite(site, classes, thumbnailDir, storageBytes = 0) {
+  const usagePreviewCount = Math.max(0, Number(site.usagePreviewCount) || 0);
+  const usageCodeCount = Math.max(0, Number(site.usageCodeCount) || 0);
+
   return {
     ...attachClassName(site, classes),
     starred: site.starred === true,
     enabled: site.enabled !== false,
+    usagePreviewCount,
+    usageCodeCount,
+    usageCount: usagePreviewCount + usageCodeCount,
+    usageLastUsedAt: site.usageLastUsedAt || '',
     storageBytes,
     url: `/site/${site.id}`,
     previewUrl: `/preview/${site.id}`,
@@ -822,6 +829,29 @@ function toPublicSite(site, classes, thumbnailDir, storageBytes = 0) {
 async function toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir) {
   const storageBytes = await getDirectorySize(path.join(storageDir, site.id));
   return toPublicSite(site, classes, thumbnailDir, storageBytes);
+}
+
+async function incrementSiteUsage(dataFile, id, type) {
+  if (!['preview', 'code'].includes(type)) {
+    return null;
+  }
+
+  const sites = await readSites(dataFile);
+  const siteIndex = sites.findIndex((site) => site.id === id);
+  if (siteIndex === -1) {
+    return null;
+  }
+
+  const site = sites[siteIndex];
+  const nextSite = {
+    ...site,
+    usagePreviewCount: Math.max(0, Number(site.usagePreviewCount) || 0) + (type === 'preview' ? 1 : 0),
+    usageCodeCount: Math.max(0, Number(site.usageCodeCount) || 0) + (type === 'code' ? 1 : 0),
+    usageLastUsedAt: new Date().toISOString()
+  };
+  sites[siteIndex] = nextSite;
+  await writeSites(dataFile, sites);
+  return nextSite;
 }
 
 function getRequestOrigin(req) {
@@ -2158,8 +2188,9 @@ function createApp(options = {}) {
       }
 
       const htmlContent = await fsp.readFile(indexPath, 'utf8');
+      const updatedSite = await incrementSiteUsage(dataFile, id, 'code') || site;
       return res.json({
-        ...(await toPublicSiteWithStorage(site, await readClasses(classesFile), thumbnailDir, storageDir)),
+        ...(await toPublicSiteWithStorage(updatedSite, await readClasses(classesFile), thumbnailDir, storageDir)),
         htmlContent
       });
     } catch (error) {
@@ -2197,9 +2228,10 @@ function createApp(options = {}) {
       }
 
       const { files, combinedText } = await readProjectCodeSnapshot(projectDir);
+      const updatedSite = await incrementSiteUsage(dataFile, id, 'code') || site;
       const classes = await readClasses(classesFile);
       return res.json({
-        ...toPublicSite(site, classes, thumbnailDir),
+        ...toPublicSite(updatedSite, classes, thumbnailDir),
         files,
         combinedText
       });
@@ -2508,6 +2540,7 @@ function createApp(options = {}) {
         return res.status(401).send('请输入班级密码');
       }
 
+      await incrementSiteUsage(dataFile, id, 'preview');
       return res.type('html').send(renderPreviewPage({ id, title: site.title }));
     } catch (error) {
       next(error);

@@ -218,9 +218,11 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /class="admin-sidebar"/);
   assert.match(html, /data-view-target="projects"/);
   assert.match(html, /data-view-target="create"/);
+  assert.match(html, /data-view-target="ranking"/);
   assert.match(html, /data-view-target="classes"/);
   assert.match(html, /data-view-target="settings"/);
   assert.match(html, /data-admin-view="projects"[^>]+class="workspace is-active"/);
+  assert.match(html, /data-admin-view="ranking"[^>]+class="workspace"/);
   assert.match(html, /data-admin-view="create"[^>]+class="workspace"/);
   assert.match(html, /data-admin-view="classes"[^>]+class="workspace"/);
   assert.match(html, /data-admin-view="settings"[^>]+class="workspace"/);
@@ -228,6 +230,14 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /projectCount/);
   assert.match(html, /classCount/);
   assert.match(html, /storageUsage/);
+  assert.match(html, /id="rankingSearchInput"/);
+  assert.match(html, /id="rankingClassFilter"/);
+  assert.match(html, /id="rankingRows"/);
+  assert.match(html, /function renderRanking/);
+  assert.match(html, /site\.enabled !== false/);
+  assert.match(html, /getTotalUsage\(right\) - getTotalUsage\(left\)/);
+  assert.match(html, /rankingSearchInput\.addEventListener\('input', renderRanking\)/);
+  assert.match(html, /rankingClassFilter\.addEventListener\('change', renderRanking\)/);
   assert.match(html, /function formatBytes/);
   assert.match(html, /id="createForm"/);
   assert.match(html, /fetch\('\/api\/admin\/sites'/);
@@ -1837,6 +1847,38 @@ test('admin can download a project HTML file', async () => {
   assert.match(response.headers['content-disposition'], /attachment/);
   assert.match(response.headers['content-disposition'], /html/);
   assert.equal(response.text, '<!doctype html><h1>Download</h1>');
+});
+
+test('preview and code opens are counted for admin rankings', async () => {
+  const ids = ['class-a', 'usage-site'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+  await agent
+    .post('/api/sites')
+    .field('title', '计数项目')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('<!doctype html><h1>Usage</h1>'), { filename: 'index.html' })
+    .expect(201);
+
+  const before = await agent.get('/api/admin/sites').expect(200);
+  assert.equal(before.body[0].usagePreviewCount, 0);
+  assert.equal(before.body[0].usageCodeCount, 0);
+  assert.equal(before.body[0].usageCount, 0);
+
+  await agent.get('/preview/usage-site').expect(200);
+  await agent.get('/api/sites/usage-site/code').expect(200);
+
+  const after = await agent.get('/api/admin/sites').expect(200);
+  const site = after.body.find((item) => item.id === 'usage-site');
+  assert.equal(site.usagePreviewCount, 1);
+  assert.equal(site.usageCodeCount, 1);
+  assert.equal(site.usageCount, 2);
+  assert.ok(site.usageLastUsedAt);
 });
 
 test('public project code endpoint returns read-only files with class access', async () => {
