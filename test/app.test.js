@@ -211,6 +211,7 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /method: 'DELETE'/);
   assert.match(html, /id="auditForbiddenSitesButton"[^>]*>违禁词审查<\/button>/);
   assert.match(html, /id="dedupeSitesButton"[^>]*>查重<\/button>/);
+  assert.match(html, /id="enableAllSitesButton"[^>]*>全部解禁<\/button>/);
   assert.match(html, /id="aiOptimizeLog"/);
   assert.match(html, /function addAiOptimizeLog/);
   assert.match(html, /const AI_OPTIMIZE_LOG_STORAGE_KEY/);
@@ -223,7 +224,9 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /runningAiOptimizations/);
   assert.match(html, /\/api\/admin\/sites\/forbidden-audit/);
   assert.match(html, /\/api\/admin\/sites\/dedupe/);
+  assert.match(html, /\/api\/admin\/sites\/enable-all/);
   assert.match(html, /function dedupeSites/);
+  assert.match(html, /function enableAllSites/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/download/);
   assert.match(html, /textContent = '下载'/);
   assert.match(html, /textContent = aiOptimizeButton\.disabled \? '优化中\.\.\.' : 'AI优化'/);
@@ -860,6 +863,59 @@ test('admin can disable a project so public lists and pages hide it', async () =
       ['visible-site', true]
     ]
   );
+});
+
+test('admin can enable all disabled projects', async () => {
+  const { app, dataDir } = await makeTestApp();
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const sites = [
+    {
+      id: 'enabled-site',
+      number: '00001',
+      title: '已启用',
+      author: '作者A',
+      enabled: true,
+      updatedAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
+      id: 'disabled-site',
+      number: '00002',
+      title: '已禁用',
+      author: '作者B',
+      enabled: false,
+      updatedAt: '2026-01-02T00:00:00.000Z'
+    },
+    {
+      id: 'implicit-enabled-site',
+      number: '00003',
+      title: '默认启用',
+      author: '作者C',
+      updatedAt: '2026-01-03T00:00:00.000Z'
+    }
+  ];
+  await fsp.writeFile(path.join(dataDir, 'sites.json'), JSON.stringify(sites, null, 2));
+
+  await request(app).post('/api/admin/sites/enable-all').send({}).expect(401);
+
+  const response = await admin.post('/api/admin/sites/enable-all').send({}).expect(200);
+  assert.deepEqual(response.body, {
+    checked: 3,
+    enabled: 1
+  });
+
+  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.deepEqual(
+    savedSites.map((site) => [site.id, site.enabled !== false]),
+    [
+      ['enabled-site', true],
+      ['disabled-site', true],
+      ['implicit-enabled-site', true]
+    ]
+  );
+  assert.equal(savedSites.find((site) => site.id === 'enabled-site').updatedAt, '2026-01-01T00:00:00.000Z');
+  assert.notEqual(savedSites.find((site) => site.id === 'disabled-site').updatedAt, '2026-01-02T00:00:00.000Z');
 });
 
 test('admin can star a project and public APIs expose the star state', async () => {

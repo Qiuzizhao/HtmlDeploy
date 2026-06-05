@@ -1105,6 +1105,7 @@
             <div class="toolbar-right">
               <button class="button" id="dedupeSitesButton" type="button">查重</button>
               <button class="warning-button" id="auditForbiddenSitesButton" type="button">违禁词审查</button>
+              <button class="button" id="enableAllSitesButton" type="button">全部解禁</button>
               <button class="button" id="generateThumbnailsButton" type="button">刷新全部封面</button>
               <button class="button" id="reloadButton" type="button">刷新列表</button>
             </div>
@@ -1365,6 +1366,7 @@
     const filterClassId = document.getElementById('filterClassId');
     const dedupeSitesButton = document.getElementById('dedupeSitesButton');
     const auditForbiddenSitesButton = document.getElementById('auditForbiddenSitesButton');
+    const enableAllSitesButton = document.getElementById('enableAllSitesButton');
     const generateThumbnailsButton = document.getElementById('generateThumbnailsButton');
     const aiOptimizeLog = document.getElementById('aiOptimizeLog');
     const navButtons = Array.from(document.querySelectorAll('[data-view-target]'));
@@ -2652,6 +2654,37 @@
         : `封面生成完成，共 ${result.generated.length} 个`);
     }
 
+    async function enableAllSites() {
+      if (!confirm('确定解除所有被禁用项目吗？')) {
+        return;
+      }
+
+      enableAllSitesButton.disabled = true;
+      enableAllSitesButton.textContent = '解禁中...';
+      setMessage(listMessage, '正在解除所有被禁用项目...');
+
+      const response = await fetch('/api/admin/sites/enable-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      enableAllSitesButton.disabled = false;
+      enableAllSitesButton.textContent = '全部解禁';
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '全部解禁失败' }));
+        setMessage(listMessage, result.error || '全部解禁失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      await loadSites();
+      setMessage(listMessage, result.enabled
+        ? `已解除 ${result.enabled} 个被禁用项目`
+        : '没有需要解禁的项目');
+    }
+
     async function auditForbiddenSites() {
       auditForbiddenSitesButton.disabled = true;
       auditForbiddenSitesButton.textContent = '审查中...';
@@ -3184,6 +3217,7 @@
     });
     auditForbiddenSitesButton.addEventListener('click', auditForbiddenSites);
     dedupeSitesButton.addEventListener('click', dedupeSites);
+    enableAllSitesButton.addEventListener('click', enableAllSites);
     generateThumbnailsButton.addEventListener('click', generateAllThumbnails);
     document.getElementById('closeCodeWindow').addEventListener('click', closeCodeWindow);
     document.getElementById('closeDirectedAiWindow').addEventListener('click', closeDirectedAiWindow);

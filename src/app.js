@@ -1964,6 +1964,37 @@ function createApp(options = {}) {
     }
   });
 
+  app.post('/api/admin/sites/enable-all', requireAdmin, async (req, res, next) => {
+    try {
+      const sites = await readSites(dataFile);
+      const now = new Date().toISOString();
+      let enabledCount = 0;
+      const nextSites = sites.map((site) => {
+        if (site.enabled !== false) {
+          return site;
+        }
+
+        enabledCount += 1;
+        return {
+          ...site,
+          enabled: true,
+          updatedAt: now
+        };
+      });
+
+      if (enabledCount) {
+        await writeSites(dataFile, nextSites);
+      }
+
+      return res.json({
+        checked: sites.length,
+        enabled: enabledCount
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.patch('/api/sites/:id/enabled', requireAdmin, async (req, res, next) => {
     try {
       const { id } = req.params;
