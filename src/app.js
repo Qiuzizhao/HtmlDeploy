@@ -167,6 +167,14 @@ function normalizeTemperature(value, fallback) {
   return Math.min(2, Math.max(0, Math.round(number * 100) / 100));
 }
 
+function normalizeTimeoutMs(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    return fallback;
+  }
+  return Math.max(1000, Math.round(number));
+}
+
 function getEnvironmentLlmConfig(options = {}) {
   return {
     apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
@@ -174,7 +182,8 @@ function getEnvironmentLlmConfig(options = {}) {
     model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini',
     thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || '',
     temperature: normalizeTemperature(options.llmTemperature ?? process.env.LLM_TEMPERATURE, 0.2),
-    nameTemperature: normalizeTemperature(options.llmNameTemperature ?? process.env.LLM_NAME_TEMPERATURE, 0.3)
+    nameTemperature: normalizeTemperature(options.llmNameTemperature ?? process.env.LLM_NAME_TEMPERATURE, 0.3),
+    timeoutMs: normalizeTimeoutMs(options.llmTimeoutMs ?? process.env.LLM_TIMEOUT_MS, 85000)
   };
 }
 
@@ -199,7 +208,8 @@ function mergeLlmConfig(options = {}, aiSettings = {}) {
     model: normalized.model || environment.model,
     thinkingType: normalized.thinkingType || environment.thinkingType,
     temperature: normalized.temperature ?? environment.temperature,
-    nameTemperature: normalized.nameTemperature ?? environment.nameTemperature
+    nameTemperature: normalized.nameTemperature ?? environment.nameTemperature,
+    timeoutMs: environment.timeoutMs
   };
 }
 
@@ -237,6 +247,34 @@ function getChatCompletionsUrl(baseUrl) {
     : `${normalizedBaseUrl}/chat/completions`;
 }
 
+async function fetchJsonWithTimeout(url, options, timeoutMs, timeoutMessage) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    const responseText = await response.text();
+    let result = {};
+    if (responseText) {
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        result = { rawText: responseText };
+      }
+    }
+    return { response, result };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(timeoutMessage);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmConfig }) {
   if (!llmConfig.apiKey) {
     throw new Error('请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY');
@@ -272,18 +310,22 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
     requestBody.thinking = { type: llmConfig.thinkingType };
   }
 
-  const response = await fetch(getChatCompletionsUrl(llmConfig.baseUrl), {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${llmConfig.apiKey}`,
-      'Content-Type': 'application/json'
+  const { response, result } = await fetchJsonWithTimeout(
+    getChatCompletionsUrl(llmConfig.baseUrl),
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${llmConfig.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
     },
-    body: JSON.stringify(requestBody)
-  });
+    llmConfig.timeoutMs,
+    `AI 优化服务响应超时（超过 ${Math.round(llmConfig.timeoutMs / 1000)} 秒），请稍后重试`
+  );
 
-  const result = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(result.error?.message || `AI 优化接口调用失败：${response.status}`);
+    throw new Error(result.error?.message || result.rawText || `AI 优化接口调用失败：${response.status}`);
   }
 
   const optimizedContent = stripCodeFence(result.choices?.[0]?.message?.content || '');
@@ -329,18 +371,22 @@ async function nameSiteWithLlm({ codeSnapshot, currentTitle, author, llmConfig }
     requestBody.thinking = { type: llmConfig.thinkingType };
   }
 
-  const response = await fetch(getChatCompletionsUrl(llmConfig.baseUrl), {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${llmConfig.apiKey}`,
-      'Content-Type': 'application/json'
+  const { response, result } = await fetchJsonWithTimeout(
+    getChatCompletionsUrl(llmConfig.baseUrl),
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${llmConfig.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
     },
-    body: JSON.stringify(requestBody)
-  });
+    llmConfig.timeoutMs,
+    `AI 命名服务响应超时（超过 ${Math.round(llmConfig.timeoutMs / 1000)} 秒），请稍后重试`
+  );
 
-  const result = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(result.error?.message || `AI 命名接口调用失败：${response.status}`);
+    throw new Error(result.error?.message || result.rawText || `AI 命名接口调用失败：${response.status}`);
   }
 
   const title = normalizeSiteTitle(stripCodeFence(result.choices?.[0]?.message?.content || ''));
