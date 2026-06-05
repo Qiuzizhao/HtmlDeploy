@@ -2,50 +2,1006 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
 <title>精致MC网页版</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;user-select:none;font-family:system-ui}
-body{background:#222;display:flex;flex-direction:column;align-items:center;padding:12px;color:#fff}
-#game{border:4px solid #443322;image-rendering:pixelated;background:#87CEFA}
-.bar{display:flex;gap:6px;margin-top:10px;padding:8px;background:#332a22;border-radius:6px}
-.item{width:48px;height:48px;border:3px solid #554433;cursor:pointer;border-radius:3px}
-.item.active{border-color:#4cd964;box-shadow:0 0 8px #4cd96477}
-.info{margin-top:8px;color:#aaa;font-size:14px}
-.title{font-size:26px;margin-bottom:8px;color:#7dd87d;text-shadow:2px 2px #000}
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  body {
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+  .title {
+    font-size: clamp(18px, 4vw, 26px);
+    margin-bottom: 6px;
+    color: #7dd87d;
+    text-shadow: 2px 2px #000;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  #game-container {
+    position: relative;
+    width: 100%;
+    max-width: 1080px;
+    aspect-ratio: 1080/600;
+  }
+  #game {
+    width: 100%;
+    height: 100%;
+    border: 4px solid #443322;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #87CEFA;
+    cursor: crosshair;
+    display: block;
+    border-radius: 2px;
+  }
+  .bar {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: #332a22;
+    border-radius: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    border: 2px solid #443322;
+  }
+  .item {
+    width: clamp(36px, 8vw, 48px);
+    height: clamp(36px, 8vw, 48px);
+    border: 3px solid #554433;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: border-color .15s, box-shadow .15s, transform .1s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item:hover {
+    border-color: #6b9;
+    transform: translateY(-2px);
+  }
+  .item.active {
+    border-color: #4cd964;
+    box-shadow: 0 0 10px #4cd96477, inset 0 0 6px #4cd96433;
+    transform: translateY(-3px);
+  }
+  .item::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #aaa;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .item:hover::after,
+  .item.active::after {
+    opacity: 1;
+  }
+  .info {
+    margin-top: 6px;
+    color: #999;
+    font-size: clamp(10px, 2vw, 13px);
+    text-align: center;
+    line-height: 1.4;
+    padding: 0 8px;
+  }
+  .stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 4px;
+    color: #888;
+    font-size: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .stats span {
+    background: #2a2a2a;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid #444;
+  }
+  .mode-btn {
+    display: none;
+    margin-top: 6px;
+    padding: 6px 16px;
+    background: #4cd964;
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .5px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mode-btn.place-mode {
+    background: #ff6b6b;
+    color: #fff;
+  }
+  @media (max-width: 768px) {
+    body {
+      padding: 6px;
+    }
+    .bar {
+      gap: 3px;
+      padding: 4px 5px;
+    }
+    .mode-btn {
+      display: inline-block;
+    }
+  }
+  @media (max-width: 480px) {
+    .info {
+      font-size: 10px;
+    }
+    .stats {
+      gap: 8px;
+      font-size: 10px;
+    }
+  }
 </style>
 </head>
 <body>
 <div class="title">🧱 精致MC网页建造</div>
-<canvas id="game" width="1080" height="600"></canvas>
+<div id="game-container">
+  <canvas id="game" width="1080" height="600"></canvas>
+</div>
 <div class="bar" id="hotbar">
-  <div class="item active" data="grass" style="background:linear-gradient(#62b947 32%,#8b6038 32%)"></div>
-  <div class="item" data="stone" style="background:#888;box-shadow:inset 2px 2px #aaa,inset -2px -2px #555"></div>
-  <div class="item" data="oak" style="background:#9c6c42;box-shadow:inset 0 8px #704c30"></div>
-  <div class="item" data="glass" style="background:rgba(200,240,255,0.45);border:2px #a1c8e8 solid"></div>
-  <div class="item" data="plank" style="background:#b88e5e"></div>
-  <div class="item" data="dirt" style="background:#8c6540"></div>
+  <div class="item active" data-type="grass" data-label="草方块" style="background:linear-gradient(#62b947 38%,#8b6038 38%)"></div>
+  <div class="item" data-type="stone" data-label="石头" style="background:#888;box-shadow:inset 2px 2px #aaa,inset -2px -2px #555"></div>
+  <div class="item" data-type="oak" data-label="橡木" style="background:#9c6c42;box-shadow:inset 0 8px #704c30"></div>
+  <div class="item" data-type="glass" data-label="玻璃" style="background:rgba(200,240,255,0.45);border:2px solid #a1c8e8"></div>
+  <div class="item" data-type="plank" data-label="木板" style="background:#b88e5e"></div>
+  <div class="item" data-type="dirt" data-label="泥土" style="background:#8c6540"></div>
+</div>
+<button class="mode-btn" id="modeBtn" title="切换挖掘/放置模式(移动端)">🔨 挖掘模式</button>
+<div class="stats">
+  <span id="dayStat">🌅 第1天</span>
+  <span id="blockStat">🧱 方块: 0</span>
+  <span id="mobStat">🐾 生物: 0</span>
 </div>
 <div class="info">WASD移动视角｜滚轮缩放｜左键挖方块｜右键放方块｜数字1~6切换方块｜自动存档</div>
 <script>
-(function(){
-  const canvas=document.getElementById("game");
-  const ctx=canvas.getContext("2d");
-  const BLOCK=32;
-  const cam={x:-350,y:-180,scale:1};
-  let select="grass";
-  const world={};
-  const mobList=[];
-  let day=0;
-  const hot=document.querySelectorAll(".item");
+(function () {
+  "use strict";
 
-  const blockCfg={
-    grass:{top:"#62b947",side:"#8b6038"},
-    stone:{bg:"#888",hl:"#aaa",sh:"#555"},
-    oak:{bg:"#9c6c42",dark:"#704c30"},
-    glass:{bg:"rgba(200,240,255,0.45)"},
-    plank:{bg:"#b88e5e"},
-    dirt:{bg:"#8c6540"}
-  };
+  // ─────────── DOM引用 ───────────
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const hotbar = document.getElementById("hotbar");
+  const modeBtn = document.getElementById("modeBtn");
+  const dayStat = document.getElementById("dayStat");
+  const blockStat = document.getElementById("blockStat");
+  const mobStat = document.getElementById("mobStat");
+  const items = hotbar.querySelectorAll(".item");
 
-  const dig=new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFH9rL/3N0d5BiR1r+LvvzQmBjR67+P//AQD/APwA/wD9AP0A/gD5APkA/gD4APgA/gD3APcA/gD2APYA/gD1APUA/gD0APQA/gDzAPMA/gDyAPIA/gDxAPMA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAP
+  // ─────────── 常量 ───────────
+  const BLOCK = 32;
+  const W = 1080;
+  const H = 600;
+  const WORLD_HALF = 80;
+  const BLOCK_TYPES = ["grass", "stone", "oak", "glass", "plank", "dirt"];
+  const WATER_COLOR = "#3388cc";
+
+  // ─────────── 音频 ───────────
+  let digSound = null;
+  try {
+    digSound = new Audio(
+      "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFH9rL/3N0d5BiR1r+LvvzQmBjR67+P//AQD/APwA/wD9AP0A/gD5APkA/gD4APgA/gD3APcA/gD2APYA/gD1APUA/gD0APQA/gDzAPMA/gDyAPIA/gDxAPMA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA/gDwAPwA"
+    );
+    digSound.volume = 0.35;
+  } catch (e) {
+    /* 音频不可用 */
+  }
+
+  function playDig() {
+    if (!digSound) return;
+    try {
+      digSound.currentTime = 0;
+      digSound.play().catch(function () {});
+    } catch (e) {}
+  }
+
+  // ─────────── 游戏状态 ───────────
+  let selectedType = "grass";
+  let camX = -350;
+  let camY = -180;
+  let camScale = 1;
+  let day = 1;
+  let dayTimer = 0;
+  const DAY_DURATION = 7200; // 约2分钟(60fps下)
+  const worldChanges = new Map();
+  const particles = [];
+  const mobs = [];
+  let isMobilePlaceMode = false;
+  let hoveredBlock = null;
+
+  // ─────────── 世界生成 ───────────
+  function hash(x, y) {
+    let h = 0;
+    const s1 = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    const s2 = Math.cos(y * 45.164 + x * 23.789) * 32145.6123;
+    h = s1 + s2;
+    return h - Math.floor(h);
+  }
+
+  function getTerrainHeight(x, y) {
+    const v1 = Math.sin(x * 0.047 + y * 0.032) * Math.cos(y * 0.053 - x * 0.028) * 9;
+    const v2 = Math.sin(x * 0.082 + 1.3) * Math.cos(y * 0.071 + 0.7) * 5;
+    const v3 = Math.sin(x * 0.031 + y * 0.064 + 2.1) * 6;
+    const v4 = Math.cos(x * 0.12 - y * 0.09) * 3;
+    return v1 + v2 + v3 + v4;
+  }
+
+  function getDefaultBlock(x, y) {
+    const h = getTerrainHeight(x, y);
+    if (h < -4.5) return "water";
+    if (h < -1.5) return "grass";
+    if (h < 3.5) return "grass";
+    return "stone";
+  }
+
+  function shouldHaveTree(x, y) {
+    const h = getTerrainHeight(x, y);
+    if (h < -1 || h > 3) return false;
+    if (getDefaultBlock(x, y) !== "grass") return false;
+    const r = hash(x * 7, y * 13);
+    if (r > 0.94) return true;
+    if (r > 0.91 && hash(x + 31, y - 17) > 0.5) return true;
+    return false;
+  }
+
+  function getBlock(x, y) {
+    const key = x + "," + y;
+    if (worldChanges.has(key)) return worldChanges.get(key);
+    const def = getDefaultBlock(x, y);
+    if (shouldHaveTree(x, y) && def === "grass") return "oak";
+    return def;
+  }
+
+  function setBlock(x, y, type) {
+    const key = x + "," + y;
+    const current = getBlock(x, y);
+    if (type === null || type === "air") {
+      const def = getDefaultBlock(x, y);
+      const treeCheck = shouldHaveTree(x, y) && def === "grass" ? "oak" : def;
+      if (current !== treeCheck) {
+        worldChanges.set(key, treeCheck);
+      } else {
+        worldChanges.delete(key);
+      }
+    } else {
+      const def = getDefaultBlock(x, y);
+      const treeCheck = shouldHaveTree(x, y) && def === "grass" ? "oak" : def;
+      if (type !== treeCheck) {
+        worldChanges.set(key, type);
+      } else {
+        worldChanges.delete(key);
+      }
+    }
+  }
+
+  function countChanges() {
+    return worldChanges.size;
+  }
+
+  // ─────────── 生物 ───────────
+  function spawnMobs(count) {
+    mobs.length = 0;
+    const mobTypes = [
+      { emoji: "🐷", color: "#f5a0a0", name: "猪" },
+      { emoji: "🐔", color: "#f5e8a0", name: "鸡" },
+      { emoji: "🐑", color: "#e0e0e0", name: "羊" },
+      { emoji: "🐮", color: "#8b5e3c", name: "牛" },
+      { emoji: "🐰", color: "#d4c8b8", name: "兔" },
+    ];
+    for (let i = 0; i < count; i++) {
+      let mx, my;
+      let attempts = 0;
+      do {
+        mx = Math.floor((hash(i * 71 + 13, 0) - 0.5) * 100);
+        my = Math.floor((hash(0, i * 37 + 7) - 0.5) * 70);
+        attempts++;
+      } while (attempts < 50 && (getBlock(mx, my) === "water" || getBlock(mx, my) === "stone"));
+      const t = mobTypes[i % mobTypes.length];
+      mobs.push({
+        x: mx * BLOCK + BLOCK / 2,
+        y: my * BLOCK + BLOCK / 2,
+        type: t,
+        vx: 0,
+        vy: 0,
+        timer: Math.floor(Math.random() * 60),
+        dirTimer: 0,
+      });
+    }
+  }
+
+  function updateMobs() {
+    for (let i = 0; i < mobs.length; i++) {
+      const m = mobs[i];
+      m.dirTimer--;
+      if (m.dirTimer <= 0) {
+        m.dirTimer = 40 + Math.floor(Math.random() * 80);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 0.9;
+        m.vx = Math.cos(angle) * speed;
+        m.vy = Math.sin(angle) * speed;
+      }
+      let nx = m.x + m.vx;
+      let ny = m.y + m.vy;
+      const bx = Math.floor(nx / BLOCK);
+      const by = Math.floor(ny / BLOCK);
+      if (bx < -WORLD_HALF - 5 || bx > WORLD_HALF + 5 || by < -WORLD_HALF - 5 || by > WORLD_HALF + 5) {
+        m.vx *= -1;
+        m.vy *= -1;
+        m.dirTimer = 20;
+        continue;
+      }
+      if (getBlock(bx, by) === "water") {
+        m.vx *= -0.5;
+        m.vy *= -0.5;
+        m.dirTimer = 15;
+        continue;
+      }
+      m.x = nx;
+      m.y = ny;
+      if (m.timer > 0) m.timer--;
+    }
+  }
+
+  // ─────────── 粒子系统 ───────────
+  function spawnParticles(wx, wy, color) {
+    const count = 8 + Math.floor(Math.random() * 8);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: wx,
+        y: wy,
+        vx: (Math.random() - 0.5) * 5,
+        vy: (Math.random() - 0.5) * 5 - 2,
+        life: 20 + Math.floor(Math.random() * 20),
+        maxLife: 40,
+        color: color,
+        size: 2 + Math.random() * 3,
+      });
+    }
+  }
+
+  function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.life--;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  // ─────────── 渲染 ───────────
+  function getBlockColor(type) {
+    switch (type) {
+      case "grass":
+        return "#62b947";
+      case "stone":
+        return "#888";
+      case "oak":
+        return "#9c6c42";
+      case "glass":
+        return "rgba(200,240,255,0.5)";
+      case "plank":
+        return "#b88e5e";
+      case "dirt":
+        return "#8c6540";
+      case "water":
+        return WATER_COLOR;
+      default:
+        return "#ccc";
+    }
+  }
+
+  function drawBlockTexture(ctx, sx, sy, type, size) {
+    const s = size;
+    ctx.fillStyle = getBlockColor(type);
+    ctx.fillRect(sx, sy, s, s);
+    switch (type) {
+      case "grass":
+        ctx.fillStyle = "#8b6038";
+        ctx.fillRect(sx, sy + s * 0.62, s, s * 0.38);
+        ctx.fillStyle = "#4a8";
+        for (let i = 0; i < 6; i++) {
+          const gx = sx + s * 0.1 + (i / 6) * s * 0.8;
+          ctx.fillRect(gx, sy + s * 0.1, s * 0.06, s * 0.35);
+        }
+        break;
+      case "stone":
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.35, s * 0.25);
+        ctx.fillStyle = "rgba(0,0,0,0.15)";
+        ctx.fillRect(sx + s * 0.55, sy + s * 0.6, s * 0.3, s * 0.25);
+        break;
+      case "oak":
+        ctx.strokeStyle = "#704c30";
+        ctx.lineWidth = 1;
+        const cy = sy + s / 2;
+        for (let r = s * 0.15; r < s * 0.5; r += s * 0.12) {
+          ctx.beginPath();
+          ctx.arc(sx + s / 2, cy, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#704c30";
+        ctx.fillRect(sx + s * 0.42, sy + s * 0.05, s * 0.16, s * 0.9);
+        break;
+      case "glass":
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.fillRect(sx + s * 0.08, sy + s * 0.08, s * 0.5, s * 0.22);
+        ctx.fillRect(sx + s * 0.6, sy + s * 0.45, s * 0.28, s * 0.2);
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(sx + 2, sy + 2, s - 4, s - 4);
+        break;
+      case "plank":
+        ctx.strokeStyle = "#9a7040";
+        ctx.lineWidth = 1;
+        for (let ly = sy + s * 0.2; ly < sy + s; ly += s * 0.2) {
+          ctx.beginPath();
+          ctx.moveTo(sx, ly);
+          ctx.lineTo(sx + s, ly);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.fillRect(sx, sy, s, s);
+        break;
+      case "dirt":
+        ctx.fillStyle = "rgba(0,0,0,0.08)";
+        for (let j = 0; j < 8; j++) {
+          const dx = sx + (hash(j * 3 + 1, 7) * s * 0.7);
+          const dy = sy + (hash(j * 5 + 2, 11) * s * 0.7);
+          ctx.fillRect(dx, dy, s * 0.1, s * 0.1);
+        }
+        break;
+      case "water":
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        for (let w = 0; w < 3; w++) {
+          const wx = sx + s * 0.15 + w * s * 0.25;
+          const wy = sy + s * 0.2 + (w % 2) * s * 0.3;
+          ctx.fillRect(wx, wy, s * 0.18, s * 0.06);
+        }
+        break;
+    }
+    ctx.strokeStyle = "rgba(0,0,0,0.18)";
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(sx + 0.4, sy + 0.4, s - 0.8, s - 0.8);
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    const viewLeft = camX;
+    const viewTop = camY;
+    const viewRight = camX + W / camScale;
+    const viewBottom = camY + H / camScale;
+
+    const bxMin = Math.floor(viewLeft / BLOCK) - 1;
+    const byMin = Math.floor(viewTop / BLOCK) - 1;
+    const bxMax = Math.ceil(viewRight / BLOCK) + 1;
+    const byMax = Math.ceil(viewBottom / BLOCK) + 1;
+
+    // 渲染方块
+    for (let by = byMin; by <= byMax; by++) {
+      for (let bx = bxMin; bx <= bxMax; bx++) {
+        const blockType = getBlock(bx, by);
+        if (blockType === "air") continue;
+        const sx = (bx * BLOCK - camX) * camScale;
+        const sy = (by * BLOCK - camY) * camScale;
+        const s = BLOCK * camScale;
+        if (sx + s < -4 || sy + s < -4 || sx > W + 4 || sy > H + 4) continue;
+        drawBlockTexture(ctx, sx, sy, blockType, s);
+      }
+    }
+
+    // 渲染生物
+    for (const m of mobs) {
+      const sx = (m.x - camX) * camScale;
+      const sy = (m.y - camY) * camScale;
+      const s = BLOCK * camScale * 0.7;
+      if (sx + s < -10 || sy + s < -10 || sx > W + 10 || sy > H + 10) continue;
+      ctx.font = Math.max(14, s * 0.8) + "px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(m.type.emoji, sx, sy);
+    }
+
+    // 渲染粒子
+    for (const p of particles) {
+      const sx = (p.x - camX) * camScale;
+      const sy = (p.y - camY) * camScale;
+      const alpha = p.life / p.maxLife;
+      ctx.fillStyle = p.color.replace(")", ", " + alpha.toFixed(2) + ")").replace("rgb(", "rgba(");
+      if (p.color.startsWith("#")) {
+        const hex = p.color;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + alpha.toFixed(2) + ")";
+      }
+      ctx.fillRect(sx - p.size / 2, sy - p.size / 2, p.size * camScale, p.size * camScale);
+    }
+
+    // 渲染悬停高亮
+    if (hoveredBlock) {
+      const hx = (hoveredBlock.x * BLOCK - camX) * camScale;
+      const hy = (hoveredBlock.y * BLOCK - camY) * camScale;
+      const hs = BLOCK * camScale;
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = Math.max(1.5, 2 * camScale);
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(hx + 1, hy + 1, hs - 2, hs - 2);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1;
+    }
+
+    // 渲染准星光标
+    if (hoveredBlock) {
+      const cx = (hoveredBlock.x * BLOCK + BLOCK / 2 - camX) * camScale;
+      const cy = (hoveredBlock.y * BLOCK + BLOCK / 2 - camY) * camScale;
+      const cs = Math.max(4, 6 * camScale);
+      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, cs, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - cs - 3, cy);
+      ctx.lineTo(cx - 3, cy);
+      ctx.moveTo(cx + cs + 3, cy);
+      ctx.lineTo(cx + 3, cy);
+      ctx.moveTo(cx, cy - cs - 3);
+      ctx.lineTo(cx, cy - 3);
+      ctx.moveTo(cx, cy + cs + 3);
+      ctx.lineTo(cx, cy + 3);
+      ctx.stroke();
+    }
+  }
+
+  // ─────────── 输入处理 ───────────
+  const keys = {};
+  let mouseX = -100;
+  let mouseY = -100;
+  let mouseOnCanvas = false;
+
+  function screenToWorld(sx, sy) {
+    return {
+      wx: sx / camScale + camX,
+      wy: sy / camScale + camY,
+    };
+  }
+
+  function screenToBlock(sx, sy) {
+    const w = screenToWorld(sx, sy);
+    return {
+      bx: Math.floor(w.wx / BLOCK),
+      by: Math.floor(w.wy / BLOCK),
+    };
+  }
+
+  function updateHoveredBlock() {
+    if (!mouseOnCanvas) {
+      hoveredBlock = null;
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const sx = (mouseX - rect.left) * (W / rect.width);
+    const sy = (mouseY - rect.top) * (H / rect.height);
+    if (sx < 0 || sy < 0 || sx > W || sy > H) {
+      hoveredBlock = null;
+      return;
+    }
+    hoveredBlock = screenToBlock(sx, sy);
+  }
+
+  canvas.addEventListener("mousemove", function (e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  canvas.addEventListener("mouseenter", function () {
+    mouseOnCanvas = true;
+  });
+
+  canvas.addEventListener("mouseleave", function () {
+    mouseOnCanvas = false;
+    hoveredBlock = null;
+  });
+
+  canvas.addEventListener("click", function (e) {
+    if (e.button !== 0) return;
+    if (isMobilePlaceMode) {
+      placeBlockAtMouse(e);
+    } else {
+      digBlockAtMouse(e);
+    }
+  });
+
+  canvas.addEventListener("contextmenu", function (e) {
+    e.preventDefault();
+    if (!isMobilePlaceMode) {
+      placeBlockAtMouse(e);
+    } else {
+      digBlockAtMouse(e);
+    }
+  });
+
+  function digBlockAtMouse(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * (W / rect.width);
+    const sy = (e.clientY - rect.top) * (H / rect.height);
+    if (sx < 0 || sy < 0 || sx > W || sy > H) return;
+    const pos = screenToBlock(sx, sy);
+    const bt = getBlock(pos.bx, pos.by);
+    if (bt === "air") return;
+    if (bt === "water") {
+      setBlock(pos.bx, pos.by, "air");
+      playDig();
+      spawnParticles(pos.bx * BLOCK + BLOCK / 2, pos.by * BLOCK + BLOCK / 2, "#4488cc");
+      saveWorld();
+      return;
+    }
+    const color = getBlockColor(bt);
+    setBlock(pos.bx, pos.by, "air");
+    playDig();
+    spawnParticles(pos.bx * BLOCK + BLOCK / 2, pos.by * BLOCK + BLOCK / 2, color);
+    saveWorld();
+  }
+
+  function placeBlockAtMouse(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * (W / rect.width);
+    const sy = (e.clientY - rect.top) * (H / rect.height);
+    if (sx < 0 || sy < 0 || sx > W || sy > H) return;
+    const pos = screenToBlock(sx, sy);
+    const bt = getBlock(pos.bx, pos.by);
+    if (bt !== "air" && bt !== "water") return;
+    setBlock(pos.bx, pos.by, selectedType);
+    spawnParticles(pos.bx * BLOCK + BLOCK / 2, pos.by * BLOCK + BLOCK / 2, getBlockColor(selectedType));
+    saveWorld();
+  }
+
+  canvas.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    const zoomFactor = 1.08;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (W / rect.width);
+    const my = (e.clientY - rect.top) * (H / rect.height);
+    const worldX = mx / camScale + camX;
+    const worldY = my / camScale + camY;
+    if (e.deltaY < 0) {
+      camScale = Math.min(3, camScale * zoomFactor);
+    } else {
+      camScale = Math.max(0.35, camScale / zoomFactor);
+    }
+    camX = worldX - mx / camScale;
+    camY = worldY - my / camScale;
+  }, { passive: false });
+
+  window.addEventListener("keydown", function (e) {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key >= "1" && e.key <= "6") {
+      const idx = parseInt(e.key) - 1;
+      selectBlockType(BLOCK_TYPES[idx]);
+    }
+    if (e.key.toLowerCase() === "e") {
+      isMobilePlaceMode = !isMobilePlaceMode;
+      updateModeButton();
+    }
+    if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+    }
+  });
+
+  window.addEventListener("keyup", function (e) {
+    keys[e.key.toLowerCase()] = false;
+  });
+
+  function selectBlockType(type) {
+    selectedType = type;
+    items.forEach(function (item) {
+      const dt = item.getAttribute("data-type");
+      if (dt === type) {
+        item.classList.add("active");
+      } else {
+        item.classList.remove("active");
+      }
+    });
+  }
+
+  items.forEach(function (item) {
+    item.addEventListener("click", function () {
+      const type = item.getAttribute("data-type");
+      selectBlockType(type);
+    });
+  });
+
+  // ─────────── 移动端模式按钮 ───────────
+  function updateModeButton() {
+    if (isMobilePlaceMode) {
+      modeBtn.textContent = "🧱 放置模式";
+      modeBtn.classList.add("place-mode");
+    } else {
+      modeBtn.textContent = "🔨 挖掘模式";
+      modeBtn.classList.remove("place-mode");
+    }
+  }
+
+  modeBtn.addEventListener("click", function () {
+    isMobilePlaceMode = !isMobilePlaceMode;
+    updateModeButton();
+  });
+
+  // ─────────── 触摸支持 ───────────
+  let touchId = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartCamX = 0;
+  let touchStartCamY = 0;
+  let touchMoved = false;
+  let touchStartTime = 0;
+  let lastTouchDist = 0;
+
+  canvas.addEventListener("touchstart", function (e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      touchId = e.touches[0].identifier;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartCamX = camX;
+      touchStartCamY = camY;
+      touchMoved = false;
+      touchStartTime = Date.now();
+    } else if (e.touches.length === 2) {
+      touchId = null;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", function (e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && touchId !== null && e.touches[0].identifier === touchId) {
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        touchMoved = true;
+      }
+      camX = touchStartCamX - dx / camScale;
+      camY = touchStartCamY - dy / camScale;
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (lastTouchDist > 0 && Math.abs(dist - lastTouchDist) > 3) {
+        const scaleFactor = dist / lastTouchDist;
+        const newScale = Math.max(0.35, Math.min(3, camScale * scaleFactor));
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const rect = canvas.getBoundingClientRect();
+        const cx = (midX - rect.left) * (W / rect.width);
+        const cy = (midY - rect.top) * (H / rect.height);
+        const wx = cx / camScale + camX;
+        const wy = cy / camScale + camY;
+        camScale = newScale;
+        camX = wx - cx / camScale;
+        camY = wy - cy / camScale;
+      }
+      lastTouchDist = dist;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", function (e) {
+    if (!touchMoved && touchId !== null && Date.now() - touchStartTime < 300) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = (touchStartX - rect.left) * (W / rect.width);
+      const sy = (touchStartY - rect.top) * (H / rect.height);
+      if (sx >= 0 && sy >= 0 && sx <= W && sy <= H) {
+        if (isMobilePlaceMode) {
+          const pos = screenToBlock(sx, sy);
+          const bt = getBlock(pos.bx, pos.by);
+          if (bt === "air" || bt === "water") {
+            setBlock(pos.bx, pos.by, selectedType);
+            spawnParticles(pos.bx * BLOCK + BLOCK / 2, pos.by * BLOCK + BLOCK / 2, getBlockColor(selectedType));
+            saveWorld();
+          }
+        } else {
+          const pos = screenToBlock(sx, sy);
+          const bt = getBlock(pos.bx, pos.by);
+          if (bt !== "air") {
+            const color = getBlockColor(bt);
+            setBlock(pos.bx, pos.by, "air");
+            playDig();
+            spawnParticles(pos.bx * BLOCK + BLOCK / 2, pos.by * BLOCK + BLOCK / 2, color);
+            saveWorld();
+          }
+        }
+      }
+    }
+    touchId = null;
+    touchMoved = false;
+    lastTouchDist = 0;
+  });
+
+  // ─────────── 存档系统 ───────────
+  const SAVE_KEY = "mc_world_v2";
+
+  function saveWorld() {
+    try {
+      const data = {
+        changes: Array.from(worldChanges.entries()),
+        camX: camX,
+        camY: camY,
+        camScale: camScale,
+        day: day,
+        dayTimer: dayTimer,
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (e) {
+      /* localStorage不可用或已满 */
+    }
+  }
+
+  function loadWorld() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (data.changes && Array.isArray(data.changes)) {
+        worldChanges.clear();
+        for (const entry of data.changes) {
+          if (Array.isArray(entry) && entry.length === 2) {
+            worldChanges.set(entry[0], entry[1]);
+          }
+        }
+      }
+      if (typeof data.camX === "number") camX = data.camX;
+      if (typeof data.camY === "number") camY = data.camY;
+      if (typeof data.camScale === "number") camScale = Math.max(0.35, Math.min(3, data.camScale));
+      if (typeof data.day === "number") day = data.day;
+      if (typeof data.dayTimer === "number") dayTimer = data.dayTimer;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function saveWorldDebounced() {
+    saveWorld();
+  }
+
+  // ─────────── 游戏循环 ───────────
+  let lastTime = 0;
+  let frameCount = 0;
+
+  function gameLoop(timestamp) {
+    requestAnimationFrame(gameLoop);
+
+    if (!lastTime) lastTime = timestamp;
+    const dt = Math.min(timestamp - lastTime, 100);
+    lastTime = timestamp;
+    frameCount++;
+
+    // 更新天数
+    dayTimer += dt / 1000 * 60;
+    if (dayTimer >= DAY_DURATION) {
+      dayTimer -= DAY_DURATION;
+      day++;
+    }
+
+    // 处理键盘移动
+    const moveSpeed = 280 / camScale;
+    let movedCam = false;
+    if (keys["w"] || keys["arrowup"]) {
+      camY -= moveSpeed / 60;
+      movedCam = true;
+    }
+    if (keys["s"] || keys["arrowdown"]) {
+      camY += moveSpeed / 60;
+      movedCam = true;
+    }
+    if (keys["a"] || keys["arrowleft"]) {
+      camX -= moveSpeed / 60;
+      movedCam = true;
+    }
+    if (keys["d"] || keys["arrowright"]) {
+      camX += moveSpeed / 60;
+      movedCam = true;
+    }
+
+    // 更新悬停方块
+    updateHoveredBlock();
+
+    // 更新生物
+    updateMobs();
+
+    // 更新粒子
+    updateParticles();
+
+    // 渲染
+    render();
+
+    // 更新统计信息 (每30帧)
+    if (frameCount % 30 === 0) {
+      dayStat.textContent = "🌅 第" + day + "天";
+      blockStat.textContent = "🧱 方块: " + countChanges();
+      mobStat.textContent = "🐾 生物: " + mobs.length;
+    }
+
+    // 自动存档 (每300帧 ~5秒)
+    if (movedCam && frameCount % 300 === 0) {
+      saveWorldDebounced();
+    }
+  }
+
+  // ─────────── 初始化 ───────────
+  function init() {
+    const loaded = loadWorld();
+    if (!loaded) {
+      worldChanges.clear();
+      camX = -350;
+      camY = -180;
+      camScale = 1;
+      day = 1;
+      dayTimer = 0;
+    }
+    spawnMobs(8);
+    selectBlockType("grass");
+    updateModeButton();
+    updateHoveredBlock();
+    dayStat.textContent = "🌅 第" + day + "天";
+    blockStat.textContent = "🧱 方块: " + countChanges();
+    mobStat.textContent = "🐾 生物: " + mobs.length;
+    requestAnimationFrame(gameLoop);
+  }
+
+  // ─────────── 响应式处理 ───────────
+  function handleResize() {
+    const container = document.getElementById("game-container");
+    if (!container) return;
+    const maxWidth = Math.min(1080, window.innerWidth - 20);
+    container.style.maxWidth = maxWidth + "px";
+  }
+
+  window.addEventListener("resize", handleResize);
+  window.addEventListener("orientationchange", function () {
+    setTimeout(handleResize, 200);
+  });
+  handleResize();
+
+  // ─────────── 启动 ───────────
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
