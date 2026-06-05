@@ -4,9 +4,19 @@ set -e
 APP_DIR="/home/ubuntu/HtmlDeploy"
 PORT=3005
 DOMAIN="htmldeploy.qiuzizhao.com"
+ENV_FILE="$APP_DIR/.env.production"
 
 echo "Updating application on custom port..."
 cd $APP_DIR
+
+if [ -f "$ENV_FILE" ]; then
+  echo "Loading private server environment..."
+  set -a
+  . "$ENV_FILE"
+  set +a
+else
+  echo "Private server environment file not found: $ENV_FILE"
+fi
 
 echo "Installing production dependencies..."
 npm install --omit=dev
