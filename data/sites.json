@@ -35,7 +35,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:26:05.208Z",
-    "updatedAt": "2026-06-05T15:38:36.266Z"
+    "updatedAt": "2026-06-05T15:38:36.266Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-06T03:23:22.797Z"
   },
   {
     "id": "a97f837c",
