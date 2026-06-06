@@ -2135,10 +2135,11 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:31:24.736Z",
-    "updatedAt": "2026-06-03T01:40:31.589Z",
+    "updatedAt": "2026-06-06T10:01:19.159Z",
     "usagePreviewCount": 1,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-06T10:01:11.546Z"
+    "usageLastUsedAt": "2026-06-06T10:01:11.546Z",
+    "starred": true
   },
   {
     "id": "dce4d86e",
@@ -2163,8 +2164,9 @@
     "title": "迷你城市规划师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T15:34:45.559Z",
-    "updatedAt": "2026-06-02T15:52:12.526Z",
-    "author": "邱老师"
+    "updatedAt": "2026-06-06T10:01:21.053Z",
+    "author": "邱老师",
+    "starred": true
   },
   {
     "id": "20d3c066",
