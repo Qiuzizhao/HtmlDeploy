@@ -1,15 +1,16 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>精美推箱子小游戏｜多关卡版</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", sans-serif;
+            font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
         }
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -17,398 +18,728 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 20px;
+            justify-content: center;
+            padding: 24px 12px;
         }
         .container {
             background: #fff;
-            padding: 30px;
+            padding: 24px 20px 28px;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            max-width: 100%;
+            width: fit-content;
         }
         .title {
-            font-size: 36px;
-            color: #333;
+            font-size: 32px;
             text-align: center;
-            margin-bottom: 16px;
-            background: linear-gradient(90deg,#764ba2,#667eea);
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, #764ba2, #667eea);
             -webkit-background-clip: text;
-            color: transparent;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             font-weight: bold;
+            letter-spacing: 2px;
         }
         .info-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 18px;
-            font-size: 18px;
+            margin-bottom: 16px;
+            font-size: 16px;
             color: #444;
             flex-wrap: wrap;
-            gap:10px;
+            gap: 8px;
         }
         .step-box {
             background: #f3f4f6;
-            padding:6px 16px;
+            padding: 4px 16px;
             border-radius: 30px;
+            white-space: nowrap;
         }
         .btn-group {
             display: flex;
-            gap:12px;
-            margin-bottom:20px;
+            gap: 10px;
+            margin-bottom: 18px;
             justify-content: center;
             flex-wrap: wrap;
         }
         .btn-group button {
-            padding:10px 20px;
+            padding: 8px 18px;
             border: none;
             border-radius: 30px;
-            font-size:15px;
+            font-size: 14px;
             cursor: pointer;
-            transition: all 0.25s ease;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-            color:#fff;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+            color: #fff;
+            font-weight: 500;
+            touch-action: manipulation;
+        }
+        .btn-group button:active {
+            transform: scale(0.96);
         }
         #resetBtn {
-            background: linear-gradient(90deg,#667eea,#764ba2);
+            background: linear-gradient(90deg, #667eea, #764ba2);
         }
-        #nextBtn{
-            background:linear-gradient(90deg,#38b6ff,#2895d9);
+        #nextBtn {
+            background: linear-gradient(90deg, #38b6ff, #2895d9);
         }
-        .level-btn{
-            background:linear-gradient(90deg,#2cb978,#1f9e63);
+        .level-btn {
+            background: linear-gradient(90deg, #2cb978, #1f9e63);
+        }
+        .level-btn.active {
+            box-shadow: 0 0 0 3px #fff, 0 0 0 5px #2cb978;
         }
         .btn-group button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 12px rgba(102,126,234,0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.35);
         }
         #gameBox {
-            border:4px solid #775538;
-            border-radius:12px;
-            background:#c9b89c;
-            padding:4px;
+            border: 4px solid #775538;
+            border-radius: 12px;
+            background: #c9b89c;
+            padding: 4px;
             box-shadow: inset 0 0 12px #947959;
+            display: inline-block;
+            line-height: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
         .cell {
-            width:46px;
-            height:46px;
-            display:inline-block;
+            width: 46px;
+            height: 46px;
+            display: inline-block;
             vertical-align: middle;
-            border:1px solid rgba(0,0,0,0.08);
-            position:relative;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            position: relative;
+            transition: background 0.15s;
         }
-        /* 墙壁 深石材质感 */
         .wall {
-            background: linear-gradient(145deg,#555,#333);
+            background: linear-gradient(145deg, #555, #333);
             box-shadow: inset 0 0 0 2px #222;
         }
-        /* 木纹地板 */
         .floor {
-            background: linear-gradient(135deg,#e9ddc8,#d9ccb5);
+            background: linear-gradient(135deg, #e9ddc8, #d9ccb5);
         }
-        /* 目标圆点 */
         .target::after {
-            content:"";
-            position:absolute;
-            width:20px;
-            height:20px;
-            background:#ff4757;
-            border-radius:50%;
-            top:50%;
-            left:50%;
-            transform:translate(-50%,-50%);
-            box-shadow:0 0 6px #ff2233;
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ff4757;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 6px #ff2233;
         }
-        /* 玩家小人 */
         .player::after {
-            content:"👨";
-            font-size:30px;
-            position:absolute;
-            top:50%;
-            left:50%;
-            transform:translate(-50%,-50%);
+            content: "👨";
+            font-size: 30px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            line-height: 1;
         }
-        /* 木箱 */
         .box::after {
-            content:"";
-            width:34px;
-            height:34px;
-            background:linear-gradient(145deg,#d49c58,#b27c36);
-            border:2px solid #805525;
-            border-radius:4px;
-            position:absolute;
-            top:50%;
-            left:50%;
-            transform:translate(-50%,-50%);
-            box-shadow:inset 0 0 0 1px #e9b87c, 2px 2px 3px rgba(0,0,0,0.3);
+            content: "";
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(145deg, #d49c58, #b27c36);
+            border: 2px solid #805525;
+            border-radius: 4px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 0 0 1px #e9b87c, 2px 2px 3px rgba(0, 0, 0, 0.3);
         }
-        /* 箱子在目标点 */
         .box-on-target::after {
-            width:34px;
-            height:34px;
-            background:linear-gradient(145deg,#ff7676,#e63939);
-            border:2px solid #b82626;
-            border-radius:4px;
-            position:absolute;
-            top:50%;
-            left:50%;
-            transform:translate(-50%,-50%);
-            box-shadow:0 0 8px #ff3333;
-            content:"";
+            content: "";
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(145deg, #ff7676, #e63939);
+            border: 2px solid #b82626;
+            border-radius: 4px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #ff3333;
         }
-        .win-tip{
-            position:fixed;
-            top:0;
-            left:0;
-            width:100%;
-            height:100%;
-            background:rgba(0,0,0,0.6);
-            display:none;
-            align-items:center;
-            justify-content:center;
-            z-index:99;
+        .win-tip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
         }
-        .win-card{
-            background:#fff;
-            padding:40px 50px;
-            border-radius:16px;
-            text-align:center;
-            box-shadow:0 8px 30px rgba(0,0,0,0.2);
+        .win-card {
+            background: #fff;
+            padding: 36px 44px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            max-width: 90vw;
         }
-        .win-card h2{
-            color:#764ba2;
-            margin-bottom:12px;
-            font-size:28px;
+        .win-card h2 {
+            color: #764ba2;
+            margin-bottom: 12px;
+            font-size: 28px;
         }
-        .win-card p{
-            font-size:18px;
-            color:#555;
-            margin-bottom:20px;
+        .win-card p {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 20px;
         }
-        .win-card button{
-            padding:9px 26px;
-            border:none;
-            border-radius:25px;
-            background:#764ba2;
-            color:#fff;
-            font-size:16px;
-            cursor:pointer;
-            margin:0 6px;
+        .win-card button {
+            padding: 9px 26px;
+            border: none;
+            border-radius: 25px;
+            background: #764ba2;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 6px;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .win-card button:active {
+            transform: scale(0.96);
+        }
+        .win-card button:hover {
+            background: #5f3a87;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 520px) {
+            .container {
+                padding: 16px 12px 20px;
+            }
+            .title {
+                font-size: 24px;
+            }
+            .cell {
+                width: 36px;
+                height: 36px;
+            }
+            .player::after {
+                font-size: 24px;
+            }
+            .box::after,
+            .box-on-target::after {
+                width: 26px;
+                height: 26px;
+            }
+            .target::after {
+                width: 14px;
+                height: 14px;
+            }
+            .info-bar {
+                font-size: 14px;
+            }
+            .btn-group button {
+                font-size: 12px;
+                padding: 6px 14px;
+            }
+            .win-card {
+                padding: 28px 24px;
+            }
+            .win-card h2 {
+                font-size: 22px;
+            }
+            .win-card p {
+                font-size: 16px;
+            }
+        }
+        @media (max-width: 400px) {
+            .cell {
+                width: 30px;
+                height: 30px;
+            }
+            .player::after {
+                font-size: 20px;
+            }
+            .box::after,
+            .box-on-target::after {
+                width: 22px;
+                height: 22px;
+            }
+            .target::after {
+                width: 12px;
+                height: 12px;
+            }
         }
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1 class="title">经典推箱子</h1>
+
         <div class="info-bar">
-            <div class="step-box">关卡：<span id="levelNum">1</span>｜步数：<span id="stepNum">0</span></div>
+            <div class="step-box">关卡：<span id="levelNum">1</span> ｜ 步数：<span id="stepNum">0</span></div>
             <div>所有箱子推入红色圆点即可过关</div>
         </div>
-        <div class="btn-group">
-            <button id="resetBtn" onclick="resetGame()">重置本关</button>
-            <button id="nextBtn" onclick="nextLevel()">下一关</button>
-            <button class="level-btn" onclick="changeLevel(1)">第1关</button>
-            <button class="level-btn" onclick="changeLevel(2)">第2关</button>
-            <button class="level-btn" onclick="changeLevel(3)">第3关</button>
-            <button class="level-btn" onclick="changeLevel(4)">第4关</button>
-            <button class="level-btn" onclick="changeLevel(5)">第5关</button>
+
+        <div class="btn-group" id="buttonGroup">
+            <button id="resetBtn">重置本关</button>
+            <button id="nextBtn">下一关</button>
         </div>
-        <div id="gameBox"></div>
+
+        <div id="gameBox" role="grid" aria-label="推箱子游戏棋盘"></div>
     </div>
 
     <!-- 通关弹窗 -->
-    <div class="win-tip" id="winModal">
+    <div class="win-tip" id="winModal" role="dialog" aria-modal="true">
         <div class="win-card">
             <h2>🎉 恭喜通关！</h2>
             <p>本关总共走了 <span id="finalStep">0</span> 步</p>
-            <button onclick="closeWinReset()">重玩本关</button>
-            <button onclick="closeWinNext()">挑战下一关</button>
+            <button id="modalResetBtn">重玩本关</button>
+            <button id="modalNextBtn">挑战下一关</button>
         </div>
     </div>
 
-<script>
-//地图说明：0空地 1墙 2目标 3玩家 4箱子 5箱子在目标
-const levels = [
-    //第1关（新手入门）
-    [
-        [1,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,0,1],
-        [1,0,3,4,0,2,0,1],
-        [1,0,0,4,4,2,0,1],
-        [1,0,0,0,0,2,0,1],
-        [1,1,1,1,1,1,1,1]
-    ],
-    //第2关
-    [
-        [1,1,1,1,1,1,1,1,1],
-        [1,0,0,1,0,0,0,0,1],
-        [1,0,3,1,4,0,2,0,1],
-        [1,0,0,0,4,4,2,0,1],
-        [1,0,0,0,0,0,2,0,1],
-        [1,1,1,1,1,1,1,1,1]
-    ],
-    //第3关
-    [
-        [1,1,1,1,1,1,1,1,1],
-        [1,1,0,0,0,0,0,1,1],
-        [1,0,0,4,1,4,0,0,1],
-        [1,0,3,4,0,2,2,0,1],
-        [1,0,0,0,0,2,0,0,1],
-        [1,1,1,1,1,1,1,1,1]
-    ],
-    //第4关
-    [
-        [1,1,1,1,1,1,1,1,1,1],
-        [1,0,0,0,1,0,0,0,0,1],
-        [1,0,3,4,1,4,0,2,0,1],
-        [1,0,0,4,0,4,2,2,0,1],
-        [1,0,0,0,0,0,0,2,0,1],
-        [1,1,1,1,1,1,1,1,1,1]
-    ],
-    //第5关（小难度）
-    [
-        [1,1,1,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,0,0,0,1],
-        [1,0,0,4,4,4,0,2,0,1],
-        [1,0,3,0,0,0,0,2,0,1],
-        [1,0,0,0,0,0,0,2,0,1],
-        [1,1,1,1,1,1,1,1,1,1]
-    ]
-];
+    <script>
+        (function() {
+            'use strict';
 
-let nowLevel = 1; //当前关卡
-let map = [];
-let originMap = [];
-let playerPos = {x:0,y:0};
-let step = 0;
+            /* ============================================================
+               常量与状态
+               ============================================================ */
+            const T = {
+                EMPTY: 0,
+                WALL: 1,
+                TARGET: 2,
+                PLAYER: 3,
+                BOX: 4,
+                BOX_ON_TARGET: 5
+            };
 
-const gameDom = document.getElementById('gameBox');
-const stepDom = document.getElementById('stepNum');
-const levelDom = document.getElementById('levelNum');
-const winModal = document.getElementById('winModal');
-const finalStepDom = document.getElementById('finalStep');
+            // 地图说明：0空地  1墙  2目标  3玩家  4箱子  5箱子在目标
+            var levels = [
+                // 第1关（新手入门）
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 3, 4, 0, 2, 0, 1],
+                    [1, 0, 0, 4, 4, 2, 0, 1],
+                    [1, 0, 0, 0, 0, 2, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                // 第2关
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 1, 0, 0, 0, 0, 1],
+                    [1, 0, 3, 1, 4, 0, 2, 0, 1],
+                    [1, 0, 0, 0, 4, 4, 2, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 2, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                // 第3关
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
+                    [1, 0, 0, 4, 1, 4, 0, 0, 1],
+                    [1, 0, 3, 4, 0, 2, 2, 0, 1],
+                    [1, 0, 0, 0, 0, 2, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                // 第4关
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                    [1, 0, 3, 4, 1, 4, 0, 2, 0, 1],
+                    [1, 0, 0, 4, 0, 4, 2, 2, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 2, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ],
+                // 第5关（小难度）
+                [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 4, 4, 4, 0, 2, 0, 1],
+                    [1, 0, 3, 0, 0, 0, 0, 2, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 2, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+                ]
+            ];
 
-//加载指定关卡
-function loadLevel(lv){
-    nowLevel = lv;
-    levelDom.innerText = nowLevel;
-    map = JSON.parse(JSON.stringify(levels[lv-1]));
-    originMap = JSON.parse(JSON.stringify(levels[lv-1]));
-    step = 0;
-    //寻找玩家初始坐标
-    for(let y=0;y<map.length;y++){
-        for(let x=0;x<map[y].length;x++){
-            if(map[y][x]===3){
-                playerPos = {x,y};
-                break;
+            // 当前状态
+            var nowLevel = 1;
+            var map = [];
+            var originMap = [];
+            var playerPos = { x: 0, y: 0 };
+            var step = 0;
+            var isWin = false;
+            var levelCount = levels.length;
+
+            // DOM 缓存
+            var gameDom = document.getElementById('gameBox');
+            var stepDom = document.getElementById('stepNum');
+            var levelDom = document.getElementById('levelNum');
+            var winModal = document.getElementById('winModal');
+            var finalStepDom = document.getElementById('finalStep');
+            var buttonGroup = document.getElementById('buttonGroup');
+
+            /* ============================================================
+               工具函数
+               ============================================================ */
+            function deepCloneGrid(grid) {
+                return grid.map(function(row) {
+                    return row.slice();
+                });
             }
-        }
-    }
-    renderMap();
-}
 
-//切换关卡
-function changeLevel(num){
-    loadLevel(num);
-}
-//下一关
-function nextLevel(){
-    if(nowLevel<levels.length){
-        loadLevel(nowLevel+1);
-    }else{
-        alert("已经是最后一关！");
-    }
-}
-//重置当前关卡
-function resetGame(){
-    loadLevel(nowLevel);
-}
-//通关弹窗：重玩
-function closeWinReset(){
-    winModal.style.display = 'none';
-    resetGame();
-}
-//通关弹窗：下一关
-function closeWinNext(){
-    winModal.style.display = 'none';
-    nextLevel();
-}
-
-// 渲染地图
-function renderMap(){
-    gameDom.innerHTML = '';
-    for(let y=0;y<map.length;y++){
-        let rowDiv = document.createElement('div');
-        for(let x=0;x<map[y].length;x++){
-            let cell = document.createElement('span');
-            cell.className = 'cell floor';
-            let val = map[y][x];
-            switch(val){
-                case 1: cell.classList.remove('floor');cell.classList.add('wall');break;
-                case 2: cell.classList.add('target');break;
-                case 3: cell.classList.add('player');break;
-                case 4: cell.classList.add('box');break;
-                case 5: cell.classList.add('box-on-target','target');break;
+            function isInBounds(y, x, grid) {
+                return y >= 0 && y < grid.length && x >= 0 && x < grid[y].length;
             }
-            rowDiv.appendChild(cell);
-        }
-        gameDom.appendChild(rowDiv);
-    }
-    stepDom.innerText = step;
-    checkWin();
-}
 
-//检测通关
-function checkWin(){
-    let win = true;
-    for(let y=0;y<map.length;y++){
-        for(let x=0;x<map[y].length;x++){
-            if(map[y][x] ===4) win = false;
-        }
-    }
-    if(win){
-        finalStepDom.innerText = step;
-        winModal.style.display = 'flex';
-    }
-}
+            /* ============================================================
+               关卡加载
+               ============================================================ */
+            function loadLevel(lv) {
+                if (lv < 1 || lv > levelCount) return;
+                nowLevel = lv;
+                levelDom.textContent = nowLevel;
 
-//移动逻辑
-function move(dx,dy){
-    const nx = playerPos.x + dx;
-    const ny = playerPos.y + dy;
-    if(map[ny][nx] ===1) return;
-    //碰到箱子
-    if(map[ny][nx]===4 || map[ny][nx]===5){
-        const bx = nx+dx;
-        const by = ny+dy;
-        //箱子前方阻碍
-        if(map[by][bx]===1 || map[by][bx]===4 || map[by][bx]===5) return;
-        //放置箱子
-        map[by][bx] = map[by][bx]===2 ?5:4;
-        //原箱子位还原
-        map[ny][nx] = map[ny][nx]===5 ?2:0;
-    }
-    //玩家旧位置恢复
-    const ox = playerPos.x;
-    const oy = playerPos.y;
-    map[oy][ox] = originMap[oy][ox]===2 ?2:0;
-    //新玩家位置
-    playerPos = {x:nx,y:ny};
-    map[ny][nx] =3;
-    step++;
-    renderMap();
-}
+                // 深拷贝原始地图
+                originMap = deepCloneGrid(levels[lv - 1]);
+                map = deepCloneGrid(levels[lv - 1]);
 
-//键盘监听
-document.onkeydown = e=>{
-    switch(e.key){
-        case 'ArrowUp':case 'w':case 'W':move(0,-1);break;
-        case 'ArrowDown':case 's':case 'S':move(0,1);break;
-        case 'ArrowLeft':case 'a':case 'A':move(-1,0);break;
-        case 'ArrowRight':case 'd':case 'D':move(1,0);break;
-    }
-}
+                step = 0;
+                isWin = false;
+                winModal.style.display = 'none';
 
-//初始化加载第一关
-loadLevel(1);
-</script>
+                // 寻找玩家初始位置
+                var found = false;
+                for (var y = 0; y < map.length && !found; y++) {
+                    for (var x = 0; x < map[y].length && !found; x++) {
+                        if (map[y][x] === T.PLAYER) {
+                            playerPos = { x: x, y: y };
+                            found = true;
+                        }
+                    }
+                }
+
+                // 更新关卡按钮高亮
+                var levelBtns = document.querySelectorAll('.level-btn');
+                for (var i = 0; i < levelBtns.length; i++) {
+                    levelBtns[i].classList.toggle('active', parseInt(levelBtns[i].dataset.level) === lv);
+                }
+
+                renderMap();
+            }
+
+            /* ============================================================
+               渲染
+               ============================================================ */
+            function renderMap() {
+                var fragment = document.createDocumentFragment();
+                var rows = map.length;
+
+                for (var y = 0; y < rows; y++) {
+                    var rowDiv = document.createElement('div');
+                    rowDiv.style.lineHeight = '0';
+                    var cols = map[y].length;
+
+                    for (var x = 0; x < cols; x++) {
+                        var cell = document.createElement('span');
+                        cell.className = 'cell floor';
+                        var val = map[y][x];
+
+                        switch (val) {
+                            case T.WALL:
+                                cell.classList.remove('floor');
+                                cell.classList.add('wall');
+                                break;
+                            case T.TARGET:
+                                cell.classList.add('target');
+                                break;
+                            case T.PLAYER:
+                                cell.classList.add('player');
+                                break;
+                            case T.BOX:
+                                cell.classList.add('box');
+                                break;
+                            case T.BOX_ON_TARGET:
+                                cell.classList.add('box-on-target', 'target');
+                                break;
+                            default:
+                                // EMPTY 无需额外类
+                                break;
+                        }
+                        rowDiv.appendChild(cell);
+                    }
+                    fragment.appendChild(rowDiv);
+                }
+
+                gameDom.innerHTML = '';
+                gameDom.appendChild(fragment);
+                stepDom.textContent = step;
+
+                // 渲染完成后检测胜利
+                checkWin();
+            }
+
+            /* ============================================================
+               胜利检测
+               ============================================================ */
+            function checkWin() {
+                if (isWin) return;
+                var allDone = true;
+                for (var y = 0; y < map.length && allDone; y++) {
+                    for (var x = 0; x < map[y].length && allDone; x++) {
+                        if (map[y][x] === T.BOX) {
+                            allDone = false;
+                        }
+                    }
+                }
+                if (allDone) {
+                    isWin = true;
+                    finalStepDom.textContent = step;
+                    winModal.style.display = 'flex';
+                }
+            }
+
+            /* ============================================================
+               移动逻辑
+               ============================================================ */
+            function doMove(dx, dy) {
+                if (isWin) return;
+                if (dx === 0 && dy === 0) return;
+
+                var nx = playerPos.x + dx;
+                var ny = playerPos.y + dy;
+
+                // 边界检查
+                if (!isInBounds(ny, nx, map)) return;
+
+                var targetCell = map[ny][nx];
+
+                // 撞墙
+                if (targetCell === T.WALL) return;
+
+                // 碰到箱子（普通箱子或在目标上的箱子）
+                if (targetCell === T.BOX || targetCell === T.BOX_ON_TARGET) {
+                    var bx = nx + dx;
+                    var by = ny + dy;
+
+                    if (!isInBounds(by, bx, map)) return;
+
+                    var beyondCell = map[by][bx];
+
+                    // 箱子前方是墙、箱子、箱子在目标上 → 不能推
+                    if (beyondCell === T.WALL ||
+                        beyondCell === T.BOX ||
+                        beyondCell === T.BOX_ON_TARGET) {
+                        return;
+                    }
+
+                    // 箱子前移
+                    map[by][bx] = (beyondCell === T.TARGET) ? T.BOX_ON_TARGET : T.BOX;
+
+                    // 原箱子位还原
+                    map[ny][nx] = (targetCell === T.BOX_ON_TARGET) ? T.TARGET : T.EMPTY;
+                }
+
+                // 玩家旧位置还原
+                var ox = playerPos.x;
+                var oy = playerPos.y;
+                map[oy][ox] = (originMap[oy][ox] === T.TARGET) ? T.TARGET : T.EMPTY;
+
+                // 玩家移动
+                playerPos = { x: nx, y: ny };
+                map[ny][nx] = T.PLAYER;
+
+                step++;
+                renderMap();
+            }
+
+            /* ============================================================
+               关卡切换与重置
+               ============================================================ */
+            function resetGame() {
+                loadLevel(nowLevel);
+            }
+
+            function nextLevel() {
+                if (nowLevel < levelCount) {
+                    loadLevel(nowLevel + 1);
+                } else {
+                    showMessage('已经是最后一关！');
+                }
+            }
+
+            function changeLevel(num) {
+                if (num >= 1 && num <= levelCount) {
+                    loadLevel(num);
+                }
+            }
+
+            function showMessage(text) {
+                // 简单反馈，不依赖额外 UI
+                var tip = document.createElement('div');
+                tip.textContent = text;
+                tip.style.cssText =
+                    'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
+                    'background:rgba(0,0,0,0.8);color:#fff;padding:10px 28px;border-radius:30px;' +
+                    'font-size:16px;z-index:999;pointer-events:none;transition:opacity 0.3s;';
+                document.body.appendChild(tip);
+                setTimeout(function() {
+                    tip.style.opacity = '0';
+                    setTimeout(function() {
+                        if (tip.parentNode) tip.parentNode.removeChild(tip);
+                    }, 300);
+                }, 1500);
+            }
+
+            /* ============================================================
+               弹窗操作
+               ============================================================ */
+            function closeWinReset() {
+                winModal.style.display = 'none';
+                resetGame();
+            }
+
+            function closeWinNext() {
+                winModal.style.display = 'none';
+                nextLevel();
+            }
+
+            /* ============================================================
+               键盘控制
+               ============================================================ */
+            function handleKeyDown(e) {
+                var key = e.key;
+                // 防止页面滚动
+                var controlKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'W', 's', 'S', 'a', 'A', 'd', 'D'];
+                if (controlKeys.indexOf(key) !== -1) {
+                    e.preventDefault();
+                }
+
+                switch (key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        doMove(0, -1);
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        doMove(0, 1);
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        doMove(-1, 0);
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        doMove(1, 0);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            /* ============================================================
+               触摸 / 滑动支持 (移动端)
+               ============================================================ */
+            var touchStartX = 0;
+            var touchStartY = 0;
+            var touchMoved = false;
+
+            function handleTouchStart(e) {
+                var touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                touchMoved = false;
+            }
+
+            function handleTouchMove(e) {
+                // 阻止页面滚动
+                e.preventDefault();
+                touchMoved = true;
+            }
+
+            function handleTouchEnd(e) {
+                if (!touchMoved) return;
+                // 使用 changedTouches 获取最终位置
+                var touch = e.changedTouches[0];
+                var dx = touch.clientX - touchStartX;
+                var dy = touch.clientY - touchStartY;
+                var absDx = dx > 0 ? dx : -dx;
+                var absDy = dy > 0 ? dy : -dy;
+
+                // 最小滑动距离 20px
+                var threshold = 20;
+                if (absDx < threshold && absDy < threshold) return;
+
+                if (absDx > absDy) {
+                    // 水平滑动
+                    doMove(dx > 0 ? 1 : -1, 0);
+                } else {
+                    // 垂直滑动
+                    doMove(0, dy > 0 ? 1 : -1);
+                }
+            }
+
+            /* ============================================================
+               动态生成关卡按钮 & 事件绑定
+               ============================================================ */
+            function buildLevelButtons() {
+                var fragment = document.createDocumentFragment();
+                for (var i = 1; i <= levelCount; i++) {
+                    var btn = document.createElement('button');
+                    btn.className = 'level-btn';
+                    btn.textContent = '第' + i + '关';
+                    btn.dataset.level = i;
+                    btn.addEventListener('click', function(e) {
+                        var lv = parseInt(this.dataset.level);
+                        changeLevel(lv);
+                    });
+                    if (i === nowLevel) {
+                        btn.classList.add('active');
+                    }
+                    fragment.appendChild(btn);
+                }
+                buttonGroup.appendChild(fragment);
+            }
+
+            function initEvents() {
+                // 键盘
+                document.addEventListener('keydown', handleKeyDown);
+
+                // 触摸滑动（只绑定在 gameBox 上，避免干扰其他区域）
+                gameBox.addEventListener('touchstart', handleTouchStart, { passive: true });
+                gameBox.addEventListener('touchmove', handleTouchMove, { passive: false });
+                gameBox.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+                // 按钮事件
+                document.getElementById('resetBtn').addEventListener('click', resetGame);
+                document.getElementById('nextBtn').addEventListener('click', nextLevel);
+                document.getElementById('modalResetBtn').addEventListener('click', closeWinReset);
+                document.getElementById('modalNextBtn').addEventListener('click', closeWinNext);
+            }
+
+            /* ============================================================
+               启动
+               ============================================================ */
+            buildLevelButtons();
+            initEvents();
+            loadLevel(1);
+
+        })();
+    </script>
 </body>
 </html>
