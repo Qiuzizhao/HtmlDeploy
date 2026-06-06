@@ -580,7 +580,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:10:51.738Z",
-    "updatedAt": "2026-06-05T02:12:37.121Z"
+    "updatedAt": "2026-06-05T02:12:37.121Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-06T09:49:50.127Z"
   },
   {
     "id": "3226829c",
