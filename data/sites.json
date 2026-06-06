@@ -2135,7 +2135,10 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:31:24.736Z",
-    "updatedAt": "2026-06-03T01:40:31.589Z"
+    "updatedAt": "2026-06-03T01:40:31.589Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-06T10:01:11.546Z"
   },
   {
     "id": "dce4d86e",
