@@ -5,11 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>小公主化妆日记</title>
     <style>
+        :root {
+            --primary-pink: #ff5e94;
+            --border-pink: #ffb6c1;
+            --bg-pink: #fff0f6;
+            --shadow-pink: rgba(255, 105, 180, 0.3);
+            --max-width: 900px;
+            --border-radius: 20px;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Arial Rounded MT Bold', sans-serif;
+            font-family: 'Arial Rounded MT Bold', 'Segoe UI', system-ui, sans-serif;
         }
 
         body {
@@ -24,9 +33,9 @@
         .game-container {
             background: white;
             width: 100%;
-            max-width: 900px;
-            border-radius: 20px;
-            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3);
+            max-width: var(--max-width);
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 25px var(--shadow-pink);
             padding: 25px;
             display: flex;
             flex-direction: column;
@@ -35,9 +44,10 @@
 
         .title {
             text-align: center;
-            color: #ff5e94;
+            color: var(--primary-pink);
             font-size: 28px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            letter-spacing: 1px;
         }
 
         .main-content {
@@ -54,7 +64,7 @@
             border-radius: 15px;
             position: relative;
             overflow: hidden;
-            border: 3px solid #ffb6c1;
+            border: 3px solid var(--border-pink);
         }
 
         .princess {
@@ -67,7 +77,6 @@
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
-            display: none;
             pointer-events: none;
             user-select: none;
         }
@@ -94,21 +103,21 @@
 
         .tool-area {
             flex: 1;
-            min-width: 300px;
+            min-width: 280px;
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
 
         .tool-group {
-            background: #fff0f6;
+            background: var(--bg-pink);
             padding: 15px;
             border-radius: 12px;
             border: 2px solid #ffc0d0;
         }
 
         .tool-title {
-            color: #ff5e94;
+            color: var(--primary-pink);
             margin-bottom: 10px;
             font-size: 16px;
         }
@@ -120,19 +129,24 @@
         }
 
         .style-btn {
-            padding: 8px 12px;
+            padding: 8px 14px;
             border: none;
             border-radius: 8px;
-            background: #ffb6c1;
+            background: var(--border-pink);
             color: white;
             cursor: pointer;
             font-size: 14px;
-            transition: 0.2s;
+            transition: background 0.2s, transform 0.2s;
+            will-change: transform;
         }
 
         .style-btn:hover {
-            background: #ff5e94;
+            background: var(--primary-pink);
             transform: scale(1.05);
+        }
+
+        .style-btn:active {
+            transform: scale(0.95);
         }
 
         .reset-btn {
@@ -150,22 +164,22 @@
 <body>
     <div class="game-container">
         <h1 class="title">💖 小公主化妆日记 💖</h1>
-        
+
         <div class="main-content">
             <div class="princess-area">
                 <div class="princess">
-                    <img src="https://i.ibb.co/SVxf8tL/princess-base.png" class="part base" alt="基础形象">
-                    <img src="https://i.ibb.co/5jvLb4f/hair1.png" class="part hair1" alt="金发">
-                    <img src="https://i.ibb.co/Z2HdR0y/hair2.png" class="part hair2" alt="棕发">
-                    <img src="https://i.ibb.co/44XnBk0/hair3.png" class="part hair3" alt="粉发">
-                    <img src="https://i.ibb.co/9s3vGmP/eyeshadow1.png" class="part eyeshadow1" alt="粉色眼影">
-                    <img src="https://i.ibb.co/5kDvLm7/eyeshadow2.png" class="part eyeshadow2" alt="紫色眼影">
-                    <img src="https://i.ibb.co/4Y7J8tL/lipstick1.png" class="part lipstick1" alt="口红">
-                    <img src="https://i.ibb.co/55vGz4Q/blush1.png" class="part blush1" alt="腮红">
-                    <img src="https://i.ibb.co/2PwVqCn/crown1.png" class="part crown1" alt="皇冠">
-                    <img src="https://i.ibb.co/6XQHf7L/earring1.png" class="part earring1" alt="左耳环">
-                    <img src="https://i.ibb.co/6XQHf7L/earring1.png" class="part earring2" alt="右耳环">
-                    <img src="https://i.ibb.co/7XQpLc0/necklace1.png" class="part necklace1" alt="项链">
+                    <img src="https://i.ibb.co/SVxf8tL/princess-base.png" class="part base" alt="公主基础形象">
+                    <img src="https://i.ibb.co/5jvLb4f/hair1.png" class="part hair1" data-part="hair" alt="金色长发">
+                    <img src="https://i.ibb.co/Z2HdR0y/hair2.png" class="part hair2" data-part="hair" data-reset="hide" alt="棕色卷发">
+                    <img src="https://i.ibb.co/44XnBk0/hair3.png" class="part hair3" data-part="hair" data-reset="hide" alt="粉色短发">
+                    <img src="https://i.ibb.co/9s3vGmP/eyeshadow1.png" class="part eyeshadow1" data-part="toggle" data-reset="hide" alt="粉色眼影">
+                    <img src="https://i.ibb.co/5kDvLm7/eyeshadow2.png" class="part eyeshadow2" data-part="toggle" data-reset="hide" alt="紫色眼影">
+                    <img src="https://i.ibb.co/4Y7J8tL/lipstick1.png" class="part lipstick1" data-part="toggle" data-reset="hide" alt="口红">
+                    <img src="https://i.ibb.co/55vGz4Q/blush1.png" class="part blush1" data-part="toggle" data-reset="hide" alt="腮红">
+                    <img src="https://i.ibb.co/2PwVqCn/crown1.png" class="part crown1" data-part="toggle" data-reset="hide" alt="皇冠">
+                    <img src="https://i.ibb.co/6XQHf7L/earring1.png" class="part earring1" data-part="earring" data-reset="hide" alt="左耳环">
+                    <img src="https://i.ibb.co/6XQHf7L/earring1.png" class="part earring2" data-part="earring" data-reset="hide" alt="右耳环">
+                    <img src="https://i.ibb.co/7XQpLc0/necklace1.png" class="part necklace1" data-part="toggle" data-reset="hide" alt="项链">
                 </div>
             </div>
 
@@ -173,102 +187,118 @@
                 <div class="tool-group">
                     <h3 class="tool-title">👑 选择发型</h3>
                     <div class="btn-group">
-                        <button class="style-btn" data-hair="1">金色长发</button>
-                        <button class="style-btn" data-hair="2">棕色卷发</button>
-                        <button class="style-btn" data-hair="3">粉色短发</button>
+                        <button class="style-btn" data-action="set-hair" data-target="hair1">金色长发</button>
+                        <button class="style-btn" data-action="set-hair" data-target="hair2">棕色卷发</button>
+                        <button class="style-btn" data-action="set-hair" data-target="hair3">粉色短发</button>
                     </div>
                 </div>
 
                 <div class="tool-group">
                     <h3 class="tool-title">🎨 化妆打扮</h3>
                     <div class="btn-group">
-                        <button class="style-btn" data-toggle="eyeshadow1">粉色眼影</button>
-                        <button class="style-btn" data-toggle="eyeshadow2">紫色眼影</button>
-                        <button class="style-btn" data-toggle="lipstick1">口红</button>
-                        <button class="style-btn" data-toggle="blush1">腮红</button>
+                        <button class="style-btn" data-action="toggle" data-target="eyeshadow1">粉色眼影</button>
+                        <button class="style-btn" data-action="toggle" data-target="eyeshadow2">紫色眼影</button>
+                        <button class="style-btn" data-action="toggle" data-target="lipstick1">口红</button>
+                        <button class="style-btn" data-action="toggle" data-target="blush1">腮红</button>
                     </div>
                 </div>
 
                 <div class="tool-group">
                     <h3 class="tool-title">✨ 搭配饰品</h3>
                     <div class="btn-group">
-                        <button class="style-btn" data-toggle="crown1">皇冠</button>
-                        <button class="style-btn" data-toggle="earring">耳环</button>
-                        <button class="style-btn" data-toggle="necklace1">项链</button>
+                        <button class="style-btn" data-action="toggle" data-target="crown1">皇冠</button>
+                        <button class="style-btn" data-action="toggle-earring">耳环</button>
+                        <button class="style-btn" data-action="toggle" data-target="necklace1">项链</button>
                     </div>
                 </div>
 
-                <button class="style-btn reset-btn" id="resetBtn">🔄 一键重置装扮</button>
+                <button class="style-btn reset-btn" data-action="reset">🔄 一键重置装扮</button>
             </div>
         </div>
     </div>
 
     <script>
         (function() {
-            const hairMap = {
-                1: 'hair1',
-                2: 'hair2',
-                3: 'hair3'
+            'use strict';
+
+            const MakeupApp = {
+                init: function() {
+                    this.cacheElements();
+                    this.bindEvents();
+                    this.reset();
+                },
+
+                cacheElements: function() {
+                    this.princess = document.querySelector('.princess');
+                    this.hairParts = this.princess.querySelectorAll('[data-part="hair"]');
+                    this.toggleParts = this.princess.querySelectorAll('[data-part="toggle"]');
+                    this.earringParts = this.princess.querySelectorAll('[data-part="earring"]');
+                    this.resetParts = this.princess.querySelectorAll('[data-reset="hide"]');
+                },
+
+                bindEvents: function() {
+                    document.querySelector('.tool-area').addEventListener('click', (e) => {
+                        const btn = e.target.closest('.style-btn');
+                        if (!btn) return;
+
+                        const action = btn.dataset.action;
+
+                        switch (action) {
+                            case 'set-hair':
+                                this.setHair(btn.dataset.target);
+                                break;
+                            case 'toggle':
+                                this.togglePart(btn.dataset.target);
+                                break;
+                            case 'toggle-earring':
+                                this.toggleEarring();
+                                break;
+                            case 'reset':
+                                this.reset();
+                                break;
+                        }
+                    });
+                },
+
+                setHair: function(targetId) {
+                    this.hairParts.forEach(el => {
+                        el.style.display = 'none';
+                    });
+                    const target = this.princess.querySelector('.' + targetId);
+                    if (target) {
+                        target.style.display = 'block';
+                    }
+                },
+
+                togglePart: function(targetId) {
+                    const element = this.princess.querySelector('.' + targetId);
+                    if (!element) return;
+
+                    const currentDisplay = element.style.display || getComputedStyle(element).display;
+                    element.style.display = currentDisplay === 'none' ? 'block' : 'none';
+                },
+
+                toggleEarring: function() {
+                    const ear1 = this.princess.querySelector('.earring1');
+                    const ear2 = this.princess.querySelector('.earring2');
+
+                    if (ear1 && ear2) {
+                        const currentDisplay = ear1.style.display || getComputedStyle(ear1).display;
+                        const newDisplay = currentDisplay === 'none' ? 'block' : 'none';
+                        ear1.style.display = newDisplay;
+                        ear2.style.display = newDisplay;
+                    }
+                },
+
+                reset: function() {
+                    this.setHair('hair1');
+                    this.resetParts.forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
             };
 
-            function changeHair(num) {
-                const hairId = hairMap[num];
-                if (!hairId) return;
-                document.querySelectorAll('[class*="hair"]').forEach(el => {
-                    if (el.classList.contains('part')) {
-                        el.style.display = 'none';
-                    }
-                });
-                const target = document.querySelector('.' + hairId);
-                if (target) target.style.display = 'block';
-            }
-
-            function togglePart(className) {
-                const element = document.querySelector('.' + className);
-                if (element) {
-                    element.style.display = element.style.display === 'none' ? 'block' : 'none';
-                }
-            }
-
-            function toggleEarring() {
-                const ear1 = document.querySelector('.earring1');
-                const ear2 = document.querySelector('.earring2');
-                if (ear1 && ear2) {
-                    const newState = ear1.style.display === 'none' ? 'block' : 'none';
-                    ear1.style.display = newState;
-                    ear2.style.display = newState;
-                }
-            }
-
-            function resetPrincess() {
-                changeHair(1);
-                document.querySelectorAll('.part').forEach(part => {
-                    if (!part.classList.contains('base') && !part.classList.contains('hair1')) {
-                        part.style.display = 'none';
-                    }
-                });
-            }
-
-            document.querySelectorAll('[data-hair]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    changeHair(parseInt(this.dataset.hair));
-                });
-            });
-
-            document.querySelectorAll('[data-toggle]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const target = this.dataset.toggle;
-                    if (target === 'earring') {
-                        toggleEarring();
-                    } else {
-                        togglePart(target);
-                    }
-                });
-            });
-
-            document.getElementById('resetBtn').addEventListener('click', resetPrincess);
-
-            changeHair(1);
+            MakeupApp.init();
         })();
     </script>
 </body>
