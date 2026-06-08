@@ -40,9 +40,9 @@
     "name": "六8",
     "password": "815726",
     "createdAt": "2026-06-02T12:01:55.583Z",
-    "uploadEnabled": true,
-    "passwordEnabled": false,
-    "updatedAt": "2026-06-08T06:41:14.036Z"
+    "uploadEnabled": false,
+    "passwordEnabled": true,
+    "updatedAt": "2026-06-08T07:26:29.452Z"
   },
   {
     "id": "f438ed26",
@@ -75,18 +75,18 @@
     "id": "8ebdaed9",
     "name": "四四班",
     "password": "371444",
-    "uploadEnabled": true,
-    "passwordEnabled": false,
+    "uploadEnabled": false,
+    "passwordEnabled": true,
     "createdAt": "2026-06-08T06:13:36.144Z",
-    "updatedAt": "2026-06-08T06:52:22.049Z"
+    "updatedAt": "2026-06-08T07:26:30.034Z"
   },
   {
     "id": "767d3252",
     "name": "社团",
     "password": "666666",
-    "uploadEnabled": false,
-    "passwordEnabled": true,
+    "uploadEnabled": true,
+    "passwordEnabled": false,
     "createdAt": "2026-06-04T01:20:15.251Z",
-    "updatedAt": "2026-06-05T14:40:24.050Z"
+    "updatedAt": "2026-06-08T07:30:26.031Z"
   }
 ]
