@@ -1,5 +1,16 @@
 [
   {
+    "id": "b4e0593f",
+    "number": "00208",
+    "title": "射击瞄准",
+    "author": "闫老师",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:05:15.546Z"
+  },
+  {
     "id": "a034a8fc",
     "number": "00207",
     "title": "3D 迷你世界",
