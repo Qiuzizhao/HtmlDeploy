@@ -39,9 +39,9 @@
     "createdAt": "2026-06-05T02:28:25.153Z",
     "updatedAt": "2026-06-05T15:15:25.217Z",
     "starred": true,
-    "usagePreviewCount": 13,
+    "usagePreviewCount": 14,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:10:10.858Z"
+    "usageLastUsedAt": "2026-06-08T02:10:50.939Z"
   },
   {
     "id": "40afa53e",
@@ -80,9 +80,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 13,
+    "usagePreviewCount": 15,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:26.539Z"
+    "usageLastUsedAt": "2026-06-08T02:10:37.452Z"
   },
   {
     "id": "17ed9196",
@@ -146,7 +146,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:22:45.330Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:10:34.462Z"
   },
   {
     "id": "908e2ef3",
@@ -211,9 +214,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 4,
+    "usagePreviewCount": 6,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:08.527Z"
+    "usageLastUsedAt": "2026-06-08T02:10:43.999Z"
   },
   {
     "id": "fe72fb41",
@@ -276,9 +279,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:27.546Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:37.772Z"
+    "usageLastUsedAt": "2026-06-08T02:10:35.620Z"
   },
   {
     "id": "2c0652e5",
@@ -439,9 +442,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:15:20.452Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-06T10:03:08.083Z"
+    "usageLastUsedAt": "2026-06-08T02:10:48.901Z"
   },
   {
     "id": "1febbb74",
@@ -513,7 +516,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:29.028Z",
-    "updatedAt": "2026-06-05T15:10:26.711Z"
+    "updatedAt": "2026-06-05T15:10:26.711Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:10:29.988Z"
   },
   {
     "id": "b59a51db",
@@ -824,9 +830,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:38.725Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:11.145Z"
+    "usageLastUsedAt": "2026-06-08T02:10:40.671Z"
   },
   {
     "id": "0b06a016",
@@ -970,9 +976,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:25.208Z",
     "updatedAt": "2026-06-04T08:01:44.004Z",
-    "usagePreviewCount": 8,
+    "usagePreviewCount": 10,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:39.802Z"
+    "usageLastUsedAt": "2026-06-08T02:10:34.912Z"
   },
   {
     "id": "d896586f",
@@ -1210,9 +1216,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:00.607Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:18.925Z"
+    "usageLastUsedAt": "2026-06-08T02:10:32.971Z"
   },
   {
     "id": "cba715bc",
@@ -1474,9 +1480,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:19.770Z",
     "updatedAt": "2026-06-03T14:30:06.558Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:12.634Z"
+    "usageLastUsedAt": "2026-06-08T02:10:39.951Z"
   },
   {
     "id": "e5deb7f6",
@@ -1504,9 +1510,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:01.972Z",
     "updatedAt": "2026-06-03T14:06:34.263Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:43.614Z"
+    "usageLastUsedAt": "2026-06-08T02:10:46.549Z"
   },
   {
     "id": "0440a27c",
@@ -1741,7 +1747,10 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:59.638Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:34:02.868Z"
+    "updatedAt": "2026-06-03T15:34:02.868Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:10:44.458Z"
   },
   {
     "id": "faab8286",
