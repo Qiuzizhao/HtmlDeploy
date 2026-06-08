@@ -672,34 +672,6 @@
     "usageLastUsedAt": "2026-06-05T17:24:26.492Z"
   },
   {
-    "id": "258897e2",
-    "number": "00140",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:25.257Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "7a0c2118",
-    "duplicateAuditKeepTitle": "刘奕鑫",
-    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
-  },
-  {
-    "id": "1be19d08",
-    "number": "00139",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:11.953Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "7a0c2118",
-    "duplicateAuditKeepTitle": "刘奕鑫",
-    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
-  },
-  {
     "id": "f8b5f9a0",
     "number": "00138",
     "title": "暗区突围控制台小游戏",
