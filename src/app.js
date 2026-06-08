@@ -110,6 +110,22 @@ function createForbiddenAuditMessage(match) {
   return `${match.field}包含违禁词「${match.word}」`;
 }
 
+function validateBasicHtmlDocument(htmlContent) {
+  const content = String(htmlContent || '').trim();
+  if (!content) {
+    return '';
+  }
+
+  const hasStructuralMarker = /<!doctype\s+html\b|<html[\s>]|<head[\s>]|<body[\s>]/i.test(content);
+  const hasHtmlElement = /<\/?(?:html|head|title|meta|link|style|body|main|section|article|nav|header|footer|div|span|p|h[1-6]|canvas|script|button|input|form|label|ul|ol|li|table|thead|tbody|tr|td|th|img|video|audio|svg)\b[^>]*>/i.test(content);
+
+  if (!hasStructuralMarker || !hasHtmlElement) {
+    return 'HTML 代码结构不完整，请上传包含 <!doctype html>、<html>、<head>/<body> 等基本结构的完整 HTML 页面。';
+  }
+
+  return '';
+}
+
 function clearForbiddenAudit(site) {
   if (!site.forbiddenAuditMessage && !site.forbiddenAuditField && !site.forbiddenAuditWord) {
     return site;
@@ -2105,7 +2121,7 @@ function createApp(options = {}) {
 
       const classes = await readClasses(classesFile);
       const newClasses = [];
-      
+
       for (const id of classIds) {
         const classItem = classes.find(c => c.id === id);
         if (classItem) {
@@ -2344,14 +2360,20 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '请上传 HTML 文件或填写 HTML 代码' });
       }
 
-      if (file && !isHtmlFile(file)) {
-        return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
-      }
+        if (file && !isHtmlFile(file)) {
+          return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
+        }
 
-      const id = await createUniqueId({ dataFile, storageDir, idGenerator });
-      const projectDir = path.join(storageDir, id);
-      await fsp.mkdir(projectDir, { recursive: true });
-      await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
+        const submittedHtmlContent = file ? file.buffer.toString('utf8') : htmlContent;
+        const htmlStructureError = validateBasicHtmlDocument(submittedHtmlContent);
+        if (htmlStructureError) {
+          return res.status(400).json({ error: htmlStructureError });
+        }
+
+        const id = await createUniqueId({ dataFile, storageDir, idGenerator });
+        const projectDir = path.join(storageDir, id);
+        await fsp.mkdir(projectDir, { recursive: true });
+        await fsp.writeFile(path.join(projectDir, 'index.html'), submittedHtmlContent);
 
       const sites = await readSites(dataFile);
       const currentMax = sites.reduce((max, s) => Math.max(max, getSiteNumberValue(s)), 0);

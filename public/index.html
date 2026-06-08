@@ -1212,9 +1212,9 @@
       return Boolean(hasCurrentClassAccess() && currentClass.uploadEnabled !== false);
     }
 
-    function findForbiddenWordMatch(title, author) {
-      const forbiddenWords = Array.isArray(uploadRules.forbiddenWords) ? uploadRules.forbiddenWords : [];
-      const fields = [
+      function findForbiddenWordMatch(title, author) {
+        const forbiddenWords = Array.isArray(uploadRules.forbiddenWords) ? uploadRules.forbiddenWords : [];
+        const fields = [
         { label: '网页名字', value: title },
         { label: '作者署名', value: author }
       ];
@@ -1228,11 +1228,27 @@
         }
       }
 
-      return '';
-    }
+        return '';
+      }
 
-    function updateUploadButtonState() {
-      const currentClass = getCurrentClass();
+      function validateBasicHtmlDocument(htmlContent) {
+        const content = String(htmlContent || '').trim();
+        if (!content) {
+          return '';
+        }
+
+        const hasStructuralMarker = /<!doctype\s+html\b|<html[\s>]|<head[\s>]|<body[\s>]/i.test(content);
+        const hasHtmlElement = /<\/?(?:html|head|title|meta|link|style|body|main|section|article|nav|header|footer|div|span|p|h[1-6]|canvas|script|button|input|form|label|ul|ol|li|table|thead|tbody|tr|td|th|img|video|audio|svg)\b[^>]*>/i.test(content);
+
+        if (!hasStructuralMarker || !hasHtmlElement) {
+          return 'HTML 代码结构不完整，请上传包含 <!doctype html>、<html>、<head>/<body> 等基本结构的完整 HTML 页面。';
+        }
+
+        return '';
+      }
+
+      function updateUploadButtonState() {
+        const currentClass = getCurrentClass();
       const uploadDisabledByClass = Boolean(currentClassId && currentClass && currentClass.uploadEnabled === false);
       openUploadButton.disabled = !classes.length || !currentClassId || !hasCurrentClassAccess() || uploadDisabledByClass;
       openUploadButton.title = uploadDisabledByClass ? '当前班级已禁用上传网页' : '';
@@ -1718,7 +1734,7 @@
       hideLoadingState();
       siteGrid.innerHTML = '';
       const renderToken = ++siteRenderToken;
-      
+
       const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
       const hasFilter = Boolean(siteSearchQuery.trim()) || starredOnly;
       classProjectCount.textContent = hasFilter
@@ -1854,13 +1870,19 @@
 
       try {
         const htmlContent = await getUploadPreviewHtml();
-        if (!htmlContent) {
-          uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码后再预览。';
-          return;
-        }
+          if (!htmlContent) {
+            uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码后再预览。';
+            return;
+          }
 
-        openUploadDraftPreview(htmlContent);
-      } catch (error) {
+          const htmlStructureMessage = validateBasicHtmlDocument(htmlContent);
+          if (htmlStructureMessage) {
+            uploadMessage.textContent = htmlStructureMessage;
+            return;
+          }
+
+          openUploadDraftPreview(htmlContent);
+        } catch (error) {
         uploadMessage.textContent = error.message || '预览失败';
       }
     }
@@ -1885,12 +1907,28 @@
       }
 
       const fileName = file ? file.name.toLowerCase() : '';
-      if (file && !fileName.endsWith('.html') && !fileName.endsWith('.htm')) {
-        uploadMessage.textContent = '当前版本只支持上传 HTML 文件。';
-        return;
-      }
+        if (file && !fileName.endsWith('.html') && !fileName.endsWith('.htm')) {
+          uploadMessage.textContent = '当前版本只支持上传 HTML 文件。';
+          return;
+        }
 
-      const formData = new FormData();
+        let submittedHtmlContent = htmlContent;
+        if (file) {
+          try {
+            submittedHtmlContent = await file.text();
+          } catch {
+            uploadMessage.textContent = '读取 HTML 文件失败，请重新选择文件。';
+            return;
+          }
+        }
+
+        const htmlStructureMessage = validateBasicHtmlDocument(submittedHtmlContent);
+        if (htmlStructureMessage) {
+          uploadMessage.textContent = htmlStructureMessage;
+          return;
+        }
+
+        const formData = new FormData();
       formData.append('title', title);
       formData.append('author', author);
       formData.append('classId', currentClassId);

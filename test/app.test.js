@@ -153,6 +153,16 @@ test('public index upload accepts either an HTML file or pasted code', async () 
   assert.match(html, /formData\.append\('htmlContent', htmlContent\)/);
 });
 
+test('public index validates basic HTML structure before upload', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /function validateBasicHtmlDocument\(htmlContent\)/);
+  assert.match(html, /<!doctype\\s\+html\\b\|<html\[\\s>\]\|<head\[\\s>\]\|<body\[\\s>\]/);
+  assert.match(html, /HTML 代码结构不完整/);
+  assert.match(html, /const htmlStructureMessage = validateBasicHtmlDocument\(submittedHtmlContent\)/);
+  assert.match(html, /submittedHtmlContent = await file\.text\(\)/);
+});
+
 test('public index can preview upload draft before submitting', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -722,6 +732,7 @@ test('admin AI settings can keep and clear the private API key', async () => {
 });
 
 test('POST /api/sites saves cached storage usage for each project', async () => {
+  const validHtml = '<!doctype html><h1>1</h1>';
   const { app } = await makeTestApp({
     idGenerator: (() => {
       const ids = ['class-a', 'with-files'];
@@ -740,15 +751,15 @@ test('POST /api/sites saves cached storage usage for each project', async () => 
     .field('title', '有文件')
     .field('author', '作者')
     .field('classId', 'class-a')
-    .attach('file', Buffer.from('12345'), 'index.html')
+    .attach('file', Buffer.from(validHtml), 'index.html')
     .expect(201);
 
-  assert.equal(upload.body.storageBytes, 5);
+  assert.equal(upload.body.storageBytes, Buffer.byteLength(validHtml));
 
   const response = await admin.get('/api/admin/sites?page=1&pageSize=50').expect(200);
   assert.equal(response.body.items[0].id, 'with-files');
-  assert.equal(response.body.items[0].storageBytes, 5);
-  assert.equal(response.body.summary.totalStorageBytes, 5);
+  assert.equal(response.body.items[0].storageBytes, Buffer.byteLength(validHtml));
+  assert.equal(response.body.summary.totalStorageBytes, Buffer.byteLength(validHtml));
 });
 
 test('GET /api/admin/sites uses cached storage usage for each project', async () => {
@@ -1081,7 +1092,44 @@ test('POST /api/sites can create a project from pasted HTML code', async () => {
   assert.equal(
     await fsp.readFile(path.join(storageDir, 'code123', 'index.html'), 'utf8'),
     '<!doctype html><h1>Code</h1>'
-  );
+    );
+  });
+
+test('POST /api/sites rejects content that is not a basic HTML document', async () => {
+  const ids = ['class-a', 'bad-a', 'bad-b', 'bad-c'];
+  const { app } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  const chineseOnly = await request(app)
+    .post('/api/sites')
+    .field('title', '随便写写')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '这里随便输入几句中文，不是网页代码')
+    .expect(400);
+  assert.match(chineseOnly.body.error, /HTML 代码结构不完整/);
+
+  const pythonCode = await request(app)
+    .post('/api/sites')
+    .field('title', 'Python 代码')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', 'import random\nprint("hello")')
+    .expect(400);
+  assert.match(pythonCode.body.error, /HTML 代码结构不完整/);
+
+  const fakeHtmlFile = await request(app)
+    .post('/api/sites')
+    .field('title', '伪装文件')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('def hello():\n    print("not html")'), { filename: 'fake.html' })
+    .expect(400);
+  assert.match(fakeHtmlFile.body.error, /HTML 代码结构不完整/);
 });
 
 test('GET /api/sites can filter projects by class', async () => {
@@ -1099,7 +1147,7 @@ test('GET /api/sites can filter projects by class', async () => {
     .field('title', '一班作品')
     .field('author', '测试作者')
     .field('classId', 'class-a')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'one.html' })
     .expect(201);
 
   await request(app)
@@ -1107,7 +1155,7 @@ test('GET /api/sites can filter projects by class', async () => {
     .field('title', '二班作品')
     .field('author', '测试作者')
     .field('classId', 'class-b')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'two.html' })
     .expect(201);
 
   await request(app).get('/api/sites?classId=class-a').expect(401);
@@ -1554,7 +1602,7 @@ test('admin login does not unlock public class project lists', async () => {
     .field('title', '一班作品')
     .field('author', '测试作者')
     .field('classId', 'class-a')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'one.html' })
     .expect(201);
 
   await agent.get('/api/sites?classId=class-a').expect(401);
@@ -1579,7 +1627,7 @@ test('admin login does not unlock the all-projects public list', async () => {
     .field('title', '一班作品')
     .field('author', '测试作者')
     .field('classId', 'class-a')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'one.html' })
     .expect(201);
 
   await agent.get('/api/sites').expect(401);
@@ -1605,7 +1653,7 @@ test('GET /api/sites without a class filter requires the all-projects password',
     .field('title', '一班作品')
     .field('author', '测试作者')
     .field('classId', 'class-a')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'one.html' })
     .expect(201);
 
   await request(app)
@@ -1613,7 +1661,7 @@ test('GET /api/sites without a class filter requires the all-projects password',
     .field('title', '二班作品')
     .field('author', '测试作者')
     .field('classId', 'class-b')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'two.html' })
     .expect(201);
 
   const visitor = request.agent(app);
@@ -1667,8 +1715,8 @@ test('POST /api/sites rejects non-HTML files and multiple files', async () => {
   await request(app)
     .post('/api/sites')
     .field('title', 'Too many')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'two.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'two.html' })
     .expect(400);
 });
 
@@ -2307,7 +2355,7 @@ test('admin cannot delete a class that still has projects', async () => {
     .field('title', '一班作品')
     .field('author', '测试作者')
     .field('classId', 'class-a')
-    .attach('file', Buffer.from('<!doctype html>'), { filename: 'one.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'one.html' })
     .expect(201);
 
   await agent.delete('/api/classes/class-a').expect(400);
