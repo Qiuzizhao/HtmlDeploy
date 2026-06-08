@@ -169,7 +169,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:21:16.198Z"
+    "createdAt": "2026-06-05T02:21:16.198Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:10:02.183Z"
   },
   {
     "id": "e645c962",
