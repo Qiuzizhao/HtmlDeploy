@@ -80,9 +80,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 12,
+    "usagePreviewCount": 13,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:54.496Z"
+    "usageLastUsedAt": "2026-06-08T02:10:26.539Z"
   },
   {
     "id": "17ed9196",
@@ -326,9 +326,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:51.387Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:11.819Z"
+    "usageLastUsedAt": "2026-06-08T02:10:26.401Z"
   },
   {
     "id": "e0b496ec",
