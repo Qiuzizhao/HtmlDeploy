@@ -25,7 +25,8 @@
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-08T07:00:00.679Z"
+    "createdAt": "2026-06-08T07:00:00.679Z",
+    "updatedAt": "2026-06-08T16:34:56.210Z"
   },
   {
     "id": "74701ee6",
@@ -190,7 +191,8 @@
     "createdAt": "2026-06-08T06:57:07.756Z",
     "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:58:37.788Z"
+    "usageLastUsedAt": "2026-06-08T06:58:37.788Z",
+    "updatedAt": "2026-06-08T16:34:56.210Z"
   },
   {
     "id": "1ef6eb1d",
@@ -219,7 +221,7 @@
     "usagePreviewCount": 9,
     "usageCodeCount": 0,
     "usageLastUsedAt": "2026-06-08T07:00:06.274Z",
-    "updatedAt": "2026-06-08T06:57:11.882Z"
+    "updatedAt": "2026-06-08T16:34:56.210Z"
   },
   {
     "id": "4e058cfa",
@@ -247,7 +249,8 @@
     "createdAt": "2026-06-08T06:56:34.433Z",
     "usagePreviewCount": 1,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:56:56.201Z"
+    "usageLastUsedAt": "2026-06-08T06:56:56.201Z",
+    "updatedAt": "2026-06-08T16:34:56.210Z"
   },
   {
     "id": "02b0b044",
@@ -348,7 +351,8 @@
     "createdAt": "2026-06-08T06:55:19.505Z",
     "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:57:56.221Z"
+    "usageLastUsedAt": "2026-06-08T06:57:56.221Z",
+    "updatedAt": "2026-06-08T16:35:23.528Z"
   },
   {
     "id": "617729a4",
@@ -376,7 +380,8 @@
     "createdAt": "2026-06-08T06:55:10.885Z",
     "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T07:00:03.340Z"
+    "usageLastUsedAt": "2026-06-08T07:00:03.340Z",
+    "updatedAt": "2026-06-08T16:34:56.210Z"
   },
   {
     "id": "285a593a",
@@ -425,7 +430,7 @@
     "id": "cb278ce1",
     "number": "00227",
     "title": "修仙",
-    "author": "9178",
+    "author": "1",
     "classId": "c37011bf",
     "enabled": true,
     "starred": false,
@@ -433,7 +438,8 @@
     "createdAt": "2026-06-08T06:53:45.336Z",
     "usagePreviewCount": 16,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:59:13.880Z"
+    "usageLastUsedAt": "2026-06-08T06:59:13.880Z",
+    "updatedAt": "2026-06-08T16:35:48.243Z"
   },
   {
     "id": "2b16e930",

@@ -13,9 +13,9 @@
     "name": "六5",
     "password": "003794",
     "createdAt": "2026-06-02T12:01:31.958Z",
-    "updatedAt": "2026-06-05T01:45:39.869Z",
-    "uploadEnabled": false,
-    "passwordEnabled": true
+    "updatedAt": "2026-06-08T16:36:19.469Z",
+    "uploadEnabled": true,
+    "passwordEnabled": false
   },
   {
     "id": "b3f7dd30",
