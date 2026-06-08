@@ -734,34 +734,6 @@
     "createdAt": "2026-06-04T06:57:38.725Z"
   },
   {
-    "id": "655d54ae",
-    "number": "00131",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:26.269Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "7a0c2118",
-    "duplicateAuditKeepTitle": "刘奕鑫",
-    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
-  },
-  {
-    "id": "bbf6450a",
-    "number": "00130",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:25.838Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "7a0c2118",
-    "duplicateAuditKeepTitle": "刘奕鑫",
-    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
-  },
-  {
     "id": "0b06a016",
     "number": "00129",
     "title": "经营城市",
