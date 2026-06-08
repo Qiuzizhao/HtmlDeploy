@@ -1340,6 +1340,18 @@
         </div>
         <div class="panel">
           <div class="panel-head">
+            <h2 class="panel-title">GitHub 数据同步</h2>
+            <div class="message" id="githubSyncMessage"></div>
+          </div>
+          <div class="settings-form">
+            <p class="settings-hint">手动把当前项目、班级、设置和上传文件同步到 GitHub 仓库。上传项目时也会自动同步，这里用于需要立即确认同步的时候。</p>
+            <div class="settings-actions">
+              <button class="primary-button" id="syncGithubButton" type="button">同步到GitHub</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
             <h2 class="panel-title">AI 功能设置</h2>
             <div class="message" id="aiSettingsMessage"></div>
           </div>
@@ -1456,6 +1468,8 @@
     const adminPasswordMessage = document.getElementById('adminPasswordMessage');
     const adminPasswordInput = document.getElementById('adminPasswordInput');
     const adminPasswordConfirmInput = document.getElementById('adminPasswordConfirmInput');
+    const githubSyncMessage = document.getElementById('githubSyncMessage');
+    const syncGithubButton = document.getElementById('syncGithubButton');
     const aiSettingsForm = document.getElementById('aiSettingsForm');
     const aiSettingsMessage = document.getElementById('aiSettingsMessage');
     const aiApiKeyStatus = document.getElementById('aiApiKeyStatus');
@@ -2422,6 +2436,28 @@
       adminPasswordInput.value = '';
       adminPasswordConfirmInput.value = '';
       setMessage(adminPasswordMessage, '后台密码已保存，当前登录已更新');
+    }
+
+    async function syncGithubData() {
+      syncGithubButton.disabled = true;
+      setMessage(githubSyncMessage, '正在同步到 GitHub...');
+
+      const response = await fetch('/api/admin/github-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      syncGithubButton.disabled = false;
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '同步到 GitHub 失败' }));
+        setMessage(githubSyncMessage, result.error || '同步到 GitHub 失败', true);
+        return;
+      }
+
+      const result = await response.json();
+      setMessage(githubSyncMessage, result.message || '同步完成');
     }
 
     function renderAiKeyStatus(aiSettings) {
@@ -3531,6 +3567,7 @@
 
     allPasswordForm.addEventListener('submit', saveAllPassword);
     adminPasswordForm.addEventListener('submit', saveAdminPassword);
+    syncGithubButton.addEventListener('click', syncGithubData);
     aiSettingsForm.addEventListener('submit', saveAiSettings);
     clearAiApiKeyButton.addEventListener('click', clearAiApiKey);
     document.getElementById('reloadAiSettings').addEventListener('click', loadAiSettings);

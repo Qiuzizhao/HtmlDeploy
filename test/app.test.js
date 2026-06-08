@@ -342,6 +342,18 @@ test('public admin exposes AI settings controls', async () => {
   assert.match(html, /await loadAiSettings\(\)/);
 });
 
+test('public admin exposes manual GitHub sync controls in settings', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /GitHub 数据同步/);
+  assert.match(html, /id="githubSyncMessage"/);
+  assert.match(html, /id="syncGithubButton"[^>]*>同步到GitHub<\/button>/);
+  assert.match(html, /const syncGithubButton = document\.getElementById\('syncGithubButton'\)/);
+  assert.match(html, /async function syncGithubData/);
+  assert.match(html, /fetch\('\/api\/admin\/github-sync'/);
+  assert.match(html, /syncGithubButton\.addEventListener\('click', syncGithubData\)/);
+});
+
 test('public admin class passwords are hidden by default with one show-hide toggle before random', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
@@ -405,6 +417,24 @@ test('git auto sync serializes backup jobs and clears stale index locks', async 
   assert.match(source, /syncQueued = true/);
   assert.match(source, /runGitSync/);
   assert.match(source, /removeStaleGitIndexLock\(process\.cwd\(\)\)/);
+});
+
+test('admin can trigger a manual GitHub sync', async () => {
+  const { app } = await makeTestApp({
+    gitSyncNow: async () => ({
+      status: 'success',
+      message: '同步完成，数据已推送到 GitHub'
+    })
+  });
+  const agent = request.agent(app);
+
+  await request(app).post('/api/admin/github-sync').send({}).expect(401);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const response = await agent.post('/api/admin/github-sync').send({}).expect(200);
+
+  assert.equal(response.body.status, 'success');
+  assert.equal(response.body.message, '同步完成，数据已推送到 GitHub');
 });
 
 async function makeTestApp(options = {}) {

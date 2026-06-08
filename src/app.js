@@ -457,33 +457,55 @@ function removeStaleGitIndexLock(cwd) {
   }
 }
 
-function runGitSync() {
-  syncTimeout = null;
+function runGitSyncNow() {
   if (syncInProgress) {
-    syncQueued = true;
-    return;
+    const error = new Error('已有同步任务正在执行，请稍后再试');
+    error.code = 'SYNC_BUSY';
+    return Promise.reject(error);
   }
 
   syncInProgress = true;
   removeStaleGitIndexLock(process.cwd());
   console.log('[Git Sync] Starting backup to GitHub...');
-  exec('git add . && git commit -m "Auto backup data" && git push', { cwd: process.cwd() }, (error, stdout, stderr) => {
-    syncInProgress = false;
-    if (error) {
-      if (stdout.includes('nothing to commit') || stderr.includes('nothing to commit')) {
-        console.log('[Git Sync] No changes to backup.');
-      } else {
-        console.error('[Git Sync] Error:', error.message);
-      }
-    } else {
-      console.log('[Git Sync] Backup successful!');
-    }
 
-    if (syncQueued) {
-      syncQueued = false;
-      syncDataToGithub();
-    }
+  return new Promise((resolve, reject) => {
+    exec('git add . && git commit -m "Auto backup data" && git push', {
+      cwd: process.cwd(),
+      timeout: 120000
+    }, (error, stdout, stderr) => {
+      syncInProgress = false;
+      const hasNoChanges = stdout.includes('nothing to commit') || stderr.includes('nothing to commit');
+
+      if (error) {
+        if (hasNoChanges) {
+          console.log('[Git Sync] No changes to backup.');
+          resolve({
+            status: 'clean',
+            message: '当前没有需要同步的数据'
+          });
+        } else {
+          console.error('[Git Sync] Error:', error.message);
+          reject(error);
+        }
+      } else {
+        console.log('[Git Sync] Backup successful!');
+        resolve({
+          status: 'success',
+          message: '同步完成，数据已推送到 GitHub'
+        });
+      }
+
+      if (syncQueued) {
+        syncQueued = false;
+        syncDataToGithub();
+      }
+    });
   });
+}
+
+function runGitSync() {
+  syncTimeout = null;
+  runGitSyncNow().catch(() => {});
 }
 
 function syncDataToGithub() {
@@ -496,6 +518,15 @@ function syncDataToGithub() {
     clearTimeout(syncTimeout);
   }
   syncTimeout = setTimeout(runGitSync, 3000);
+}
+
+function syncDataToGithubNow() {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+    syncTimeout = null;
+  }
+
+  return runGitSyncNow();
 }
 
 function renderAdminLoginPage(errorMessage = '') {
@@ -1175,6 +1206,7 @@ function createApp(options = {}) {
   const idGenerator = options.idGenerator || createDefaultId;
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
   const fallbackAdminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
+  const gitSyncNow = options.gitSyncNow || syncDataToGithubNow;
   const aiOptimizeJobTimeoutMs = normalizeTimeoutMs(
     options.llmOptimizeJobTimeoutMs ?? process.env.LLM_OPTIMIZE_JOB_TIMEOUT_MS,
     300000,
@@ -1654,6 +1686,20 @@ function createApp(options = {}) {
       return res.json(toAdminSettingsResponse(settings));
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.post('/api/admin/github-sync', requireAdmin, async (req, res) => {
+    try {
+      const result = await gitSyncNow();
+      return res.json(result);
+    } catch (error) {
+      const status = error.code === 'SYNC_BUSY' ? 409 : 500;
+      return res.status(status).json({
+        error: error.code === 'SYNC_BUSY'
+          ? error.message
+          : `同步到 GitHub 失败：${error.message}`
+      });
     }
   });
 
