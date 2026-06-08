@@ -9,9 +9,9 @@
     "starred": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T02:05:15.546Z",
-    "usagePreviewCount": 4,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:05.342Z"
+    "usageLastUsedAt": "2026-06-08T02:07:54.354Z"
   },
   {
     "id": "a034a8fc",
@@ -39,9 +39,9 @@
     "createdAt": "2026-06-05T02:28:25.153Z",
     "updatedAt": "2026-06-05T15:15:25.217Z",
     "starred": true,
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 5,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:07:10.489Z"
+    "usageLastUsedAt": "2026-06-08T02:07:56.291Z"
   },
   {
     "id": "40afa53e",
@@ -77,9 +77,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 6,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:33.040Z"
+    "usageLastUsedAt": "2026-06-08T02:08:01.467Z"
   },
   {
     "id": "17ed9196",
@@ -205,9 +205,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:03.225Z"
+    "usageLastUsedAt": "2026-06-08T02:07:59.559Z"
   },
   {
     "id": "fe72fb41",
@@ -218,9 +218,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:08.689Z",
-    "usagePreviewCount": 5,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:25.338Z"
+    "usagePreviewCount": 7,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T02:07:58.782Z"
   },
   {
     "id": "0ac4f446",
@@ -269,7 +269,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:19:27.546Z"
+    "createdAt": "2026-06-05T02:19:27.546Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:08:01.773Z"
   },
   {
     "id": "2c0652e5",
@@ -384,7 +387,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:16:25.884Z",
-    "updatedAt": "2026-06-05T09:30:31.485Z"
+    "updatedAt": "2026-06-05T09:30:31.485Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:57.256Z"
   },
   {
     "id": "43e85628",
@@ -781,7 +787,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:38.725Z"
+    "createdAt": "2026-06-04T06:57:38.725Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:49.906Z"
   },
   {
     "id": "0b06a016",
@@ -848,7 +857,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:59.400Z",
-    "updatedAt": "2026-06-04T08:01:38.950Z"
+    "updatedAt": "2026-06-04T08:01:38.950Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:48.029Z"
   },
   {
     "id": "7dee5414",
@@ -859,7 +871,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:53.261Z",
-    "updatedAt": "2026-06-04T09:27:54.422Z"
+    "updatedAt": "2026-06-04T09:27:54.422Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:57.377Z"
   },
   {
     "id": "badc9200",
@@ -1293,7 +1308,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:57:59.047Z",
     "updatedAt": "2026-06-03T15:29:23.218Z",
-    "enabled": true
+    "enabled": true,
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:48.627Z"
   },
   {
     "id": "fecedab7",
