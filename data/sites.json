@@ -80,9 +80,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 11,
+    "usagePreviewCount": 12,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:51.152Z"
+    "usageLastUsedAt": "2026-06-08T02:09:54.496Z"
   },
   {
     "id": "17ed9196",
@@ -476,9 +476,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:14:25.867Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:28.006Z"
+    "usageLastUsedAt": "2026-06-08T02:09:54.134Z"
   },
   {
     "id": "44fdb58e",
@@ -1191,9 +1191,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:15.872Z",
     "updatedAt": "2026-06-05T01:55:03.538Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:38.458Z"
+    "usageLastUsedAt": "2026-06-08T02:09:55.474Z"
   },
   {
     "id": "2b80d611",
