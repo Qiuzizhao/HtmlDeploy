@@ -53,9 +53,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:26:05.208Z",
     "updatedAt": "2026-06-06T06:17:17.864Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-06T06:19:11.269Z"
+    "usageLastUsedAt": "2026-06-08T02:07:31.287Z"
   },
   {
     "id": "a97f837c",
@@ -77,9 +77,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 5,
+    "usagePreviewCount": 6,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:01.115Z"
+    "usageLastUsedAt": "2026-06-08T02:07:33.040Z"
   },
   {
     "id": "17ed9196",
@@ -129,7 +129,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:22:46.824Z",
-    "updatedAt": "2026-06-05T15:34:34.005Z"
+    "updatedAt": "2026-06-05T15:34:34.005Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:33.561Z"
   },
   {
     "id": "3c6b83db",
@@ -243,9 +246,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:53.051Z",
     "updatedAt": "2026-06-05T02:21:46.386Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:22.031Z"
+    "usageLastUsedAt": "2026-06-08T02:07:33.290Z"
   },
   {
     "id": "bb49e750",
@@ -1386,7 +1389,10 @@
     "author": "龙博",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:19.770Z",
-    "updatedAt": "2026-06-03T14:30:06.558Z"
+    "updatedAt": "2026-06-03T14:30:06.558Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:32.715Z"
   },
   {
     "id": "e5deb7f6",
@@ -1533,7 +1539,10 @@
     "title": "喂养小动物",
     "author": "wzy",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:52:44.888Z"
+    "createdAt": "2026-06-03T06:52:44.888Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:07:32.782Z"
   },
   {
     "id": "0de4f13b",
