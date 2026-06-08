@@ -897,7 +897,20 @@ async function getDirectorySize(directory) {
   return total;
 }
 
-function toPublicSite(site, classes, thumbnailDir, storageBytes = 0) {
+function normalizeStorageBytes(value) {
+  const bytes = Number(value);
+  return Number.isFinite(bytes) && bytes > 0 ? Math.round(bytes) : 0;
+}
+
+async function attachFreshStorageCache(site, storageDir) {
+  return {
+    ...site,
+    storageBytes: await getDirectorySize(path.join(storageDir, site.id)),
+    storageUpdatedAt: new Date().toISOString()
+  };
+}
+
+function toPublicSite(site, classes, thumbnailDir, storageBytes = site.storageBytes) {
   const usagePreviewCount = Math.max(0, Number(site.usagePreviewCount) || 0);
   const usageCodeCount = Math.max(0, Number(site.usageCodeCount) || 0);
 
@@ -909,7 +922,8 @@ function toPublicSite(site, classes, thumbnailDir, storageBytes = 0) {
     usageCodeCount,
     usageCount: usagePreviewCount + usageCodeCount,
     usageLastUsedAt: site.usageLastUsedAt || '',
-    storageBytes,
+    storageBytes: normalizeStorageBytes(storageBytes),
+    storageUpdatedAt: site.storageUpdatedAt || '',
     url: `/site/${site.id}`,
     previewUrl: `/preview/${site.id}`,
     thumbnailUrl: getThumbnailUrl(thumbnailDir, site.id)
@@ -917,8 +931,68 @@ function toPublicSite(site, classes, thumbnailDir, storageBytes = 0) {
 }
 
 async function toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir) {
-  const storageBytes = await getDirectorySize(path.join(storageDir, site.id));
-  return toPublicSite(site, classes, thumbnailDir, storageBytes);
+  return toPublicSite(site, classes, thumbnailDir);
+}
+
+function parsePositiveInteger(value, fallback, max = Number.MAX_SAFE_INTEGER) {
+  const number = Number.parseInt(value, 10);
+  if (!Number.isFinite(number) || number <= 0) {
+    return fallback;
+  }
+
+  return Math.min(max, number);
+}
+
+function createAdminSitesSummary(sites) {
+  return {
+    totalProjects: sites.length,
+    enabledProjects: sites.filter((site) => site.enabled !== false).length,
+    disabledProjects: sites.filter((site) => site.enabled === false).length,
+    totalStorageBytes: sites.reduce((total, site) => total + normalizeStorageBytes(site.storageBytes), 0)
+  };
+}
+
+function filterAdminSites(sites, query) {
+  const keyword = String(query.q || '').trim().toLocaleLowerCase();
+  const classId = String(query.classId || '').trim();
+  const starred = String(query.starred || '').trim();
+  const enabled = String(query.enabled || '').trim();
+
+  return sites.filter((site) => {
+    if (classId && site.classId !== classId) {
+      return false;
+    }
+
+    if (starred === 'true' && site.starred !== true) {
+      return false;
+    }
+
+    if (enabled === 'true' && site.enabled === false) {
+      return false;
+    }
+
+    if (enabled === 'false' && site.enabled !== false) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    return [
+      site.title,
+      site.author,
+      site.className,
+      site.number,
+      site.id,
+      site.url
+    ].some((value) => String(value || '').toLocaleLowerCase().includes(keyword));
+  });
+}
+
+function shouldReturnPaginatedAdminSites(query) {
+  return ['page', 'pageSize', 'q', 'classId', 'starred', 'enabled']
+    .some((key) => query[key] !== undefined);
 }
 
 async function incrementSiteUsage(dataFile, id, type) {
@@ -1402,10 +1476,10 @@ function createApp(options = {}) {
 
       await fsp.writeFile(path.join(storageDir, job.siteId, 'index.html'), optimizedContent);
 
-      const site = clearDuplicateAudit({
+      const site = await attachFreshStorageCache(clearDuplicateAudit({
         ...latestSites[latestSiteIndex],
         updatedAt: new Date().toISOString()
-      });
+      }), storageDir);
       latestSites[latestSiteIndex] = site;
       await writeSites(dataFile, latestSites);
       generateThumbnailLater(job.siteId, job.origin);
@@ -1526,10 +1600,23 @@ function createApp(options = {}) {
     try {
       const sites = await readSites(dataFile);
       const classes = await readClasses(classesFile);
-      const sitesWithStorage = await Promise.all(
-        sites.map((site) => toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir))
-      );
-      res.json(sitesWithStorage);
+      const publicSites = sites.map((site) => toPublicSite(site, classes, thumbnailDir));
+
+      if (!shouldReturnPaginatedAdminSites(req.query)) {
+        return res.json(publicSites);
+      }
+
+      const filteredSites = filterAdminSites(publicSites, req.query);
+      const pageSize = parsePositiveInteger(req.query.pageSize, 50, 200);
+      const page = parsePositiveInteger(req.query.page, 1);
+      const start = (page - 1) * pageSize;
+      return res.json({
+        items: filteredSites.slice(start, start + pageSize),
+        total: filteredSites.length,
+        page,
+        pageSize,
+        summary: createAdminSitesSummary(publicSites)
+      });
     } catch (error) {
       next(error);
     }
@@ -2058,7 +2145,8 @@ function createApp(options = {}) {
         forbiddenWhitelist: false,
         createdAt: new Date().toISOString()
       };
-      sites.unshift(site);
+      const siteWithStorage = await attachFreshStorageCache(site, storageDir);
+      sites.unshift(siteWithStorage);
       await writeSites(dataFile, sites);
 
       settings.lastUsedSiteNumber = nextNumberValue;
@@ -2066,7 +2154,7 @@ function createApp(options = {}) {
 
       generateThumbnailLater(id, getRequestOrigin(req));
 
-      return res.status(201).json(await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir));
+      return res.status(201).json(await toPublicSiteWithStorage(siteWithStorage, classes, thumbnailDir, storageDir));
     } catch (error) {
       next(error);
     }
@@ -2530,10 +2618,10 @@ function createApp(options = {}) {
       await fsp.mkdir(projectDir, { recursive: true });
       await fsp.writeFile(path.join(projectDir, 'index.html'), file ? file.buffer : htmlContent);
 
-      const site = clearDuplicateAudit({
+      const site = await attachFreshStorageCache(clearDuplicateAudit({
         ...sites[siteIndex],
         updatedAt: new Date().toISOString()
-      });
+      }), storageDir);
       sites[siteIndex] = site;
       await writeSites(dataFile, sites);
       generateThumbnailLater(id, getRequestOrigin(req));
@@ -2749,7 +2837,7 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '当前版本只支持上传 HTML 文件' });
       }
 
-      const site = clearForbiddenAudit(file ? clearDuplicateAudit({
+      let site = clearForbiddenAudit(file ? clearDuplicateAudit({
         ...sites[siteIndex],
         title,
         author,
@@ -2767,6 +2855,7 @@ function createApp(options = {}) {
         const projectDir = path.join(storageDir, id);
         await fsp.mkdir(projectDir, { recursive: true });
         await fsp.writeFile(path.join(projectDir, 'index.html'), file.buffer);
+        site = await attachFreshStorageCache(site, storageDir);
         generateThumbnailLater(id, getRequestOrigin(req));
       }
 
