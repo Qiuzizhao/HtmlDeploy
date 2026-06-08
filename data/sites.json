@@ -101,7 +101,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:24:18.223Z",
-    "updatedAt": "2026-06-05T15:48:19.479Z"
+    "updatedAt": "2026-06-05T15:48:19.479Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:06:53.609Z"
   },
   {
     "id": "b582c9a6",
