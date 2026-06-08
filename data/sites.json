@@ -769,20 +769,6 @@
     "createdAt": "2026-06-04T06:57:16.173Z"
   },
   {
-    "id": "350cf349",
-    "number": "00126",
-    "title": "吃饭模拟器",
-    "author": "曾锦莘",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:11.108Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "081562d2",
-    "duplicateAuditKeepTitle": "吃饭模拟器",
-    "duplicateAuditMessage": "与「吃饭模拟器（00125）」代码重复"
-  },
-  {
     "id": "081562d2",
     "number": "00125",
     "title": "吃饭模拟器",
