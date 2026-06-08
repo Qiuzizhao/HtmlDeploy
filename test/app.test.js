@@ -68,7 +68,8 @@ test('public index shows total usage count on project cards', async () => {
   assert.match(html, /const usageTag = document\.createElement\('div'\)/);
   assert.match(html, /usageTag\.className = 'site-usage-tag'/);
   assert.match(html, /const usageCount = Math\.max\(0, Number\(site\.usageCount\) \|\| 0\)/);
-  assert.match(html, /usageTag\.textContent = `总次数 \$\{usageCount\}`/);
+  assert.match(html, /usageTag\.textContent = `\$\{usageCount\} 次`/);
+  assert.doesNotMatch(html, /总次数 \$\{usageCount\}/);
   assert.ok(html.indexOf("usageTag.className = 'site-usage-tag'") < html.indexOf("url.className = 'site-url'"));
 });
 

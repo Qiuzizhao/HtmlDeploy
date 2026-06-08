@@ -1590,7 +1590,7 @@
         const usageCount = Math.max(0, Number(site.usageCount) || 0);
         const usageTag = document.createElement('div');
         usageTag.className = 'site-usage-tag';
-        usageTag.textContent = `总次数 ${usageCount}`;
+        usageTag.textContent = `${usageCount} 次`;
         tagsContainer.append(usageTag);
 
         const url = document.createElement('div');
