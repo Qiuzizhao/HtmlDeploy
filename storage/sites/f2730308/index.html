@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阳光小镇：向日葵接阳光 🌻</title>
+    <style>
+        /* 清新阳光的配色与基础样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #e0f7fa, #fff9c4); /* 天蓝到暖黄渐变 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        h1 {
+            color: #ffb300;
+            margin: 5px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-size: 24px;
+        }
+
+        p {
+            color: #558b2f;
+            margin: 5px 0 15px 0;
+            font-weight: bold;
+        }
+
+        /* 游戏看板 */
+        #ui-panel {
+            width: 400px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: bold;
+            color: #37474f;
+            margin-bottom: 10px;
+        }
+
+        #lives {
+            color: #e53935;
+        }
+
+        /* 游戏画布 */
+        #gameCanvas {
+            background: linear-gradient(to bottom, #b3e5fc 70%, #81c784 100%); /* 蓝天与草地 */
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 6px solid #fff;
+            cursor: none; /* 隐藏鼠标，用花盆代替 */
+        }
+
+        /* 结束和开始弹窗 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 18px;
+            background-color: #ffb300;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 179, 0, 0.4);
+            transition: transform 0.2s, background-color 0.2s;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background-color: #ffa000;
+            transform: scale(1.05);
+        }
+
+        #game-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🌻 阳光小镇 ☀️</h1>
+    <p>左右移动鼠标/手指，收集阳光和雨滴，躲开乌云吧！</p>
+
+    <div id="ui-panel">
+        <div id="score-display">快乐值: ✨ <span id="score">0</span></div>
+        <div id="lives-display">心情: <span id="lives">❤️❤️❤️</span></div>
+    </div>
+
+    <div id="game-container">
+        <!-- 游戏画布 -->
+        <canvas id="gameCanvas" width="400" height="500"></canvas>
+
+        <!-- 开始/结束 遮罩层 -->
+        <div id="overlay" class="overlay">
+            <h2 id="overlay-title" style="color: #ff8f00; font-size: 28px; margin-bottom: 10px;">准备好迎接阳光了吗？</h2>
+            <p id="overlay-desc" style="color: #666; margin-bottom: 20px;">让小花盆快快长大吧！</p>
+            <button id="start-btn" class="btn">开始游戏</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+
+        // 游戏状态
+        let score = 0;
+        let lives = 3;
+        let gameOver = true;
+        let items = [];
+        let spawnTimer = 0;
+        let spawnRate = 40; // 每隔多少帧生成一个物品
+
+        // 花盆属性
+        const basket = {
+            x: canvas.width / 2 - 35,
+            y: canvas.height - 55,
+            width: 70,
+            height: 45,
+            emoji: "🪴"
+        };
+
+        // 物品类型
+        const ITEM_TYPES = {
+            SUN: { emoji: "☀️", score: 10, isBad: false, speed: 3 },
+            RAIN: { emoji: "💧", score: 20, isBad: false, speed: 4 },
+            CLOUD: { emoji: "☁️", score: 0, isBad: true, speed: 2.5 }
+        };
+
+        // 监听鼠标移动
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const root = document.documentElement;
+            const mouseX = e.clientX - rect.left - root.scrollLeft;
+            
+            // 保持花盆在画布内
+            basket.x = mouseX - basket.width / 2;
+            if (basket.x < 0) basket.x = 0;
+            if (basket.x > canvas.width - basket.width) basket.x = canvas.width - basket.width;
+        });
+
+        // 支持移动端触摸
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const touchX = touch.clientX - rect.left;
+            
+            basket.x = touchX - basket.width / 2;
+            if (basket.x < 0) basket.x = 0;
+            if (basket.x > canvas.width - basket.width) basket.x = canvas.width - basket.width;
+        }, { passive: false });
+
+        // 点击按钮开始/重启游戏
+        startBtn.addEventListener('click', startGame);
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            items = [];
+            gameOver = false;
+            scoreEl.innerText = score;
+            livesEl.innerText = "❤️❤️❤️";
+            overlay.style.display = 'none';
+            animate();
+        }
+
+        function spawnItem() {
+            const rand = Math.random();
+            let type;
+            
+            if (rand < 0.6) {
+                type = ITEM_TYPES.SUN; // 60% 概率出太阳
+            } else if (rand < 0.8) {
+                type = ITEM_TYPES.RAIN; // 20% 概率出雨滴
+            } else {
+                type = ITEM_TYPES.CLOUD; // 20% 概率出乌云
+            }
+
+            items.push({
+                x: Math.random() * (canvas.width - 30) + 5,
+                y: -30,
+                size: 28,
+                type: type
+            });
+        }
+
+        function drawBasket() {
+            ctx.font = "40px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            // 绘制花盆 Emoji
+            ctx.fillText(basket.emoji, basket.x + basket.width/2, basket.y + basket.height/2);
+        }
+
+        function updateAndDrawItems() {
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.y += item.type.speed; // 物品下落
+
+                // 绘制物品
+                ctx.font = `${item.size}px Arial`;
+                ctx.fillText(item.type.emoji, item.x, item.y);
+
+                // 碰撞检测 (花盆顶部边缘碰撞)
+                if (
+                    item.y + item.size/2 >= basket.y &&
+                    item.y - item.size/2 <= basket.y + basket.height &&
+                    item.x >= basket.x &&
+                    item.x <= basket.x + basket.width
+                ) {
+                    // 吃到正向物品
+                    if (!item.type.isBad) {
+                        score += item.type.score;
+                        scoreEl.innerText = score;
+                        // 动态改变花盆状态（短暂开花效果）
+                        basket.emoji = "🌻";
+                        setTimeout(() => { if(!gameOver) basket.emoji = "🪴"; }, 300);
+                    } else {
+                        // 碰到乌云
+                        lives--;
+                        updateLivesDisplay();
+                        basket.emoji = "🥀";
+                        setTimeout(() => { if(!gameOver) basket.emoji = "🪴"; }, 500);
+                        
+                        if (lives <= 0) {
+                            endGame();
+                        }
+                    }
+                    items.splice(i, 1);
+                    continue;
+                }
+
+                // 掉出屏幕
+                if (item.y > canvas.height + 20) {
+                    items.splice(i, 1);
+                }
+            }
+        }
+
+        function updateLivesDisplay() {
+            let hearts = "";
+            for(let i=0; i<3; i++) {
+                hearts += i < lives ? "❤️" : "🖤";
+            }
+            livesEl.innerText = hearts;
+        }
+
+        function endGame() {
+            gameOver = true;
+            overlayTitle.innerText = "太阳下山啦！☀️";
+            overlayDesc.innerText = `你今天收获了 ${score} 点快乐能量！🌻`;
+            startBtn.innerText = "再来一局";
+            overlay.style.display = 'flex';
+        }
+
+        // 游戏主循环
+        function animate() {
+            if (gameOver) return;
+
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制花盆
+            drawBasket();
+
+            // 生成新物品
+            spawnTimer++;
+            if (spawnTimer >= spawnRate) {
+                spawnItem();
+                spawnTimer = 0;
+                // 随着分数提高，稍微加快生成速度
+                spawnRate = Math.max(20, 40 - Math.floor(score / 150) * 5);
+            }
+
+            // 更新和绘制物品
+            updateAndDrawItems();
+
+            // 循环调用
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
