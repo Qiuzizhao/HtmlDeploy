@@ -76,7 +76,8 @@
     "name": "五5",
     "password": "555648",
     "uploadEnabled": true,
-    "passwordEnabled": true,
-    "createdAt": "2026-06-08T01:22:20.374Z"
+    "passwordEnabled": false,
+    "createdAt": "2026-06-08T01:22:20.374Z",
+    "updatedAt": "2026-06-08T01:22:57.981Z"
   }
 ]
