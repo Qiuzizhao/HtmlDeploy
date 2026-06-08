@@ -24,9 +24,9 @@
     "createdAt": "2026-06-05T07:35:47.791Z",
     "updatedAt": "2026-06-05T15:26:36.452Z",
     "starred": true,
-    "usagePreviewCount": 12,
+    "usagePreviewCount": 13,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:58.186Z"
+    "usageLastUsedAt": "2026-06-08T02:09:31.092Z"
   },
   {
     "id": "69131173",
@@ -177,9 +177,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.266Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:20.865Z"
+    "usageLastUsedAt": "2026-06-08T02:09:31.663Z"
   },
   {
     "id": "62b9c9b3",
@@ -218,9 +218,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:08.689Z",
-    "usagePreviewCount": 14,
+    "usagePreviewCount": 15,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:09:22.787Z"
+    "usageLastUsedAt": "2026-06-08T02:09:34.365Z"
   },
   {
     "id": "0ac4f446",
@@ -518,9 +518,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:25.321Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:17.938Z"
+    "usageLastUsedAt": "2026-06-08T02:09:33.678Z"
   },
   {
     "id": "f4672ecd",
@@ -888,9 +888,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:59.400Z",
     "updatedAt": "2026-06-04T08:01:38.950Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:48.029Z"
+    "usageLastUsedAt": "2026-06-08T02:09:32.065Z"
   },
   {
     "id": "7dee5414",
