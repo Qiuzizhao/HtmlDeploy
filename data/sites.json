@@ -77,9 +77,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 9,
+    "usagePreviewCount": 10,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:13.254Z"
+    "usageLastUsedAt": "2026-06-08T02:08:35.278Z"
   },
   {
     "id": "17ed9196",
@@ -1868,7 +1868,10 @@
     "author": "何芷希",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:51.420Z",
-    "updatedAt": "2026-06-03T16:00:31.964Z"
+    "updatedAt": "2026-06-03T16:00:31.964Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:08:34.867Z"
   },
   {
     "id": "4891a2f7",
