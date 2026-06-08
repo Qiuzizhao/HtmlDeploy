@@ -438,24 +438,64 @@ function parseCookies(header = '') {
 }
 
 let syncTimeout = null;
+let syncInProgress = false;
+let syncQueued = false;
+
+function removeStaleGitIndexLock(cwd) {
+  const lockPath = path.join(cwd, '.git', 'index.lock');
+  try {
+    const stats = fs.statSync(lockPath);
+    if (Date.now() - stats.mtimeMs < 60 * 1000) {
+      return false;
+    }
+
+    fs.unlinkSync(lockPath);
+    console.warn('[Git Sync] Removed stale .git/index.lock.');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function runGitSync() {
+  syncTimeout = null;
+  if (syncInProgress) {
+    syncQueued = true;
+    return;
+  }
+
+  syncInProgress = true;
+  removeStaleGitIndexLock(process.cwd());
+  console.log('[Git Sync] Starting backup to GitHub...');
+  exec('git add . && git commit -m "Auto backup data" && git push', { cwd: process.cwd() }, (error, stdout, stderr) => {
+    syncInProgress = false;
+    if (error) {
+      if (stdout.includes('nothing to commit') || stderr.includes('nothing to commit')) {
+        console.log('[Git Sync] No changes to backup.');
+      } else {
+        console.error('[Git Sync] Error:', error.message);
+      }
+    } else {
+      console.log('[Git Sync] Backup successful!');
+    }
+
+    if (syncQueued) {
+      syncQueued = false;
+      syncDataToGithub();
+    }
+  });
+}
+
 function syncDataToGithub() {
+  if (syncInProgress) {
+    syncQueued = true;
+    return;
+  }
+
   if (syncTimeout) {
     clearTimeout(syncTimeout);
   }
-  syncTimeout = setTimeout(() => {
-    console.log('[Git Sync] Starting backup to GitHub...');
-    exec('git add . && git commit -m "Auto backup data" && git push', { cwd: process.cwd() }, (error, stdout, stderr) => {
-      if (error) {
-        if (stdout.includes('nothing to commit') || stderr.includes('nothing to commit')) {
-          console.log('[Git Sync] No changes to backup.');
-        } else {
-          console.error('[Git Sync] Error:', error.message);
-        }
-      } else {
-        console.log('[Git Sync] Backup successful!');
-      }
-    });
-  }, 3000);
+  syncTimeout = setTimeout(runGitSync, 3000);
 }
 
 function renderAdminLoginPage(errorMessage = '') {
