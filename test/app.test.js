@@ -395,6 +395,18 @@ test('public admin can preview edited project code before saving', async () => {
   assert.match(html, /window\.URL\.revokeObjectURL\(previewUrl\)/);
 });
 
+test('git auto sync serializes backup jobs and clears stale index locks', async () => {
+  const source = await fsp.readFile(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
+
+  assert.match(source, /let syncInProgress = false/);
+  assert.match(source, /let syncQueued = false/);
+  assert.match(source, /function removeStaleGitIndexLock/);
+  assert.match(source, /index\.lock/);
+  assert.match(source, /syncQueued = true/);
+  assert.match(source, /runGitSync/);
+  assert.match(source, /removeStaleGitIndexLock\(process\.cwd\(\)\)/);
+});
+
 async function makeTestApp(options = {}) {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-'));
   const dataDir = path.join(root, 'data');
