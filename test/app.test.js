@@ -289,6 +289,11 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /id="dedupeSitesButton"[^>]*>查重<\/button>/);
   assert.match(html, /id="enableAllSitesButton"[^>]*>全部解禁<\/button>/);
   assert.match(html, /id="aiOptimizeLog"/);
+  assert.match(html, /id="taskStatusPanel"/);
+  assert.match(html, /id="taskStatusRows"/);
+  assert.match(html, /function loadTaskStatuses/);
+  assert.match(html, /\/api\/admin\/thumbnail-jobs\/\$\{encodeURIComponent\(jobId\)\}/);
+  assert.match(html, /\/api\/admin\/jobs\/logs/);
   assert.match(html, /function addAiOptimizeLog/);
   assert.match(html, /const AI_OPTIMIZE_LOG_STORAGE_KEY/);
   assert.match(html, /function loadAiOptimizeLog/);
@@ -475,13 +480,16 @@ test('public admin can preview edited project code before saving', async () => {
 test('git auto sync serializes backup jobs and clears stale index locks', async () => {
   const source = await fsp.readFile(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
 
+  assert.match(source, /const GIT_SYNC_DELAY_MS = 10 \* 60 \* 1000/);
   assert.match(source, /let syncInProgress = false/);
   assert.match(source, /let syncQueued = false/);
   assert.match(source, /function removeStaleGitIndexLock/);
   assert.match(source, /index\.lock/);
   assert.match(source, /syncQueued = true/);
   assert.match(source, /runGitSync/);
+  assert.match(source, /setTimeout\(runGitSync, GIT_SYNC_DELAY_MS\)/);
   assert.match(source, /removeStaleGitIndexLock\(process\.cwd\(\)\)/);
+  assert.match(source, /writeSites\(dataFile, sites, \{ sync: false \}\)/);
 });
 
 test('admin can trigger a manual GitHub sync', async () => {
@@ -540,6 +548,19 @@ async function waitForAiOptimizeJob(agent, jobId, { status = 'success', attempts
   }
 
   throw new Error(`AI optimize job did not reach ${status}; latest status: ${latest?.body?.status}`);
+}
+
+async function waitForThumbnailJob(agent, jobId, { attempts = 80 } = {}) {
+  let latest;
+  for (let index = 0; index < attempts; index += 1) {
+    latest = await agent.get(`/api/admin/thumbnail-jobs/${jobId}`).expect(200);
+    if (['success', 'error'].includes(latest.body.status)) {
+      return latest.body;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  throw new Error(`Thumbnail job did not finish; latest status: ${latest?.body?.status}`);
 }
 
 test('GET /api/sites returns an empty list before uploads', async () => {
@@ -740,6 +761,71 @@ test('GET /api/admin/sites uses cached storage usage for each project', async ()
       ['missing-files', 0]
     ]
   );
+});
+
+test('thumbnail generation runs as background jobs with progress', async () => {
+  const generatedIds = [];
+  const { app, dataDir } = await makeTestApp({
+    thumbnailGenerator: async ({ id }) => {
+      generatedIds.push(id);
+      if (id === 'bad-site') {
+        throw new Error('截图失败');
+      }
+      return { id, thumbnailUrl: `/thumbnails/${id}.png?v=1` };
+    }
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await fsp.writeFile(
+    path.join(dataDir, 'sites.json'),
+    JSON.stringify([
+      { id: 'good-site', title: '好项目', author: '作者', classId: 'class-a', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'bad-site', title: '坏项目', author: '作者', classId: 'class-a', createdAt: '2026-01-02T00:00:00.000Z' }
+    ], null, 2)
+  );
+
+  const single = await agent.post('/api/sites/good-site/thumbnail').send({}).expect(202);
+  assert.equal(single.body.status, 'queued');
+  assert.equal(single.body.total, 1);
+  assert.ok(single.body.jobId);
+
+  const singleDone = await waitForThumbnailJob(agent, single.body.jobId);
+  assert.equal(singleDone.status, 'success');
+  assert.equal(singleDone.success, 1);
+  assert.equal(singleDone.failed, 0);
+
+  const batch = await agent.post('/api/admin/thumbnails').send({}).expect(202);
+  assert.equal(batch.body.status, 'queued');
+  assert.equal(batch.body.total, 2);
+  assert.ok(batch.body.jobId);
+
+  const batchDone = await waitForThumbnailJob(agent, batch.body.jobId);
+  assert.equal(batchDone.status, 'error');
+  assert.equal(batchDone.finished, 2);
+  assert.equal(batchDone.success, 1);
+  assert.equal(batchDone.failed, 1);
+  assert.equal(batchDone.errors[0].id, 'bad-site');
+  assert.deepEqual(generatedIds, ['good-site', 'good-site', 'bad-site']);
+});
+
+test('admin job logs persist AI optimize messages', async () => {
+  const { app } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await agent.post('/api/admin/jobs/logs').send({
+    text: 'AI 优化已开始',
+    status: 'running',
+    type: 'ai-optimize'
+  }).expect(201);
+
+  const logs = await agent.get('/api/admin/jobs/logs?limit=10').expect(200);
+
+  assert.equal(logs.body.logs.length, 1);
+  assert.equal(logs.body.logs[0].text, 'AI 优化已开始');
+  assert.equal(logs.body.logs[0].status, 'running');
+  assert.equal(logs.body.logs[0].type, 'ai-optimize');
 });
 
 test('admin can set the all-projects password and visitors must unlock all projects', async () => {
