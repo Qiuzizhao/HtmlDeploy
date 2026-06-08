@@ -982,7 +982,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:55.467Z"
+    "createdAt": "2026-06-04T06:55:55.467Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:10:20.904Z"
   },
   {
     "id": "7a0c2118",
@@ -1207,9 +1210,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:00.607Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:13.122Z"
+    "usageLastUsedAt": "2026-06-08T02:10:18.925Z"
   },
   {
     "id": "cba715bc",
@@ -1355,7 +1358,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:47:50.998Z",
-    "updatedAt": "2026-06-05T09:34:31.347Z"
+    "updatedAt": "2026-06-05T09:34:31.347Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:10:22.561Z"
   },
   {
     "id": "42b2ae5a",
