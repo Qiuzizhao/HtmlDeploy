@@ -1100,6 +1100,27 @@
     const codeMessage = document.getElementById('codeMessage');
     const codeViewer = document.getElementById('codeViewer');
     const copyCodeButton = document.getElementById('copyCode');
+    const CLASS_SELECTION_STORAGE_KEY = 'project-site-selected-class-id';
+
+    function getStoredClassId() {
+      try {
+        return localStorage.getItem(CLASS_SELECTION_STORAGE_KEY) || '';
+      } catch {
+        return '';
+      }
+    }
+
+    function rememberSelectedClassId(classId) {
+      try {
+        if (classId) {
+          localStorage.setItem(CLASS_SELECTION_STORAGE_KEY, classId);
+        } else {
+          localStorage.removeItem(CLASS_SELECTION_STORAGE_KEY);
+        }
+      } catch {
+        return;
+      }
+    }
 
     let currentPreviewUrl = '';
     let currentPreviewExternalUrl = '';
@@ -1110,7 +1131,7 @@
     let siteSearchQuery = '';
     let starredOnly = false;
     let uploadRules = { forbiddenWords: [] };
-    let currentClassId = '';
+    let currentClassId = getStoredClassId();
     const unlockedClassIds = new Set();
 
     function getCurrentClass() {
@@ -1650,6 +1671,7 @@
 
       if (!classes.some((item) => item.id === currentClassId)) {
         currentClassId = '';
+        rememberSelectedClassId('');
       }
 
       renderClasses();
@@ -1667,6 +1689,7 @@
 
     async function selectClass(classId) {
       currentClassId = classId;
+      rememberSelectedClassId(classId);
       renderClasses();
       await loadSites();
     }

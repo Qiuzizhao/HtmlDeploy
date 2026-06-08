@@ -105,6 +105,20 @@ test('public index loads class buttons and uploads to the selected class', async
   assert.match(html, /formData\.append\('classId', currentClassId\)/);
 });
 
+test('public index keeps the selected class after refresh', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /const CLASS_SELECTION_STORAGE_KEY = 'project-site-selected-class-id'/);
+  assert.match(html, /function getStoredClassId/);
+  assert.match(html, /localStorage\.getItem\(CLASS_SELECTION_STORAGE_KEY\)/);
+  assert.match(html, /let currentClassId = getStoredClassId\(\)/);
+  assert.match(html, /function rememberSelectedClassId\(classId\)/);
+  assert.match(html, /localStorage\.setItem\(CLASS_SELECTION_STORAGE_KEY, classId\)/);
+  assert.match(html, /localStorage\.removeItem\(CLASS_SELECTION_STORAGE_KEY\)/);
+  assert.match(html, /rememberSelectedClassId\(classId\)/);
+  assert.match(html, /rememberSelectedClassId\(''\)/);
+});
+
 test('public index renders class password entry inside the project grid', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
