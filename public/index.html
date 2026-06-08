@@ -1101,6 +1101,7 @@
     const codeViewer = document.getElementById('codeViewer');
     const copyCodeButton = document.getElementById('copyCode');
     const CLASS_SELECTION_STORAGE_KEY = 'project-site-selected-class-id';
+    const SITE_RENDER_BATCH_SIZE = 12;
 
     function getStoredClassId() {
       try {
@@ -1132,6 +1133,8 @@
     let starredOnly = false;
     let uploadRules = { forbiddenWords: [] };
     let currentClassId = getStoredClassId();
+    let siteSearchDebounceTimer = null;
+    let siteRenderToken = 0;
     const unlockedClassIds = new Set();
 
     function getCurrentClass() {
@@ -1527,8 +1530,133 @@
       renderSites(getFilteredSites());
     }
 
+    function debounceProjectSearchRender() {
+      if (siteSearchDebounceTimer) {
+        window.clearTimeout(siteSearchDebounceTimer);
+      }
+
+      siteSearchDebounceTimer = window.setTimeout(() => {
+        siteSearchQuery = projectSearchInput.value;
+        renderFilteredSites();
+      }, 300);
+    }
+
+    function createSiteCard(site) {
+      const card = document.createElement('article');
+      card.className = site.starred === true ? 'site-card is-starred' : 'site-card';
+
+      const cardMain = document.createElement('div');
+      cardMain.className = 'site-card-main';
+
+      const cover = document.createElement('div');
+      cover.className = 'site-cover';
+      if (site.thumbnailUrl) {
+        const image = document.createElement('img');
+        image.src = site.thumbnailUrl;
+        image.alt = `${site.title} 的封面图`;
+        image.loading = 'lazy';
+        cover.append(image);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'site-cover-placeholder';
+        placeholder.textContent = '暂无封面';
+        cover.append(placeholder);
+      }
+
+      const content = document.createElement('div');
+      content.className = 'site-content';
+
+      const heading = document.createElement('div');
+      heading.className = 'site-heading';
+
+      const number = document.createElement('span');
+      number.className = 'site-number';
+      number.textContent = site.number;
+
+      const title = document.createElement('h2');
+      title.className = 'site-title';
+      title.textContent = site.title;
+
+      heading.append(number, title);
+      if (site.starred === true) {
+        const starIcon = document.createElement('span');
+        starIcon.className = 'site-star-icon';
+        starIcon.textContent = '★';
+        starIcon.title = '星标项目';
+        starIcon.setAttribute('aria-label', '星标项目');
+        heading.append(starIcon);
+      }
+
+      const tagsContainer = document.createElement('div');
+      tagsContainer.className = 'site-tags';
+
+      const classTag = document.createElement('div');
+      classTag.className = 'site-class-tag';
+      classTag.textContent = site.className || '未分配';
+      tagsContainer.append(classTag);
+
+      if (site.author) {
+        const authorTag = document.createElement('div');
+        authorTag.className = 'site-author-tag';
+        authorTag.textContent = site.author;
+        tagsContainer.append(authorTag);
+      }
+
+      const usageCount = Math.max(0, Number(site.usageCount) || 0);
+      const usageTag = document.createElement('div');
+      usageTag.className = 'site-usage-tag';
+      usageTag.textContent = `${usageCount} 次`;
+      tagsContainer.append(usageTag);
+
+      const url = document.createElement('div');
+      url.className = 'site-url';
+      url.textContent = site.url;
+      tagsContainer.append(url);
+
+      content.append(heading, tagsContainer);
+      cardMain.append(cover, content);
+
+      const actions = document.createElement('div');
+      actions.className = 'card-actions';
+
+      const previewButton = document.createElement('button');
+      previewButton.className = 'primary-button';
+      previewButton.type = 'button';
+      previewButton.textContent = '预览项目';
+      previewButton.addEventListener('click', () => openProjectWindow(site));
+
+      const codeButton = document.createElement('button');
+      codeButton.className = 'secondary-button';
+      codeButton.type = 'button';
+      codeButton.textContent = '查看代码';
+      codeButton.addEventListener('click', () => openCodeWindow(site));
+
+      actions.append(previewButton, codeButton);
+      card.append(cardMain, actions);
+      return card;
+    }
+
+    function appendSiteCardBatch(sites, startIndex, renderToken) {
+      if (renderToken !== siteRenderToken) {
+        return;
+      }
+
+      const endIndex = Math.min(startIndex + SITE_RENDER_BATCH_SIZE, sites.length);
+      const fragment = document.createDocumentFragment();
+      sites.slice(startIndex, endIndex).forEach((site, batchIndex) => {
+        const index = startIndex + batchIndex;
+        fragment.append(createSiteCard(site, index));
+      });
+      siteGrid.append(fragment);
+
+      if (endIndex < sites.length) {
+        requestAnimationFrame(() => appendSiteCardBatch(sites, endIndex, renderToken));
+      }
+    }
+
     function renderSites(sites) {
       siteGrid.innerHTML = '';
+      const renderToken = ++siteRenderToken;
       
       const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
       const hasFilter = Boolean(siteSearchQuery.trim()) || starredOnly;
@@ -1547,101 +1675,7 @@
       }
       emptyState.style.display = sites.length ? 'none' : 'block';
 
-      sites.forEach((site, index) => {
-        const card = document.createElement('article');
-        card.className = site.starred === true ? 'site-card is-starred' : 'site-card';
-
-        const cardMain = document.createElement('div');
-        cardMain.className = 'site-card-main';
-
-        const cover = document.createElement('div');
-        cover.className = 'site-cover';
-        if (site.thumbnailUrl) {
-          const image = document.createElement('img');
-          image.src = site.thumbnailUrl;
-          image.alt = `${site.title} 的封面图`;
-          image.loading = 'lazy';
-          cover.append(image);
-        } else {
-          const placeholder = document.createElement('div');
-          placeholder.className = 'site-cover-placeholder';
-          placeholder.textContent = '暂无封面';
-          cover.append(placeholder);
-        }
-
-        const content = document.createElement('div');
-        content.className = 'site-content';
-
-        const heading = document.createElement('div');
-        heading.className = 'site-heading';
-
-        const number = document.createElement('span');
-        number.className = 'site-number';
-        number.textContent = site.number;
-
-        const title = document.createElement('h2');
-        title.className = 'site-title';
-        title.textContent = site.title;
-
-        heading.append(number, title);
-        if (site.starred === true) {
-          const starIcon = document.createElement('span');
-          starIcon.className = 'site-star-icon';
-          starIcon.textContent = '★';
-          starIcon.title = '星标项目';
-          starIcon.setAttribute('aria-label', '星标项目');
-          heading.append(starIcon);
-        }
-
-        const tagsContainer = document.createElement('div');
-        tagsContainer.className = 'site-tags';
-
-        const classTag = document.createElement('div');
-        classTag.className = 'site-class-tag';
-        classTag.textContent = site.className || '未分配';
-        tagsContainer.append(classTag);
-
-        if (site.author) {
-          const authorTag = document.createElement('div');
-          authorTag.className = 'site-author-tag';
-          authorTag.textContent = site.author;
-          tagsContainer.append(authorTag);
-        }
-
-        const usageCount = Math.max(0, Number(site.usageCount) || 0);
-        const usageTag = document.createElement('div');
-        usageTag.className = 'site-usage-tag';
-        usageTag.textContent = `${usageCount} 次`;
-        tagsContainer.append(usageTag);
-
-        const url = document.createElement('div');
-        url.className = 'site-url';
-        url.textContent = site.url;
-        tagsContainer.append(url);
-
-        content.append(heading, tagsContainer);
-        cardMain.append(cover, content);
-
-        const actions = document.createElement('div');
-        actions.className = 'card-actions';
-
-        const previewButton = document.createElement('button');
-        previewButton.className = 'primary-button';
-        previewButton.type = 'button';
-        previewButton.textContent = '预览项目';
-        previewButton.addEventListener('click', () => openProjectWindow(site));
-
-        const codeButton = document.createElement('button');
-        codeButton.className = 'secondary-button';
-        codeButton.type = 'button';
-        codeButton.textContent = '查看代码';
-        codeButton.addEventListener('click', () => openCodeWindow(site));
-
-        actions.append(previewButton, codeButton);
-        card.append(cardMain, actions);
-
-        siteGrid.append(card);
-      });
+      appendSiteCardBatch(sites, 0, renderToken);
     }
 
     function renderClasses() {
@@ -1814,10 +1848,7 @@
 
     openUploadButton.addEventListener('click', openUpload);
     refreshClassSitesButton.addEventListener('click', refreshCurrentClassSites);
-    projectSearchInput.addEventListener('input', () => {
-      siteSearchQuery = projectSearchInput.value;
-      renderFilteredSites();
-    });
+    projectSearchInput.addEventListener('input', debounceProjectSearchRender);
     starredFilterButton.addEventListener('click', () => {
       starredOnly = !starredOnly;
       updateProjectFilterControls();

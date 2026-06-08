@@ -803,6 +803,35 @@
       flex-wrap: wrap;
     }
 
+    .site-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      background: #fbfdff;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .site-pagination select {
+      width: auto;
+      min-height: 36px;
+      padding: 0 30px 0 10px;
+    }
+
+    .site-pagination .button {
+      min-height: 36px;
+      padding: 0 12px;
+    }
+
+    .site-pagination .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
     .thumbnail-cell {
       width: 96px;
     }
@@ -1076,6 +1105,11 @@
         max-width: none;
       }
 
+      .site-pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
       .toolbar-left,
       .toolbar-right,
       .toolbar-left input,
@@ -1179,6 +1213,19 @@
               </thead>
               <tbody id="siteRows"></tbody>
             </table>
+          </div>
+          <div class="site-pagination" aria-label="项目分页">
+            <label>
+              每页
+              <select id="adminPageSize" aria-label="每页项目数量">
+                <option value="20">20 条</option>
+                <option value="50" selected>50 条</option>
+                <option value="100">100 条</option>
+              </select>
+            </label>
+            <button class="button" id="prevSitesPage" type="button">上一页</button>
+            <span id="sitesPageInfo">第 1 页 / 共 1 页</span>
+            <button class="button" id="nextSitesPage" type="button">下一页</button>
           </div>
           <div class="empty" id="emptyState">还没有项目。</div>
         </div>
@@ -1491,6 +1538,10 @@
     const emptyState = document.getElementById('emptyState');
     const searchInput = document.getElementById('searchInput');
     const filterClassId = document.getElementById('filterClassId');
+    const adminPageSize = document.getElementById('adminPageSize');
+    const prevSitesPage = document.getElementById('prevSitesPage');
+    const nextSitesPage = document.getElementById('nextSitesPage');
+    const sitesPageInfo = document.getElementById('sitesPageInfo');
     const rankingMessage = document.getElementById('rankingMessage');
     const rankingSearchInput = document.getElementById('rankingSearchInput');
     const rankingClassFilter = document.getElementById('rankingClassFilter');
@@ -1525,8 +1576,14 @@
     const AI_OPTIMIZE_LOG_STORAGE_KEY = 'project-site-ai-optimize-log';
 
     let sites = [];
+    let rankingSites = [];
     let classes = [];
     let settings = {};
+    let adminSitesPage = 1;
+    let adminSitesPageSize = 50;
+    let adminSitesTotal = 0;
+    let adminSitesSummary = null;
+    let adminSearchDebounceTimer = null;
     let currentCodeSite = null;
     let currentDirectedAiSite = null;
     let currentDirectedAiButton = null;
@@ -1534,6 +1591,7 @@
     const runningAiOptimizations = new Set();
     const runningAiNaming = new Set();
     const AI_REQUEST_TIMEOUT_MS = 60000;
+    const loadedAdminViews = new Set();
     let forbiddenWordsState = {
       query: '',
       offset: 0,
@@ -1730,13 +1788,21 @@
       });
 
       activeViewTitle.textContent = viewTitles[viewName] || viewTitles.projects;
+      if (!loadedAdminViews.has(viewName)) {
+        loadCurrentViewData(viewName).catch((error) => {
+          setMessage(listMessage, `加载失败：${error.message}`, true);
+        });
+      }
     }
 
     function updateSummary() {
-      const totalStorageBytes = sites.reduce((total, site) => total + (site.storageBytes || 0), 0);
-      projectCount.textContent = String(sites.length);
+      const summary = adminSitesSummary || {
+        totalProjects: sites.length,
+        totalStorageBytes: sites.reduce((total, site) => total + (site.storageBytes || 0), 0)
+      };
+      projectCount.textContent = String(summary.totalProjects || 0);
       classCount.textContent = String(classes.length);
-      storageUsage.textContent = formatBytes(totalStorageBytes);
+      storageUsage.textContent = formatBytes(summary.totalStorageBytes || 0);
     }
 
     function formatDate(value) {
@@ -1851,6 +1917,26 @@
       });
 
       select.value = value;
+    }
+
+    async function loadCurrentViewData(viewName) {
+      if (!viewName || loadedAdminViews.has(viewName)) {
+        return;
+      }
+
+      if (viewName === 'projects') {
+        await loadSites();
+      } else if (viewName === 'ranking') {
+        await loadRankingSites();
+      } else if (viewName === 'forbidden') {
+        await loadForbiddenWords({ offset: 0 });
+      } else if (viewName === 'settings') {
+        await loadAiSettings();
+      } else if (viewName === 'classes') {
+        await loadClasses();
+      }
+
+      loadedAdminViews.add(viewName);
     }
 
     function openProjectWindow(site) {
@@ -2013,13 +2099,9 @@
       }
 
       const updatedSite = await response.json();
-      const index = sites.findIndex((site) => site.id === updatedSite.id);
-      if (index !== -1) {
-        sites[index] = updatedSite;
-        currentCodeSite = updatedSite;
-      }
-      renderRows();
-      renderRanking();
+      replaceSiteInState(updatedSite);
+      currentCodeSite = updatedSite;
+      refreshVisibleRows();
       setCodeMessage('代码已保存，封面会在后台自动刷新。');
       setMessage(listMessage, `「${updatedSite.title}」代码已保存`);
     }
@@ -2130,14 +2212,10 @@
           throw new Error('AI 优化任务没有返回项目结果');
         }
 
-        const index = sites.findIndex((item) => item.id === updatedSite.id);
-        if (index !== -1) {
-          sites[index] = updatedSite;
-        }
+        replaceSiteInState(updatedSite);
         addAiOptimizeLog(`「${updatedSite.title}」${isDirected ? '定向 ' : ''}AI 优化完成并已保存${result.model ? `（${result.model}）` : ''}。`, 'success');
         runningAiOptimizations.delete(site.id);
-        renderRows();
-        renderRanking();
+        refreshVisibleRows();
         setMessage(listMessage, getRunningAiText() || `「${updatedSite.title}」${isDirected ? '定向 ' : ''}AI 优化已保存，封面会在后台自动刷新。`);
       } catch (error) {
         addAiOptimizeLog(`「${site.title}」${isDirected ? '定向 ' : ''}AI 优化失败：${error.message || '网络错误'}`, 'error');
@@ -2152,8 +2230,7 @@
         if (runningText) {
           setMessage(listMessage, runningText);
         } else if (wasRunning) {
-          renderRows();
-          renderRanking();
+          refreshVisibleRows();
         }
       }
     }
@@ -2186,14 +2263,10 @@
 
         const result = await response.json();
         const updatedSite = result.site;
-        const index = sites.findIndex((item) => item.id === updatedSite.id);
-        if (index !== -1) {
-          sites[index] = updatedSite;
-        }
+        replaceSiteInState(updatedSite);
         addAiOptimizeLog(`「${site.title}」AI 命名完成：${updatedSite.title}${result.model ? `（${result.model}）` : ''}。`, 'success');
         runningAiNaming.delete(site.id);
-        renderRows();
-        renderRanking();
+        refreshVisibleRows();
         setMessage(listMessage, `AI 命名已保存为「${updatedSite.title}」`);
       } catch (error) {
         addAiOptimizeLog(`「${site.title}」AI 命名失败：${error.message || '网络错误'}`, 'error');
@@ -2203,8 +2276,7 @@
         button.disabled = false;
         button.textContent = 'AI命名';
         if (wasRunning) {
-          renderRows();
-          renderRanking();
+          refreshVisibleRows();
         }
       }
     }
@@ -2671,7 +2743,7 @@
     function renderRanking() {
       const keyword = rankingSearchInput.value.trim().toLowerCase();
       const selectedClass = rankingClassFilter.value;
-      const rankedSites = sites
+      const rankedSites = rankingSites
         .filter((site) => site.enabled !== false)
         .filter((site) => {
           const siteNumber = site.number || '';
@@ -2979,19 +3051,83 @@
       });
     }
 
+    function updateSitesPaginationControls() {
+      const totalPages = Math.max(1, Math.ceil(adminSitesTotal / adminSitesPageSize));
+      adminSitesPage = Math.min(adminSitesPage, totalPages);
+      adminPageSize.value = String(adminSitesPageSize);
+      prevSitesPage.disabled = adminSitesPage <= 1;
+      nextSitesPage.disabled = adminSitesPage >= totalPages;
+      sitesPageInfo.textContent = `第 ${adminSitesPage} 页 / 共 ${totalPages} 页`;
+    }
+
+    function replaceSiteInList(list, updatedSite) {
+      const index = list.findIndex((item) => item.id === updatedSite.id);
+      if (index !== -1) {
+        list[index] = updatedSite;
+      }
+      return index;
+    }
+
+    function replaceSiteInState(updatedSite) {
+      replaceSiteInList(sites, updatedSite);
+      replaceSiteInList(rankingSites, updatedSite);
+    }
+
+    function refreshVisibleRows() {
+      renderRows();
+      renderRanking();
+      updateSummary();
+    }
+
+    async function loadRankingSites() {
+      setMessage(rankingMessage, '加载中...');
+      const response = await fetch('/api/admin/sites');
+      if (!response.ok) {
+        setMessage(rankingMessage, '加载排行榜失败', true);
+        return;
+      }
+
+      rankingSites = await response.json();
+      renderRanking();
+    }
+
+    function buildAdminSitesParams() {
+      const params = new URLSearchParams();
+      params.set('page', String(adminSitesPage));
+      params.set('pageSize', String(adminSitesPageSize));
+
+      const keyword = searchInput.value.trim();
+      if (keyword) {
+        params.set('q', keyword);
+      }
+
+      if (filterClassId.value) {
+        params.set('classId', filterClassId.value);
+      }
+
+      return params;
+    }
+
     async function loadSites() {
       setMessage(listMessage, '加载中...');
-      const response = await fetch('/api/admin/sites');
+      const params = buildAdminSitesParams();
+      const response = await fetch(`/api/admin/sites?${params.toString()}`);
       if (!response.ok) {
         setMessage(listMessage, '加载项目失败', true);
         return;
       }
 
-      sites = await response.json();
+      const result = await response.json();
+      sites = result.items || [];
+      adminSitesTotal = result.total || sites.length;
+      adminSitesPage = result.page || adminSitesPage;
+      adminSitesPageSize = result.pageSize || adminSitesPageSize;
+      adminSitesSummary = result.summary || adminSitesSummary;
       renderRows();
-      renderRanking();
       updateSummary();
-      setMessage(listMessage, `${sites.length} 个项目`);
+      updateSitesPaginationControls();
+      loadedAdminViews.add('projects');
+      setMessage(listMessage, `${adminSitesTotal} 个项目，当前显示 ${sites.length} 个`);
     }
 
     async function generateSiteThumbnail(site, button) {
@@ -3017,8 +3153,11 @@
       if (index !== -1) {
         sites[index].thumbnailUrl = result.thumbnailUrl;
       }
-      renderRows();
-      renderRanking();
+      const rankingIndex = rankingSites.findIndex((item) => item.id === site.id);
+      if (rankingIndex !== -1) {
+        rankingSites[rankingIndex].thumbnailUrl = result.thumbnailUrl;
+      }
+      refreshVisibleRows();
       setMessage(listMessage, '封面已生成');
     }
 
@@ -3228,18 +3367,8 @@
       }
 
       const updatedSite = await response.json();
-      // 更新本地数据，只更新当前行而不是整个列表刷新
-      const index = sites.findIndex((s) => s.id === site.id);
-      if (index !== -1) {
-        sites[index] = updatedSite;
-
-        // 同步更新 className，以防修改了班级
-        const newClass = classes.find((c) => c.id === updatedSite.classId);
-        if (newClass) {
-          sites[index].className = newClass.name;
-        }
-      }
-
+      replaceSiteInState(updatedSite);
+      refreshVisibleRows();
       setMessage(listMessage, '保存成功');
     }
 
@@ -3262,12 +3391,8 @@
       }
 
       const updatedSite = await response.json();
-      const index = sites.findIndex((item) => item.id === updatedSite.id);
-      if (index !== -1) {
-        sites[index] = updatedSite;
-      }
-      renderRows();
-      renderRanking();
+      replaceSiteInState(updatedSite);
+      refreshVisibleRows();
       setMessage(listMessage, updatedSite.enabled === false ? '项目已禁用，前台将隐藏' : '项目已启用，前台将显示');
     }
 
@@ -3290,12 +3415,8 @@
       }
 
       const updatedSite = await response.json();
-      const index = sites.findIndex((item) => item.id === updatedSite.id);
-      if (index !== -1) {
-        sites[index] = updatedSite;
-      }
-      renderRows();
-      renderRanking();
+      replaceSiteInState(updatedSite);
+      refreshVisibleRows();
       setMessage(listMessage, updatedSite.starred === true ? '已添加星标，前台卡片会显示星标' : '已取消星标');
     }
 
@@ -3318,12 +3439,8 @@
       }
 
       const updatedSite = await response.json();
-      const index = sites.findIndex((item) => item.id === updatedSite.id);
-      if (index !== -1) {
-        sites[index] = updatedSite;
-      }
-      renderRows();
-      renderRanking();
+      replaceSiteInState(updatedSite);
+      refreshVisibleRows();
       setMessage(listMessage, updatedSite.forbiddenWhitelist === true ? '项目已加入违禁词审查白名单' : '项目已移出违禁词审查白名单');
     }
 
@@ -3462,9 +3579,13 @@
           s.className = updatedClass.name;
         }
       });
+      rankingSites.forEach(s => {
+        if (s.classId === updatedClass.id) {
+          s.className = updatedClass.name;
+        }
+      });
       // 重新渲染项目列表以反映更新后的班级名，但不刷新整个页面或重新请求
-      renderRows();
-      renderRanking();
+      refreshVisibleRows();
       setMessage(classMessage, '保存班级成功');
     }
 
@@ -3607,8 +3728,40 @@
       classPasswordInput.value = generatePassword();
     });
     createForm.addEventListener('submit', createSite);
-    searchInput.addEventListener('input', renderRows);
-    filterClassId.addEventListener('change', renderRows);
+    function debounceAdminSitesLoad() {
+      if (adminSearchDebounceTimer) {
+        window.clearTimeout(adminSearchDebounceTimer);
+      }
+
+      adminSearchDebounceTimer = window.setTimeout(() => {
+        adminSitesPage = 1;
+        loadSites();
+      }, 250);
+    }
+
+    searchInput.addEventListener('input', debounceAdminSitesLoad);
+    filterClassId.addEventListener('change', () => {
+      adminSitesPage = 1;
+      loadSites();
+    });
+    adminPageSize.addEventListener('change', () => {
+      adminSitesPage = 1;
+      adminSitesPageSize = Number.parseInt(adminPageSize.value, 10) || 50;
+      loadSites();
+    });
+    prevSitesPage.addEventListener('click', () => {
+      if (adminSitesPage > 1) {
+        adminSitesPage -= 1;
+        loadSites();
+      }
+    });
+    nextSitesPage.addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(adminSitesTotal / adminSitesPageSize));
+      if (adminSitesPage < totalPages) {
+        adminSitesPage += 1;
+        loadSites();
+      }
+    });
     rankingSearchInput.addEventListener('input', renderRanking);
     rankingClassFilter.addEventListener('change', renderRanking);
     navButtons.forEach((button) => {
@@ -3617,6 +3770,7 @@
     document.getElementById('reloadButton').addEventListener('click', async () => {
       await loadSettings();
       await loadClasses();
+      adminSitesPage = 1;
       await loadSites();
     });
     auditForbiddenSitesButton.addEventListener('click', auditForbiddenSites);
@@ -3689,11 +3843,12 @@
 
     async function boot() {
       renderAiOptimizeLog();
-      await loadSettings();
-      await loadAiSettings();
-      await loadForbiddenWords({ offset: 0 });
-      await loadClasses();
-      await loadSites();
+      await Promise.all([
+        loadSettings(),
+        loadClasses()
+      ]);
+      loadedAdminViews.add('classes');
+      await loadCurrentViewData('projects');
     }
 
     boot().catch((error) => {

@@ -44,7 +44,8 @@ test('public index does not show the project list heading or helper copy', async
 test('public index renders a visible upload-order number on each project card', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
-  assert.match(html, /sites\.forEach\(\(site, index\)/);
+  assert.match(html, /function appendSiteCardBatch/);
+  assert.match(html, /const index = startIndex \+ batchIndex/);
   assert.match(html, /className = 'site-heading'/);
   assert.match(html, /className = 'site-number'/);
   assert.match(html, /textContent = site\.number/);
