@@ -449,6 +449,20 @@
       overflow-wrap: anywhere;
     }
 
+    .site-usage-tag {
+      display: inline-flex;
+      width: fit-content;
+      max-width: 100%;
+      padding: 5px 9px;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      background: #fff7ed;
+      color: #c2410c;
+      font-size: 13px;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+
     .site-url {
       display: inline-block;
       max-width: 100%;
@@ -1572,6 +1586,12 @@
           authorTag.textContent = site.author;
           tagsContainer.append(authorTag);
         }
+
+        const usageCount = Math.max(0, Number(site.usageCount) || 0);
+        const usageTag = document.createElement('div');
+        usageTag.className = 'site-usage-tag';
+        usageTag.textContent = `总次数 ${usageCount}`;
+        tagsContainer.append(usageTag);
 
         const url = document.createElement('div');
         url.className = 'site-url';

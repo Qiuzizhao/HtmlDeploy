@@ -61,6 +61,17 @@ test('public index shows the class name tag on project cards', async () => {
   assert.ok(html.indexOf("className = 'site-class-tag'") < html.indexOf("url.className = 'site-url'"));
 });
 
+test('public index shows total usage count on project cards', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /\.site-usage-tag/);
+  assert.match(html, /const usageTag = document\.createElement\('div'\)/);
+  assert.match(html, /usageTag\.className = 'site-usage-tag'/);
+  assert.match(html, /const usageCount = Math\.max\(0, Number\(site\.usageCount\) \|\| 0\)/);
+  assert.match(html, /usageTag\.textContent = `总次数 \$\{usageCount\}`/);
+  assert.ok(html.indexOf("usageTag.className = 'site-usage-tag'") < html.indexOf("url.className = 'site-url'"));
+});
+
 test('public index highlights starred project cards with a star icon', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
