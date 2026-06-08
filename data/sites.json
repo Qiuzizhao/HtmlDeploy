@@ -694,20 +694,6 @@
     "updatedAt": "2026-06-04T08:01:20.926Z"
   },
   {
-    "id": "b8af3ac4",
-    "number": "00136",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:57.354Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "7a0c2118",
-    "duplicateAuditKeepTitle": "刘奕鑫",
-    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
-  },
-  {
     "id": "83025d69",
     "number": "00135",
     "title": "及笄",
