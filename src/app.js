@@ -437,6 +437,8 @@ function parseCookies(header = '') {
   );
 }
 
+const GIT_SYNC_DELAY_MS = 10 * 60 * 1000;
+
 let syncTimeout = null;
 let syncInProgress = false;
 let syncQueued = false;
@@ -517,7 +519,8 @@ function syncDataToGithub() {
   if (syncTimeout) {
     clearTimeout(syncTimeout);
   }
-  syncTimeout = setTimeout(runGitSync, 3000);
+  syncTimeout = setTimeout(runGitSync, GIT_SYNC_DELAY_MS);
+  syncTimeout.unref?.();
 }
 
 function syncDataToGithubNow() {
@@ -770,10 +773,12 @@ async function writeAiSettings(aiSettingsFile, settings) {
   return normalized;
 }
 
-async function writeSites(dataFile, sites) {
+async function writeSites(dataFile, sites, { sync = true } = {}) {
   await fsp.mkdir(path.dirname(dataFile), { recursive: true });
   await fsp.writeFile(dataFile, JSON.stringify(sites, null, 2));
-  syncDataToGithub();
+  if (sync) {
+    syncDataToGithub();
+  }
 }
 
 async function writeClasses(classesFile, classes) {
@@ -786,6 +791,50 @@ async function writeSettings(settingsFile, settings) {
   await fsp.mkdir(path.dirname(settingsFile), { recursive: true });
   await fsp.writeFile(settingsFile, JSON.stringify(settings, null, 2));
   syncDataToGithub();
+}
+
+function normalizeJobLog(log = {}) {
+  const createdAt = log.createdAt || new Date().toISOString();
+  return {
+    id: String(log.id || createDefaultId()),
+    type: String(log.type || 'general').trim() || 'general',
+    text: String(log.text || '').trim(),
+    status: ['running', 'success', 'error'].includes(log.status) ? log.status : 'running',
+    time: String(log.time || new Date(createdAt).toLocaleTimeString('zh-CN', { hour12: false })),
+    createdAt
+  };
+}
+
+async function readJobLogs(jobsFile) {
+  await fsp.mkdir(path.dirname(jobsFile), { recursive: true });
+  try {
+    const raw = await fsp.readFile(jobsFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    const logs = Array.isArray(parsed) ? parsed : Array.isArray(parsed.logs) ? parsed.logs : [];
+    return logs.map(normalizeJobLog).filter((log) => log.text).slice(0, 300);
+  } catch {
+    return [];
+  }
+}
+
+async function writeJobLogs(jobsFile, logs) {
+  await fsp.mkdir(path.dirname(jobsFile), { recursive: true });
+  await fsp.writeFile(jobsFile, JSON.stringify({ logs: logs.slice(0, 300) }, null, 2));
+  syncDataToGithub();
+}
+
+async function appendJobLog(jobsFile, log) {
+  const normalized = normalizeJobLog(log);
+  if (!normalized.text) {
+    const error = new Error('日志内容不能为空');
+    error.status = 400;
+    throw error;
+  }
+
+  const logs = await readJobLogs(jobsFile);
+  logs.unshift(normalized);
+  await writeJobLogs(jobsFile, logs);
+  return normalized;
 }
 
 function toAdminSettingsResponse(settings, { includeForbiddenWords = true } = {}) {
@@ -1014,7 +1063,7 @@ async function incrementSiteUsage(dataFile, id, type) {
     usageLastUsedAt: new Date().toISOString()
   };
   sites[siteIndex] = nextSite;
-  await writeSites(dataFile, sites);
+  await writeSites(dataFile, sites, { sync: false });
   return nextSite;
 }
 
@@ -1274,6 +1323,7 @@ function createApp(options = {}) {
   const classesFile = options.classesFile || path.join(process.cwd(), 'data', 'classes.json');
   const settingsFile = options.settingsFile || path.join(process.cwd(), 'data', 'settings.json');
   const aiSettingsFile = options.aiSettingsFile || path.join(process.cwd(), 'data', 'private-ai-settings.json');
+  const jobsFile = options.jobsFile || path.join(path.dirname(dataFile), 'jobs.json');
   const storageDir = options.storageDir || path.join(process.cwd(), 'storage', 'sites');
   const thumbnailDir = options.thumbnailDir || path.join(process.cwd(), 'storage', 'thumbnails');
   const publicDir = options.publicDir || path.join(process.cwd(), 'public');
@@ -1281,6 +1331,11 @@ function createApp(options = {}) {
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
   const fallbackAdminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
   const gitSyncNow = options.gitSyncNow || syncDataToGithubNow;
+  const thumbnailGenerator = options.thumbnailGenerator || generateSiteThumbnail;
+  const thumbnailConcurrency = Math.max(1, Math.min(2, Number.parseInt(
+    options.thumbnailConcurrency ?? process.env.THUMBNAIL_CONCURRENCY ?? '1',
+    10
+  ) || 1));
   const aiOptimizeJobTimeoutMs = normalizeTimeoutMs(
     options.llmOptimizeJobTimeoutMs ?? process.env.LLM_OPTIMIZE_JOB_TIMEOUT_MS,
     300000,
@@ -1292,7 +1347,10 @@ function createApp(options = {}) {
   ) || 1));
   const aiOptimizeJobs = new Map();
   const aiOptimizeQueue = [];
+  const thumbnailJobs = new Map();
+  const thumbnailQueue = [];
   let runningAiOptimizeJobs = 0;
+  let runningThumbnailJobs = 0;
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -1375,15 +1433,149 @@ function createApp(options = {}) {
     return classItem ? hasClassAccess(req, classItem) : true;
   }
 
-  function generateThumbnailLater(id, origin) {
-    setTimeout(async () => {
-      try {
-        const adminToken = createAdminToken(await getAdminPassword());
-        await generateSiteThumbnail({ id, origin, thumbnailDir, adminToken });
-      } catch (error) {
-        console.warn(`[Thumbnail] Failed to generate ${id}: ${error.message}`);
+  function cleanupThumbnailJobs() {
+    const maxAgeMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    for (const [jobId, job] of thumbnailJobs.entries()) {
+      if (['success', 'error'].includes(job.status) && now - Date.parse(job.finishedAt || job.updatedAt || job.createdAt) > maxAgeMs) {
+        thumbnailJobs.delete(jobId);
       }
-    }, 0);
+    }
+  }
+
+  function toThumbnailJobResponse(job) {
+    return {
+      jobId: job.id,
+      type: job.type,
+      status: job.status,
+      total: job.total,
+      finished: job.finished,
+      success: job.success,
+      failed: job.failed,
+      current: job.current,
+      generated: job.generated,
+      errors: job.errors,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      finishedAt: job.finishedAt || ''
+    };
+  }
+
+  function createThumbnailJob(siteItems, origin) {
+    const now = new Date().toISOString();
+    const normalizedSites = siteItems
+      .filter((site) => site?.id)
+      .map((site) => ({
+        id: String(site.id),
+        title: String(site.title || site.id)
+      }));
+    return {
+      id: createDefaultId(),
+      type: 'thumbnail',
+      status: 'queued',
+      total: normalizedSites.length,
+      finished: 0,
+      success: 0,
+      failed: 0,
+      current: '',
+      sites: normalizedSites,
+      origin,
+      generated: [],
+      errors: [],
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: ''
+    };
+  }
+
+  function updateThumbnailJob(job, patch = {}) {
+    Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+    thumbnailJobs.set(job.id, job);
+    return job;
+  }
+
+  function enqueueThumbnailJob(job) {
+    cleanupThumbnailJobs();
+    thumbnailJobs.set(job.id, job);
+    thumbnailQueue.push(job);
+    const timer = setTimeout(processThumbnailQueue, 0);
+    timer.unref?.();
+    return toThumbnailJobResponse(job);
+  }
+
+  function processThumbnailQueue() {
+    while (runningThumbnailJobs < thumbnailConcurrency && thumbnailQueue.length > 0) {
+      const job = thumbnailQueue.shift();
+      runningThumbnailJobs += 1;
+      runThumbnailJob(job)
+        .catch((error) => {
+          updateThumbnailJob(job, {
+            status: 'error',
+            failed: job.total,
+            finished: job.total,
+            errors: [{ error: error.message || '封面任务失败' }],
+            finishedAt: new Date().toISOString()
+          });
+        })
+        .finally(() => {
+          runningThumbnailJobs -= 1;
+          processThumbnailQueue();
+        });
+    }
+  }
+
+  async function runThumbnailJob(job) {
+    updateThumbnailJob(job, {
+      status: job.total > 0 ? 'running' : 'success'
+    });
+
+    if (job.total === 0) {
+      updateThumbnailJob(job, {
+        finishedAt: new Date().toISOString()
+      });
+      return;
+    }
+
+    const adminToken = createAdminToken(await getAdminPassword());
+    for (const site of job.sites) {
+      updateThumbnailJob(job, {
+        current: site.title || site.id
+      });
+
+      try {
+        const result = await thumbnailGenerator({
+          id: site.id,
+          origin: job.origin,
+          thumbnailDir,
+          adminToken
+        });
+        job.generated.push(result);
+        job.success += 1;
+      } catch (error) {
+        const message = error.message || '封面生成失败';
+        job.errors.push({
+          id: site.id,
+          title: site.title || site.id,
+          error: message
+        });
+        job.failed += 1;
+        console.warn(`[Thumbnail] Failed to generate ${site.id}: ${message}`);
+      }
+
+      job.finished += 1;
+      updateThumbnailJob(job);
+    }
+
+    updateThumbnailJob(job, {
+      status: job.failed > 0 ? 'error' : 'success',
+      current: '',
+      finishedAt: new Date().toISOString()
+    });
+  }
+
+  function generateThumbnailLater(id, origin) {
+    const job = createThumbnailJob([{ id }], origin);
+    enqueueThumbnailJob(job);
   }
 
   function cleanupAiOptimizeJobs() {
@@ -1619,6 +1811,37 @@ function createApp(options = {}) {
       });
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.get('/api/admin/thumbnail-jobs/:jobId', requireAdmin, (req, res) => {
+    cleanupThumbnailJobs();
+    const job = thumbnailJobs.get(String(req.params.jobId));
+    if (!job) {
+      return res.status(404).json({ error: '封面任务不存在' });
+    }
+
+    return res.json(toThumbnailJobResponse(job));
+  });
+
+  app.get('/api/admin/jobs/logs', requireAdmin, async (req, res, next) => {
+    try {
+      const type = String(req.query.type || '').trim();
+      const limit = Math.max(1, Math.min(100, Number.parseInt(req.query.limit || '30', 10) || 30));
+      const logs = await readJobLogs(jobsFile);
+      const filteredLogs = type ? logs.filter((log) => log.type === type) : logs;
+      return res.json({ logs: filteredLogs.slice(0, limit) });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/admin/jobs/logs', requireAdmin, async (req, res, next) => {
+    try {
+      const log = await appendJobLog(jobsFile, req.body || {});
+      return res.status(201).json(log);
+    } catch (error) {
+      return next(error);
     }
   });
 
@@ -2170,13 +2393,8 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      const result = await generateSiteThumbnail({
-        id,
-        origin: getRequestOrigin(req),
-        thumbnailDir,
-        adminToken: createAdminToken(await getAdminPassword())
-      });
-      return res.json(result);
+      const job = createThumbnailJob([site], getRequestOrigin(req));
+      return res.status(202).json(enqueueThumbnailJob(job));
     } catch (error) {
       next(error);
     }
@@ -2191,25 +2409,8 @@ function createApp(options = {}) {
       const targetSites = requestedIds
         ? sites.filter((site) => requestedIds.has(site.id))
         : sites;
-      const generated = [];
-      const failed = [];
-      const origin = getRequestOrigin(req);
-      const adminToken = createAdminToken(await getAdminPassword());
-
-      for (const site of targetSites) {
-        try {
-          generated.push(await generateSiteThumbnail({
-            id: site.id,
-            origin,
-            thumbnailDir,
-            adminToken
-          }));
-        } catch (error) {
-          failed.push({ id: site.id, error: error.message });
-        }
-      }
-
-      return res.json({ generated, failed });
+      const job = createThumbnailJob(targetSites, getRequestOrigin(req));
+      return res.status(202).json(enqueueThumbnailJob(job));
     } catch (error) {
       next(error);
     }
