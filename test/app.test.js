@@ -278,6 +278,9 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /function renderRanking/);
   assert.match(html, /site\.enabled !== false/);
   assert.match(html, /getTotalUsage\(right\) - getTotalUsage\(left\)/);
+  assert.match(html, /previewButton\.textContent = '预览'/);
+  assert.match(html, /previewButton\.addEventListener\('click', \(\) => \{/);
+  assert.match(html, /if \(!openProjectWindow\(site\)\) \{/);
   assert.match(html, /rankingSearchInput\.addEventListener\('input', renderRanking\)/);
   assert.match(html, /rankingClassFilter\.addEventListener\('change', renderRanking\)/);
   assert.match(html, /function formatBytes/);

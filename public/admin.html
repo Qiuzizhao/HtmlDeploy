@@ -2961,13 +2961,22 @@
         const actionCell = document.createElement('td');
         const actions = document.createElement('div');
         actions.className = 'row-actions';
+        const previewButton = document.createElement('button');
+        previewButton.className = 'button';
+        previewButton.type = 'button';
+        previewButton.textContent = '预览';
+        previewButton.addEventListener('click', () => {
+          if (!openProjectWindow(site)) {
+            setMessage(rankingMessage, '预览窗口被浏览器拦截，请允许弹窗后重试。', true);
+          }
+        });
         const starButton = document.createElement('button');
         starButton.className = starred ? 'warning-button' : 'button';
         starButton.type = 'button';
         starButton.textContent = '星标';
         starButton.title = starred ? '已星标，点击可取消星标' : '给优秀作品添加前台星标展示';
         starButton.addEventListener('click', () => toggleSiteStarred(site, starButton));
-        actions.append(starButton);
+        actions.append(previewButton, starButton);
         actionCell.append(actions);
 
         row.append(rankCell, titleCell, authorCell, classCell, totalCell, previewCell, codeCell, lastUsedCell, actionCell);
