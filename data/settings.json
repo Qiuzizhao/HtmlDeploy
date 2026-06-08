@@ -1,6 +1,6 @@
 {
   "allPassword": "652980",
-  "allPasswordEnabled": true,
+  "allPasswordEnabled": false,
   "forbiddenWords": [
     "福音会",
     "中国教徒",
@@ -51109,5 +51109,5 @@
     "导管"
   ],
   "lastUsedSiteNumber": 268,
-  "updatedAt": "2026-06-08T07:21:45.977Z"
+  "updatedAt": "2026-06-08T09:27:09.298Z"
 }
