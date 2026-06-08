@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简易吃鸡模拟器</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{overflow:hidden;background:#557755}
+        #game{width:100vw;height:100vh;position:relative}
+        .player{width:40px;height:40px;background:#0099ff;border-radius:50%;position:absolute;z-index:99}
+        .gun{width:20px;height:8px;background:#333;position:absolute;top:16px;left:35px}
+        .box{width:30px;height:30px;background:#996633;position:absolute}
+        .bullet{width:6px;height:6px;background:#ff3333;border-radius:50%;position:absolute}
+        #tip{position:fixed;top:10px;left:10px;color:#fff;font-size:18px}
+    </style>
+</head>
+<body>
+    <div id="tip">WASD移动｜鼠标左键射击｜棕色方块=物资箱</div>
+    <div id="game">
+        <div class="player" id="me"><div class="gun"></div></div>
+    </div>
+    <script>
+        const game = document.getElementById('game')
+        const player = document.getElementById('me')
+        let x = window.innerWidth/2, y = window.innerHeight/2
+        const speed = 6
+        const key = {}
+
+        // 生成物资箱
+        for(let i=0;i<15;i++){
+            let box = document.createElement('div')
+            box.className = 'box'
+            box.style.left = Math.random()*window.innerWidth + 'px'
+            box.style.top = Math.random()*window.innerHeight + 'px'
+            game.appendChild(box)
+        }
+
+        // 按键监听
+        document.onkeydown = e=>key[e.key.toLowerCase()]=true
+        document.onkeyup = e=>key[e.key.toLowerCase()]=false
+
+        // 射击
+        game.onclick = e=>{
+            let b = document.createElement('div')
+            b.className = 'bullet'
+            b.style.left = x+20+'px'
+            b.style.top = y+20+'px'
+            game.appendChild(b)
+            // 子弹自动消失
+            setTimeout(()=>b.remove(),300)
+        }
+
+        // 游戏循环
+        function loop(){
+            if(key['w']) y -= speed
+            if(key['s']) y += speed
+            if(key['a']) x -= speed
+            if(key['d']) x += speed
+            player.style.left = x+'px'
+            player.style.top = y+'px'
+            requestAnimationFrame(loop)
+        }
+        loop()
+    </script>
+</body>
+</html>

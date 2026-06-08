@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点点消方块</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            text-align: center;
+            padding-top: 30px;
+        }
+        h1 {
+            color: #222;
+            margin-bottom: 10px;
+        }
+        .info-bar {
+            font-size: 18px;
+            margin: 15px 0;
+        }
+        #score {
+            color: #e63946;
+            font-weight: bold;
+        }
+        #time {
+            color: #1d3557;
+            font-weight: bold;
+        }
+        .game-box {
+            display: inline-grid;
+            grid-template-columns: repeat(8, 50px);
+            gap: 6px;
+            background: #ddd;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .block {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .block:hover {
+            transform: scale(1.08);
+        }
+        .btn-area {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            background: #457b9d;
+            color: #fff;
+            cursor: pointer;
+            margin: 0 8px;
+        }
+        button:hover {
+            background: #1d3557;
+        }
+        .tip {
+            margin-top: 15px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>点点消方块</h1>
+    <div class="info-bar">
+        得分：<span id="score">0</span> &nbsp;&nbsp;
+        剩余时间：<span id="time">60</span> 秒
+    </div>
+
+    <div class="game-box" id="gameArea"></div>
+
+    <div class="btn-area">
+        <button onclick="startGame()">开始游戏</button>
+        <button onclick="resetGame()">重新开始</button>
+    </div>
+
+    <p class="tip">规则：点击彩色方块消除，每消除一个+1分，60秒内尽可能拿高分！</p>
+
+    <script>
+        const colors = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dDA0DD','#ff9ff3'];
+        let score = 0;
+        let time = 60;
+        let timer = null;
+        const col = 8, row = 8;
+
+        // 生成随机颜色方块
+        function createBlocks() {
+            const area = document.getElementById('gameArea');
+            area.innerHTML = '';
+            for(let i = 0; i < col * row; i++){
+                const div = document.createElement('div');
+                div.className = 'block';
+                div.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                div.onclick = function(){
+                    if(timer){
+                        this.style.opacity = 0;
+                        setTimeout(() => {
+                            this.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                            this.style.opacity = 1;
+                        }, 200);
+                        score++;
+                        document.getElementById('score').innerText = score;
+                    }
+                }
+                area.appendChild(div);
+            }
+        }
+
+        // 开始游戏
+        function startGame() {
+            if(timer) return;
+            time = 60;
+            score = 0;
+            document.getElementById('score').innerText = score;
+            document.getElementById('time').innerText = time;
+
+            timer = setInterval(() => {
+                time--;
+                document.getElementById('time').innerText = time;
+                if(time <= 0){
+                    clearInterval(timer);
+                    timer = null;
+                    alert(`时间到！你的最终得分：${score} 分`);
+                }
+            }, 1000);
+        }
+
+        // 重置游戏
+        function resetGame() {
+            clearInterval(timer);
+            timer = null;
+            score = 0;
+            time = 60;
+            document.getElementById('score').innerText = score;
+            document.getElementById('time').innerText = time;
+            createBlocks();
+        }
+
+        // 页面初始化
+        window.onload = function(){
+            createBlocks();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小球打怪卡牌游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        /* 游戏画布 */
+        #gameCanvas {
+            border: 3px solid #00f5d4;
+            background: #16213e;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 245, 212, 0.3);
+        }
+
+        /* 游戏信息面板 */
+        .game-info {
+            margin-bottom: 10px;
+            font-size: 18px;
+            display: flex;
+            gap: 20px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        /* 卡牌选择弹窗 */
+        .card-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            display: none;
+        }
+
+        .card-modal.active {
+            display: flex;
+        }
+
+        .card-title {
+            font-size: 32px;
+            margin-bottom: 30px;
+            color: #00f5d4;
+            text-shadow: 0 0 10px #00f5d4;
+        }
+
+        /* 卡牌样式 */
+        .cards-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 20px;
+        }
+
+        .card {
+            width: 220px;
+            height: 300px;
+            background: linear-gradient(135deg, #252941, #1b1e34);
+            border: 2px solid #00f5d4;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 25px rgba(0, 245, 212, 0.4);
+            border-color: #fbff2c;
+        }
+
+        .card h3 {
+            color: #fbff2c;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .card p {
+            color: #e0e0e0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .card .effect {
+            margin-top: 20px;
+            color: #00f5d4;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- 游戏信息 -->
+    <div class="game-info">
+        <div>经验：<span id="exp">0</span></div>
+        <div>经验上限：<span id="maxExp">0</span></div>
+        <div>等级：<span id="level">1</span></div>
+        <div>已学技能：<span id="skills">无</span></div>
+    </div>
+
+    <!-- 游戏画布 -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <!-- 卡牌选择弹窗 -->
+    <div class="card-modal" id="cardModal">
+        <div class="card-title">选择你的技能卡牌</div>
+        <div class="cards-container" id="cardsContainer"></div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const expText = document.getElementById("exp");
+        const maxExpText = document.getElementById("maxExp");
+        const levelText = document.getElementById("level");
+        const skillsText = document.getElementById("skills");
+        const cardModal = document.getElementById("cardModal");
+        const cardsContainer = document.getElementById("cardsContainer");
+
+        // 游戏核心数据
+        const game = {
+            exp: 0,
+            maxExp: 0,
+            level: 1,
+            skills: [],
+            playerSpeed: 3,
+            expMultiplier: 1,
+            killRadius: 0
+        };
+
+        // 玩家（白色小球）
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 15,
+            color: "#ffffff"
+        };
+
+        // 按键控制
+        const keys = {
+            w: false, s: false, a: false, d: false,
+            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false
+        };
+
+        // 怪物数组
+        let monsters = [];
+        const monsterCount = 8;
+
+        // 技能卡牌库
+        const skillCards = [
+            {
+                name: "速度强化",
+                desc: "提升小球移动速度",
+                effect: () => { game.playerSpeed += 1.5; },
+                text: "移动速度+50%"
+            },
+            {
+                name: "经验增幅",
+                desc: "打怪获得的经验翻倍",
+                effect: () => { game.expMultiplier *= 1.5; },
+                text: "经验获取+50%"
+            },
+            {
+                name: "范围秒杀",
+                desc: "周围怪物自动被消灭",
+                effect: () => { game.killRadius = 60; },
+                text: "解锁60px范围秒杀"
+            },
+            {
+                name: "经验上限提升",
+                desc: "增加升级所需经验上限",
+                effect: () => { game.maxExp += 30; },
+                text: "经验上限+30"
+            }
+        ];
+
+        // 初始化游戏
+        function initGame() {
+            // 随机初始经验上限
+            game.maxExp = Math.floor(Math.random() * 40) + 60;
+            updateInfo();
+            createMonsters();
+            // 开局必选卡牌
+            openCardSelect();
+        }
+
+        // 更新游戏信息显示
+        function updateInfo() {
+            expText.textContent = game.exp;
+            maxExpText.textContent = game.maxExp;
+            levelText.textContent = game.level;
+            skillsText.textContent = game.skills.length > 0 ? game.skills.join("、") : "无";
+        }
+
+        // 创建怪物
+        function createMonsters() {
+            monsters = [];
+            for (let i = 0; i < monsterCount; i++) {
+                monsters.push({
+                    x: Math.random() * (canvas.width - 30) + 15,
+                    y: Math.random() * (canvas.height - 30) + 15,
+                    radius: 12,
+                    color: "#ff4757",
+                    speed: Math.random() * 1.5 + 0.5
+                });
+            }
+        }
+
+        // 打开卡牌选择界面
+        function openCardSelect() {
+            cardModal.classList.add("active");
+            cardsContainer.innerHTML = "";
+
+            // 随机3张不同卡牌
+            let randomCards = [...skillCards].sort(() => Math.random() - 0.5).slice(0, 3);
+            
+            randomCards.forEach(card => {
+                const cardEl = document.createElement("div");
+                cardEl.className = "card";
+                cardEl.innerHTML = `
+                    <h3>${card.name}</h3>
+                    <p>${card.desc}</p>
+                    <div class="effect">${card.text}</div>
+                `;
+                cardEl.onclick = () => selectCard(card);
+                cardsContainer.appendChild(cardEl);
+            });
+        }
+
+        // 选择卡牌
+        function selectCard(card) {
+            card.effect(); // 执行技能效果
+            game.skills.push(card.name); // 记录技能
+            game.exp = 0; // 重置经验
+            game.level++; // 升级
+            game.maxExp = Math.floor(Math.random() * 40) + game.level * 30; // 新经验上限
+            updateInfo();
+            cardModal.classList.remove("active"); // 关闭弹窗
+        }
+
+        // 玩家移动
+        function movePlayer() {
+            if (keys.w || keys.ArrowUp) player.y -= game.playerSpeed;
+            if (keys.s || keys.ArrowDown) player.y += game.playerSpeed;
+            if (keys.a || keys.ArrowLeft) player.x -= game.playerSpeed;
+            if (keys.d || keys.ArrowRight) player.x += game.playerSpeed;
+
+            // 边界限制
+            if (player.x < player.radius) player.x = player.radius;
+            if (player.x > canvas.width - player.radius) player.x = canvas.width - player.radius;
+            if (player.y < player.radius) player.y = player.radius;
+            if (player.y > canvas.height - player.radius) player.y = canvas.height - player.radius;
+        }
+
+        // 怪物移动
+        function moveMonsters() {
+            monsters.forEach(monster => {
+                // 随机移动
+                monster.x += (Math.random() - 0.5) * monster.speed * 4;
+                monster.y += (Math.random() - 0.5) * monster.speed * 4;
+
+                // 边界反弹
+                if (monster.x < monster.radius || monster.x > canvas.width - monster.radius) {
+                    monster.speed *= -1;
+                }
+                if (monster.y < monster.radius || monster.y > canvas.height - monster.radius) {
+                    monster.speed *= -1;
+                }
+            });
+        }
+
+        // 碰撞检测 & 经验获取
+        function checkCollisions() {
+            monsters.forEach((monster, index) => {
+                const dx = player.x - monster.x;
+                const dy = player.y - monster.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // 范围秒杀
+                if (game.killRadius > 0 && distance < game.killRadius) {
+                    monsters.splice(index, 1);
+                    addExp();
+                    return;
+                }
+
+                // 触碰怪物
+                if (distance < player.radius + monster.radius) {
+                    monsters.splice(index, 1);
+                    addExp();
+                }
+            });
+
+            // 补充怪物
+            if (monsters.length < monsterCount) {
+                createMonsters();
+            }
+        }
+
+        // 增加经验
+        function addExp() {
+            game.exp += Math.floor(10 * game.expMultiplier);
+            updateInfo();
+
+            // 经验满，解锁卡牌
+            if (game.exp >= game.maxExp) {
+                openCardSelect();
+            }
+        }
+
+        // 绘制游戏画面
+        function drawGame() {
+            // 清空画布
+            ctx.fillStyle = "#16213e";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制玩家
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            ctx.strokeStyle = "#00f5d4";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 绘制范围秒杀圈
+            if (game.killRadius > 0) {
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, game.killRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 71, 87, 0.4)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // 绘制怪物
+            monsters.forEach(monster => {
+                ctx.beginPath();
+                ctx.arc(monster.x, monster.y, monster.radius, 0, Math.PI * 2);
+                ctx.fillStyle = monster.color;
+                ctx.fill();
+            });
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            movePlayer();
+            moveMonsters();
+            checkCollisions();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 键盘控制
+        document.addEventListener("keydown", e => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+        });
+        document.addEventListener("keyup", e => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+        });
+
+        // 启动游戏
+        initGame();
+        gameLoop();
+    </script>
+</body>
+</html>

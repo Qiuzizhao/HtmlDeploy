@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点击打方块</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+        body {
+            height: 100vh;
+            background: #1a1a2e;
+            overflow: hidden;
+        }
+        .info {
+            color: #fff;
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+        }
+        #gameBox {
+            width: 90%;
+            height: calc(100vh - 100px);
+            margin: 0 auto;
+            position: relative;
+            border: 2px solid #4a90e2;
+            border-radius: 10px;
+        }
+        .block {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #e94560;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .block:active {
+            transform: scale(0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        分数：<span id="score">0</span> | 倒计时：<span id="time">30</span> 秒
+    </div>
+    <div id="gameBox"></div>
+
+    <script>
+        const gameBox = document.getElementById('gameBox');
+        const scoreDom = document.getElementById('score');
+        const timeDom = document.getElementById('time');
+        let score = 0;
+        let time = 30;
+        let timer, createTimer;
+
+        // 生成随机方块
+        function createBlock() {
+            const block = document.createElement('div');
+            block.className = 'block';
+            // 随机位置
+            const maxX = gameBox.clientWidth - 60;
+            const maxY = gameBox.clientHeight - 60;
+            const x = Math.floor(Math.random() * maxX);
+            const y = Math.floor(Math.random() * maxY);
+            block.style.left = x + 'px';
+            block.style.top = y + 'px';
+
+            // 点击加分并消失
+            block.addEventListener('click', () => {
+                score++;
+                scoreDom.innerText = score;
+                block.remove();
+            });
+
+            gameBox.appendChild(block);
+
+            // 方块3秒自动消失
+            setTimeout(() => {
+                block.remove();
+            }, 3000);
+        }
+
+        // 倒计时
+        function countDown() {
+            timer = setInterval(() => {
+                time--;
+                timeDom.innerText = time;
+                if (time <= 0) {
+                    clearInterval(timer);
+                    clearInterval(createTimer);
+                    alert(`游戏结束！你的得分：${score}`);
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        // 开始游戏
+        function startGame() {
+            countDown();
+            createTimer = setInterval(createBlock, 800);
+        }
+
+        startGame();
+    </script>
+</body>
+</html>

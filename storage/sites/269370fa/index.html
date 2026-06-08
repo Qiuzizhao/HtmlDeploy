@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 30px;
+            font-family: sans-serif;
+        }
+        h1 {
+            color: #4cd964;
+            margin-bottom: 10px;
+        }
+        .info {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        #gameCanvas {
+            border: 3px solid #4cd964;
+            background: #000;
+        }
+        .tip {
+            color: #aaa;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>贪吃蛇</h1>
+    <div class="info">得分：<span id="score">0</span></div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="tip">方向键 ↑ ↓ ← → 控制 | 碰到边界/自身游戏结束</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreText = document.getElementById('score');
+
+        // 格子大小
+        const grid = 20;
+        let snake = [];
+        let food = {};
+        let dir = 'right';
+        let nextDir = 'right';
+        let score = 0;
+        let gameRun = true;
+
+        // 初始化蛇
+        function init() {
+            snake = [
+                {x: 10, y: 10},
+                {x: 9, y: 10},
+                {x: 8, y: 10}
+            ];
+            score = 0;
+            scoreText.innerText = score;
+            dir = 'right';
+            nextDir = 'right';
+            gameRun = true;
+            createFood();
+        }
+
+        // 生成食物
+        function createFood() {
+            food.x = Math.floor(Math.random() * (canvas.width / grid));
+            food.y = Math.floor(Math.random() * (canvas.height / grid));
+            // 防止食物出现在蛇身上
+            snake.forEach(seg => {
+                if (seg.x === food.x && seg.y === food.y) createFood();
+            });
+        }
+
+        // 绘制方块
+        function drawRect(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * grid, y * grid, grid - 1, grid - 1);
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            if (!gameRun) return;
+            dir = nextDir;
+
+            // 清屏
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 移动蛇：添加新头部，删除尾部
+            let head = {...snake[0]};
+            switch(dir) {
+                case 'up': head.y--; break;
+                case 'down': head.y++; break;
+                case 'left': head.x--; break;
+                case 'right': head.x++; break;
+            }
+            snake.unshift(head);
+
+            // 吃到食物
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreText.innerText = score;
+                createFood();
+            } else {
+                snake.pop();
+            }
+
+            // 撞边界判定
+            if (head.x < 0 || head.x >= canvas.width/grid ||
+                head.y < 0 || head.y >= canvas.height/grid) {
+                gameOver();
+                return;
+            }
+
+            // 撞自己判定
+            for(let i = 1; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // 画蛇
+            snake.forEach((seg, idx) => {
+                drawRect(seg.x, seg.y, idx === 0 ? '#4cd964' : '#2ecc71');
+            });
+            // 画食物
+            drawRect(food.x, food.y, '#ff3b30');
+
+            setTimeout(gameLoop, 120);
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameRun = false;
+            alert(`游戏结束！最终得分：${score}\n点击确定重新开始`);
+            init();
+            gameLoop();
+        }
+
+        // 键盘控制
+        document.addEventListener('keydown', e => {
+            const key = e.key;
+            if (key === 'ArrowUp' && dir !== 'down') nextDir = 'up';
+            if (key === 'ArrowDown' && dir !== 'up') nextDir = 'down';
+            if (key === 'ArrowLeft' && dir !== 'right') nextDir = 'left';
+            if (key === 'ArrowRight' && dir !== 'left') nextDir = 'right';
+        });
+
+        // 启动游戏
+        init();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>王者荣耀 - 网页完整版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            color: #fff;
+            height: 100vh;
+        }
+
+        /* 通用动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        @keyframes skillFlash {
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.8); }
+            100% { box-shadow: 0 0 20px 10px rgba(255, 215, 0, 0); }
+        }
+        .shake { animation: shake 0.3s ease; }
+        .skill-flash { animation: skillFlash 0.5s ease; }
+
+        /* 登录界面 */
+        .login-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)),
+            url("https://game.gtimg.cn/images/yxzj/web201910/skin-bg.jpg") center/cover no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: all 0.8s ease;
+        }
+        .login-logo {
+            font-size: 64px;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 15px #ff5500, 0 0 30px #ff2200;
+            margin-bottom: 60px;
+            letter-spacing: 8px;
+        }
+        .login-desc {
+            font-size: 18px;
+            color: #ccc;
+            margin-bottom: 40px;
+        }
+        .btn {
+            width: 240px;
+            height: 70px;
+            background: linear-gradient(180deg, #ff7830, #ff3d00);
+            border: 2px solid #ffd700;
+            border-radius: 18px;
+            font-size: 26px;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 60, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 15px 40px rgba(255, 60, 0, 0.7);
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* 主大厅 */
+        .hall-screen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),
+            url("https://game.gtimg.cn/images/yxzj/web201910/main-bg.jpg") center/cover no-repeat;
+            position: relative;
+        }
+        .hall-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .hall-title {
+            font-size: 48px;
+            color: #ffd700;
+            margin-bottom: 50px;
+            text-shadow: 0 0 10px #000;
+        }
+
+        /* 英雄选择页 */
+        .hero-select {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: none;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .select-title {
+            text-align: center;
+            font-size: 40px;
+            color: #ffd700;
+            margin-bottom: 40px;
+        }
+        .hero-list {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+        }
+        .hero-card {
+            width: 160px;
+            height: 220px;
+            background: #1a1a1a;
+            border: 3px solid transparent;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .hero-card:hover {
+            transform: translateY(-10px);
+            border-color: #ffd700;
+            box-shadow: 0 0 25px rgba(255,215,0,0.6);
+        }
+        .hero-card.active {
+            border-color: #00bfff;
+            box-shadow: 0 0 25px rgba(0,191,255,0.6);
+        }
+        .hero-avatar {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+        }
+        .hero-name {
+            text-align: center;
+            font-size: 20px;
+            line-height: 50px;
+            font-weight: bold;
+        }
+
+        /* 对战主界面 */
+        .battle-screen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            background: url("https://game.gtimg.cn/images/yxzj/img202104/map-bg.jpg") center/cover no-repeat;
+            position: relative;
+        }
+
+        /* 顶部信息栏 */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+            z-index: 20;
+        }
+        .hero-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .mini-hero {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #ffd700;
+        }
+        .bar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hp-bar, .mp-bar {
+            width: 220px;
+            height: 18px;
+            background: #333;
+            border-radius: 9px;
+            overflow: hidden;
+        }
+        .hp-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            transition: width 0.3s ease;
+        }
+        .mp-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            transition: width 0.3s ease;
+        }
+        .status-text {
+            font-size: 16px;
+            color: #ffd700;
+        }
+        .gold-box {
+            margin-left: auto;
+            font-size: 20px;
+            color: #ffd700;
+        }
+
+        /* 战场单位：玩家、敌方、小兵 */
+        .unit {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: left 0.1s linear, bottom 0.1s linear;
+            z-index: 10;
+        }
+        .player-hero {
+            width: 80px;
+            height: 80px;
+            bottom: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .enemy-hero {
+            width: 80px;
+            height: 80px;
+            top: 200px;
+            right: 20%;
+        }
+        .minion {
+            width: 50px;
+            height: 50px;
+            bottom: 220px;
+            left: 30%;
+        }
+
+        /* 左侧装备面板 */
+        .equip-wrap {
+            position: absolute;
+            top: 90px;
+            left: 10px;
+            width: 300px;
+            background: rgba(0,0,0,0.85);
+            border-radius: 15px;
+            padding: 20px;
+            display: none;
+            z-index: 25;
+        }
+        .equip-title {
+            font-size: 24px;
+            color: #ffd700;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .equip-item {
+            width: 100%;
+            height: 55px;
+            background: #222;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .equip-item:hover {
+            background: #444;
+        }
+        .close-equip {
+            margin-top: 15px;
+            text-align: center;
+            color: #ff6666;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* 左侧击杀提示 */
+        .tip-box {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            color: #ff4444;
+            font-weight: bold;
+            text-shadow: 0 0 10px #000;
+            display: none;
+            z-index: 30;
+        }
+
+        /* 左下角 虚拟摇杆 */
+        .joystick-wrap {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 170px;
+            height: 170px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 20;
+        }
+        .joystick-point {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 65px;
+            height: 65px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+        }
+
+        /* 右下角 技能区域 */
+        .skill-wrap {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 18px;
+            align-items: flex-end;
+            z-index: 20;
+        }
+        .skill-btn {
+            width: 80px;
+            height: 80px;
+            background: rgba(0,0,0,0.7);
+            border: 3px solid #ffd700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .skill-cd {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #fff;
+            border-radius: 50%;
+        }
+
+        /* 结算面板 */
+        .result-panel {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 999;
+        }
+        .result-title {
+            font-size: 56px;
+            color: #2ecc71;
+            margin-bottom: 30px;
+        }
+        .result-info {
+            font-size: 24px;
+            line-height: 2.2;
+            margin-bottom: 40px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .joystick-wrap { width: 140px; height: 140px; }
+            .skill-btn { width: 70px; height: 70px; }
+            .hero-card { width: 130px; height: 190px; }
+            .equip-wrap { width: 260px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 1. 登录界面 -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-logo">王者荣耀</div>
+        <div class="login-desc">网页复刻完整版 · 双端可玩</div>
+        <button class="btn" id="startLogin">进入游戏</button>
+    </div>
+
+    <!-- 2. 游戏大厅 -->
+    <div class="hall-screen" id="hallScreen">
+        <div class="hall-center">
+            <div class="hall-title">游戏大厅</div>
+            <button class="btn" id="goHeroSelect">开始匹配</button>
+        </div>
+    </div>
+
+    <!-- 3. 英雄选择界面 -->
+    <div class="hero-select" id="heroSelect">
+        <h2 class="select-title">选择你的出战英雄</h2>
+        <div class="hero-list">
+            <div class="hero-card" data-hero="刘邦" onclick="pickHero(this,'刘邦','https://game.gtimg.cn/images/yxzj/img202101/hero-liubang.png')">
+                <img class="hero-avatar" src="https://game.gtimg.cn/images/yxzj/img202101/hero-liubang.png">
+                <div class="hero-name">刘邦</div>
+            </div>
+            <div class="hero-card" data-hero="李白" onclick="pickHero(this,'李白','https://game.gtimg.cn/images/yxzj/img202101/hero-libai.png')">
+                <img class="hero-avatar" src="https://game.gtimg.cn/images/yxzj/img202101/hero-libai.png">
+                <div class="hero-name">李白</div>
+            </div>
+            <div class="hero-card" data-hero="貂蝉" onclick="pickHero(this,'貂蝉','https://game.gtimg.cn/images/yxzj/img202101/hero-diaochan.png')">
+                <img class="hero-avatar" src="https://game.gtimg.cn/images/yxzj/img202101/hero-diaochan.png">
+                <div class="hero-name">貂蝉</div>
+            </div>
+            <div class="hero-card" data-hero="孙悟空" onclick="pickHero(this,'孙悟空','https://game.gtimg.cn/images/yxzj/img202101/hero-sunwukong.png')">
+                <img class="hero-avatar" src="https://game.gtimg.cn/images/yxzj/img202101/hero-sunwukong.png">
+                <div class="hero-name">孙悟空</div>
+            </div>
+            <div class="hero-card" data-hero="后羿" onclick="pickHero(this,'后羿','https://game.gtimg.cn/images/yxzj/img202101/hero-houyi.png')">
+                <img class="hero-avatar" src="https://game.gtimg.cn/images/yxzj/img202101/hero-houyi.png">
+                <div class="hero-name">后羿</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 对战界面 -->
+    <div class="battle-screen" id="battleScreen">
+        <!-- 顶部状态栏 -->
+        <div class="top-bar">
+            <div class="hero-info">
+                <img class="mini-hero" id="miniHero">
+                <div class="bar-group">
+                    <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
+                    <div class="mp-bar"><div class="mp-fill" id="mpFill"></div></div>
+                </div>
+            </div>
+            <div class="status-text">
+                <span id="heroName">英雄</span> | 等级：<span id="heroLv">1</span>
+            </div>
+            <div class="gold-box">💰 金币：<span id="goldNum">0</span></div>
+        </div>
+
+        <!-- 击杀提示 -->
+        <div class="tip-box" id="killTip">击杀敌方英雄！</div>
+
+        <!-- 玩家英雄 -->
+        <div class="unit player-hero" id="playerHero"></div>
+        <!-- 敌方英雄 -->
+        <div class="unit enemy-hero" id="enemyHero" style="background-image:url(https://game.gtimg.cn/images/yxzj/img202101/hero-libai.png)"></div>
+        <!-- 小兵 -->
+        <div class="unit minion" id="minion" style="background-image:url(https://game.gtimg.cn/images/yxzj/img202101/minion.png)"></div>
+
+        <!-- 装备面板 -->
+        <div class="equip-wrap" id="equipPanel">
+            <div class="equip-title">装备商店</div>
+            <div class="equip-item" onclick="buyEquip('急速战靴',300)">急速战靴 | +300金币</div>
+            <div class="equip-item" onclick="buyEquip('无尽战刃',1200)">无尽战刃 | +1200金币</div>
+            <div class="equip-item" onclick="buyEquip('破军',1800)">破军 | +1800金币</div>
+            <div class="equip-item" onclick="buyEquip('魔女斗篷',1000)">魔女斗篷 | +1000金币</div>
+            <div class="close-equip" onclick="closeEquipPanel()">关闭商店</div>
+        </div>
+
+        <!-- 虚拟摇杆 -->
+        <div class="joystick-wrap" id="joystickWrap">
+            <div class="joystick-point" id="joystickPoint"></div>
+        </div>
+
+        <!-- 技能按钮区 -->
+        <div class="skill-wrap">
+            <div class="skill-btn" onclick="useSkill(1)">
+                一技能
+                <div class="skill-cd" id="cd1" style="display:none"></div>
+            </div>
+            <div class="skill-btn" onclick="useSkill(2)">
+                二技能
+                <div class="skill-cd" id="cd2" style="display:none"></div>
+            </div>
+            <div class="skill-btn" onclick="useSkill(3)">
+                大招
+                <div class="skill-cd" id="cd3" style="display:none"></div>
+            </div>
+            <div class="skill-btn" onclick="openEquipPanel()">装备</div>
+        </div>
+    </div>
+
+    <!-- 结算面板 -->
+    <div class="result-panel" id="resultPanel">
+        <div class="result-title">对战胜利</div>
+        <div class="result-info">
+            击杀：<span id="killCount">0</span><br>
+            死亡：<span id="deadCount">0</span><br>
+            助攻：<span id="assistCount">0</span>
+        </div>
+        <button class="btn" onclick="restartGame()">再来一局</button>
+    </div>
+
+    <script>
+        // ========== 全局变量 ==========
+        const loginScreen = document.getElementById('loginScreen');
+        const hallScreen = document.getElementById('hallScreen');
+        const heroSelect = document.getElementById('heroSelect');
+        const battleScreen = document.getElementById('battleScreen');
+        const resultPanel = document.getElementById('resultPanel');
+        const playerHero = document.getElementById('playerHero');
+        const enemyHero = document.getElementById('enemyHero');
+        const minion = document.getElementById('minion');
+        const hpFill = document.getElementById('hpFill');
+        const mpFill = document.getElementById('mpFill');
+        const heroNameText = document.getElementById('heroName');
+        const heroLv = document.getElementById('heroLv');
+        const goldNum = document.getElementById('goldNum');
+        const miniHero = document.getElementById('miniHero');
+        const equipPanel = document.getElementById('equipPanel');
+        const killTip = document.getElementById('killTip');
+        const joystickPoint = document.getElementById('joystickPoint');
+        const joystickWrap = document.getElementById('joystickWrap');
+
+        // 游戏数据
+        let gameData = {
+            hp: 100,
+            mp: 100,
+            level: 1,
+            gold: 0,
+            kill: 0,
+            dead: 0,
+            assist: 0,
+            heroImg: "",
+            heroName: "",
+            moveX: 0,
+            moveY: 0
+        };
+
+        // 技能CD计时
+        let skillCD = { cd1: 0, cd2: 0, cd3: 0 };
+        const CD_TIME = { 1: 3, 2: 4, 3: 8 };
+
+        // ========== 界面跳转逻辑 ==========
+        // 登录 -> 大厅
+        document.getElementById('startLogin').addEventListener('click', () => {
+            loginScreen.style.opacity = 0;
+            setTimeout(() => {
+                loginScreen.style.display = 'none';
+                hallScreen.style.display = 'block';
+            }, 800);
+        });
+
+        // 大厅 -> 英雄选择
+        document.getElementById('goHeroSelect').addEventListener('click', () => {
+            hallScreen.style.display = 'none';
+            heroSelect.style.display = 'flex';
+        });
+
+        // 选择英雄
+        function pickHero(card, name, img) {
+            // 清除选中样式
+            document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+
+            gameData.heroName = name;
+            gameData.heroImg = img;
+
+            // 进入对战
+            setTimeout(() => {
+                heroSelect.style.display = 'none';
+                battleScreen.style.display = 'block';
+                // 初始化英雄外观与状态
+                playerHero.style.backgroundImage = `url(${img})`;
+                miniHero.src = img;
+                heroNameText.innerText = name;
+                resetBattleStatus();
+            }, 600);
+        }
+
+        // 重置对局状态
+        function resetBattleStatus() {
+            gameData.hp = 100;
+            gameData.mp = 100;
+            gameData.level = 1;
+            gameData.gold = 0;
+            gameData.kill = 0;
+            gameData.dead = 0;
+            gameData.assist = 0;
+            gameData.moveX = 0;
+            gameData.moveY = 0;
+
+            hpFill.style.width = "100%";
+            mpFill.style.width = "100%";
+            heroLv.innerText = "1";
+            goldNum.innerText = "0";
+
+            playerHero.style.left = "50%";
+            playerHero.style.bottom = "180px";
+
+            // 重置技能CD
+            skillCD = { cd1:0, cd2:0, cd3:0 };
+            document.getElementById('cd1').style.display = 'none';
+            document.getElementById('cd2').style.display = 'none';
+            document.getElementById('cd3').style.display = 'none';
+        }
+
+        // ========== 技能系统 + CD + 掉血 + 蓝量 ==========
+        function useSkill(skillId) {
+            // 检测CD
+            if(skillCD[`cd${skillId}`] > 0) return;
+            // 检测蓝量
+            if(gameData.mp < 15) {
+                alert("蓝量不足！");
+                return;
+            }
+
+            // 扣蓝
+            gameData.mp -= 15;
+            mpFill.style.width = gameData.mp + "%";
+
+            // 技能动画
+            const btn = event.target;
+            btn.classList.add('skill-flash');
+            setTimeout(() => btn.classList.remove('skill-flash'), 500);
+
+            // 敌方掉血
+            gameData.hp -= 12;
+            hpFill.style.width = Math.max(0, gameData.hp) + "%";
+            playerHero.classList.add('shake');
+            setTimeout(() => playerHero.classList.remove('shake'), 300);
+
+            // 击杀判定
+            if(gameData.hp <= 0) {
+                gameData.dead++;
+                setTimeout(showResult, 1200);
+                return;
+            }
+
+            // 敌方被击杀
+            let enemyHp = 100 - (gameData.kill * 25);
+            if(enemyHp <= 0) {
+                gameData.kill++;
+                showKillTip();
+                // 升级+金币
+                gameData.level++;
+                gameData.gold += 200;
+                heroLv.innerText = gameData.level;
+                goldNum.innerText = gameData.gold;
+            }
+
+            // 开启CD倒计时
+            startCD(skillId, CD_TIME[skillId]);
+        }
+
+        // 技能CD倒计时
+        function startCD(id, time) {
+            const cdDom = document.getElementById(`cd${id}`);
+            skillCD[`cd${id}`] = time;
+            cdDom.style.display = "flex";
+            cdDom.innerText = time;
+
+            let timer = setInterval(() => {
+                skillCD[`cd${id}`]--;
+                cdDom.innerText = skillCD[`cd${id}`];
+                if(skillCD[`cd${id}`] <= 0) {
+                    clearInterval(timer);
+                    cdDom.style.display = "none";
+                }
+            }, 1000);
+        }
+
+        // 击杀提示
+        function showKillTip() {
+            killTip.style.display = "block";
+            setTimeout(() => killTip.style.display = "none", 1500);
+        }
+
+        // ========== 装备系统 ==========
+        function openEquipPanel() {
+            equipPanel.style.display = "block";
+        }
+        function closeEquipPanel() {
+            equipPanel.style.display = "none";
+        }
+        function buyEquip(name, cost) {
+            if(gameData.gold >= cost) {
+                gameData.gold -= cost;
+                goldNum.innerText = gameData.gold;
+                alert(`成功购买：${name}`);
+            } else {
+                alert("金币不足，无法购买！");
+            }
+        }
+
+        // ========== 键盘移动（电脑端） ==========
+        document.addEventListener('keydown', (e) => {
+            if(battleScreen.style.display !== 'block') return;
+            const step = 10;
+            if(e.key === "ArrowLeft") gameData.moveX -= step;
+            if(e.key === "ArrowRight") gameData.moveX += step;
+            if(e.key === "ArrowUp") gameData.moveY += step;
+            if(e.key === "ArrowDown") gameData.moveY -= step;
+
+            playerHero.style.left = `calc(50% + ${gameData.moveX}px)`;
+            playerHero.style.bottom = `${180 + gameData.moveY}px`;
+        });
+
+        // ========== 触屏摇杆（手机端） ==========
+        let isDrag = false;
+        joystickPoint.addEventListener('mousedown', () => isDrag = true);
+        joystickPoint.addEventListener('touchstart', () => isDrag = true);
+
+        document.addEventListener('mousemove', moveJoy);
+        document.addEventListener('touchmove', moveJoy);
+
+        document.addEventListener('mouseup', () => {
+            isDrag = false;
+            joystickPoint.style.top = "50%";
+            joystickPoint.style.left = "50%";
+        });
+        document.addEventListener('touchend', () => {
+            isDrag = false;
+            joystickPoint.style.top = "50%";
+            joystickPoint.style.left = "50%";
+        });
+
+        function moveJoy(e) {
+            if(!isDrag) return;
+            const rect = joystickWrap.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            let x = clientX - rect.left - rect.width/2;
+            let y = clientY - rect.top - rect.height/2;
+            const maxR = rect.width / 2 - 32;
+
+            // 限制摇杆范围
+            let r = Math.sqrt(x*x + y*y);
+            if(r > maxR) {
+                x = x / r * maxR;
+                y = y / r * maxR;
+            }
+
+            joystickPoint.style.left = `calc(50% + ${x}px)`;
+            joystickPoint.style.top = `calc(50% + ${y}px)`;
+
+            // 控制英雄移动
+            gameData.moveX += x / 8;
+            gameData.moveY -= y / 8;
+            playerHero.style.left = `calc(50% + ${gameData.moveX}px)`;
+            playerHero.style.bottom = `${180 + gameData.moveY}px`;
+        }
+
+        // ========== 结算与重开 ==========
+        function showResult() {
+            battleScreen.style.display = "none";
+            document.getElementById('killCount').innerText = gameData.kill;
+            document.getElementById('deadCount').innerText = gameData.dead;
+            document.getElementById('assistCount').innerText = gameData.assist;
+            resultPanel.style.display = "flex";
+        }
+        function restartGame() {
+            resultPanel.style.display = "none";
+            heroSelect.style.display = "flex";
+        }
+    </script>
+</body>
+</html>

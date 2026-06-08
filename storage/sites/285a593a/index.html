@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>棕色娜塔莎 互动人物</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+        body {
+            background: #a0522d;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        h2 {
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px #333;
+        }
+        /* 人物容器 */
+        .character {
+            width: 280px;
+            height: 420px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .character:hover {
+            transform: scale(1.05);
+        }
+        .character:active {
+            transform: scale(0.97);
+        }
+        /* 身体 */
+        .body {
+            width: 160px;
+            height: 220px;
+            background: #d2b48c;
+            border-radius: 60px 60px 40px 40px;
+            position: absolute;
+            left: 50%;
+            top: 140px;
+            transform: translateX(-50%);
+        }
+        /* 头部 */
+        .head {
+            width: 140px;
+            height: 150px;
+            background: #f0d9b5;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            transform: translateX(-50%);
+        }
+        /* 棕色头发 */
+        .hair {
+            width: 146px;
+            height: 156px;
+            background: #6b3b1a;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 17px;
+            transform: translateX(-50%);
+            z-index: -1;
+        }
+        /* 眼睛 */
+        .eye-left, .eye-right {
+            width: 18px;
+            height: 22px;
+            background: #222;
+            border-radius: 50%;
+            position: absolute;
+            top: 65px;
+        }
+        .eye-left { left: 45px; }
+        .eye-right { right: 45px; }
+        /* 嘴巴 */
+        .mouth {
+            width: 30px;
+            height: 12px;
+            border-bottom: 3px solid #6b3b1a;
+            border-radius: 0 0 20px 20px;
+            position: absolute;
+            left: 50%;
+            top: 105px;
+            transform: translateX(-50%);
+        }
+        /* 手臂 */
+        .arm-left, .arm-right {
+            width: 40px;
+            height: 140px;
+            background: #d2b48c;
+            border-radius: 20px;
+            position: absolute;
+            top: 160px;
+        }
+        .arm-left { left: 40px; transform: rotate(15deg); }
+        .arm-right { right: 40px; transform: rotate(-15deg); }
+
+        .tip {
+            margin-top: 25px;
+            font-size: 18px;
+            min-height: 24px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        /* 抖动动画 */
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            30% { transform: translateX(-8px); }
+            70% { transform: translateX(8px); }
+        }
+        .shake {
+            animation: shake 0.4s ease;
+        }
+    </style>
+</head>
+<body>
+    <h2>娜塔莎</h2>
+    <div class="character" id="char">
+        <div class="hair"></div>
+        <div class="head">
+            <div class="eye-left"></div>
+            <div class="eye-right"></div>
+            <div class="mouth"></div>
+        </div>
+        <div class="body"></div>
+        <div class="arm-left"></div>
+        <div class="arm-right"></div>
+    </div>
+
+    <div class="tip" id="tip">点击人物和她互动吧~</div>
+
+    <script>
+        const char = document.getElementById('char');
+        const tip = document.getElementById('tip');
+        const words = [
+            "哈喽！我是娜塔莎😊",
+            "很高兴和你一起玩耍",
+            "今天的棕色装扮好看吗？",
+            "轻轻点我，我会回应你哦",
+            "陪我多玩一会儿吧！",
+            "暖暖的棕色是不是很治愈"
+        ];
+
+        char.addEventListener('click', () => {
+            char.classList.add('shake');
+            let randomTxt = words[Math.floor(Math.random() * words.length)];
+            tip.innerText = randomTxt;
+            setTimeout(() => {
+                char.classList.remove('shake');
+            }, 400);
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>凡人修仙录 - 终极完整版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",serif}
+        body{background:#0b0f1a;color:#e0e6f0;min-height:100vh;padding:10px}
+        .game{max-width:900px;margin:0 auto;background:#121a29;border-radius:16px;overflow:hidden;box-shadow:0 0 50px #000}
+        .top{background:linear-gradient(90deg,#1a243a,#243457);padding:16px 20px;color:#ffd700;text-align:center;border-bottom:2px solid #3b4b6f}
+        .tab{display:flex;flex-wrap:wrap;background:#182235;border-bottom:1px solid #2a364f}
+        .tab button{flex:1;padding:14px 8px;background:transparent;border:none;color:#b0c4de;font-size:15px;cursor:pointer}
+        .tab button.active{background:#243457;color:#ffd700}
+        .page{display:none;padding:20px;min-height:520px}
+        .page.show{display:block}
+        .card{background:#162032;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid #27344d}
+        .card h3{color:#ffd700;margin-bottom:10px;font-size:16px}
+        .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0}
+        .btn{padding:12px 10px;border-radius:8px;border:none;background:#243457;color:#eaf2ff;font-size:14px;cursor:pointer}
+        .btn:hover{background:#2f4470}
+        .btn.yellow{background:#b8860b;color:#000}
+        .btn.red{background:#8b2121}
+        .btn.green{background:#1f5621}
+        .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #2a364f}
+        .log{height:160px;overflow-y:auto;background:#0e1624;padding:12px;border-radius:8px;font-size:13px;line-height:1.6}
+        .bar{width:100%;height:16px;background:#1f2a3f;border-radius:8px;overflow:hidden;margin:6px 0}
+        .bar-in{height:100%;background:linear-gradient(90deg,#4facfe,#00f2fe);width:0%}
+        .item{display:inline-block;background:#1f2a3f;padding:6px 10px;margin:4px;border-radius:6px;font-size:13px}
+        .bag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    </style>
+</head>
+<body>
+<div class="game">
+    <div class="top"><h2>🧧 凡人修仙录 · 终极完整版</h2></div>
+    <div class="tab">
+        <button onclick="tab(0)" class="active">修炼</button>
+        <button onclick="tab(1)">功法</button>
+        <button onclick="tab(2)">法宝</button>
+        <button onclick="tab(3)">战斗</button>
+        <button onclick="tab(4)">地图</button>
+        <button onclick="tab(5)">背包</button>
+        <button onclick="tab(6)">宗门</button>
+    </div>
+
+    <!-- 修炼 -->
+    <div class="page show" id="p0">
+        <div class="card"><h3>角色信息</h3>
+            <div class="info-row"><span>境界</span><span id="realm">炼气一层</span></div>
+            <div class="info-row"><span>灵根</span><span id="root">无</span></div>
+            <div class="info-row"><span>灵气</span><span id="sp">0</span></div>
+            <div class="info-row"><span>修为</span><span id="exp">0</span>/<span id="maxexp">100</span></div>
+            <div class="bar"><div class="bar-in" id="expbar"></div></div>
+            <div class="info-row"><span>攻击</span><span id="atk">10</span></div>
+            <div class="info-row"><span>生命</span><span id="hp">100</span></div>
+        </div>
+        <div class="grid">
+            <button class="btn" onclick="practice()">🧘 修炼</button>
+            <button class="btn yellow" onclick="breakGame()">⚡ 突破境界</button>
+            <button class="btn green" onclick="afk()">⏸️ 挂机修炼</button>
+            <button class="btn" onclick="randomRoot()">✨ 觉醒灵根</button>
+        </div>
+        <div class="card"><h3>渡劫</h3>
+            <button class="btn red" onclick="dujie()">🌩️ 渡劫飞升</button>
+        </div>
+        <div class="card"><h3>日志</h3><div class="log" id="log"></div></div>
+    </div>
+
+    <!-- 功法 -->
+    <div class="page" id="p1">
+        <div class="card"><h3>功法</h3>
+            <div id="skillList"></div>
+            <button class="btn" onclick="studySkill()">学习功法</button>
+        </div>
+    </div>
+
+    <!-- 法宝 -->
+    <div class="page" id="p2">
+        <div class="card"><h3>法宝</h3>
+            <div id="equipList"></div>
+            <button class="btn" onclick="drawEquip()">抽取法宝</button>
+        </div>
+    </div>
+
+    <!-- 战斗 -->
+    <div class="page" id="p3">
+        <div class="card"><h3>妖兽</h3>
+            <div class="info-row"><span>妖兽</span><span id="emon">野狼</span></div>
+            <div class="info-row"><span>生命</span><span id="ehp">100</span>/<span id="emaxhp">100</span></div>
+            <div class="bar"><div class="bar-in" id="ebar" style="background:#ff5555"></div></div>
+            <button class="btn red" onclick="fight()">⚔️ 攻击</button>
+            <button class="btn" onclick="nextE()">刷新妖兽</button>
+        </div>
+    </div>
+
+    <!-- 地图 -->
+    <div class="page" id="p4">
+        <div class="card"><h3>世界地图</h3>
+            <button class="btn" onclick="goMap(1)">青风平原</button>
+            <button class="btn" onclick="goMap(2)">黑风崖</button>
+            <button class="btn" onclick="goMap(3)">万妖谷</button>
+            <button class="btn" onclick="goMap(4)">仙域</button>
+        </div>
+    </div>
+
+    <!-- 背包 -->
+    <div class="page" id="p5">
+        <div class="card"><h3>背包</h3>
+            <div class="bag-grid" id="bag"></div>
+        </div>
+        <div class="grid">
+            <button class="btn green" onclick="usePill()">服用聚气丹</button>
+            <button class="btn" onclick="makePill()">炼制丹药</button>
+        </div>
+    </div>
+
+    <!-- 宗门 -->
+    <div class="page" id="p6">
+        <div class="card"><h3>宗门任务</h3>
+            <button class="btn" onclick="task()">接受任务</button>
+            <button class="btn" onclick="taskReward()">领取奖励</button>
+        </div>
+        <div class="grid">
+            <button class="btn" onclick="saveAll()">💾 存档</button>
+            <button class="btn" onclick="loadAll()">📂 读档</button>
+            <button class="btn red" onclick="resetAll()">♻️ 重置</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let g={
+    realm:0,hp:100,atk:10,sp:0,exp:0,maxexp:100,
+    root:"无",rootRate:1,
+    realmList:["炼气一层","炼气二层","炼气三层","炼气四层","炼气五层","炼气六层","炼气七层","炼气八层","炼气九层","炼气大圆满",
+    "筑基初期","筑基中期","筑基后期","筑基大圆满","金丹初期","金丹中期","金丹后期","金丹大圆满",
+    "元婴","化神","炼虚","合体","大乘","渡劫","飞升"],
+    skill:[0,0,0,0],equip:[0,0,0,0],
+    bag:{pill:0,gold:0,stone:0},
+    emon:0,ehp:100,emaxhp:100,
+    map:1,task:0,taskVal:0,afk:0
+};
+const el=id=>document.getElementById(id);
+const pages=document.querySelectorAll(".page");
+const tabs=document.querySelectorAll(".tab button");
+
+function tab(i){
+    pages.forEach((e,j)=>e.classList.toggle("show",j==i));
+    tabs.forEach((e,j)=>e.classList.toggle("active",j==i));
+}
+
+function log(t){
+    let o=el("log");o.innerHTML+="• "+t+"<br>";o.scrollTop=o.scrollHeight;
+}
+
+function up(){
+    el("realm").innerText=g.realmList[g.realm];
+    el("root").innerText=g.root;
+    el("sp").innerText=g.sp;
+    el("exp").innerText=g.exp;
+    el("maxexp").innerText=g.maxexp;
+    el("expbar").style.width=(g.exp/g.maxexp*100)+"%";
+    el("hp").innerText=g.hp;
+    el("atk").innerText=g.atk;
+    el("emon").innerText=["野狼","血狼","虎妖","蛇王","妖王","仙兽"][g.emon];
+    el("ehp").innerText=g.ehp;
+    el("emaxhp").innerText=g.emaxhp;
+    el("ebar").style.width=(g.ehp/g.emaxhp*100)+"%";
+    el("bag").innerHTML=`
+        <div class="item">金币 ${g.bag.gold}</div>
+        <div class="item">灵石 ${g.bag.stone}</div>
+        <div class="item">聚气丹 ${g.bag.pill}</div>
+    `;
+    el("skillList").innerHTML=`
+        <div class="item">吐纳法 ${g.skill[0]?"已学":"未学"}</div>
+        <div class="item">烈焰诀 ${g.skill[1]?"已学":"未学"}</div>
+        <div class="item">风雷术 ${g.skill[2]?"已学":"未学"}</div>
+        <div class="item">仙王体 ${g.skill[3]?"已学":"未学"}</div>
+    `;
+    el("equipList").innerHTML=`
+        <div class="item">铁剑 ${g.equip[0]?"已装备":"未拥有"}</div>
+        <div class="item">灵袍 ${g.equip[1]?"已装备":"未拥有"}</div>
+        <div class="item">玉戒 ${g.equip[2]?"已装备":"未拥有"}</div>
+        <div class="item">仙剑 ${g.equip[3]?"已装备":"未拥有"}</div>
+    `;
+}
+
+function practice(){
+    let add=Math.floor(8*g.rootRate)+2;
+    g.sp+=add;g.exp+=add;
+    log("修炼成功 +"+add+"灵气");
+    up();
+}
+
+function breakGame(){
+    if(g.exp<g.maxexp){log("修为不足");return}
+    let ok=Math.random()<0.65;
+    if(ok){
+        g.realm++;g.exp=0;g.maxexp=Math.floor(g.maxexp*1.6);
+        g.atk+=3;g.hp+=20;
+        log("突破成功！"+g.realmList[g.realm]);
+    }else{
+        g.exp=Math.floor(g.exp*0.6);log("突破失败！");
+    }
+    up();
+}
+
+function randomRoot(){
+    let r=["凡根","灵根","地根","天根","仙根"][Math.floor(Math.random()*5)];
+    g.root=r;
+    g.rootRate={"凡根":0.8,"灵根":1,"地根":1.3,"天根":1.6,"仙根":2}[r];
+    log("觉醒灵根："+r);up();
+}
+
+function afk(){
+    if(g.afk)return;g.afk=1;
+    setInterval(()=>{
+        if(g.afk){g.sp+=5;g.exp+=5;up()}
+    },1000);
+    log("挂机修炼已开启");
+}
+
+function dujie(){
+    if(g.realm<24){log("需达到渡劫期才能飞升");return}
+    let ok=Math.random()<0.3;
+    if(ok){g.realm=25;log("渡劫成功！已飞升仙界！");}
+    else{log("渡劫失败！修为倒退");g.realm-=3;}
+    up();
+}
+
+function studySkill(){
+    if(g.bag.gold<20){log("金币不足");return}
+    g.bag.gold-=20;
+    g.skill[Math.floor(Math.random()*4)]=1;
+    log("学习成功！");up();
+}
+
+function drawEquip(){
+    if(g.bag.stone<30){log("灵石不足");return}
+    g.bag.stone-=30;
+    g.equip[Math.floor(Math.random()*4)]=1;
+    g.atk+=5;log("获得法宝！");up();
+}
+
+function nextE(){
+    g.emon=(g.emon+1)%6;
+    g.emaxhp=100+g.emon*80;
+    g.ehp=g.emaxhp;
+    log("遇到新妖兽");up();
+}
+
+function fight(){
+    if(g.ehp<=0){log("妖兽已被击杀");g.bag.gold+=10;g.bag.stone+=2;nextE();up();return}
+    let d=g.atk;g.ehp-=d;
+    log("对妖兽造成 "+d+" 伤害");
+    if(g.ehp<=0){
+        log("击杀成功！获得奖励");
+        g.bag.gold+=10;g.bag.stone+=2;
+        if(Math.random()<0.3)g.bag.pill++;
+    }else{
+        let eh=20+g.emon*6;g.hp-=eh;
+        log("妖兽反击！损失生命 "+eh);
+        if(g.hp<=0){log("你被击败了！");g.hp=50;}
+    }
+    up();
+}
+
+function goMap(x){
+    g.map=x;log("进入地图："+["青风平原","黑风崖","万妖谷","仙域"][x-1]);
+}
+
+function usePill(){
+    if(g.bag.pill<1){log("没有丹药");return}
+    g.bag.pill--;g.exp+=120;g.sp+=120;
+    log("服用聚气丹 +120修为");up();
+}
+
+function makePill(){
+    if(g.bag.stone<10){log("灵石不足");return}
+    g.bag.stone-=10;g.bag.pill++;
+    log("炼制成功！获得聚气丹");up();
+}
+
+function task(){
+    if(g.task){log("已接受任务");return}
+    g.task=1;g.taskVal=50;
+    log("任务：获取50修为");
+}
+
+function taskReward(){
+    if(!g.task||g.exp<g.taskVal){log("未完成");return}
+    g.task=0;g.bag.gold+=50;g.bag.stone+=10;
+    log("任务完成！获得奖励");up();
+}
+
+function saveAll(){
+    localStorage.setItem("xx_full",JSON.stringify(g));
+    log("存档成功！");
+}
+
+function loadAll(){
+    let t=localStorage.getItem("xx_full");
+    if(t){g=JSON.parse(t);log("读档成功！");up()}
+    else log("无存档");
+}
+
+function resetAll(){
+    localStorage.removeItem("xx_full");location.reload();
+}
+
+up();log("欢迎来到修仙世界！");
+</script>
+</body>
+</html>

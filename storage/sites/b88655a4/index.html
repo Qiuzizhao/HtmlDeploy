@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>双人跑酷小游戏</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 3px solid #333;
+            background: #87CEEB; /* 天空蓝背景 */
+        }
+        .tip {
+            font-size: 16px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="tip">
+        🔴红色角色：W跳跃 | A左移 | D右移 &nbsp;&nbsp;
+        🔵蓝色角色：↑跳跃 | ←左移 | →右移
+    </div>
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+    <script>
+        // 获取画布和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+
+        // 键盘按键状态
+        const keys = {};
+        document.addEventListener('keydown', e => keys[e.key] = true);
+        document.addEventListener('keyup', e => keys[e.key] = false);
+
+        // 角色基类配置
+        const GRAVITY = 0.6;    // 重力
+        const JUMP_FORCE = -14; // 跳跃力度
+        const SPEED = 5;        // 移动速度
+
+        // 🔴 红色玩家 (W/A/D 控制)
+        const playerRed = {
+            x: 80,
+            y: 300,
+            w: 40,
+            h: 50,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            color: '#ff4444'
+        };
+
+        // 🔵 蓝色玩家 (方向键控制)
+        const playerBlue = {
+            x: 200,
+            y: 300,
+            w: 40,
+            h: 50,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            color: '#4488ff'
+        };
+
+        // 跑酷平台数组
+        const platforms = [
+            {x: 0, y: 400, w: 800, h: 50}, // 地面
+            {x: 150, y: 320, w: 120, h: 20},
+            {x: 350, y: 260, w: 120, h: 20},
+            {x: 550, y: 200, w: 120, h: 20},
+            {x: 680, y: 330, w: 100, h: 20}
+        ];
+
+        // 碰撞检测：角色与平台碰撞
+        function checkCollision(player, plat) {
+            return player.x < plat.x + plat.w &&
+                   player.x + player.w > plat.x &&
+                   player.y < plat.y + plat.h &&
+                   player.y + player.h > plat.y;
+        }
+
+        // 更新单个角色逻辑
+        function updatePlayer(player, leftKey, rightKey, jumpKey) {
+            // 左右移动
+            if (keys[leftKey]) player.vx = -SPEED;
+            else if (keys[rightKey]) player.vx = SPEED;
+            else player.vx = 0;
+
+            // 跳跃 (仅在地面可跳)
+            if (keys[jumpKey] && player.onGround) {
+                player.vy = JUMP_FORCE;
+                player.onGround = false;
+            }
+
+            // 重力
+            player.vy += GRAVITY;
+
+            // 更新位置
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // 边界限制 (防止跑出屏幕)
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.w > W) player.x = W - player.w;
+
+            // 平台碰撞 & 落地检测
+            player.onGround = false;
+            for (let p of platforms) {
+                if (checkCollision(player, p)) {
+                    // 从上方落到平台
+                    if (player.vy > 0 && player.y + player.h - player.vy <= p.y) {
+                        player.y = p.y - player.h;
+                        player.vy = 0;
+                        player.onGround = true;
+                    }
+                }
+            }
+        }
+
+        // 绘制卡通角色
+        function drawPlayer(player) {
+            // 身体
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            // 眼睛
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x + 8, player.y + 12, 8, 8);
+            ctx.fillRect(player.x + 24, player.y + 12, 8, 8);
+            // 眼珠
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 10, player.y + 14, 4, 4);
+            ctx.fillRect(player.x + 26, player.y + 14, 4, 4);
+        }
+
+        // 绘制平台
+        function drawPlatforms() {
+            ctx.fillStyle = '#654321';
+            for (let p of platforms) {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+            }
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            // 清空画布
+            ctx.clearRect(0, 0, W, H);
+
+            // 更新两个玩家
+            updatePlayer(playerRed, 'a', 'd', 'w');    // 红：A左 D右 W跳
+            updatePlayer(playerBlue, 'ArrowLeft', 'ArrowRight', 'ArrowUp'); // 蓝：方向键
+
+            // 绘制场景
+            drawPlatforms();
+            drawPlayer(playerRed);
+            drawPlayer(playerBlue);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>恐怖奶奶 - 恐怖小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border: 3px solid #222;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+
+        /* 游戏画布 */
+        #gameCanvas {
+            display: block;
+            background: #0d0d0d;
+        }
+
+        /* UI 提示 */
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            text-shadow: 0 0 5px red;
+            z-index: 10;
+        }
+
+        /* 弹窗 */
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border: 2px solid darkred;
+            text-align: center;
+            z-index: 20;
+            display: none;
+        }
+
+        .modal h1 {
+            color: #ff0000;
+            margin-bottom: 20px;
+        }
+
+        .modal button {
+            padding: 10px 25px;
+            background: darkred;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+
+        .modal button:hover {
+            background: red;
+        }
+
+        /* 开始界面 */
+        #startScreen {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="ui">
+            <p>WASD 移动 | 找到钥匙打开大门逃生</p>
+        </div>
+
+        <!-- 开始界面 -->
+        <div id="startScreen" class="modal">
+            <h1>恐怖奶奶</h1>
+            <p>你被困在奶奶的房子里</p>
+            <p>找到钥匙，打开大门，不要被奶奶抓到！</p>
+            <button onclick="startGame()">开始游戏</button>
+        </div>
+
+        <!-- 失败界面 -->
+        <div id="loseModal" class="modal">
+            <h1>你被奶奶抓住了！</h1>
+            <p>游戏结束</p>
+            <button onclick="restartGame()">重新开始</button>
+        </div>
+
+        <!-- 胜利界面 -->
+        <div id="winModal" class="modal">
+            <h1>你成功逃生了！</h1>
+            <p>你活下来了...</p>
+            <button onclick="restartGame()">再次挑战</button>
+        </div>
+    </div>
+
+    <script>
+        // 获取画布
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
+        // ==================== 游戏音效 ====================
+        const bgSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horrible-horror-atmosphere-121.mp3');
+        const heartbeatSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horror-heartbeat-1709.mp3');
+        bgSound.loop = true;
+        heartbeatSound.loop = true;
+
+        // ==================== 游戏对象 ====================
+        // 玩家
+        const player = {
+            x: 100,
+            y: 100,
+            size: 25,
+            speed: 4,
+            color: '#00ff00'
+        };
+
+        // 恐怖奶奶
+        const granny = {
+            x: 600,
+            y: 400,
+            size: 35,
+            speed: 2.2,
+            color: '#ffffff'
+        };
+
+        // 钥匙
+        const key = {
+            x: 350,
+            y: 250,
+            size: 15,
+            color: '#ffff00',
+            collected: false
+        };
+
+        // 大门
+        const door = {
+            x: 750,
+            y: 280,
+            width: 30,
+            height: 80,
+            color: '#8B4513'
+        };
+
+        // 墙壁（房间边界）
+        const walls = [
+            {x: 0, y: 0, w: 800, h: 20},   // 上
+            {x: 0, y: 580, w: 800, h: 20}, // 下
+            {x: 0, y: 0, w: 20, h: 600},   // 左
+            {x: 780, y: 0, w: 20, h: 600}  // 右
+        ];
+
+        // 按键控制
+        const keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false
+        };
+
+        let gameStarted = false;
+        let gameOver = false;
+
+        // ==================== 键盘事件 ====================
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'w') keys.w = true;
+            if(e.key === 'a') keys.a = true;
+            if(e.key === 's') keys.s = true;
+            if(e.key === 'd') keys.d = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if(e.key === 'w') keys.w = false;
+            if(e.key === 'a') keys.a = false;
+            if(e.key === 's') keys.s = false;
+            if(e.key === 'd') keys.d = false;
+        });
+
+        // ==================== 碰撞检测 ====================
+        function checkCollision(a, b) {
+            return a.x < b.x + b.size &&
+                   a.x + a.size > b.x &&
+                   a.y < b.y + b.size &&
+                   a.y + a.size > b.y;
+        }
+
+        // ==================== 奶奶追击逻辑 ====================
+        function moveGranny() {
+            if(gameOver) return;
+            
+            // 向玩家方向移动
+            if(granny.x < player.x) granny.x += granny.speed;
+            if(granny.x > player.x) granny.x -= granny.speed;
+            if(granny.y < player.y) granny.y += granny.speed;
+            if(granny.y > player.y) granny.y -= granny.speed;
+        }
+
+        // ==================== 绘制游戏 ====================
+        function drawGame() {
+            // 清空画布
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            // 绘制墙壁
+            ctx.fillStyle = '#333';
+            walls.forEach(wall => {
+                ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+            });
+
+            // 绘制大门
+            ctx.fillStyle = door.color;
+            ctx.fillRect(door.x, door.y, door.width, door.height);
+
+            // 绘制钥匙（未收集时）
+            if(!key.collected) {
+                ctx.fillStyle = key.color;
+                ctx.beginPath();
+                ctx.arc(key.x, key.y, key.size, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // 绘制奶奶
+            ctx.fillStyle = granny.color;
+            ctx.beginPath();
+            ctx.arc(granny.x, granny.y, granny.size, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.font = '16px Arial';
+            ctx.fillText('奶奶', granny.x-15, granny.y+5);
+
+            // 绘制玩家
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // ==================== 游戏更新 ====================
+        function updateGame() {
+            if(!gameStarted || gameOver) return;
+
+            // 玩家移动
+            if(keys.w && player.y > 30) player.y -= player.speed;
+            if(keys.s && player.y < 550) player.y += player.speed;
+            if(keys.a && player.x > 30) player.x -= player.speed;
+            if(keys.d && player.x < 750) player.x += player.speed;
+
+            // 奶奶移动
+            moveGranny();
+
+            // 检测是否拿到钥匙
+            if(checkCollision(player, key) && !key.collected) {
+                key.collected = true;
+            }
+
+            // 检测是否被奶奶抓到
+            if(checkCollision(player, granny)) {
+                loseGame();
+            }
+
+            // 检测是否开门逃生（必须拿到钥匙）
+            if(key.collected && 
+               player.x + player.size > door.x && 
+               player.y > door.y && 
+               player.y < door.y + door.height) {
+                winGame();
+            }
+        }
+
+        // ==================== 游戏循环 ====================
+        function gameLoop() {
+            drawGame();
+            updateGame();
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+
+        // ==================== 游戏控制函数 ====================
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('startScreen').style.display = 'none';
+            bgSound.play();
+            heartbeatSound.play();
+        }
+
+        function loseGame() {
+            gameOver = true;
+            document.getElementById('loseModal').style.display = 'block';
+            bgSound.pause();
+            heartbeatSound.pause();
+        }
+
+        function winGame() {
+            gameOver = true;
+            document.getElementById('winModal').style.display = 'block';
+            bgSound.pause();
+            heartbeatSound.pause();
+        }
+
+        function restartGame() {
+            // 重置所有状态
+            player.x = 100;
+            player.y = 100;
+            granny.x = 600;
+            granny.y = 400;
+            key.collected = false;
+            gameOver = false;
+            
+            document.getElementById('loseModal').style.display = 'none';
+            document.getElementById('winModal').style.display = 'none';
+            
+            bgSound.currentTime = 0;
+            heartbeatSound.currentTime = 0;
+            bgSound.play();
+            heartbeatSound.play();
+        }
+    </script>
+</body>
+</html>

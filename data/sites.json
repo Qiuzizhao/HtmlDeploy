@@ -1,17 +1,666 @@
 [
   {
+    "id": "742b8763",
+    "number": "00268",
+    "title": "双人连招格斗",
+    "author": "1",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T07:00:04.543Z",
+    "updatedAt": "2026-06-08T07:07:50.039Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:07:57.470Z"
+  },
+  {
+    "id": "269370fa",
+    "number": "00266",
+    "title": "贪吃的不知名物体",
+    "author": "子",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T07:00:00.679Z"
+  },
+  {
+    "id": "74701ee6",
+    "number": "00265",
+    "title": "王者农药",
+    "author": "zcx",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:59:32.812Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:02.825Z"
+  },
+  {
+    "id": "b52acd53",
+    "number": "00255",
+    "title": "音游",
+    "author": "。",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:59:22.625Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:17.800Z"
+  },
+  {
+    "id": "50483e53",
+    "number": "00253",
+    "title": "音游666版",
+    "author": "泪幕了",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:59:07.708Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T07:00:01.216Z"
+  },
+  {
+    "id": "7644de34",
+    "number": "00252",
+    "title": "我的世界小游戏",
+    "author": "0",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:58:34.828Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:59:09.936Z",
+    "updatedAt": "2026-06-08T06:59:10.218Z"
+  },
+  {
+    "id": "f8782efc",
+    "number": "00251",
+    "title": "跳一跳",
+    "author": "黄思彤",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:58:33.540Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:59:44.885Z"
+  },
+  {
+    "id": "24cab4eb",
+    "number": "00250",
+    "title": "火影忍者",
+    "author": "小孩",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:58:30.137Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:58:45.496Z"
+  },
+  {
+    "id": "cbde5144",
+    "number": "00249",
+    "title": "熊大快跑",
+    "author": "黄钲深",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:58:22.689Z",
+    "usagePreviewCount": 9,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:17.001Z",
+    "updatedAt": "2026-06-08T07:09:30.823Z"
+  },
+  {
+    "id": "7879bff4",
+    "number": "00248",
+    "title": "加油",
+    "author": "张三",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:58:14.347Z"
+  },
+  {
+    "id": "1dca2219",
+    "number": "00247",
+    "title": "jojo",
+    "author": "欧柯岐",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:57:55.967Z"
+  },
+  {
+    "id": "1af40f15",
+    "number": "00246",
+    "title": "MC 3D闯关",
+    "author": "1",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:57:27.362Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:58:49.932Z",
+    "updatedAt": "2026-06-08T06:59:08.995Z"
+  },
+  {
+    "id": "cd31f2cc",
+    "number": "00245",
+    "title": "枪战联机",
+    "author": "少羽",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:57:15.890Z",
+    "usagePreviewCount": 17,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T07:00:12.242Z"
+  },
+  {
+    "id": "85d8bb20",
+    "number": "00244",
+    "title": "恶魔轮盘",
+    "author": "彭义欧",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:57:07.756Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:58:37.788Z"
+  },
+  {
+    "id": "1ef6eb1d",
+    "number": "00243",
+    "title": "起床战争",
+    "author": "刘城浩",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:41.271Z",
+    "usagePreviewCount": 6,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:04.300Z"
+  },
+  {
+    "id": "340a8a4d",
+    "number": "00242",
+    "title": "界徐盛斗地主",
+    "author": "徐盛",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:38.129Z",
+    "usagePreviewCount": 9,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:06.274Z",
+    "updatedAt": "2026-06-08T06:57:11.882Z"
+  },
+  {
+    "id": "4e058cfa",
+    "number": "00241",
+    "title": "音游",
+    "author": "泪幕了",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:37.550Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:58:50.757Z"
+  },
+  {
+    "id": "583007e7",
+    "number": "00240",
+    "title": "谁是卧底",
+    "author": "一个人",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:34.433Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:56:56.201Z"
+  },
+  {
+    "id": "02b0b044",
+    "number": "00239",
+    "title": "定轨音游",
+    "author": "😊👍",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:32.916Z",
+    "updatedAt": "2026-06-08T06:57:18.037Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:59:28.067Z"
+  },
+  {
+    "id": "a2303346",
+    "number": "00238",
+    "title": "和平精英",
+    "author": "少羽nb",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:28.319Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:59:08.927Z"
+  },
+  {
+    "id": "4be85e12",
+    "number": "00237",
+    "title": "我去不早说",
+    "author": "我是L",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:56:17.368Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:57:27.907Z"
+  },
+  {
+    "id": "ae287e02",
+    "number": "00236",
+    "title": "恐怖奶奶",
+    "author": "林佑",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:55:52.526Z",
+    "usagePreviewCount": 21,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:13.663Z"
+  },
+  {
+    "id": "37624d3b",
+    "number": "00235",
+    "title": "叶罗丽魔法换装",
+    "author": "u",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:55:52.061Z",
+    "usagePreviewCount": 5,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:16.913Z",
+    "updatedAt": "2026-06-08T06:57:18.540Z"
+  },
+  {
+    "id": "3d4a783b",
+    "number": "00234",
+    "title": "3D方块世界",
+    "author": "是",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:55:48.477Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:56:45.028Z",
+    "updatedAt": "2026-06-08T06:57:19.693Z"
+  },
+  {
+    "id": "fa5ed234",
+    "number": "00233",
+    "title": "植物大战僵尸",
+    "author": "李天晴",
+    "classId": "8ebdaed9",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:55:19.505Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:57:56.221Z"
+  },
+  {
+    "id": "617729a4",
+    "number": "00232",
+    "title": "拼手速",
+    "author": "陈子琪",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:55:17.985Z",
+    "usagePreviewCount": 8,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:59:59.990Z"
+  },
+  {
+    "id": "e13046ff",
+    "number": "00231",
+    "title": "冰公主快跑",
+    "author": "张三",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:55:10.885Z",
+    "usagePreviewCount": 7,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:03.340Z"
+  },
+  {
+    "id": "285a593a",
+    "number": "00230",
+    "title": "娜塔莎",
+    "author": "曾婉妍",
+    "classId": "8ebdaed9",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:54:50.474Z",
+    "usagePreviewCount": 9,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:56:14.885Z"
+  },
+  {
+    "id": "6a892a39",
+    "number": "00229",
+    "title": "蛋仔闯关",
+    "author": "啊",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:54:47.577Z",
+    "usagePreviewCount": 13,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T07:00:16.269Z",
+    "updatedAt": "2026-06-08T06:56:37.742Z"
+  },
+  {
+    "id": "99cfb130",
+    "number": "00228",
+    "title": "王者农药",
+    "author": "zcx",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:54:45.193Z",
+    "usagePreviewCount": 14,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T07:00:20.990Z"
+  },
+  {
+    "id": "cb278ce1",
+    "number": "00227",
+    "title": "修仙",
+    "author": "9178",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:53:45.336Z",
+    "usagePreviewCount": 16,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:59:13.880Z"
+  },
+  {
+    "id": "2b16e930",
+    "number": "00226",
+    "title": "跑酷",
+    "author": "2年老原批",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:53:37.740Z",
+    "usagePreviewCount": 15,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T06:59:21.335Z"
+  },
+  {
+    "id": "8c04dc84",
+    "number": "00225",
+    "title": "我的世界加速版",
+    "author": "111",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:53:37.423Z",
+    "usagePreviewCount": 14,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:57:50.553Z",
+    "updatedAt": "2026-06-08T06:56:38.459Z"
+  },
+  {
+    "id": "61b35060",
+    "number": "00224",
+    "title": "画板",
+    "author": "闫老师",
+    "classId": "8ebdaed9",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:53:03.025Z",
+    "usagePreviewCount": 14,
+    "usageCodeCount": 2,
+    "usageLastUsedAt": "2026-06-08T06:56:30.737Z"
+  },
+  {
+    "id": "32bfd3b0",
+    "number": "00223",
+    "title": "滑雪",
+    "author": "邱老师",
+    "classId": "c37011bf",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T06:52:39.466Z",
+    "usagePreviewCount": 8,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:58:35.805Z"
+  },
+  {
+    "id": "56f007c0",
+    "number": "00222",
+    "title": "广告",
+    "author": "4",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:26:10.123Z",
+    "usagePreviewCount": 11,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:34:27.527Z"
+  },
+  {
+    "id": "b2247e72",
+    "number": "00221",
+    "title": "点击消方块",
+    "author": "无",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:20:51.327Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:27:57.855Z",
+    "updatedAt": "2026-06-08T06:56:42.928Z"
+  },
+  {
+    "id": "08c585a2",
+    "number": "00220",
+    "title": "选卡",
+    "author": "w",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:20:48.539Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:32:43.361Z"
+  },
+  {
+    "id": "7b601e1f",
+    "number": "00218",
+    "title": "宠",
+    "author": "王",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:20:42.112Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:20:54.597Z"
+  },
+  {
+    "id": "b88655a4",
+    "number": "00217",
+    "title": "游戏",
+    "author": "w",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:20:09.751Z",
+    "usagePreviewCount": 5,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:33:17.247Z"
+  },
+  {
+    "id": "fc13731e",
+    "number": "00216",
+    "title": "宠",
+    "author": "奶奶",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:19:43.982Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:26:35.055Z",
+    "updatedAt": "2026-06-08T06:35:39.931Z"
+  },
+  {
+    "id": "ffc9f86f",
+    "number": "00213",
+    "title": "足球",
+    "author": "你",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:19:21.770Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:34:34.065Z",
+    "updatedAt": "2026-06-08T06:34:19.064Z"
+  },
+  {
+    "id": "35dfa95c",
+    "number": "00212",
+    "title": "请问",
+    "author": "kiwi",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:19:11.488Z",
+    "usagePreviewCount": 13,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:20:54.197Z"
+  },
+  {
+    "id": "fd470e93",
+    "number": "00211",
+    "title": "跑酷",
+    "author": "罗睿",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:18:55.574Z",
+    "usagePreviewCount": 13,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:37:21.447Z"
+  },
+  {
+    "id": "8d9469ef",
+    "number": "00210",
+    "title": "修仙",
+    "author": "陈俊濠",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:18:40.959Z",
+    "usagePreviewCount": 17,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:32:34.488Z"
+  },
+  {
+    "id": "ee650c99",
+    "number": "00209",
+    "title": "射击",
+    "author": "田宇",
+    "classId": "c2888068",
+    "enabled": true,
+    "starred": false,
+    "forbiddenWhitelist": false,
+    "createdAt": "2026-06-08T02:16:59.059Z",
+    "usagePreviewCount": 22,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T06:38:19.288Z"
+  },
+  {
     "id": "b4e0593f",
     "number": "00208",
     "title": "射击瞄准",
     "author": "闫老师",
     "classId": "c2888068",
     "enabled": true,
-    "starred": false,
+    "starred": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T02:05:15.546Z",
-    "usagePreviewCount": 6,
+    "usagePreviewCount": 12,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:21.820Z"
+    "usageLastUsedAt": "2026-06-08T06:37:36.989Z",
+    "updatedAt": "2026-06-08T06:33:35.660Z"
   },
   {
     "id": "a034a8fc",
@@ -24,9 +673,9 @@
     "createdAt": "2026-06-05T07:35:47.791Z",
     "updatedAt": "2026-06-05T15:26:36.452Z",
     "starred": true,
-    "usagePreviewCount": 13,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:31.092Z"
+    "usagePreviewCount": 65,
+    "usageCodeCount": 2,
+    "usageLastUsedAt": "2026-06-08T06:41:02.785Z"
   },
   {
     "id": "69131173",
@@ -39,9 +688,9 @@
     "createdAt": "2026-06-05T02:28:25.153Z",
     "updatedAt": "2026-06-05T15:15:25.217Z",
     "starred": true,
-    "usagePreviewCount": 16,
+    "usagePreviewCount": 33,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:12:22.857Z"
+    "usageLastUsedAt": "2026-06-08T06:41:04.466Z"
   },
   {
     "id": "40afa53e",
@@ -53,9 +702,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:26:05.208Z",
     "updatedAt": "2026-06-06T06:17:17.864Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 6,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:31.287Z"
+    "usageLastUsedAt": "2026-06-08T06:34:20.341Z"
   },
   {
     "id": "a97f837c",
@@ -67,9 +716,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:41.719Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:07.058Z"
+    "usageLastUsedAt": "2026-06-08T06:36:06.846Z"
   },
   {
     "id": "0b5adbb1",
@@ -80,9 +729,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 15,
+    "usagePreviewCount": 31,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:37.452Z"
+    "usageLastUsedAt": "2026-06-08T06:39:08.745Z"
   },
   {
     "id": "17ed9196",
@@ -93,7 +742,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:15.651Z",
-    "updatedAt": "2026-06-05T15:07:47.656Z"
+    "updatedAt": "2026-06-05T15:07:47.656Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:16:15.056Z"
   },
   {
     "id": "4139a720",
@@ -105,9 +757,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:24:18.223Z",
     "updatedAt": "2026-06-05T15:48:19.479Z",
-    "usagePreviewCount": 8,
+    "usagePreviewCount": 15,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:12:23.148Z"
+    "usageLastUsedAt": "2026-06-08T06:39:15.312Z"
   },
   {
     "id": "b582c9a6",
@@ -119,9 +771,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:12:23.333Z"
+    "usageLastUsedAt": "2026-06-08T06:36:34.410Z"
   },
   {
     "id": "3cccb5d2",
@@ -133,9 +785,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:22:46.824Z",
     "updatedAt": "2026-06-05T15:34:34.005Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:33.561Z"
+    "usageLastUsedAt": "2026-06-08T06:39:02.686Z"
   },
   {
     "id": "3c6b83db",
@@ -173,9 +825,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:21:16.198Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 6,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:02.183Z"
+    "usageLastUsedAt": "2026-06-08T06:39:46.477Z"
   },
   {
     "id": "e645c962",
@@ -186,9 +838,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.266Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:31.663Z"
+    "usageLastUsedAt": "2026-06-08T06:40:45.562Z"
   },
   {
     "id": "62b9c9b3",
@@ -214,9 +866,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:18.078Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 6,
+    "usagePreviewCount": 16,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:43.999Z"
+    "usageLastUsedAt": "2026-06-08T06:40:46.347Z"
   },
   {
     "id": "fe72fb41",
@@ -227,9 +879,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:08.689Z",
-    "usagePreviewCount": 17,
+    "usagePreviewCount": 30,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:10:15.676Z"
+    "usageLastUsedAt": "2026-06-08T06:40:20.397Z"
   },
   {
     "id": "0ac4f446",
@@ -241,9 +893,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:54.630Z",
     "updatedAt": "2026-06-06T07:28:14.296Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:27.999Z"
+    "usageLastUsedAt": "2026-06-08T06:41:08.457Z"
   },
   {
     "id": "105fcd61",
@@ -255,9 +907,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:53.051Z",
     "updatedAt": "2026-06-05T02:21:46.386Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:33.290Z"
+    "usageLastUsedAt": "2026-06-08T06:39:06.750Z"
   },
   {
     "id": "bb49e750",
@@ -269,9 +921,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:50.378Z",
     "updatedAt": "2026-06-05T15:10:26.711Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 8,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:54.755Z"
+    "usageLastUsedAt": "2026-06-08T06:37:19.151Z"
   },
   {
     "id": "7ffd899e",
@@ -282,9 +934,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:27.546Z",
-    "usagePreviewCount": 4,
+    "usagePreviewCount": 13,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:12:17.620Z"
+    "usageLastUsedAt": "2026-06-08T06:41:04.887Z"
   },
   {
     "id": "2c0652e5",
@@ -295,9 +947,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:24.028Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:51.958Z"
+    "usageLastUsedAt": "2026-06-08T06:34:46.101Z"
   },
   {
     "id": "3f4297e9",
@@ -309,9 +961,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:12.351Z",
     "updatedAt": "2026-06-05T15:07:47.656Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:06:45.705Z"
+    "usageLastUsedAt": "2026-06-08T06:39:05.009Z"
   },
   {
     "id": "56a2aabe",
@@ -321,7 +973,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:18:40.032Z"
+    "createdAt": "2026-06-05T02:18:40.032Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:37:25.051Z"
   },
   {
     "id": "03f26337",
@@ -332,9 +987,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:51.387Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 21,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:26.401Z"
+    "usageLastUsedAt": "2026-06-08T06:40:15.218Z"
   },
   {
     "id": "e0b496ec",
@@ -345,7 +1000,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:50.151Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:07.290Z"
   },
   {
     "id": "1d4268ed",
@@ -357,9 +1015,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:47.963Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 13,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:11:00.024Z"
+    "usageLastUsedAt": "2026-06-08T06:37:49.784Z"
   },
   {
     "id": "af3daa4a",
@@ -381,9 +1039,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:23.876Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:05.146Z"
+    "usageLastUsedAt": "2026-06-08T06:38:06.852Z"
   },
   {
     "id": "6a9a8b07",
@@ -395,9 +1053,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:16:56.191Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:56.901Z"
+    "usageLastUsedAt": "2026-06-08T06:34:09.819Z"
   },
   {
     "id": "31e7be77",
@@ -421,7 +1079,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:15:49.457Z"
+    "createdAt": "2026-06-05T02:15:49.457Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:15:35.307Z"
   },
   {
     "id": "eddb21ae",
@@ -445,9 +1106,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:15:20.452Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:48.901Z"
+    "usageLastUsedAt": "2026-06-08T06:34:47.680Z"
   },
   {
     "id": "1febbb74",
@@ -472,9 +1133,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:14:36.733Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:57.686Z"
+    "usageLastUsedAt": "2026-06-08T06:40:29.834Z"
   },
   {
     "id": "d3a522a2",
@@ -485,9 +1146,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:14:25.867Z",
-    "usagePreviewCount": 4,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:54.134Z"
+    "usagePreviewCount": 5,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T06:32:55.528Z"
   },
   {
     "id": "44fdb58e",
@@ -520,9 +1181,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:29.028Z",
     "updatedAt": "2026-06-05T15:10:26.711Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:29.988Z"
+    "usageLastUsedAt": "2026-06-08T02:14:04.350Z"
   },
   {
     "id": "b59a51db",
@@ -533,9 +1194,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:25.321Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:33.678Z"
+    "usageLastUsedAt": "2026-06-08T06:34:19.540Z"
   },
   {
     "id": "f4672ecd",
@@ -546,9 +1207,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:21.661Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-06T10:00:30.359Z"
+    "usageLastUsedAt": "2026-06-08T06:38:14.116Z"
   },
   {
     "id": "95e47cb5",
@@ -559,9 +1220,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:16.775Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:52.843Z"
+    "usageLastUsedAt": "2026-06-08T06:35:24.083Z"
   },
   {
     "id": "434695b6",
@@ -572,9 +1233,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:13.793Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:00.705Z"
+    "usageLastUsedAt": "2026-06-08T06:37:25.511Z"
   },
   {
     "id": "4bc49135",
@@ -609,9 +1270,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:11:31.692Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:14.704Z"
+    "usageLastUsedAt": "2026-06-08T06:40:19.485Z"
   },
   {
     "id": "0dce3757",
@@ -622,9 +1283,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:11:19.033Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:12:27.301Z"
+    "usageLastUsedAt": "2026-06-08T06:35:46.572Z"
   },
   {
     "id": "688601d3",
@@ -671,7 +1332,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:09:43.555Z"
+    "createdAt": "2026-06-05T02:09:43.555Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:36:56.319Z"
   },
   {
     "id": "32ae0671",
@@ -718,9 +1382,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T09:14:45.994Z",
     "updatedAt": "2026-06-04T09:29:33.385Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-05T17:24:17.081Z"
+    "usageLastUsedAt": "2026-06-08T06:37:10.220Z"
   },
   {
     "id": "285dffe5",
@@ -732,9 +1396,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:44.118Z",
     "updatedAt": "2026-06-04T08:01:29.674Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:49.389Z"
+    "usageLastUsedAt": "2026-06-08T06:35:33.359Z"
   },
   {
     "id": "fb57d6c2",
@@ -744,7 +1408,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:40.319Z"
+    "createdAt": "2026-06-04T06:58:40.319Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:37.909Z"
   },
   {
     "id": "bf623c7d",
@@ -754,7 +1421,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:58:32.330Z"
+    "createdAt": "2026-06-04T06:58:32.330Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:19:24.998Z"
   },
   {
     "id": "6a1236e4",
@@ -765,9 +1435,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:28.879Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-05T17:24:26.492Z"
+    "usageLastUsedAt": "2026-06-08T06:36:22.923Z"
   },
   {
     "id": "f8b5f9a0",
@@ -812,7 +1482,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:46.810Z"
+    "createdAt": "2026-06-04T06:57:46.810Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:37:57.558Z"
   },
   {
     "id": "ac407516",
@@ -822,7 +1495,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:41.967Z"
+    "createdAt": "2026-06-04T06:57:41.967Z",
+    "usagePreviewCount": 8,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:02.417Z"
   },
   {
     "id": "db0d35f3",
@@ -833,9 +1509,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:38.725Z",
-    "usagePreviewCount": 4,
+    "usagePreviewCount": 10,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:40.671Z"
+    "usageLastUsedAt": "2026-06-08T06:41:09.034Z"
   },
   {
     "id": "0b06a016",
@@ -860,7 +1536,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:18.325Z",
-    "updatedAt": "2026-06-04T06:58:54.926Z"
+    "updatedAt": "2026-06-04T06:58:54.926Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:59.836Z"
   },
   {
     "id": "a2d9b2f6",
@@ -892,9 +1571,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:03.801Z",
     "updatedAt": "2026-06-04T09:28:05.898Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:43.644Z"
+    "usageLastUsedAt": "2026-06-08T06:36:14.864Z"
   },
   {
     "id": "4632d81e",
@@ -906,9 +1585,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:59.400Z",
     "updatedAt": "2026-06-04T08:01:38.950Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 8,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:32.065Z"
+    "usageLastUsedAt": "2026-06-08T06:37:43.585Z"
   },
   {
     "id": "7dee5414",
@@ -920,9 +1599,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:53.261Z",
     "updatedAt": "2026-06-04T09:27:54.422Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 11,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:05.358Z"
+    "usageLastUsedAt": "2026-06-08T06:38:05.352Z"
   },
   {
     "id": "badc9200",
@@ -932,7 +1611,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:56:45.222Z"
+    "createdAt": "2026-06-04T06:56:45.222Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:46.448Z"
   },
   {
     "id": "3df92c63",
@@ -943,9 +1625,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:37.265Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:22.554Z"
+    "usageLastUsedAt": "2026-06-08T06:38:12.760Z"
   },
   {
     "id": "61c96dc8",
@@ -979,9 +1661,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:25.208Z",
     "updatedAt": "2026-06-04T08:01:44.004Z",
-    "usagePreviewCount": 10,
+    "usagePreviewCount": 20,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:34.912Z"
+    "usageLastUsedAt": "2026-06-08T06:38:38.208Z"
   },
   {
     "id": "d896586f",
@@ -992,23 +1674,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:55.467Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:20.904Z"
-  },
-  {
-    "id": "7a0c2118",
-    "number": "00112",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:49.313Z",
-    "updatedAt": "2026-06-06T06:11:44.863Z",
-    "usagePreviewCount": 1,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-06T06:11:25.501Z"
+    "usageLastUsedAt": "2026-06-08T06:35:47.054Z"
   },
   {
     "id": "afab1cb0",
@@ -1020,23 +1688,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.119Z",
     "updatedAt": "2026-06-04T08:01:51.577Z",
-    "usagePreviewCount": 2,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:23.352Z"
-  },
-  {
-    "id": "29c65a3b",
-    "number": "00110",
-    "title": "迷你KARDS卡牌对战",
-    "author": "1939工作室",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:47.500Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "2a4f4097",
-    "duplicateAuditKeepTitle": "迷你KARDS卡牌对战",
-    "duplicateAuditMessage": "与「迷你KARDS卡牌对战（00109）」代码重复"
+    "usagePreviewCount": 5,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T06:33:05.566Z"
   },
   {
     "id": "2a4f4097",
@@ -1047,7 +1701,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:46.773Z",
-    "updatedAt": "2026-06-04T08:01:53.468Z"
+    "updatedAt": "2026-06-04T08:01:53.468Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:17.986Z"
   },
   {
     "id": "a02afaed",
@@ -1058,9 +1715,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:45.149Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:39.962Z"
+    "usageLastUsedAt": "2026-06-08T06:39:28.573Z"
   },
   {
     "id": "1d0e9405",
@@ -1083,7 +1740,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:26.673Z"
+    "createdAt": "2026-06-04T06:55:26.673Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:38.122Z"
   },
   {
     "id": "e8ff2b50",
@@ -1095,9 +1755,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
     "updatedAt": "2026-06-05T15:10:26.711Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 8,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:27.457Z"
+    "usageLastUsedAt": "2026-06-08T06:41:09.238Z"
   },
   {
     "id": "3a662fbd",
@@ -1107,7 +1767,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:55:00.083Z"
+    "createdAt": "2026-06-04T06:55:00.083Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:34:24.804Z"
   },
   {
     "id": "95f034aa",
@@ -1149,7 +1812,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:39.451Z",
-    "updatedAt": "2026-06-04T06:58:23.938Z"
+    "updatedAt": "2026-06-04T06:58:23.938Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:16:37.728Z"
   },
   {
     "id": "b4fe3fef",
@@ -1170,21 +1836,10 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:30.298Z"
-  },
-  {
-    "id": "b32a8c5b",
-    "number": "00097",
-    "title": "方块吃方块",
-    "author": "王梓萱",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:17.791Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "1f582346",
-    "duplicateAuditKeepTitle": "方块吃方块",
-    "duplicateAuditMessage": "与「方块吃方块（00096）」代码重复"
+    "createdAt": "2026-06-04T06:54:30.298Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:33:53.475Z"
   },
   {
     "id": "1f582346",
@@ -1206,9 +1861,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:15.872Z",
     "updatedAt": "2026-06-05T01:55:03.538Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:57.706Z"
+    "usageLastUsedAt": "2026-06-08T06:35:51.306Z"
   },
   {
     "id": "2b80d611",
@@ -1219,9 +1874,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:00.607Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:32.971Z"
+    "usageLastUsedAt": "2026-06-08T06:36:24.699Z"
   },
   {
     "id": "cba715bc",
@@ -1232,77 +1887,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:53:44.874Z",
-    "updatedAt": "2026-06-04T08:02:32.707Z"
-  },
-  {
-    "id": "fd30eb39",
-    "number": "00092",
-    "title": "跑酷",
-    "author": "111",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:36.635Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "56b4e6c6",
-    "duplicateAuditKeepTitle": "跑酷",
-    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
-  },
-  {
-    "id": "f40ae352",
-    "number": "00091",
-    "title": "跑酷",
-    "author": "111",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:36.472Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "56b4e6c6",
-    "duplicateAuditKeepTitle": "跑酷",
-    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
-  },
-  {
-    "id": "798ad85c",
-    "number": "00090",
-    "title": "跑酷",
-    "author": "111",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:36.243Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "56b4e6c6",
-    "duplicateAuditKeepTitle": "跑酷",
-    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
-  },
-  {
-    "id": "4c7bf496",
-    "number": "00089",
-    "title": "跑酷",
-    "author": "111",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:35.757Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "56b4e6c6",
-    "duplicateAuditKeepTitle": "跑酷",
-    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
-  },
-  {
-    "id": "15fc69b5",
-    "number": "00088",
-    "title": "跑酷",
-    "author": "111",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:34.346Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "56b4e6c6",
-    "duplicateAuditKeepTitle": "跑酷",
-    "duplicateAuditMessage": "与「跑酷（00087）」代码重复"
+    "updatedAt": "2026-06-04T08:02:32.707Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:32.673Z"
   },
   {
     "id": "56b4e6c6",
@@ -1323,7 +1911,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:52:54.508Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:07:22.767Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:32.511Z"
   },
   {
     "id": "66a141d9",
@@ -1345,7 +1936,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:52:53.251Z",
-    "updatedAt": "2026-06-04T08:02:39.886Z"
+    "updatedAt": "2026-06-04T08:02:39.886Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:34:10.045Z"
   },
   {
     "id": "4cdb21b6",
@@ -1356,7 +1950,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:51:26.876Z",
-    "updatedAt": "2026-06-04T08:02:40.883Z"
+    "updatedAt": "2026-06-04T08:02:40.883Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:12:40.336Z"
   },
   {
     "id": "cfaf4708",
@@ -1381,9 +1978,9 @@
     "createdAt": "2026-06-03T06:57:59.047Z",
     "updatedAt": "2026-06-03T15:29:23.218Z",
     "enabled": true,
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:48.627Z"
+    "usageLastUsedAt": "2026-06-08T06:36:36.530Z"
   },
   {
     "id": "fecedab7",
@@ -1393,9 +1990,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:58.333Z",
     "updatedAt": "2026-06-03T15:13:35.872Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:45.658Z"
+    "usageLastUsedAt": "2026-06-08T06:36:57.437Z"
   },
   {
     "id": "90cc94a8",
@@ -1405,7 +2002,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:54.082Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:35:23.629Z"
+    "updatedAt": "2026-06-03T15:35:23.629Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:16:54.577Z"
   },
   {
     "id": "104a8681",
@@ -1442,20 +2042,10 @@
     "author": "周之茹",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:56.709Z",
-    "updatedAt": "2026-06-03T14:29:06.174Z"
-  },
-  {
-    "id": "eff0af36",
-    "number": "00074",
-    "title": "音乐",
-    "author": "零零",
-    "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:55:34.897Z",
-    "enabled": false,
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "aae90e66",
-    "duplicateAuditKeepTitle": "音乐",
-    "duplicateAuditMessage": "与「音乐（00073）」代码重复"
+    "updatedAt": "2026-06-03T14:29:06.174Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:37:04.512Z"
   },
   {
     "id": "aae90e66",
@@ -1463,7 +2053,10 @@
     "title": "音乐",
     "author": "零零",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:55:34.123Z"
+    "createdAt": "2026-06-03T06:55:34.123Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:58.685Z"
   },
   {
     "id": "ee25f642",
@@ -1483,9 +2076,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:19.770Z",
     "updatedAt": "2026-06-03T14:30:06.558Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 11,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:39.951Z"
+    "usageLastUsedAt": "2026-06-08T06:40:17.978Z"
   },
   {
     "id": "e5deb7f6",
@@ -1494,7 +2087,10 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-03T06:55:18.085Z",
-    "updatedAt": "2026-06-05T09:34:30.502Z"
+    "updatedAt": "2026-06-05T09:34:30.502Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:40:33.363Z"
   },
   {
     "id": "48bf777d",
@@ -1513,9 +2109,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:01.972Z",
     "updatedAt": "2026-06-03T14:06:34.263Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:46.549Z"
+    "usageLastUsedAt": "2026-06-08T06:39:42.507Z"
   },
   {
     "id": "0440a27c",
@@ -1533,7 +2129,10 @@
     "title": "躲避球",
     "author": "书",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:54:01.111Z"
+    "createdAt": "2026-06-03T06:54:01.111Z",
+    "usagePreviewCount": 6,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:44.225Z"
   },
   {
     "id": "9ebabadc",
@@ -1541,7 +2140,10 @@
     "title": "跳动的音符",
     "author": "呵呵",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:53:59.436Z"
+    "createdAt": "2026-06-03T06:53:59.436Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:37:57.106Z"
   },
   {
     "id": "68672ac2",
@@ -1551,7 +2153,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:55.247Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:31:14.921Z"
+    "updatedAt": "2026-06-03T15:31:14.921Z",
+    "usagePreviewCount": 8,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:40:47.563Z"
   },
   {
     "id": "2cb5cec3",
@@ -1569,7 +2174,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:31.773Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:31:55.976Z"
+    "updatedAt": "2026-06-03T15:31:55.976Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:24.968Z"
   },
   {
     "id": "b75517d1",
@@ -1590,9 +2198,9 @@
     "createdAt": "2026-06-03T06:53:15.370Z",
     "updatedAt": "2026-06-05T15:10:49.937Z",
     "enabled": true,
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:50.228Z"
+    "usageLastUsedAt": "2026-06-08T06:34:30.172Z"
   },
   {
     "id": "c236a467",
@@ -1612,7 +2220,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:04.601Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:33:11.185Z"
+    "updatedAt": "2026-06-03T15:33:11.185Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:43.008Z"
   },
   {
     "id": "bdc2e637",
@@ -1620,7 +2231,10 @@
     "title": "音游",
     "author": "哈哈",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:52:55.398Z"
+    "createdAt": "2026-06-03T06:52:55.398Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:13.354Z"
   },
   {
     "id": "2dd02888",
@@ -1630,7 +2244,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:52:51.493Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:32:22.709Z"
+    "updatedAt": "2026-06-03T15:32:22.709Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:35.127Z"
   },
   {
     "id": "7cc9835a",
@@ -1639,9 +2256,9 @@
     "author": "wzy",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:52:44.888Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:32.782Z"
+    "usageLastUsedAt": "2026-06-08T02:17:36.782Z"
   },
   {
     "id": "0de4f13b",
@@ -1649,7 +2266,10 @@
     "title": "音游",
     "author": "六6班",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:52:24.020Z"
+    "createdAt": "2026-06-03T06:52:24.020Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:48.170Z"
   },
   {
     "id": "356df195",
@@ -1677,7 +2297,10 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:51:47.327Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:33:42.277Z"
+    "updatedAt": "2026-06-03T15:33:42.277Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:40:03.809Z"
   },
   {
     "id": "dc340e1d",
@@ -1698,9 +2321,9 @@
     "author": "龙博",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:51:22.696Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:46.311Z"
+    "usageLastUsedAt": "2026-06-08T06:39:14.426Z"
   },
   {
     "id": "ee5efda8",
@@ -1708,7 +2331,10 @@
     "title": "哦哦",
     "author": "哦哦",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:50:43.471Z"
+    "createdAt": "2026-06-03T06:50:43.471Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:10.985Z"
   },
   {
     "id": "fc4b5b2f",
@@ -1725,7 +2351,10 @@
     "title": "音游",
     "author": "尹俊程",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:17:35.234Z"
+    "createdAt": "2026-06-03T03:17:35.234Z",
+    "usagePreviewCount": 4,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:40:05.234Z"
   },
   {
     "id": "1bc444f2",
@@ -1733,7 +2362,10 @@
     "title": "连发版优化枪战小游戏",
     "author": "谢智睿",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:16:04.878Z"
+    "createdAt": "2026-06-03T03:16:04.878Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:00.427Z"
   },
   {
     "id": "bd7db19d",
@@ -1754,22 +2386,9 @@
     "createdAt": "2026-06-03T03:15:59.638Z",
     "enabled": true,
     "updatedAt": "2026-06-03T15:34:02.868Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:44.458Z"
-  },
-  {
-    "id": "faab8286",
-    "number": "00042",
-    "title": "终极枪战",
-    "author": "陈洋威ooo",
-    "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:15:44.559Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "enabled": false,
-    "duplicateAuditKeepId": "302dea0c",
-    "duplicateAuditKeepTitle": "终极枪战",
-    "duplicateAuditMessage": "与「终极枪战（00041）」代码重复"
+    "usageLastUsedAt": "2026-06-08T06:40:53.093Z"
   },
   {
     "id": "302dea0c",
@@ -1778,7 +2397,10 @@
     "author": "陈洋威ooo",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:15:44.142Z",
-    "updatedAt": "2026-06-03T15:34:07.393Z"
+    "updatedAt": "2026-06-03T15:34:07.393Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:41:04.823Z"
   },
   {
     "id": "0dd91148",
@@ -1788,7 +2410,10 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:14:49.774Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:34:11.592Z"
+    "updatedAt": "2026-06-03T15:34:11.592Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:43.065Z"
   },
   {
     "id": "7a60d012",
@@ -1805,7 +2430,10 @@
     "author": "林宸骏",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:14:08.387Z",
-    "updatedAt": "2026-06-03T15:36:48.140Z"
+    "updatedAt": "2026-06-03T15:36:48.140Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:04.028Z"
   },
   {
     "id": "f65ec769",
@@ -1813,7 +2441,10 @@
     "title": "豆包快问快答",
     "author": "张雨萱",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:13:45.392Z"
+    "createdAt": "2026-06-03T03:13:45.392Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:00.625Z"
   },
   {
     "id": "229b7657",
@@ -1821,7 +2452,10 @@
     "title": "快乐消消消",
     "author": "姜泓竹",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:13:44.909Z"
+    "createdAt": "2026-06-03T03:13:44.909Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:53.594Z"
   },
   {
     "id": "0fea8045",
@@ -1847,7 +2481,10 @@
     "title": "国际象棋",
     "author": "斯蒂芬.威廉.霍金LSR",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:13:00.557Z"
+    "createdAt": "2026-06-03T03:13:00.557Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:39.835Z"
   },
   {
     "id": "fae72eb9",
@@ -1873,7 +2510,10 @@
     "title": "和平精英",
     "author": "张子宏前辈",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:12:27.511Z"
+    "createdAt": "2026-06-03T03:12:27.511Z",
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:41:00.189Z"
   },
   {
     "id": "cc95fdb4",
@@ -1894,9 +2534,9 @@
     "createdAt": "2026-06-03T03:11:52.926Z",
     "enabled": true,
     "updatedAt": "2026-06-03T16:14:22.137Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:09.500Z"
+    "usageLastUsedAt": "2026-06-08T02:17:52.117Z"
   },
   {
     "id": "4da24e57",
@@ -1914,7 +2554,10 @@
     "title": "躲避球",
     "author": "高梓航",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:11:44.585Z"
+    "createdAt": "2026-06-03T03:11:44.585Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:18:46.451Z"
   },
   {
     "id": "4adc8e0f",
@@ -1924,7 +2567,10 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:07.906Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:34:52.497Z"
+    "updatedAt": "2026-06-03T15:34:52.497Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:41:04.862Z"
   },
   {
     "id": "7d5703bd",
@@ -1935,9 +2581,9 @@
     "createdAt": "2026-06-03T03:11:03.330Z",
     "enabled": true,
     "updatedAt": "2026-06-03T16:02:02.551Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:50.852Z"
+    "usageLastUsedAt": "2026-06-08T06:35:06.830Z"
   },
   {
     "id": "848ad2a3",
@@ -1947,9 +2593,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:51.420Z",
     "updatedAt": "2026-06-03T16:00:31.964Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:34.867Z"
+    "usageLastUsedAt": "2026-06-08T06:39:38.280Z"
   },
   {
     "id": "4891a2f7",
@@ -1959,7 +2605,10 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:40.909Z",
     "updatedAt": "2026-06-03T15:35:01.947Z",
-    "enabled": true
+    "enabled": true,
+    "usagePreviewCount": 3,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:34:47.221Z"
   },
   {
     "id": "877d8d3c",
@@ -1976,7 +2625,10 @@
     "title": "三角洲",
     "author": "杨浩宇",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:10:26.178Z"
+    "createdAt": "2026-06-03T03:10:26.178Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:40:00.654Z"
   },
   {
     "id": "391800e9",
@@ -1985,7 +2637,10 @@
     "author": "杨浩宇",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:25.421Z",
-    "updatedAt": "2026-06-03T13:50:06.186Z"
+    "updatedAt": "2026-06-03T13:50:06.186Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:01.218Z"
   },
   {
     "id": "c536947a",
@@ -2019,7 +2674,10 @@
     "title": "连发版优化枪战小游戏",
     "author": "谢智睿",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:09:49.923Z"
+    "createdAt": "2026-06-03T03:09:49.923Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:32.993Z"
   },
   {
     "id": "91241494",
@@ -2027,7 +2685,10 @@
     "title": "阿静的跑酷游戏",
     "author": "吴宜静",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:09:47.777Z"
+    "createdAt": "2026-06-03T03:09:47.777Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:38:02.175Z"
   },
   {
     "id": "599e660e",
@@ -2036,7 +2697,11 @@
     "author": "田宏坤",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:09:47.545Z",
-    "updatedAt": "2026-06-03T13:44:23.947Z"
+    "updatedAt": "2026-06-08T06:37:52.914Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:37:46.132Z",
+    "starred": true
   },
   {
     "id": "3c273285",
@@ -2045,7 +2710,10 @@
     "author": "邱老师",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:07:49.202Z",
-    "updatedAt": "2026-06-03T15:47:31.828Z"
+    "updatedAt": "2026-06-03T15:47:31.828Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:39:26.667Z"
   },
   {
     "id": "0f04a317",
@@ -2055,9 +2723,9 @@
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T17:05:25.794Z",
     "updatedAt": "2026-06-06T10:01:51.490Z",
-    "usagePreviewCount": 3,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T01:19:38.159Z",
+    "usagePreviewCount": 10,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-08T06:40:27.518Z",
     "starred": true
   },
   {
@@ -2069,7 +2737,10 @@
     "createdAt": "2026-06-02T16:55:23.262Z",
     "enabled": true,
     "updatedAt": "2026-06-03T15:19:23.823Z",
-    "forbiddenWhitelist": true
+    "forbiddenWhitelist": true,
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:17.740Z"
   },
   {
     "id": "dddf5777",
@@ -2086,7 +2757,10 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:33:29.140Z",
-    "updatedAt": "2026-06-03T01:40:29.757Z"
+    "updatedAt": "2026-06-03T01:40:29.757Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T06:35:08.769Z"
   },
   {
     "id": "2dac8aab",
@@ -2096,9 +2770,9 @@
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:31:24.736Z",
     "updatedAt": "2026-06-06T10:01:19.159Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T01:20:05.492Z",
+    "usageLastUsedAt": "2026-06-08T06:40:04.131Z",
     "starred": true
   },
   {
@@ -2127,9 +2801,9 @@
     "updatedAt": "2026-06-06T10:01:21.053Z",
     "author": "邱老师",
     "starred": true,
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 5,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:07.901Z"
+    "usageLastUsedAt": "2026-06-08T02:18:00.333Z"
   },
   {
     "id": "20d3c066",
@@ -2138,7 +2812,10 @@
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T14:33:57.334Z",
     "updatedAt": "2026-06-02T15:51:03.870Z",
-    "author": "邱老师"
+    "author": "邱老师",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:14:34.249Z"
   },
   {
     "id": "12e37a79",

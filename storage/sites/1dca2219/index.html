@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOJO幻影血脉 强化对战</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif}
+body{
+    background:#0c0c0c;
+    min-height:100vh;
+    display:flex;justify-content:center;align-items:center;
+    background-image:linear-gradient(rgba(0,0,0,0.8),rgba(0,0,0,0.8)),
+    url(https://p3-hippo-sign.byteimg.com/tos-cn-i-a9yeduch1e/9381f1c1389e40089d4d778427012323~tplv-ii0cwwkcx9-resize-crop-v1:0:0:1200:675:0:0.jpeg);
+    background-size:cover;background-position:center;
+}
+.wrap{
+    width:1100px;height:720px;border:5px solid #d4af37;border-radius:12px;
+    background:#181818;overflow:hidden;position:relative;
+    box-shadow:0 0 40px #8b6914;
+}
+.battle-area{
+    width:100%;height:460px;position:relative;border-bottom:4px solid #d4af37;
+}
+/*血条怒气栏*/
+.hp-box{width:280px;position:absolute;top:20px}
+.player-box{left:20px}
+.enemy-box{right:20px}
+.name{color:#ffd700;font-size:22px;font-weight:bold;text-shadow:2px 2px #000;margin-bottom:4px}
+.hp-bg{width:100%;height:26px;background:#333;border:2px solid #fff;border-radius:6px;overflow:hidden}
+.hp-fill{height:100%;background:linear-gradient(90deg,#f33,#c00);transition:width .3s}
+.rage-bg{width:100%;height:14px;background:#222;border:1px solid #999;border-radius:4px;margin-top:4px;overflow:hidden}
+.rage-fill{height:100%;background:linear-gradient(90deg,#ff9500,#ffdd00);transition:width .2s}
+/*角色*/
+.char{
+    width:200px;height:320px;position:absolute;bottom:30px;
+    background-size:contain;background-repeat:no-repeat;background-position:center;
+    transition:transform .15s;
+}
+#jonathan{left:80px;background-image:url(https://p3-hippo-sign.byteimg.com/tos-cn-i-a9yeduch1e/3111d328f4224448909313092d324741~tplv-ii0cwwkcx9-resize-crop-v1:0:0:500:750:0:0.jpeg)}
+#dio{right:80px;background-image:url(https://p3-hippo-sign.byteimg.com/tos-cn-i-a9yeduch1e/67908d1348844789a4840474d1830d75~tplv-ii0cwwkcx9-resize-crop-v1:0:0:500:750:0:0.jpeg);transform:scaleX(-1)}
+/*动画关键帧*/
+@keyframes atkPlayer{0{transform:translateX(0)}50%{transform:translateX(50px)}100%{transform:translateX(0)}}
+@keyframes atkDio{0{transform:translateX(0) scaleX(-1)}50%{transform:translateX(-50px) scaleX(-1)}100%{transform:translateX(0) scaleX(-1)}}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}75%{transform:translate(6px,-3px)}}
+@keyframes textPop{0{scale:.8;opacity:0}50%{scale:1.3;opacity:1}100%{scale:1.6;opacity:0}}
+@keyframes skillGlow{0{filter:brightness(1)}50%{filter:brightness(1.8) drop-shadow(0 0 12px gold)}100%{filter:brightness(1)}}
+.atk-ani{animation:atkPlayer .3s ease-out}
+.dio-atk-ani{animation:atkDio .3s ease-out}
+.hit-flash{animation:flash .18s linear 3}
+.skill-glow{animation:skillGlow .5s}
+.shake-screen{animation:shake .25s}
+/*浮动伤害文字*/
+.float-dmg{
+    position:absolute;font-size:32px;font-weight:bold;color:#fff;text-shadow:2px 2px #000;
+    animation:textPop .9s forwards;z-index:20;pointer-events:none
+}
+.skill-tag{color:#ffd700;font-size:36px}
+.crit-tag{color:#ff2222;font-size:38px}
+/*操作面板*/
+.ctrl-panel{height:260px;background:#0f0f0f;padding:20px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:center}
+.btn{
+    width:150px;height:66px;font-size:19px;font-weight:bold;border:3px solid #d4af37;
+    background:#222;color:#fff;border-radius:10px;cursor:pointer;transition:.2s
+}
+.btn:hover:not(:disabled){background:#d4af37;color:#000;scale:1.06}
+.btn:disabled{border:#555;background:#333;color:#777;cursor:not-allowed;scale:1}
+/*战斗日志*/
+.log-box{
+    position:absolute;right:10px;bottom:270px;width:260px;height:160px;
+    background:rgba(0,0,0,.65);border:1px solid #777;padding:8px;overflow-y:auto;color:#ddd;font-size:13px
+}
+.log-title{color:#ffd700;font-size:15px;margin-bottom:4px;border-bottom:1px solid #555;padding-bottom:3px}
+/*结束遮罩*/
+.over-mask{
+    position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;
+    flex-direction:column;justify-content:center;align-items:center;z-index:99
+}
+.over-text{font-size:56px;font-weight:bold;margin-bottom:30px;text-shadow:0 0 20px gold}
+.restart{width:220px;height:86px;font-size:26px;background:#d4af37;border:none;border-radius:12px;font-weight:bold;cursor:pointer}
+.tip{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:#aaa;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap" id="gameWrap">
+    <div class="battle-area">
+        <!--玩家状态-->
+        <div class="hp-box player-box">
+            <div class="name">乔纳森·乔斯达</div>
+            <div class="hp-bg"><div class="hp-fill" id="pHP" style="width:100%"></div></div>
+            <div class="rage-bg"><div class="rage-fill" id="pRage" style="width:0%"></div></div>
+        </div>
+        <!--敌人状态-->
+        <div class="hp-box enemy-box">
+            <div class="name">迪奥·布兰度</div>
+            <div class="hp-bg"><div class="hp-fill" id="eHP" style="width:100%"></div></div>
+            <div class="rage-bg"><div class="rage-fill" id="eRage" style="width:0%"></div></div>
+        </div>
+        <!--角色-->
+        <div class="char" id="jonathan"></div>
+        <div class="char" id="dio"></div>
+        <!--战斗日志-->
+        <div class="log-box">
+            <div class="log-title">战斗记录</div>
+            <div id="logList"></div>
+        </div>
+        <!--结束界面-->
+        <div class="over-mask" id="overMask">
+            <div class="over-text" id="overText"></div>
+            <button class="restart" id="restartBtn">重新开战</button>
+        </div>
+    </div>
+    <!--操作按钮-->
+    <div class="ctrl-panel">
+        <button class="btn" id="atkBtn">普攻(A)</button>
+        <button class="btn" id="skill1Btn">波纹疾走(S)</button>
+        <button class="btn" id="skill2Btn">齐贝林援助(D)</button>
+        <button class="btn" id="blockBtn">格挡(W)</button>
+        <button class="btn" id="dodgeBtn">闪避(Q)</button>
+    </div>
+    <div class="tip">A普攻 | S波纹疾走 | D齐贝林援助 | W格挡 | Q闪避</div>
+</div>
+
+<script>
+//DOM
+const wrap=document.getElementById('gameWrap');
+const jojo=document.getElementById('jonathan');
+const dio=document.getElementById('dio');
+const pHP=document.getElementById('pHP');
+const eHP=document.getElementById('eHP');
+const pRage=document.getElementById('pRage');
+const eRage=document.getElementById('eRage');
+const logList=document.getElementById('logList');
+const overMask=document.getElementById('overMask');
+const overText=document.getElementById('overText');
+const restartBtn=document.getElementById('restartBtn');
+const atkBtn=document.getElementById('atkBtn');
+const skill1Btn=document.getElementById('skill1Btn');
+const skill2Btn=document.getElementById('skill2Btn');
+const blockBtn=document.getElementById('blockBtn');
+const dodgeBtn=document.getElementById('dodgeBtn');
+
+//游戏参数
+const Game={
+    pHp:100,eHp:100,
+    pRage:0,eRage:0,
+    pBlock:false,eBlock:false,
+    pDodge:false,eDodge:false,
+    cooldown:{skill1:0,skill2:0,dodge:0},
+    isBusy:false,gameEnd:false,
+    //伤害数值
+    dmgAtk:12,dmgWave:28,dmgZebelin:35,dmgDioAtk:13,dmgEye:30,
+    critRate:0.18,critMul:1.8,blockReduce:0.65,dodgeChance:0.55
+};
+
+//添加战斗日志
+function addLog(msg){
+    const div=document.createElement('div');
+    div.textContent=msg;
+    logList.appendChild(div);
+    logList.scrollTop=logList.scrollHeight;
+}
+//浮动伤害文字
+function popText(x,y,val,isCrit=false,isSkill=false){
+    const el=document.createElement('div');
+    el.className='float-dmg';
+    if(isCrit)el.classList.add('crit-tag');
+    else if(isSkill)el.classList.add('skill-tag');
+    el.textContent=val;
+    el.style.left=x+'px';el.style.top=y+'px';
+    wrap.querySelector('.battle-area').appendChild(el);
+    setTimeout(()=>el.remove(),900);
+}
+//屏幕抖动
+function screenShake(){
+    wrap.classList.add('shake-screen');
+    setTimeout(()=>wrap.classList.remove('shake-screen'),250);
+}
+//更新血条怒气
+function refreshBar(){
+    pHP.style.width=Game.pHp+'%';
+    eHP.style.width=Game.eHp+'%';
+    pRage.style.width=Game.pRage+'%';
+    eRage.style.width=Game.eRage+'%';
+}
+//怒气增长
+function addRage(isPlayer,val=12){
+    if(isPlayer){
+        Game.pRage=Math.min(100,Game.pRage+val);
+    }else{
+        Game.eRage=Math.min(100,Game.eRage+val);
+    }
+    refreshBar();
+}
+//计算暴击
+function calcDmg(base){
+    const isCrit=Math.random()<Game.critRate;
+    const final=isCrit?Math.floor(base*Game.critMul):base;
+    return {val:final,crit:isCrit};
+}
+//冷却计时
+function tickCD(){
+    for(let k in Game.cooldown){
+        if(Game.cooldown[k]>0)Game.cooldown[k]--;
+    }
+}
+//锁定/解锁按钮
+function setBtnLock(lock){
+    const btns=[atkBtn,skill1Btn,skill2Btn,blockBtn,dodgeBtn];
+    btns.forEach(b=>b.disabled=lock||Game.gameEnd);
+}
+
+//玩家普攻
+function playerAtk(){
+    if(Game.isBusy||Game.gameEnd)return;
+    Game.isBusy=true;setBtnLock(true);tickCD();
+    jojo.classList.add('atk-ani');
+    setTimeout(()=>{
+        let res=calcDmg(Game.dmgAtk);
+        let dmg=res.val;
+        if(Game.eBlock){
+            dmg=Math.floor(dmg*(1-Game.blockReduce));
+            addLog('DIO格挡，伤害大幅降低');
+        }else if(Game.eDodge&&Math.random()<Game.dodgeChance){
+            addLog('DIO灵巧闪避攻击！');
+            popText(dio.offsetLeft+60,dio.offsetTop+60,'MISS');
+            resetCharAni();
+            endTurn();return;
+        }else{
+            dio.classList.add('hit-flash');screenShake();
+            Game.eHp=Math.max(0,Game.eHp-dmg);
+            popText(dio.offsetLeft+60,dio.offsetTop+60,'-'+dmg,res.crit);
+            addLog(`乔纳森普攻${res.crit?'暴击':''}，造成${dmg}伤害`);
+            addRage(true,10);addRage(false,8);
+        }
+        refreshBar();
+        checkEnd();
+        resetCharAni();
+        if(!Game.gameEnd)setTimeout(enemyTurn,700);
+    },150);
+}
+//波纹疾走
+function playerWave(){
+    if(Game.isBusy||Game.cooldown.skill1>0||Game.gameEnd)return;
+    Game.isBusy=true;setBtnLock(true);Game.cooldown.skill1=4;tickCD();
+    jojo.classList.add('atk-ani','skill-glow');
+    setTimeout(()=>{
+        let res=calcDmg(Game.dmgWave);
+        let dmg=res.val;
+        if(Game.eBlock){
+            dmg=Math.floor(dmg*(1-Game.blockReduce));
+            addLog('DIO硬挡波纹冲击');
+        }else if(Game.eDodge&&Math.random()<Game.dodgeChance){
+            addLog('DIO躲开波纹！');
+            popText(dio.offsetLeft+60,dio.offsetTop+60,'MISS');
+            resetCharAni();
+            endTurn();return;
+        }else{
+            dio.classList.add('hit-flash');screenShake();
+            Game.eHp=Math.max(0,Game.eHp-dmg);
+            popText(dio.offsetLeft+60,dio.offsetTop+60,'波纹-'+dmg,res.crit,true);
+            addLog(`波纹疾走${res.crit?'暴击！':''}，伤害${dmg}`);
+            addRage(true,18);addRage(false,12);
+        }
+        refreshBar();checkEnd();resetCharAni();
+        if(!Game.gameEnd)setTimeout(enemyTurn,700);
+    },180);
+}
+//齐贝林援助（消耗怒气50）
+function playerZebelin(){
+    if(Game.isBusy||Game.cooldown.skill2>0||Game.pRage<50||Game.gameEnd)return;
+    Game.isBusy=true;setBtnLock(true);Game.cooldown.skill2=6;Game.pRage-=50;tickCD();refreshBar();
+    jojo.classList.add('skill-glow');
+    setTimeout(()=>{
+        let res=calcDmg(Game.dmgZebelin);
+        let dmg=res.val;
+        if(Game.eBlock){
+            dmg=Math.floor(dmg*(1-Game.blockReduce));
+            addLog('DIO格挡齐贝林合击');
+        }else if(Game.eDodge&&Math.random()<Game.dodgeChance){
+            addLog('DIO极限闪避合击！');
+            popText(dio.offsetLeft+60,dio.offsetTop+60,'MISS');
+            resetCharAni();endTurn();return;
+        }else{
+            dio.classList.add('hit-flash');screenShake();
+            Game.eHp=Math.max(0,Game.eHp-dmg);
+            popText(dio.offsetLeft+60,dio.offsetTop+60,'齐贝林-'+dmg,res.crit,true);
+            addLog(`齐贝林波纹合击${res.crit?'暴击！':''}，伤害${dmg}`);
+            addRage(false,15);
+        }
+        refreshBar();checkEnd();resetCharAni();
+        if(!Game.gameEnd)setTimeout(enemyTurn,700);
+    },200);
+}
+//玩家格挡
+function playerBlock(){
+    if(Game.isBusy||Game.gameEnd)return;
+    Game.pBlock=true;addLog('乔纳森举起手臂格挡');
+    setTimeout(()=>{Game.pBlock=false},1200);
+    endTurn();
+}
+//玩家闪避
+function playerDodge(){
+    if(Game.isBusy||Game.cooldown.dodge>0||Game.gameEnd)return;
+    Game.isBusy=true;setBtnLock(true);Game.cooldown.dodge=3;tickCD();
+    jojo.style.opacity='0.4';
+    Game.pDodge=true;
+    setTimeout(()=>{
+        jojo.style.opacity='1';Game.pDodge=false;
+        addLog('闪避姿态解除');
+        resetCharAni();endTurn();
+    },600);
+}
+//清除角色动画
+function resetCharAni(){
+    jojo.classList.remove('atk-ani','skill-glow','hit-flash');
+    dio.classList.remove('dio-atk-ani','skill-glow','hit-flash');
+}
+//回合结束
+function endTurn(){
+    Game.isBusy=false;setBtnLock(false);
+}
+//DIO AI逻辑
+function enemyTurn(){
+    if(Game.gameEnd)return;
+    Game.isBusy=true;setBtnLock(true);tickCD();
+    //AI决策
+    const rand=Math.random();
+    let useEye=(Game.eRage>=40&&rand<0.35);
+    let doBlock=(Game.pRage>30&&rand<0.25);
+    let doDodge=(rand<0.18);
+
+    Game.eBlock=doBlock;Game.eDodge=doDodge;
+    if(doBlock)addLog('DIO预判攻势开启格挡');
+    if(doDodge)addLog('DIO保持闪避姿态');
+
+    setTimeout(()=>{
+        if(useEye){
+            dio.classList.add('dio-atk-ani','skill-glow');
+            let res=calcDmg(Game.dmgEye);
+            let dmg=res.val;
+            if(Game.pBlock){
+                dmg=Math.floor(dmg*(1-Game.blockReduce));
+                addLog('乔纳森格挡空裂眼刺惊');
+            }else if(Game.pDodge&&Math.random()<Game.dodgeChance){
+                addLog('乔纳森躲开眼刺惊！');
+                popText(jojo.offsetLeft+60,jojo.offsetTop+60,'MISS');
+                resetCharAni();endTurn();return;
+            }else{
+                jojo.classList.add('hit-flash');screenShake();
+                Game.pHp=Math.max(0,Game.pHp-dmg);
+                popText(jojo.offsetLeft+60,jojo.offsetTop+60,'眼刺惊-'+dmg,res.crit,true);
+                addLog(`DIO释放空裂眼刺惊${res.crit?'暴击！':''}，伤害${dmg}`);
+                Game.eRage-=40;
+            }
+        }else{
+            dio.classList.add('dio-atk-ani');
+            let res=calcDmg(Game.dmgDioAtk);
+            let dmg=res.val;
+            if(Game.pBlock){
+                dmg=Math.floor(dmg*(1-Game.blockReduce));
+                addLog('乔纳森格挡DIO爪击');
+            }else if(Game.pDodge&&Math.random()<Game.dodgeChance){
+                addLog('乔纳森闪避爪击');
+                popText(jojo.offsetLeft+60,jojo.offsetTop+60,'MISS');
+                resetCharAni();endTurn();return;
+            }else{
+                jojo.classList.add('hit-flash');screenShake();
+                Game.pHp=Math.max(0,Game.pHp-dmg);
+                popText(jojo.offsetLeft+60,jojo.offsetTop+60,'-'+dmg,res.crit);
+                addLog(`DIO爪击${res.crit?'暴击':''}，造成${dmg}伤害`);
+                addRage(false,10);addRage(true,8);
+            }
+        }
+        refreshBar();checkEnd();resetCharAni();
+        endTurn();
+    },300);
+}
+//判定胜负
+function checkEnd(){
+    if(Game.eHp<=0){
+        Game.gameEnd=true;
+        overText.textContent='乔纳森胜利！人类的赞歌是勇气的赞歌';
+        overText.style.color='#4cf';
+        overMask.style.display='flex';
+        setBtnLock(true);
+        addLog('===战斗结束：乔纳森获胜===');
+    }else if(Game.pHp<=0){
+        Game.gameEnd=true;
+        overText.textContent='DIO胜利！你激怒了我！';
+        overText.style.color='#f36';
+        overMask.style.display='flex';
+        setBtnLock(true);
+        addLog('===战斗结束：DIO获胜===');
+    }
+}
+//重置游戏
+function restartGame(){
+    Game.pHp=100;Game.eHp=100;
+    Game.pRage=0;Game.eRage=0;
+    Game.pBlock=false;Game.eBlock=false;
+    Game.pDodge=false;Game.eDodge=false;
+    Game.cooldown={skill1:0,skill2:0,dodge:0};
+    Game.isBusy=false;Game.gameEnd=false;
+    logList.innerHTML='';
+    refreshBar();
+    resetCharAni();
+    overMask.style.display='none';
+    setBtnLock(false);
+    addLog('战斗开始！乔纳森 VS DIO');
+}
+//绑定事件
+atkBtn.onclick=playerAtk;
+skill1Btn.onclick=playerWave;
+skill2Btn.onclick=playerZebelin;
+blockBtn.onclick=playerBlock;
+dodgeBtn.onclick=playerDodge;
+restartBtn.onclick=restartGame;
+//键盘
+document.addEventListener('keydown',e=>{
+    switch(e.key.toLowerCase()){
+        case 'a':playerAtk();break;
+        case 's':playerWave();break;
+        case 'd':playerZebelin();break;
+        case 'w':playerBlock();break;
+        case 'q':playerDodge();break;
+    }
+});
+//开局
+restartGame();
+</script>
+</body>
+</html>

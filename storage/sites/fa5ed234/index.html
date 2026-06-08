@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>植物大战僵尸 - 网页版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #222;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        /* 游戏主容器 */
+        .game-container {
+            width: 900px;
+            height: 600px;
+            background: url("https://img0.baidu.com/it/u=889247828,214961200&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=600") no-repeat center;
+            background-size: cover;
+            position: relative;
+            border: 4px solid #666;
+            overflow: hidden;
+        }
+
+        /* 阳光面板 */
+        .sun-score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 80px;
+            height: 80px;
+            background: #ffd700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+            border: 3px solid #fff;
+            z-index: 100;
+        }
+
+        /* 植物卡槽 */
+        .card-bar {
+            position: absolute;
+            top: 10px;
+            left: 100px;
+            display: flex;
+            gap: 10px;
+            z-index: 99;
+        }
+
+        .plant-card {
+            width: 60px;
+            height: 80px;
+            background: #ddd;
+            border: 2px solid #000;
+            cursor: pointer;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .plant-card img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .plant-card p {
+            font-size: 12px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        /* 草坪格子 */
+        .grid {
+            position: absolute;
+            width: 100px;
+            height: 120px;
+        }
+
+        /* 植物样式 */
+        .plant {
+            width: 70px;
+            height: 70px;
+            position: absolute;
+            z-index: 10;
+        }
+
+        /* 僵尸样式 */
+        .zombie {
+            width: 80px;
+            height: 120px;
+            position: absolute;
+            z-index: 20;
+        }
+
+        /* 子弹样式 */
+        .bullet {
+            width: 20px;
+            height: 20px;
+            background: #52fa7b;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 5;
+        }
+
+        /* 阳光道具 */
+        .sun {
+            width: 40px;
+            height: 40px;
+            background: #ffd700;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 50;
+            cursor: pointer;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="game">
+        <!-- 阳光数量 -->
+        <div class="sun-score" id="sunScore">100</div>
+
+        <!-- 植物卡槽 -->
+        <div class="card-bar">
+            <div class="plant-card" id="sunflowerCard">
+                <img src="https://img1.baidu.com/it/u=1067808042,2160515201&fm=253&fmt=auto&app=120&f=JPEG?w=200&h=200" alt="向日葵">
+                <p>阳光<br>50</p>
+            </div>
+            <div class="plant-card" id="peashooterCard">
+                <img src="https://img2.baidu.com/it/u=321271034,2134512702&fm=253&fmt=auto&app=120&f=JPEG?w=200&h=200" alt="豌豆射手">
+                <p>豌豆<br>100</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心数据
+        const game = document.getElementById('game');
+        const sunScore = document.getElementById('sunScore');
+        let sun = 100;
+        let selectedPlant = null;
+
+        // 草坪5行9列坐标
+        const rows = [80, 200, 320, 440, 560];
+        const cols = [150, 250, 350, 450, 550, 650, 750, 850];
+
+        // 1. 选择植物
+        document.getElementById('sunflowerCard').onclick = () => {
+            selectedPlant = { type: 'sunflower', cost: 50 };
+        };
+        document.getElementById('peashooterCard').onclick = () => {
+            selectedPlant = { type: 'peashooter', cost: 100 };
+        };
+
+        // 2. 点击草坪种植植物
+        game.onclick = (e) => {
+            if (!selectedPlant) return;
+            const x = e.clientX - game.getBoundingClientRect().left;
+            const y = e.clientY - game.getBoundingClientRect().top;
+
+            // 找到最近格子
+            const col = cols.find(c => c > x - 50 && c < x + 50);
+            const row = rows.find(r => r > y - 60 && r < y + 60);
+            if (!col || !row) return;
+
+            // 阳光足够才可以种植
+            if (sun < selectedPlant.cost) return;
+            sun -= selectedPlant.cost;
+            sunScore.textContent = sun;
+
+            // 创建植物
+            const plant = document.createElement('img');
+            plant.className = 'plant';
+            plant.style.left = col - 35 + 'px';
+            plant.style.top = row - 35 + 'px';
+
+            if (selectedPlant.type === 'sunflower') {
+                plant.src = 'https://img1.baidu.com/it/u=1067808042,2160515201&fm=253&fmt=auto&app=120&f=JPEG?w=200&h=200';
+                // 向日葵产阳光
+                setInterval(() => createSun(col, row), 5000);
+            } else {
+                plant.src = 'https://img2.baidu.com/it/u=321271034,2134512702&fm=253&fmt=auto&app=120&f=JPEG?w=200&h=200';
+                // 豌豆射手发射子弹
+                setInterval(() => shootBullet(col, row), 1000);
+            }
+
+            game.appendChild(plant);
+            selectedPlant = null;
+        };
+
+        // 3. 创建阳光
+        function createSun(x, y) {
+            const sunItem = document.createElement('div');
+            sunItem.className = 'sun';
+            sunItem.style.left = x + 'px';
+            sunItem.style.top = y + 'px';
+            sunItem.textContent = '+25';
+            game.appendChild(sunItem);
+
+            // 点击收集阳光
+            sunItem.onclick = () => {
+                sun += 25;
+                sunScore.textContent = sun;
+                sunItem.remove();
+            };
+
+            // 自动消失
+            setTimeout(() => sunItem.remove(), 8000);
+        }
+
+        // 4. 豌豆射手发射子弹
+        function shootBullet(x, y) {
+            const bullet = document.createElement('div');
+            bullet.className = 'bullet';
+            bullet.style.left = x + 'px';
+            bullet.style.top = y + 'px';
+            game.appendChild(bullet);
+
+            // 子弹飞行
+            const fly = setInterval(() => {
+                bullet.style.left = bullet.offsetLeft + 10 + 'px';
+                if (bullet.offsetLeft > 900) {
+                    clearInterval(fly);
+                    bullet.remove();
+                }
+
+                // 子弹击中僵尸
+                document.querySelectorAll('.zombie').forEach(z => {
+                    if (hitTest(bullet, z)) {
+                        z.remove();
+                        bullet.remove();
+                        clearInterval(fly);
+                    }
+                });
+            }, 30);
+        }
+
+        // 5. 生成僵尸
+        setInterval(() => {
+            const row = rows[Math.floor(Math.random() * rows.length)];
+            const zombie = document.createElement('img');
+            zombie.className = 'zombie';
+            zombie.src = 'https://img2.baidu.com/it/u=2581734615,1114147723&fm=253&fmt=auto&app=138&f=JPEG?w=300&h=400';
+            zombie.style.left = '820px';
+            zombie.style.top = row + 'px';
+            game.appendChild(zombie);
+
+            // 僵尸前进
+            const walk = setInterval(() => {
+                zombie.style.left = zombie.offsetLeft - 2 + 'px';
+                if (zombie.offsetLeft < 100) {
+                    alert('游戏结束！僵尸突破防线！');
+                    clearInterval(walk);
+                    location.reload();
+                }
+            }, 50);
+        }, 5000);
+
+        // 碰撞检测
+        function hitTest(a, b) {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+            return !(ar.right < br.left || ar.left > br.right || ar.bottom < br.top || ar.top > br.bottom);
+        }
+    </script>
+</body>
+</html>

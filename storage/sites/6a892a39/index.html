@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蛋仔派对 - 欢乐闯关</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #87CEEB, #98FB98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 游戏标题 */
+        .game-title {
+            font-size: 32px;
+            color: #ff6b9d;
+            text-shadow: 2px 2px 0 #fff;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        /* 游戏画布 */
+        #gameCanvas {
+            border: 4px solid #ff9bbb;
+            border-radius: 10px;
+            background: #f0f8ff;
+            box-shadow: 0 0 20px rgba(255, 107, 157, 0.4);
+        }
+
+        /* 操作提示 */
+        .tips {
+            margin-top: 10px;
+            color: #333;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .score {
+            font-size: 24px;
+            color: #ff4500;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-title">蛋仔派对欢乐闯关</div>
+    <div class="score">当前分数：<span id="score">0</span></div>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <div class="tips">
+        方向键 ← → 移动 | 空格键 跳跃 | 收集金币得分 | 躲避障碍物
+    </div>
+
+    <script>
+        // 获取画布和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+
+        // ===================== 游戏核心参数 =====================
+        let score = 0;
+        const gameSpeed = 5;
+
+        // 蛋仔角色属性
+        const egg = {
+            x: 100,
+            y: 380,
+            width: 60,
+            height: 60,
+            speed: 8,
+            jumpPower: 15,
+            gravity: 0.6,
+            velY: 0,
+            isJumping: false
+        };
+
+        // 键盘控制
+        const keys = {
+            right: false,
+            left: false,
+            space: false
+        };
+
+        // 金币和障碍物数组
+        let coins = [];
+        let obstacles = [];
+
+        // ===================== 工具函数 =====================
+        // 随机数
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        // 碰撞检测
+        function isCollide(a, b) {
+            return (
+                a.x < b.x + b.width &&
+                a.x + a.width > b.x &&
+                a.y < b.y + b.height &&
+                a.y + a.height > b.y
+            );
+        }
+
+        // ===================== 绘制元素 =====================
+        // 绘制蛋仔
+        function drawEgg() {
+            ctx.fillStyle = '#ffb6c1';
+            ctx.beginPath();
+            ctx.ellipse(egg.x + egg.width/2, egg.y + egg.height/2, egg.width/2, egg.height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ff69b4';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 眼睛
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(egg.x + 20, egg.y + 20, 8, 0, Math.PI*2);
+            ctx.arc(egg.x + 40, egg.y + 20, 8, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(egg.x + 20, egg.y + 20, 4, 0, Math.PI*2);
+            ctx.arc(egg.x + 40, egg.y + 20, 4, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // 绘制地面
+        function drawGround() {
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 440, canvas.width, 60);
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 430, canvas.width, 10);
+        }
+
+        // 绘制金币
+        function drawCoins() {
+            for (let i = 0; i < coins.length; i++) {
+                const coin = coins[i];
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 金币移动
+                coin.x -= gameSpeed;
+
+                // 出界移除
+                if (coin.x + coin.width < 0) {
+                    coins.splice(i, 1);
+                    i--;
+                }
+
+                // 碰撞加分
+                if (isCollide(egg, coin)) {
+                    score += 10;
+                    scoreElement.textContent = score;
+                    coins.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        // 绘制障碍物
+        function drawObstacles() {
+            for (let i = 0; i < obstacles.length; i++) {
+                const obs = obstacles[i];
+                ctx.fillStyle = '#FF4500';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.strokeStyle = '#B22222';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                obs.x -= gameSpeed;
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    i--;
+                }
+
+                // 碰到障碍物游戏重置
+                if (isCollide(egg, obs)) {
+                    resetGame();
+                }
+            }
+        }
+
+        // ===================== 游戏逻辑 =====================
+        // 生成金币
+        function spawnCoin() {
+            coins.push({
+                x: canvas.width,
+                y: random(300, 380),
+                width: 30,
+                height: 30
+            });
+        }
+
+        // 生成障碍物
+        function spawnObstacle() {
+            obstacles.push({
+                x: canvas.width,
+                y: 390,
+                width: 40,
+                height: 50
+            });
+        }
+
+        // 蛋仔移动
+        function updateEgg() {
+            // 左右移动
+            if (keys.right && egg.x + egg.width < canvas.width) {
+                egg.x += egg.speed;
+            }
+            if (keys.left && egg.x > 0) {
+                egg.x -= egg.speed;
+            }
+
+            // 跳跃与重力
+            if (keys.space && !egg.isJumping) {
+                egg.velY = -egg.jumpPower;
+                egg.isJumping = true;
+            }
+
+            egg.velY += egg.gravity;
+            egg.y += egg.velY;
+
+            // 落地检测
+            if (egg.y + egg.height >= 440) {
+                egg.y = 440 - egg.height;
+                egg.velY = 0;
+                egg.isJumping = false;
+            }
+        }
+
+        // 游戏重置
+        function resetGame() {
+            score = 0;
+            scoreElement.textContent = score;
+            egg.x = 100;
+            egg.y = 380;
+            coins = [];
+            obstacles = [];
+        }
+
+        // ===================== 游戏主循环 =====================
+        function gameLoop() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制元素
+            drawGround();
+            drawEgg();
+            drawCoins();
+            drawObstacles();
+
+            // 更新角色
+            updateEgg();
+
+            // 随机生成道具
+            if (Math.random() < 0.015) spawnCoin();
+            if (Math.random() < 0.01) spawnObstacle();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ===================== 键盘控制 =====================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === ' ') keys.space = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === ' ') keys.space = false;
+        });
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>

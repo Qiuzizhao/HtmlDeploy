@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易网页音游</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background: #121212;
+            overflow: hidden;
+        }
+        /* 开始/结束弹窗 */
+        .mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+           -direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .mask h1 {
+            font-size: 50px;
+            color: #4fc3f7;
+            margin-bottom: 20px;
+        }
+        .mask p {
+            font-size: 20px;
+            margin: 8px 0;
+            color: #ccc;
+        }
+        .start-btn {
+            margin-top: 30px;
+            padding: 14px 40px;
+            font-size: 22px;
+            background: #2196f3;
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .start-btn:hover {
+            background: #1976d2;
+            transform: scale(1.05);
+        }
+        .hide {
+            display: none !important;
+        }
+        /* 游戏信息栏 */
+        .game-info {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 24px;
+            z-index: 100;
+            text-align: center;
+        }
+        .info-item {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        /* 游戏舞台 */
+        #gameBox {
+            width: 400px;
+            height: 100vh;
+            margin: 0 auto;
+            background: #1e1e2f;
+            position: relative;
+            overflow: hidden;
+        }
+        /* 判定线 */
+        .judge-line {
+            position: absolute;
+            bottom: 120px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #4fc3f7;
+            box-shadow: 0 0 10px #4fc3f7;
+        }
+        /* 轨道 */
+        .track {
+            width: 100px;
+            height: 100%;
+            float: left;
+            border-right: 1px solid #333;
+        }
+        /* 音符样式 */
+        .note {
+            position: absolute;
+            width: 80px;
+            height: 20px;
+            left: 10px;
+            border-radius: 4px;
+            background: #ff4081;
+            box-shadow: 0 0 8px #ff4081;
+        }
+        /* 按键提示 */
+        .key-hint {
+            position: absolute;
+            bottom: 40px;
+            width: 80px;
+            height: 60px;
+            left: 10px;
+            line-height: 60px;
+            text-align: center;
+            font-size: 26px;
+            color: #fff;
+            border: 2px solid #666;
+            border-radius: 6px;
+        }
+        .active {
+            background: #4fc3f7;
+            border-color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <!-- 开始界面 -->
+    <div class="mask" id="startMask">
+        <h1>网页下落音游</h1>
+        <p>操作按键：D F J K 四个键对应四条轨道</p>
+        <p>音符落到蓝色判定线时按下按键</p>
+        <p>精准击打获得高分，连续击打提升连击</p>
+        <button class="start-btn" onclick="startGame()">开始游戏</button>
+    </div>
+
+    <!-- 结束界面 -->
+    <div class="mask hide" id="endMask">
+        <h1>游戏结束</h1>
+        <p>总分：<span id="totalScore">0</span></p>
+        <p>最高连击：<span id="maxCombo">0</span></p>
+        <button class="start-btn" onclick="restartGame()">再来一局</button>
+    </div>
+
+    <!-- 游戏数据 -->
+    <div class="game-info">
+        <div class="info-item">分数：<span id="score">0</span></div>
+        <div class="info-item">连击：<span id="combo">0</span></div>
+    </div>
+
+    <!-- 游戏主体 -->
+    <div id="gameBox">
+        <!-- 四条轨道 -->
+        <div class="track"><div class="key-hint">D</div></div>
+        <div class="track"><div class="key-hint">F</div></div>
+        <div class="track"><div class="key-hint">J</div></div>
+        <div class="track"><div class="key-hint">K</div></div>
+        <!-- 判定线 -->
+        <div class="judge-line"></div>
+    </div>
+
+    <script>
+        // DOM 获取
+        const gameBox = document.getElementById('gameBox');
+        const startMask = document.getElementById('startMask');
+        const endMask = document.getElementById('endMask');
+        const scoreDom = document.getElementById('score');
+        const comboDom = document.getElementById('combo');
+        const totalScoreDom = document.getElementById('totalScore');
+        const maxComboDom = document.getElementById('maxCombo');
+        const keyHints = document.querySelectorAll('.key-hint');
+
+        // 游戏配置
+        const keyList = ['d','f','j','k'];
+        const noteSpeed = 4;      // 音符下落速度
+        const judgeRange = 30;    // 判定容错范围
+        let gameRunning = false;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let notes = [];
+        let noteTimer, gameLoopId;
+
+        // 重置游戏数据
+        function resetData() {
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            notes = [];
+            updateUI();
+            // 清空所有音符
+            document.querySelectorAll('.note').forEach(n=>n.remove());
+        }
+
+        // 更新界面分数/连击
+        function updateUI() {
+            scoreDom.innerText = score;
+            comboDom.innerText = combo;
+        }
+
+        // 生成随机音符
+        function createNote() {
+            if(!gameRunning) return;
+            const trackIdx = Math.floor(Math.random() * 4);
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.style.left = trackIdx * 100 + 10 + 'px';
+            note.style.top = '-30px';
+            gameBox.appendChild(note);
+            notes.push({
+                el: note,
+                track: trackIdx,
+                y: -30
+            });
+        }
+
+        // 按键按下
+        document.addEventListener('keydown', e=>{
+            if(!gameRunning) return;
+            const key = e.key.toLowerCase();
+            const idx = keyList.indexOf(key);
+            if(idx === -1) return;
+
+            // 按键高亮
+            keyHints[idx].classList.add('active');
+            setTimeout(()=>keyHints[idx].classList.remove('active'),100);
+
+            // 判定音符
+            const judgeY = gameBox.clientHeight - 120;
+            let hit = false;
+
+            for(let i = notes.length - 1; i >= 0; i--) {
+                const n = notes[i];
+                if(n.track !== idx) continue;
+                const diff = Math.abs(n.y - judgeY);
+
+                // 在判定范围内 = 击中
+                if(diff < judgeRange) {
+                    hit = true;
+                    combo ++;
+                    if(combo > maxCombo) maxCombo = combo;
+                    // 根据精准度加分
+                    if(diff < 10) score += 100;
+                    else score += 50;
+                    updateUI();
+
+                    // 移除音符
+                    n.el.remove();
+                    notes.splice(i,1);
+                    break;
+                }
+            }
+            // 没击中断连击
+            if(!hit) combo = 0;
+        });
+
+        // 游戏主循环：音符下落 + 漏判检测
+        function gameLoop() {
+            if(!gameRunning) return;
+            const boxH = gameBox.clientHeight;
+            const judgeY = boxH - 120;
+
+            for(let i = notes.length - 1; i >= 0; i--) {
+                const n = notes[i];
+                n.y += noteSpeed;
+                n.el.style.top = n.y + 'px';
+
+                // 音符超出判定线下方 = 漏掉
+                if(n.y > judgeY + judgeRange) {
+                    n.el.remove();
+                    notes.splice(i,1);
+                    combo = 0;
+                    updateUI();
+                }
+            }
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        // 开始游戏
+        function startGame() {
+            resetData();
+            startMask.classList.add('hide');
+            endMask.classList.add('hide');
+            gameRunning = true;
+            // 每隔 600ms 生成一个音符
+            noteTimer = setInterval(createNote, 600);
+            gameLoop();
+            // 30秒后自动结束游戏
+            setTimeout(gameOver, 30000);
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(noteTimer);
+            cancelAnimationFrame(gameLoopId);
+            totalScoreDom.innerText = score;
+            maxComboDom.innerText = maxCombo;
+            endMask.classList.remove('hide');
+        }
+
+        // 重新开始
+        function restartGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>

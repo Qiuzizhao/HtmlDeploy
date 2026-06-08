@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>迷你世界 - 网易小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #87CEEB;
+            font-family: "微软雅黑", sans-serif;
+        }
+        /* 游戏画布 */
+        #gameCanvas {
+            display: block;
+            cursor: none;
+        }
+        /* 游戏UI */
+        .ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            color: white;
+            text-shadow: 2px 2px 4px #000;
+        }
+        /* 准星 */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+        /* 物品栏 */
+        .hotbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .hotbar-item {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #666;
+            border-radius: 5px;
+            background: #333;
+        }
+        .hotbar-item.active {
+            border-color: white;
+            background: #555;
+        }
+        /* 提示文字 */
+        .tips {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="ui">
+        <div class="crosshair"></div>
+        <div class="hotbar" id="hotbar"></div>
+        <div class="tips">WASD移动 | 鼠标视角 | 左键破坏 | 右键放置 | 数字1-5切换方块</div>
+    </div>
+
+    <script>
+        // ========== 游戏基础配置 ==========
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // 方块大小 / 视野距离
+        const BLOCK_SIZE = 60;
+        const RENDER_DISTANCE = 12;
+
+        // 玩家属性
+        const player = {
+            x: 0, y: 0,
+            speed: 5,
+            selectedBlock: 1 // 默认选中草方块
+        };
+
+        // 方块类型（对应迷你世界经典方块）
+        const blocks = {
+            0: { name: "空气", color: "" },
+            1: { name: "草方块", color: "#3A5F38" },
+            2: { name: "石头", color: "#777777" },
+            3: { name: "木头", color: "#8B4513" },
+            4: { name: "泥土", color: "#6B4423" },
+            5: { name: "钻石块", color: "#00BFFF" }
+        };
+
+        // 世界数据（自动生成地形）
+        let world = {};
+        const keys = {};
+
+        // ========== 初始化地形 ==========
+        function generateWorld() {
+            // 生成地面
+            for(let x = -20; x < 20; x++) {
+                for(let z = -20; z < 20; z++) {
+                    const height = Math.floor(Math.random() * 2) - 1;
+                    setBlock(x, height, z, 1); // 草方块
+                    setBlock(x, height-1, z, 4); // 泥土
+                    setBlock(x, height-2, z, 2); // 石头
+                }
+            }
+            // 随机生成树木
+            for(let i = 0; i < 15; i++) {
+                const tx = Math.floor(Math.random() * 30) - 15;
+                const tz = Math.floor(Math.random() * 30) - 15;
+                const ty = 0;
+                // 树干
+                for(let y = 0; y < 4; y++) setBlock(tx, ty+y, tz, 3);
+                // 树叶
+                for(let x = -1; x <=1; x++) for(let z = -1; z <=1; z++)
+                    for(let y = 0; y < 3; y++) setBlock(tx+x, ty+3+y, tz+z, 1);
+            }
+        }
+
+        // ========== 方块操作 ==========
+        function getBlock(x,y,z) {
+            return world[`${x},${y},${z}`] || 0;
+        }
+        function setBlock(x,y,z,id) {
+            world[`${x},${y},${z}`] = id;
+        }
+
+        // ========== 输入控制 ==========
+        document.addEventListener("keydown", e => {
+            keys[e.key.toLowerCase()] = true;
+            // 数字键切换方块
+            if(e.key >= "1" && e.key <= "5") player.selectedBlock = parseInt(e.key);
+        });
+        document.addEventListener("keyup", e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // 鼠标控制
+        let mouseX = 0, mouseY = 0;
+        canvas.addEventListener("mousemove", e => {
+            mouseX = e.movementX;
+            mouseY = e.movementY;
+        });
+        // 左键破坏
+        canvas.addEventListener("mousedown", e => {
+            if(e.button === 0) {
+                const x = Math.round(player.x / BLOCK_SIZE);
+                const y = Math.round(player.y / BLOCK_SIZE);
+                setBlock(x, y, 0, 0);
+            }
+            // 右键放置
+            if(e.button === 2) {
+                const x = Math.round(player.x / BLOCK_SIZE);
+                const y = Math.round(player.y / BLOCK_SIZE);
+                if(getBlock(x,y,0) === 0) setBlock(x,y,0, player.selectedBlock);
+            }
+        });
+        // 禁止右键菜单
+        canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+        // ========== 玩家移动 ==========
+        function updatePlayer() {
+            if(keys["w"]) player.y -= player.speed;
+            if(keys["s"]) player.y += player.speed;
+            if(keys["a"]) player.x -= player.speed;
+            if(keys["d"]) player.x += player.speed;
+        }
+
+        // ========== 渲染世界 ==========
+        function renderWorld() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            
+            // 绘制3D透视效果
+            for(let z = RENDER_DISTANCE; z > 0; z--) {
+                for(let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
+                    for(let y = -RENDER_DISTANCE; y <= RENDER_DISTANCE; y++) {
+                        const block = getBlock(x,y,z);
+                        if(block === 0) continue;
+                        
+                        // 3D坐标转换
+                        const scale = 1 / z;
+                        const scrX = canvas.width/2 + (x * BLOCK_SIZE - player.x) * scale;
+                        const scrY = canvas.height/2 + (y * BLOCK_SIZE - player.y) * scale;
+                        const size = BLOCK_SIZE * scale;
+                        
+                        // 绘制方块
+                        ctx.fillStyle = blocks[block].color;
+                        ctx.fillRect(scrX - size/2, scrY - size/2, size, size);
+                        ctx.strokeStyle = "#000";
+                        ctx.strokeRect(scrX - size/2, scrY - size/2, size, size);
+                    }
+                }
+            }
+        }
+
+        // ========== 物品栏渲染 ==========
+        function renderHotbar() {
+            const hotbar = document.getElementById("hotbar");
+            hotbar.innerHTML = "";
+            for(let i=1; i<=5; i++) {
+                const item = document.createElement("div");
+                item.className = "hotbar-item" + (i === player.selectedBlock ? " active" : "");
+                item.style.background = blocks[i].color;
+                hotbar.appendChild(item);
+            }
+        }
+
+        // ========== 游戏主循环 ==========
+        function gameLoop() {
+            updatePlayer();
+            renderWorld();
+            renderHotbar();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 窗口适配
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // 启动游戏
+        generateWorld();
+        gameLoop();
+        renderHotbar();
+    </script>
+</body>
+</html>

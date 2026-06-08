@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>萌萌宠物养成</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #ffeff6, #fce1ee);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-box {
+            background: white;
+            width: 340px;
+            padding: 25px;
+            border-radius: 25px;
+            box-shadow: 0 8px 24px rgba(255, 154, 186, 0.3);
+            text-align: center;
+        }
+
+        .title {
+            font-size: 24px;
+            color: #ff6b9e;
+            margin-bottom: 15px;
+        }
+
+        /* 宠物状态条 */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0 20px;
+            gap: 5px;
+        }
+
+        .status {
+            flex: 1;
+            background: #f8e1f0;
+            padding: 6px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #d16a91;
+        }
+
+        /* 宠物主体 */
+        .pet-area {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+
+        .pet {
+            width: 100%;
+            height: 100%;
+            font-size: 100px;
+            transition: all 0.3s ease;
+        }
+
+        .pet.happy {
+            transform: scale(1.05);
+        }
+
+        .pet.sad {
+            opacity: 0.7;
+        }
+
+        /* 按钮区域 */
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-feed { background: #ff9bbb; }
+        .btn-play { background: #88c9ff; }
+        .btn-clean { background: #96e6b3; }
+        .btn-sleep { background: #c8a6f2; }
+
+        /* 提示文字 */
+        .tip {
+            margin-top: 15px;
+            color: #ff6b9e;
+            font-size: 14px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-box">
+        <h2 class="title">🐾 萌萌小宠物 🐾</h2>
+
+        <div class="status-bar">
+            <div class="status" id="hunger">饱食度: 100</div>
+            <div class="status" id="happy">开心值: 100</div>
+        </div>
+
+        <div class="pet-area">
+            <div class="pet" id="pet">🐶</div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-feed" onclick="feed()">喂饭</button>
+            <button class="btn-play" onclick="play()">玩耍</button>
+            <button class="btn-clean" onclick="clean()">洗澡</button>
+            <button class="btn-sleep" onclick="sleep()">睡觉</button>
+        </div>
+
+        <div class="tip" id="tip">快来照顾我吧～</div>
+    </div>
+
+    <script>
+        // 宠物状态
+        let pet = {
+            hunger: 100,    // 饱食度
+            happy: 100,     // 开心值
+        };
+
+        const petEl = document.getElementById('pet');
+        const tipEl = document.getElementById('tip');
+
+        // 自动掉状态（让游戏更真实）
+        setInterval(() => {
+            pet.hunger = Math.max(0, pet.hunger - 2);
+            pet.happy = Math.max(0, pet.happy - 1);
+            updateUI();
+            checkMood();
+        }, 2000);
+
+        // 喂饭
+        function feed() {
+            pet.hunger = Math.min(100, pet.hunger + 25);
+            tipEl.textContent = '真好吃～😋';
+            updateUI();
+            happyAnim();
+        }
+
+        // 玩耍
+        function play() {
+            pet.happy = Math.min(100, pet.happy + 25);
+            pet.hunger = Math.max(0, pet.hunger - 5);
+            tipEl.textContent = '好开心！🥳';
+            updateUI();
+            happyAnim();
+        }
+
+        // 洗澡
+        function clean() {
+            pet.happy = Math.min(100, pet.happy + 15);
+            tipEl.textContent = '变干净啦～🛁';
+            updateUI();
+            happyAnim();
+        }
+
+        // 睡觉
+        function sleep() {
+            pet.happy += 10;
+            tipEl.textContent = '睡得好香～💤';
+            updateUI();
+        }
+
+        // 更新界面数值
+        function updateUI() {
+            document.getElementById('hunger').innerText = `饱食度: ${pet.hunger}`;
+            document.getElementById('happy').innerText = `开心值: ${pet.happy}`;
+        }
+
+        // 宠物表情变化
+        function checkMood() {
+            if (pet.hunger < 30 || pet.happy < 30) {
+                petEl.textContent = '🥺';
+                petEl.className = 'pet sad';
+                tipEl.textContent = '我好难过…';
+            } else {
+                petEl.textContent = '🐶';
+                petEl.className = 'pet';
+            }
+        }
+
+        // 开心动画
+        function happyAnim() {
+            petEl.className = 'pet happy';
+            setTimeout(() => petEl.className = 'pet', 500);
+        }
+    </script>
+</body>
+</html>

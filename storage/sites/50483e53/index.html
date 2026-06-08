@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星光音游 - Star Rhythm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* 全局粒子背景 */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .game-header {
+            text-align: center;
+        }
+
+        .game-title {
+            font-size: 42px;
+            background: linear-gradient(90deg, #00d4ff, #ff2e63, #9d4edd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(157, 62, 221, 0.3);
+        }
+
+        .game-subtitle {
+            color: #aaa;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+
+        /* 顶部状态栏 */
+        .game-stats {
+            display: flex;
+            gap: 30px;
+            font-size: 18px;
+            font-weight: 600;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stat-item {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item span {
+            color: #00d4ff;
+        }
+
+        .combo {
+            color: #ffdf00 !important;
+        }
+
+        /* 难度选择区域 */
+        .diff-select {
+            display: flex;
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        .diff-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,212,255,0.4);
+            background: rgba(0,212,255,0.1);
+            color: #00d4ff;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .diff-btn.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        /* 音游主面板 */
+        .game-board {
+            width: 460px;
+            height: 580px;
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 20px;
+            border: 2px solid rgba(157, 78, 221, 0.3);
+            box-shadow: 0 0 50px rgba(157, 78, 221, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 轨道 */
+        .tracks {
+            display: flex;
+            height: 100%;
+            position: relative;
+        }
+
+        .track {
+            flex: 1;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* 判定线 */
+        .hit-line {
+            position: absolute;
+            bottom: 100px;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #ff2e63, #9d4edd);
+            box-shadow: 0 0 15px #ff2e63;
+            z-index: 10;
+        }
+
+        /* 按键区 */
+        .key-area {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            display: flex;
+            padding: 10px;
+            gap: 8px;
+        }
+
+        .key-btn {
+            flex: 1;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(15,52,96,0.6), rgba(15,52,96,0.3));
+            border: 2px solid rgba(0,212,255,0.3);
+            color: #00d4ff;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.15s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .key-btn.active {
+            background: linear-gradient(180deg, #00d4ff, #00aaff);
+            color: #0f3460;
+            transform: translateY(-4px);
+            box-shadow: 0 0 20px #00d4ff;
+        }
+
+        /* 音符 */
+        .note {
+            position: absolute;
+            width: 21%;
+            height: 24px;
+            border-radius: 8px;
+            top: -30px;
+            background: linear-gradient(90deg, #ff2e63, #9d4edd);
+            box-shadow: 0 0 12px rgba(255,46,99,0.6);
+            animation: fall linear forwards;
+            z-index: 5;
+        }
+
+        @keyframes fall {
+            to { top: 480px; }
+        }
+
+        /* 判定文字 */
+        .judge {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            opacity: 0;
+            z-index: 99;
+            text-shadow: 0 0 15px currentColor;
+            pointer-events: none;
+        }
+
+        .judge.perfect { color: #ffdf00; animation: show 0.6s forwards; }
+        .judge.great { color: #00d4ff; animation: show 0.6s forwards; }
+        .judge.good { color: #4ade80; animation: show 0.6s forwards; }
+        .judge.miss { color: #ff4444; animation: show 0.6s forwards; }
+
+        @keyframes show {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* 粒子特效 */
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFly 0.8s ease-out forwards;
+        }
+
+        @keyframes particleFly {
+            0% { opacity: 1; transform: translate(0,0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+
+        /* 结束弹窗 */
+        .game-end {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(22,33,62,0.95);
+            padding: 40px 60px;
+            border-radius: 20px;
+            border: 2px solid #9d4edd;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(157,78,221,0.4);
+            display: none;
+            z-index: 999;
+            backdrop-filter: blur(20px);
+        }
+
+        .game-end h2 {
+            font-size: 36px;
+            color: #ff2e63;
+            margin-bottom: 20px;
+        }
+
+        .end-score {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #00d4ff;
+        }
+
+        .restart {
+            margin-top: 25px;
+            padding: 12px 30px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(90deg, #9d4edd, #ff2e63);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 5px 15px rgba(157,78,221,0.4);
+        }
+
+        .restart:hover {
+            transform: scale(1.05);
+        }
+
+        /* 暂停提示 */
+        .pause-tip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            font-size: 32px;
+            color: #fff;
+            text-shadow: 0 0 20px #00d4ff;
+            display: none;
+            z-index: 100;
+        }
+
+        .tip-text {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="particles"></div>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">⭐ 星光音游 ⭐</h1>
+            <p class="game-subtitle">D F J K 按键 | 空格键 暂停/继续</p>
+        </div>
+
+        <!-- 难度选择 -->
+        <div class="diff-select">
+            <div class="diff-btn active" data-speed="2.2">简单</div>
+            <div class="diff-btn" data-speed="1.8">普通</div>
+            <div class="diff-btn" data-speed="1.3">困难</div>
+        </div>
+
+        <div class="game-stats">
+            <div class="stat-item">分数: <span id="score">0</span></div>
+            <div class="stat-item">生命: <span id="hp">100</span></div>
+            <div class="stat-item">连击: <span id="combo" class="combo">0</span></div>
+        </div>
+
+        <div class="game-board">
+            <div class="tracks">
+                <div class="track"></div><div class="track"></div>
+                <div class="track"></div><div class="track"></div>
+            </div>
+            <div class="hit-line"></div>
+            <div class="judge" id="judge"></div>
+            <div class="pause-tip" id="pauseTip">
+                游戏暂停
+                <div class="tip-text">按下空格键继续</div>
+            </div>
+            <div class="key-area">
+                <div class="key-btn" data-lane="0">D</div>
+                <div class="key-btn" data-lane="1">F</div>
+                <div class="key-btn" data-lane="2">J</div>
+                <div class="key-btn" data-lane="3">K</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-end" id="endPanel">
+        <h2>游戏结束</h2>
+        <p class="end-score">最终得分: <span id="final">0</span></p>
+        <p class="end-score">最高连击: <span id="maxCombo">0</span></p>
+        <button class="restart" onclick="restart()">再来一局</button>
+    </div>
+
+    <!-- 背景音乐 -->
+    <audio id="bgm" loop preload="auto">
+        <!-- 内置免费在线BGM，无需本地文件 -->
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    
+
+    <script>
+        const scoreText = document.getElementById('score');
+        const hpText = document.getElementById('hp');
+        const comboText = document.getElementById('combo');
+        const judgeText = document.getElementById('judge');
+        const endPanel = document.getElementById('endPanel');
+        const pauseTip = document.getElementById('pauseTip');
+        const board = document.querySelector('.game-board');
+        const keys = document.querySelectorAll('.key-btn');
+        const diffBtns = document.querySelectorAll('.diff-btn');
+        const bgm = document.getElementById('bgm');
+
+        // 游戏参数
+        let score = 0;
+        let hp = 100;
+        let combo = 0;
+        let maxCombo = 0;
+        let gameRunning = true;
+        let gamePause = false;
+        let noteSpeed = 2.2;
+        const hitPos = 420;
+        const keyBind = { d:0, f:1, j:2, k:3, D:0, F:1, J:2, K:3 };
+
+        let spawnTimer = null;
+
+        // 难度切换
+        diffBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if(gameRunning) return; // 游戏中不可切换难度
+                diffBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                noteSpeed = parseFloat(btn.dataset.speed);
+            });
+        });
+
+        // 生成音符
+        function spawnNote() {
+            if (!gameRunning || gamePause) return;
+            const note = document.createElement('div');
+            note.classList.add('note');
+            const lane = Math.floor(Math.random() * 4);
+            note.style.left = `${lane * 25 + 2}%`;
+            note.style.animationDuration = `${noteSpeed}s`;
+            board.appendChild(note);
+
+            // 漏击判定
+            setTimeout(() => {
+                if (note.parentElement && gameRunning) {
+                    note.remove();
+                    showJudge('MISS');
+                    combo = 0;
+                    comboText.innerText = combo;
+                    hp -= 12;
+                    updateHp();
+                }
+            }, noteSpeed * 1000);
+        }
+
+        // 创建粒子爆炸特效
+        function createParticles(x, y, color) {
+            for(let i = 0; i < 12; i++){
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                p.style.background = color;
+                const tx = (Math.random() - 0.5) * 80;
+                const ty = (Math.random() - 0.5) * 80;
+                p.style.setProperty('--tx', tx + 'px');
+                p.style.setProperty('--ty', ty + 'px');
+                board.appendChild(p);
+                setTimeout(() => p.remove(), 800);
+            }
+        }
+
+        // 按键监听
+        document.addEventListener('keydown', e => {
+            // 空格 暂停/继续
+            if(e.code === 'Space'){
+                if(!gameRunning) return;
+                gamePause = !gamePause;
+                pauseTip.style.display = gamePause ? 'block' : 'none';
+                if(gamePause){
+                    bgm.pause();
+                }else{
+                    bgm.play();
+                }
+                return;
+            }
+
+            if (!gameRunning || gamePause) return;
+            const lane = keyBind[e.key];
+            if (lane === undefined) return;
+
+            keys[lane].classList.add('active');
+            setTimeout(()=>keys[lane].classList.remove('active'),80);
+            hitCheck(lane);
+        });
+
+        // 击中判定
+        function hitCheck(lane) {
+            const notes = document.querySelectorAll('.note');
+            let isHit = false;
+            let particleColor = "#ffffff";
+
+            notes.forEach(n => {
+                const y = n.offsetTop;
+                const diff = Math.abs(y - hitPos);
+                const noteLeft = n.offsetLeft + n.offsetWidth / 2;
+
+                if (diff < 45) {
+                    n.remove();
+                    isHit = true;
+                    combo++;
+                    if(combo > maxCombo) maxCombo = combo;
+                    comboText.innerText = combo;
+
+                    if (diff < 20) {
+                        showJudge('PERFECT');
+                        score += 20;
+                        particleColor = "#ffdf00";
+                    } else if (diff < 35) {
+                        showJudge('GREAT');
+                        score += 12;
+                        particleColor = "#00d4ff";
+                    } else {
+                        showJudge('GOOD');
+                        score += 6;
+                        particleColor = "#4ade80";
+                    }
+                    updateScore();
+                    createParticles(noteLeft, hitPos, particleColor);
+                }
+            });
+
+            if (!isHit) {
+                showJudge('MISS');
+                combo = 0;
+                comboText.innerText = combo;
+                hp -= 8;
+                updateHp();
+            }
+        }
+
+        // 显示判定文字
+        function showJudge(text) {
+            judgeText.className = 'judge ' + text.toLowerCase();
+            judgeText.innerText = text;
+        }
+
+        function updateScore() {
+            scoreText.innerText = score;
+        }
+
+        function updateHp() {
+            hp = Math.max(0, hp);
+            hpText.innerText = hp;
+            if (hp <= 0) gameOver();
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(spawnTimer);
+            bgm.pause();
+            document.getElementById('final').innerText = score;
+            document.getElementById('maxCombo').innerText = maxCombo;
+            endPanel.style.display = 'block';
+        }
+
+        // 重新开始游戏
+        function restart() {
+            score = 0;
+            hp = 100;
+            combo = 0;
+            maxCombo = 0;
+            gameRunning = true;
+            gamePause = false;
+            pauseTip.style.display = 'none';
+
+            updateScore();
+            updateHp();
+            comboText.innerText = combo;
+            endPanel.style.display = 'none';
+
+            // 清空残留音符和粒子
+            document.querySelectorAll('.note, .particle').forEach(el => el.remove());
+
+            // 重启音符生成
+            clearInterval(spawnTimer);
+            spawnTimer = setInterval(spawnNote, 720);
+            bgm.currentTime = 0;
+            bgm.play();
+        }
+
+        // 初始化启动
+        spawnTimer = setInterval(spawnNote, 720);
+        bgm.volume = 0.3;
+    </script>
+</body>
+</html>
