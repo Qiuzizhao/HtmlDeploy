@@ -207,6 +207,21 @@ test('public index can search projects and filter starred projects', async () =>
   assert.match(html, /starredFilterButton\.setAttribute\('aria-pressed'/);
 });
 
+test('public index debounces search and renders cards in batches', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /const SITE_RENDER_BATCH_SIZE = 12/);
+  assert.match(html, /let siteSearchDebounceTimer = null/);
+  assert.match(html, /let siteRenderToken = 0/);
+  assert.match(html, /function debounceProjectSearchRender/);
+  assert.match(html, /window\.setTimeout\(\(\) => \{/);
+  assert.match(html, /window\.clearTimeout\(siteSearchDebounceTimer\)/);
+  assert.match(html, /function appendSiteCardBatch/);
+  assert.match(html, /requestAnimationFrame\(\(\) => appendSiteCardBatch/);
+  assert.match(html, /const renderToken = \+\+siteRenderToken/);
+  assert.match(html, /projectSearchInput\.addEventListener\('input', debounceProjectSearchRender\)/);
+});
+
 test('public index only shows the new-page button in the preview header', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -329,6 +344,22 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /className = 'storage-cell'/);
   assert.match(html, /storageCell\.textContent = formatBytes\(site\.storageBytes \|\| 0\)/);
   assert.match(html, /搜索项目名称、ID 或序号/);
+  assert.match(html, /id="adminPageSize"/);
+  assert.match(html, /id="prevSitesPage"/);
+  assert.match(html, /id="nextSitesPage"/);
+  assert.match(html, /id="sitesPageInfo"/);
+  assert.match(html, /let adminSitesPage = 1/);
+  assert.match(html, /let adminSitesPageSize = 50/);
+  assert.match(html, /let adminSitesTotal = 0/);
+  assert.match(html, /fetch\(`\/api\/admin\/sites\?\$\{params\.toString\(\)\}`\)/);
+  assert.match(html, /params\.set\('pageSize', String\(adminSitesPageSize\)\)/);
+  assert.match(html, /sites = result\.items \|\| \[\]/);
+  assert.match(html, /adminSitesTotal = result\.total \|\| sites\.length/);
+  assert.match(html, /function replaceSiteInState/);
+  assert.match(html, /function refreshVisibleRows/);
+  assert.match(html, /function loadCurrentViewData/);
+  assert.match(html, /const loadedAdminViews = new Set\(\)/);
+  assert.match(html, /if \(!loadedAdminViews\.has\(viewName\)\)/);
   assert.match(html, /id="classForm"/);
   assert.match(html, /id="classPasswordInput"/);
   assert.match(html, /id="generateClassPassword"/);
@@ -557,6 +588,34 @@ test('GET /api/sites assigns five-digit numbers to existing projects by creation
   );
 });
 
+test('GET /api/admin/sites supports pagination with cached storage summaries', async () => {
+  const { app, dataDir, storageDir } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await fsp.writeFile(
+    path.join(dataDir, 'sites.json'),
+    JSON.stringify([
+      { id: 'site-3', title: '第三个', author: '作者', classId: 'class-a', storageBytes: 30, createdAt: '2026-01-03T00:00:00.000Z' },
+      { id: 'site-2', title: '第二个', author: '作者', classId: 'class-a', storageBytes: 20, createdAt: '2026-01-02T00:00:00.000Z' },
+      { id: 'site-1', title: '第一个', author: '作者', classId: 'class-b', storageBytes: 10, createdAt: '2026-01-01T00:00:00.000Z' }
+    ], null, 2)
+  );
+  await fsp.mkdir(path.join(storageDir, 'site-3'), { recursive: true });
+  await fsp.writeFile(path.join(storageDir, 'site-3', 'index.html'), 'this-file-size-should-not-be-used');
+
+  const response = await agent.get('/api/admin/sites?page=2&pageSize=2').expect(200);
+
+  assert.equal(response.body.page, 2);
+  assert.equal(response.body.pageSize, 2);
+  assert.equal(response.body.total, 3);
+  assert.equal(response.body.summary.totalProjects, 3);
+  assert.equal(response.body.summary.totalStorageBytes, 60);
+  assert.deepEqual(response.body.items.map((site) => [site.id, site.storageBytes]), [
+    ['site-1', 10]
+  ]);
+});
+
 test('admin AI settings require admin access and mask saved API keys', async () => {
   const secretKey = 'sk-test-secret-1234567890';
   const { app, dataDir } = await makeTestApp();
@@ -625,7 +684,37 @@ test('admin AI settings can keep and clear the private API key', async () => {
   assert.equal(cleared.body.apiKeyPreview, '');
 });
 
-test('GET /api/admin/sites includes storage usage for each project', async () => {
+test('POST /api/sites saves cached storage usage for each project', async () => {
+  const { app } = await makeTestApp({
+    idGenerator: (() => {
+      const ids = ['class-a', 'with-files'];
+      return () => ids.shift() || 'fallback';
+    })()
+  });
+  const admin = request.agent(app);
+  const visitor = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await admin.post('/api/classes').send({ name: '一班', password: '123456' }).expect(201);
+  await visitor.post('/api/classes/class-a/unlock').send({ password: '123456' }).expect(200);
+
+  const upload = await visitor
+    .post('/api/sites')
+    .field('title', '有文件')
+    .field('author', '作者')
+    .field('classId', 'class-a')
+    .attach('file', Buffer.from('12345'), 'index.html')
+    .expect(201);
+
+  assert.equal(upload.body.storageBytes, 5);
+
+  const response = await admin.get('/api/admin/sites?page=1&pageSize=50').expect(200);
+  assert.equal(response.body.items[0].id, 'with-files');
+  assert.equal(response.body.items[0].storageBytes, 5);
+  assert.equal(response.body.summary.totalStorageBytes, 5);
+});
+
+test('GET /api/admin/sites uses cached storage usage for each project', async () => {
   const { app, dataDir, storageDir } = await makeTestApp();
   const agent = request.agent(app);
   await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
@@ -633,7 +722,7 @@ test('GET /api/admin/sites includes storage usage for each project', async () =>
   await fsp.writeFile(
     path.join(dataDir, 'sites.json'),
     JSON.stringify([
-      { id: 'with-files', title: '有文件', author: '作者', classId: 'class-a', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'with-files', title: '有文件', author: '作者', classId: 'class-a', storageBytes: 99, createdAt: '2026-01-01T00:00:00.000Z' },
       { id: 'missing-files', title: '无文件', author: '作者', classId: 'class-a', createdAt: '2026-01-02T00:00:00.000Z' }
     ], null, 2)
   );
@@ -646,7 +735,7 @@ test('GET /api/admin/sites includes storage usage for each project', async () =>
   assert.deepEqual(
     response.body.map((site) => [site.id, site.storageBytes]),
     [
-      ['with-files', 12],
+      ['with-files', 99],
       ['missing-files', 0]
     ]
   );
