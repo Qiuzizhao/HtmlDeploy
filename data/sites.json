@@ -39,9 +39,9 @@
     "createdAt": "2026-06-05T02:28:25.153Z",
     "updatedAt": "2026-06-05T15:15:25.217Z",
     "starred": true,
-    "usagePreviewCount": 15,
+    "usagePreviewCount": 16,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:11:01.563Z"
+    "usageLastUsedAt": "2026-06-08T02:12:22.857Z"
   },
   {
     "id": "40afa53e",
@@ -105,9 +105,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:24:18.223Z",
     "updatedAt": "2026-06-05T15:48:19.479Z",
-    "usagePreviewCount": 7,
+    "usagePreviewCount": 8,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:09:04.653Z"
+    "usageLastUsedAt": "2026-06-08T02:12:23.148Z"
   },
   {
     "id": "b582c9a6",
@@ -119,9 +119,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:23:16.644Z",
     "updatedAt": "2026-06-05T15:09:44.673Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:16.702Z"
+    "usageLastUsedAt": "2026-06-08T02:12:23.333Z"
   },
   {
     "id": "3cccb5d2",
@@ -1687,9 +1687,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:51:24.040Z",
     "updatedAt": "2026-06-03T14:04:55.859Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:12:18.889Z"
+    "usageLastUsedAt": "2026-06-08T02:12:22.496Z"
   },
   {
     "id": "e025a2a4",
