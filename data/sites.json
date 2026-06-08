@@ -55,20 +55,6 @@
     "updatedAt": "2026-06-05T15:09:44.673Z"
   },
   {
-    "id": "ec39275e",
-    "number": "00203",
-    "title": "逃离老师",
-    "author": "啦啦啦",
-    "classId": "f438ed26",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:25:24.712Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "0b5adbb1",
-    "duplicateAuditKeepTitle": "逃离老师",
-    "duplicateAuditMessage": "与「逃离老师（00202）」代码重复"
-  },
-  {
     "id": "0b5adbb1",
     "number": "00202",
     "title": "逃离老师",
