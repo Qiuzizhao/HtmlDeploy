@@ -316,7 +316,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:17:51.387Z"
+    "createdAt": "2026-06-05T02:17:51.387Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:08:30.112Z"
   },
   {
     "id": "e0b496ec",
@@ -591,7 +594,10 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:11:19.033Z"
+    "createdAt": "2026-06-05T02:11:19.033Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:08:28.484Z"
   },
   {
     "id": "688601d3",
@@ -1043,7 +1049,10 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:23.994Z",
-    "updatedAt": "2026-06-05T15:10:26.711Z"
+    "updatedAt": "2026-06-05T15:10:26.711Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:08:27.457Z"
   },
   {
     "id": "3a662fbd",
