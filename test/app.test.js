@@ -41,6 +41,18 @@ test('public index does not show the project list heading or helper copy', async
   assert.doesNotMatch(html, /上传项目文件后，点击卡片可在大窗口中预览。/);
 });
 
+test('public index shows a loading spinner before project cards resolve', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /class="loading-state" id="loadingState"/);
+  assert.match(html, /class="loading-spinner"/);
+  assert.match(html, /<span>正在加载项目\.\.\.<\/span>/);
+  assert.match(html, /<div class="empty" id="emptyState" hidden>/);
+  assert.match(html, /function showLoadingState\(\)/);
+  assert.match(html, /showLoadingState\(\);\s+const sitesUrl/);
+  assert.match(html, /function hideLoadingState\(\)/);
+});
+
 test('public index renders a visible upload-order number on each project card', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 

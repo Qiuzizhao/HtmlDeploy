@@ -497,6 +497,38 @@
       box-shadow: var(--soft-shadow);
     }
 
+    .loading-state {
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      color: var(--brand-dark);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .loading-state[hidden],
+    .empty[hidden] {
+      display: none;
+    }
+
+    .loading-spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid #bae6fd;
+      border-top-color: #0ea5e9;
+      border-radius: 50%;
+      animation: loading-spin 0.8s linear infinite;
+    }
+
+    @keyframes loading-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .unlock-panel {
       grid-column: 1 / -1;
       width: min(520px, 100%);
@@ -980,8 +1012,12 @@
       </div>
       <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
     </section>
+    <div class="loading-state" id="loadingState" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>正在加载项目...</span>
+    </div>
     <section class="grid" id="siteGrid" aria-live="polite"></section>
-    <div class="empty" id="emptyState">还没有项目，点击右上角上传一个。</div>
+    <div class="empty" id="emptyState" hidden>还没有项目，点击右上角上传一个。</div>
   </main>
 
   <div class="overlay" id="uploadOverlay" aria-hidden="true">
@@ -1071,6 +1107,7 @@
   <script>
     const classTabs = document.getElementById('classTabs');
     const siteGrid = document.getElementById('siteGrid');
+    const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
     const uploadOverlay = document.getElementById('uploadOverlay');
     const previewBackdrop = document.getElementById('previewBackdrop');
@@ -1135,7 +1172,31 @@
     let currentClassId = getStoredClassId();
     let siteSearchDebounceTimer = null;
     let siteRenderToken = 0;
+    let siteLoadToken = 0;
     const unlockedClassIds = new Set();
+
+    function showLoadingState() {
+      loadingState.hidden = false;
+      emptyState.hidden = true;
+      emptyState.style.display = 'none';
+      siteGrid.innerHTML = '';
+      classProjectCount.textContent = '正在加载项目...';
+    }
+
+    function hideLoadingState() {
+      loadingState.hidden = true;
+    }
+
+    function showEmptyState(message) {
+      emptyState.textContent = message;
+      emptyState.hidden = false;
+      emptyState.style.display = 'block';
+    }
+
+    function hideEmptyState() {
+      emptyState.hidden = true;
+      emptyState.style.display = 'none';
+    }
 
     function getCurrentClass() {
       return classes.find((item) => item.id === currentClassId);
@@ -1195,8 +1256,7 @@
 
     function openUpload() {
       if (!currentClassId) {
-        emptyState.textContent = '请先到后台创建班级，再上传网页。';
-        emptyState.style.display = 'block';
+        showEmptyState('请先到后台创建班级，再上传网页。');
         return;
       }
 
@@ -1207,8 +1267,7 @@
       }
 
       if (!canUploadCurrentClass()) {
-        emptyState.textContent = '当前班级已禁用上传网页功能。';
-        emptyState.style.display = 'block';
+        showEmptyState('当前班级已禁用上传网页功能。');
         return;
       }
 
@@ -1451,7 +1510,8 @@
     function renderClassPasswordPrompt(message = '请输入班级密码后查看项目。', count = 0) {
       loadedSites = [];
       siteGrid.innerHTML = '';
-      emptyState.style.display = 'none';
+      hideLoadingState();
+      hideEmptyState();
 
       const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
       classProjectCount.textContent = `${currentClassName}共有 ${count} 个项目`;
@@ -1655,6 +1715,7 @@
     }
 
     function renderSites(sites) {
+      hideLoadingState();
       siteGrid.innerHTML = '';
       const renderToken = ++siteRenderToken;
       
@@ -1664,16 +1725,17 @@
         ? `${currentClassName}当前显示 ${sites.length} 个 / 共 ${loadedSites.length} 个项目`
         : `${currentClassName}共有 ${sites.length} 个项目`;
 
-      if (!classes.length) {
-        emptyState.textContent = '请先到后台创建班级。';
+      if (sites.length) {
+        hideEmptyState();
+      } else if (!classes.length) {
+        showEmptyState('请先到后台创建班级。');
       } else if (hasFilter && loadedSites.length) {
-        emptyState.textContent = '没有匹配的项目。';
+        showEmptyState('没有匹配的项目。');
       } else if (!currentClassId) {
-        emptyState.textContent = '还没有可查看的项目。';
+        showEmptyState('还没有可查看的项目。');
       } else {
-        emptyState.textContent = '当前班级还没有项目。';
+        showEmptyState('当前班级还没有项目。');
       }
-      emptyState.style.display = sites.length ? 'none' : 'block';
 
       appendSiteCardBatch(sites, 0, renderToken);
     }
@@ -1729,10 +1791,16 @@
     }
 
     async function loadSites() {
+      const loadToken = ++siteLoadToken;
+      showLoadingState();
       const sitesUrl = currentClassId
         ? `/api/sites?classId=${encodeURIComponent(currentClassId)}`
         : '/api/sites';
       const response = await fetch(sitesUrl);
+      if (loadToken !== siteLoadToken) {
+        return;
+      }
+
       if (response.status === 401) {
         loadedSites = [];
         updateUploadButtonState();
@@ -1742,6 +1810,7 @@
       }
 
       if (!response.ok) {
+        hideLoadingState();
         updateUploadButtonState();
         throw new Error('加载项目失败');
       }
@@ -1760,8 +1829,8 @@
       try {
         await loadSites();
       } catch (error) {
-        emptyState.textContent = error.message || '刷新项目失败';
-        emptyState.style.display = 'block';
+        hideLoadingState();
+        showEmptyState(error.message || '刷新项目失败');
       } finally {
         refreshClassSitesButton.disabled = false;
       }
@@ -1905,8 +1974,8 @@
     }
 
     boot().catch((error) => {
-      emptyState.textContent = `加载项目失败：${error.message}`;
-      emptyState.style.display = 'block';
+      hideLoadingState();
+      showEmptyState(`加载项目失败：${error.message}`);
     });
   </script>
 </body>
