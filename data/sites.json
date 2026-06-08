@@ -9,9 +9,9 @@
     "starred": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T02:05:15.546Z",
-    "usagePreviewCount": 5,
+    "usagePreviewCount": 6,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:07:54.354Z"
+    "usageLastUsedAt": "2026-06-08T02:09:21.820Z"
   },
   {
     "id": "a034a8fc",
@@ -39,9 +39,9 @@
     "createdAt": "2026-06-05T02:28:25.153Z",
     "updatedAt": "2026-06-05T15:15:25.217Z",
     "starred": true,
-    "usagePreviewCount": 9,
+    "usagePreviewCount": 11,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:08:44.218Z"
+    "usageLastUsedAt": "2026-06-08T02:09:18.541Z"
   },
   {
     "id": "40afa53e",
@@ -218,9 +218,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:20:08.689Z",
-    "usagePreviewCount": 12,
+    "usagePreviewCount": 14,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T02:09:07.797Z"
+    "usageLastUsedAt": "2026-06-08T02:09:22.787Z"
   },
   {
     "id": "0ac4f446",
@@ -689,9 +689,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T09:23:10.200Z",
     "updatedAt": "2026-06-04T09:29:32.746Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-05T17:24:19.919Z"
+    "usageLastUsedAt": "2026-06-08T02:09:19.967Z"
   },
   {
     "id": "a60c5981",
@@ -815,9 +815,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:57:38.725Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:09:03.376Z"
+    "usageLastUsedAt": "2026-06-08T02:09:11.145Z"
   },
   {
     "id": "0b06a016",
@@ -999,9 +999,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:55:49.119Z",
     "updatedAt": "2026-06-04T08:01:51.577Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:08:22.480Z"
+    "usageLastUsedAt": "2026-06-08T02:09:23.352Z"
   },
   {
     "id": "29c65a3b",
@@ -1482,7 +1482,10 @@
     "author": "zxy",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:01.972Z",
-    "updatedAt": "2026-06-03T14:06:34.263Z"
+    "updatedAt": "2026-06-03T14:06:34.263Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:09:23.296Z"
   },
   {
     "id": "0440a27c",
