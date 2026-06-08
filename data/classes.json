@@ -4,9 +4,9 @@
     "name": "示例",
     "password": "111111",
     "createdAt": "2026-06-02T12:01:14.508Z",
-    "updatedAt": "2026-06-08T09:26:33.251Z",
+    "updatedAt": "2026-06-08T15:58:02.728Z",
     "uploadEnabled": false,
-    "passwordEnabled": false
+    "passwordEnabled": true
   },
   {
     "id": "392f3c64",
@@ -84,9 +84,9 @@
     "id": "767d3252",
     "name": "社团",
     "password": "666666",
-    "uploadEnabled": true,
-    "passwordEnabled": false,
+    "uploadEnabled": false,
+    "passwordEnabled": true,
     "createdAt": "2026-06-04T01:20:15.251Z",
-    "updatedAt": "2026-06-08T07:30:26.031Z"
+    "updatedAt": "2026-06-08T15:57:59.376Z"
   }
 ]

@@ -9,10 +9,12 @@
     "starred": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T07:00:04.543Z",
-    "updatedAt": "2026-06-08T08:51:56.698Z",
+    "updatedAt": "2026-06-08T16:15:02.010Z",
     "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T07:29:35.287Z"
+    "usageLastUsedAt": "2026-06-08T07:29:35.287Z",
+    "storageBytes": 15729,
+    "storageUpdatedAt": "2026-06-08T16:15:02.011Z"
   },
   {
     "id": "269370fa",
@@ -729,9 +731,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:25:24.387Z",
-    "usagePreviewCount": 31,
+    "usagePreviewCount": 32,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:39:08.745Z"
+    "usageLastUsedAt": "2026-06-08T16:15:04.865Z"
   },
   {
     "id": "17ed9196",

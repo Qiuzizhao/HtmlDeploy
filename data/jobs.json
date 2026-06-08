@@ -1,0 +1,36 @@
+{
+  "logs": [
+    {
+      "id": "61f777ce",
+      "type": "ai-optimize",
+      "text": "「双人连招格斗」AI 优化完成并已保存（deepseek-v4-flash）。",
+      "status": "success",
+      "time": "00:15:02",
+      "createdAt": "2026-06-08T16:15:02.595Z"
+    },
+    {
+      "id": "797296b6",
+      "type": "ai-optimize",
+      "text": "正在AI 优化「双人连招格斗」",
+      "status": "running",
+      "time": "00:14:26",
+      "createdAt": "2026-06-08T16:14:26.167Z"
+    },
+    {
+      "id": "9101d41e",
+      "type": "ai-optimize",
+      "text": "「双人连招格斗」AI 优化任务已创建，后台会继续执行。",
+      "status": "running",
+      "time": "00:14:25",
+      "createdAt": "2026-06-08T16:14:25.990Z"
+    },
+    {
+      "id": "f1b91cc1",
+      "type": "ai-optimize",
+      "text": "正在提交AI 优化任务「双人连招格斗」...",
+      "status": "running",
+      "time": "00:14:25",
+      "createdAt": "2026-06-08T16:14:25.824Z"
+    }
+  ]
+}

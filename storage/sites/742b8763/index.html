@@ -10,7 +10,6 @@
             box-sizing: border-box;
             font-family: Arial, sans-serif;
         }
-
         body {
             background: #1a1a1a;
             display: flex;
@@ -20,12 +19,10 @@
             flex-direction: column;
             color: white;
         }
-
         .game-container {
             position: relative;
             display: inline-block;
         }
-
         .health-bar-container {
             position: absolute;
             top: 20px;
@@ -38,34 +35,29 @@
             display: flex;
             overflow: hidden;
         }
-
         #player1Health {
             width: 50%;
             height: 100%;
             background: #ff4757;
-            transition: width 0.2s;
+            transition: width 0.2s ease;
         }
-
         #player2Health {
             width: 50%;
             height: 100%;
             background: #3742fa;
-            transition: width 0.2s;
+            transition: width 0.2s ease;
         }
-
         #gameCanvas {
             border: 3px solid #fff;
             background: #2d3436;
             border-radius: 8px;
         }
-
         .tips {
             margin-top: 15px;
             text-align: center;
             line-height: 1.6;
             font-size: 16px;
         }
-
         #gameOver {
             position: absolute;
             top: 50%;
@@ -76,8 +68,8 @@
             color: #fff;
             text-shadow: 0 0 10px #000;
             display: none;
+            pointer-events: none;
         }
-
         .combo-tip {
             position: absolute;
             top: 80px;
@@ -86,10 +78,10 @@
             font-weight: bold;
             text-shadow: 2px 2px #000;
             display: none;
+            pointer-events: none;
         }
         #combo1 { left: 15%; }
         #combo2 { right: 15%; }
-
         .restart {
             margin-top: 15px;
             padding: 10px 25px;
@@ -99,6 +91,7 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
+            transition: background 0.2s;
         }
         .restart:hover {
             background: #00a085;
@@ -116,251 +109,328 @@
         <canvas id="gameCanvas" width="1000" height="500"></canvas>
         <div id="gameOver">游戏结束</div>
     </div>
-    <button class="restart" onclick="restartGame()">重新开始</button>
+    <button class="restart" id="restartBtn">重新开始</button>
     <div class="tips">
         玩家1(红)：W跳跃 | A左 | D右 | S普通攻击 | 连按S = 连招(高伤害)<br>
         玩家2(蓝)：↑跳跃 | ←左 | →右 | ↓普通攻击 | 连按↓ = 连招(高伤害)
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const gameOverText = document.getElementById('gameOver');
-        const p1Health = document.getElementById('player1Health');
-        const p2Health = document.getElementById('player2Health');
-        const comboTip1 = document.getElementById('combo1');
-        const comboTip2 = document.getElementById('combo2');
+        (function() {
+            'use strict';
 
-        let gameOver = false;
-        let animFrameId = null;
-
-        // 防止方向键滚动页面
-        const PREVENTED_KEYS = [32, 37, 38, 39, 40]; // 空格、方向键
-
-        class Player {
-            constructor(x, color, controls, comboTip) {
-                this.x = x;
-                this.y = 380;
-                this.width = 50;
-                this.height = 100;
-                this.speed = 8;
-                this.jumpPower = 15;
-                this.vy = 0;
-                this.gravity = 0.7;
-                this.grounded = true;
-                this.color = color;
-                this.health = 100;
-                this.attacking = false;
-                this.attackRange = 60;
-                this.controls = controls;
-                this.comboTip = comboTip;
-
-                // 连招相关
-                this.attackCount = 0;
-                this.lastAttackTime = 0;
-                this.comboTime = 300; // 连招判定间隔(毫秒)
-                this.isCombo = false;
-                this.normalDmg = 0.5;
-                this.comboDmg = 1.2; // 连招伤害更高
-
-                // 攻击冷却：防止每帧扣血
-                this.attackCooldown = 0;
-                this.attackCooldownTime = 100; // 毫秒
-                this.lastHitTime = 0;
-
-                // 上一帧按键状态，用于边缘触发
-                this.prevAttackKey = false;
+            // requestAnimationFrame polyfill for older browsers
+            if (!window.requestAnimationFrame) {
+                window.requestAnimationFrame = function(callback) {
+                    return window.setTimeout(function() {
+                        callback(Date.now());
+                    }, 1000 / 60);
+                };
+                window.cancelAnimationFrame = function(id) {
+                    clearTimeout(id);
+                };
             }
 
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                // 普通攻击范围
-                if(this.attacking && !this.isCombo) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    ctx.fillRect(this.x - this.attackRange/2, this.y, this.width + this.attackRange, this.height);
-                }
-                // 连招范围（更大、特效更深）
-                if(this.isCombo) {
-                    ctx.fillStyle = 'rgba(255,215,0,0.5)';
-                    ctx.fillRect(this.x - this.attackRange, this.y - 10, this.width + this.attackRange * 2, this.height + 20);
-                }
-            }
+            // DOM 元素引用
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const gameOverText = document.getElementById('gameOver');
+            const p1HealthEl = document.getElementById('player1Health');
+            const p2HealthEl = document.getElementById('player2Health');
+            const comboTip1 = document.getElementById('combo1');
+            const comboTip2 = document.getElementById('combo2');
+            const restartBtn = document.getElementById('restartBtn');
 
-            update(opponent) {
-                if(gameOver) return;
-                const now = Date.now();
+            // 游戏常量
+            const GRAVITY = 0.7;
+            const GROUND_Y = canvas.height - 20;
+            const PLAYER_WIDTH = 50;
+            const PLAYER_HEIGHT = 100;
+            const MAX_HEALTH = 100;
+            const NORMAL_DAMAGE = 0.5;
+            const COMBO_DAMAGE = 1.2;
+            const COMBO_WINDOW = 300; // 连招判定时间窗 (ms)
+            const ATTACK_COOLDOWN = 100; // 攻击冷却 (ms)
+            const COMBO_HIT_COUNT = 2; // 触发连招所需连续攻击次数
 
-                // 重力与落地
-                this.vy += this.gravity;
-                this.y += this.vy;
-                if(this.y + this.height > canvas.height - 20) {
-                    this.y = canvas.height - 20 - this.height;
+            // 游戏状态
+            let gameOver = false;
+            let animFrameId = null;
+            let player1 = null;
+            let player2 = null;
+
+            // 按键状态 (使用字符串键名，兼容性更好)
+            const keys = {};
+
+            // 需要阻止默认行为的按键列表 (方向键、空格)
+            const PREVENTED_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
+
+            // ---------- Player 类 ----------
+            class Player {
+                constructor(x, color, controls, comboEl) {
+                    this.x = x;
+                    this.y = GROUND_Y - PLAYER_HEIGHT;
+                    this.width = PLAYER_WIDTH;
+                    this.height = PLAYER_HEIGHT;
+                    this.speed = 8;
+                    this.jumpPower = 15;
                     this.vy = 0;
                     this.grounded = true;
+                    this.color = color;
+                    this.health = MAX_HEALTH;
+                    this.controls = controls;      // { left, right, jump, attack }
+                    this.comboEl = comboEl;
+
+                    // 攻击状态
+                    this.attacking = false;
+                    this.isCombo = false;
+                    this.attackCount = 0;
+                    this.lastAttackTime = 0;
+                    this.lastHitTime = 0;
+                    this.prevAttackKey = false;
+
+                    // 攻击范围 (基于玩家尺寸)
+                    this.normalRange = PLAYER_WIDTH + 60;
+                    this.comboRange = PLAYER_WIDTH + 120; // 连招范围更大
                 }
 
-                // 移动
-                if(keys[this.controls.left] && this.x > 0) this.x -= this.speed;
-                if(keys[this.controls.right] && this.x + this.width < canvas.width) this.x += this.speed;
-                if(keys[this.controls.jump] && this.grounded) {
-                    this.vy = -this.jumpPower;
-                    this.grounded = false;
+                // 更新物理、移动、攻击逻辑
+                update(opponent, now) {
+                    if (gameOver) return;
+
+                    // 重力
+                    this.vy += GRAVITY;
+                    this.y += this.vy;
+                    if (this.y + this.height > GROUND_Y) {
+                        this.y = GROUND_Y - this.height;
+                        this.vy = 0;
+                        this.grounded = true;
+                    }
+
+                    // 移动
+                    if (keys[this.controls.left] && this.x > 0) {
+                        this.x -= this.speed;
+                    }
+                    if (keys[this.controls.right] && this.x + this.width < canvas.width) {
+                        this.x += this.speed;
+                    }
+                    if (keys[this.controls.jump] && this.grounded) {
+                        this.vy = -this.jumpPower;
+                        this.grounded = false;
+                    }
+
+                    // 攻击检测 (边缘触发：按键从 false 变为 true)
+                    const attackDown = keys[this.controls.attack];
+                    const attackTriggered = attackDown && !this.prevAttackKey;
+                    this.prevAttackKey = attackDown;
+                    this.attacking = attackDown;
+
+                    if (attackTriggered) {
+                        // 连招计数
+                        if (now - this.lastAttackTime < COMBO_WINDOW) {
+                            this.attackCount++;
+                        } else {
+                            this.attackCount = 1;
+                        }
+                        this.lastAttackTime = now;
+
+                        // 判定是否触发连招
+                        this.isCombo = this.attackCount >= COMBO_HIT_COUNT;
+
+                        // 显示连招提示
+                        if (this.isCombo) {
+                            this.comboEl.style.display = 'block';
+                        }
+
+                        // 攻击命中 (带冷却)
+                        if (now - this.lastHitTime > ATTACK_COOLDOWN) {
+                            if (this.checkHit(opponent)) {
+                                const dmg = this.isCombo ? COMBO_DAMAGE : NORMAL_DAMAGE;
+                                opponent.health = Math.max(0, opponent.health - dmg);
+                                this.lastHitTime = now;
+                                updateHealthBars();
+                                checkWinner();
+                            }
+                        }
+                    }
+
+                    // 松开攻击键时，重置连招状态
+                    if (!attackDown) {
+                        this.comboEl.style.display = 'none';
+                        this.isCombo = false;
+                        this.attackCount = 0;
+                    }
+
+                    this.draw();
                 }
 
-                // 攻击检测：边缘触发（按键从false变为true）
-                const attackKeyDown = keys[this.controls.attack];
-                const attackTriggered = attackKeyDown && !this.prevAttackKey;
-                this.prevAttackKey = attackKeyDown;
+                // 绘制角色
+                draw() {
+                    // 主体
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
 
-                this.attacking = attackKeyDown;
-
-                // 连招逻辑
-                if(attackTriggered) {
-                    if (now - this.lastAttackTime < this.comboTime) {
-                        this.attackCount++;
-                    } else {
-                        this.attackCount = 1;
-                    }
-                    this.lastAttackTime = now;
-
-                    // 连续2次攻击 = 触发连招
-                    this.isCombo = this.attackCount >= 2;
-
-                    // 显示连招提示
-                    if(this.isCombo) {
-                        this.comboTip.style.display = 'block';
-                    }
-
-                    // 攻击命中扣血（带冷却，防止多次扣血）
-                    if (now - this.lastHitTime > this.attackCooldownTime) {
-                        if(this.checkHit(opponent)) {
-                            let dmg = this.isCombo ? this.comboDmg : this.normalDmg;
-                            opponent.health -= dmg;
-                            if(opponent.health < 0) opponent.health = 0;
-                            this.lastHitTime = now;
-                            updateHealthBars();
-                            checkWinner();
+                    // 攻击范围指示器
+                    if (this.attacking) {
+                        if (this.isCombo) {
+                            // 连招范围 (金色)
+                            ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+                            ctx.fillRect(this.x - 30, this.y - 10, this.width + 60, this.height + 20);
+                        } else {
+                            // 普通攻击范围
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                            ctx.fillRect(this.x - 30, this.y, this.width + 60, this.height);
                         }
                     }
                 }
 
-                // 如果攻击键完全松开，重置连招提示与状态（但保留attackCount一段时间？为了更好体验，松开后重置）
-                if(!attackKeyDown) {
-                    this.comboTip.style.display = 'none';
-                    this.isCombo = false;
-                    this.attackCount = 0; // 松开即重置连招计数
+                // 碰撞检测
+                checkHit(opponent) {
+                    const range = this.isCombo ? this.comboRange : this.normalRange;
+                    // 计算攻击盒 (从玩家中心向左右延伸)
+                    const attackLeft = this.x - (range - this.width) / 2;
+                    const attackRight = this.x + (range + this.width) / 2;
+                    const attackTop = this.y;
+                    const attackBottom = this.y + this.height;
+
+                    // 对手碰撞盒
+                    const oppLeft = opponent.x;
+                    const oppRight = opponent.x + opponent.width;
+                    const oppTop = opponent.y;
+                    const oppBottom = opponent.y + opponent.height;
+
+                    return attackLeft < oppRight && attackRight > oppLeft &&
+                           attackTop < oppBottom && attackBottom > oppTop;
+                }
+            }
+
+            // ---------- 游戏控制函数 ----------
+
+            function updateHealthBars() {
+                // 血条总宽度为容器50%（各占一半），血量百分比映射
+                const p1Percent = (player1.health / MAX_HEALTH) * 50;
+                const p2Percent = (player2.health / MAX_HEALTH) * 50;
+                p1HealthEl.style.width = Math.min(p1Percent, 50) + '%';
+                p2HealthEl.style.width = Math.min(p2Percent, 50) + '%';
+            }
+
+            function checkWinner() {
+                if (player1.health <= 0) {
+                    gameOverText.textContent = '蓝色玩家胜利！';
+                    endGame();
+                } else if (player2.health <= 0) {
+                    gameOverText.textContent = '红色玩家胜利！';
+                    endGame();
+                }
+            }
+
+            function endGame() {
+                gameOver = true;
+                gameOverText.style.display = 'block';
+                if (animFrameId !== null) {
+                    cancelAnimationFrame(animFrameId);
+                    animFrameId = null;
+                }
+            }
+
+            function initGame() {
+                // 停止之前的动画循环
+                if (animFrameId !== null) {
+                    cancelAnimationFrame(animFrameId);
+                    animFrameId = null;
                 }
 
-                this.draw();
+                // 重置游戏状态
+                gameOver = false;
+                gameOverText.style.display = 'none';
+                comboTip1.style.display = 'none';
+                comboTip2.style.display = 'none';
+
+                // 创建玩家 (调整初始位置)
+                player1 = new Player(200, '#ff4757', {
+                    left: 'a',
+                    right: 'd',
+                    jump: 'w',
+                    attack: 's'
+                }, comboTip1);
+
+                player2 = new Player(750, '#3742fa', {
+                    left: 'ArrowLeft',
+                    right: 'ArrowRight',
+                    jump: 'ArrowUp',
+                    attack: 'ArrowDown'
+                }, comboTip2);
+
+                // 重置所有按键状态
+                for (const key in keys) {
+                    if (Object.prototype.hasOwnProperty.call(keys, key)) {
+                        keys[key] = false;
+                    }
+                }
+                // 确保 prevAttackKey 重置
+                if (player1) player1.prevAttackKey = false;
+                if (player2) player2.prevAttackKey = false;
+
+                updateHealthBars();
+                animate();
             }
 
-            checkHit(opponent) {
-                let range = this.isCombo ? this.attackRange * 1.5 : this.attackRange;
-                return (
-                    this.x - range < opponent.x + opponent.width &&
-                    this.x + this.width + range > opponent.x &&
-                    this.y < opponent.y + opponent.height &&
-                    this.y + this.height > opponent.y
-                );
-            }
-        }
+            // 动画主循环
+            function animate() {
+                if (gameOver) {
+                    animFrameId = null;
+                    return;
+                }
 
-        const keys = {};
+                const now = Date.now();
 
-        // 初始化键盘状态（兼容原来的键位）
-        const keyMappings = {
-            83: false, 65: false, 68: false, 87: false,
-            40: false, 37: false, 39: false, 38: false
-        };
-        Object.assign(keys, keyMappings);
+                // 清空画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        let player1, player2;
+                // 地面
+                ctx.fillStyle = '#636e72';
+                ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
 
-        function initGame() {
-            // 停止旧动画循环
-            if(animFrameId !== null) {
-                cancelAnimationFrame(animFrameId);
-                animFrameId = null;
+                // 更新玩家
+                player1.update(player2, now);
+                player2.update(player1, now);
+
+                animFrameId = requestAnimationFrame(animate);
             }
 
-            gameOver = false;
-            gameOverText.style.display = 'none';
-            player1 = new Player(200, '#ff4757', {
-                left: 65, right: 68, jump: 87, attack: 83
-            }, comboTip1);
-            player2 = new Player(750, '#3742fa', {
-                left: 37, right: 39, jump: 38, attack: 40
-            }, comboTip2);
-            updateHealthBars();
-            // 重置所有按键状态，防止卡键
-            for(let key in keys) {
-                keys[key] = false;
-            }
-            player1.prevAttackKey = false;
-            player2.prevAttackKey = false;
-            animate();
-        }
+            // ---------- 事件绑定 ----------
 
-        function updateHealthBars() {
-            // 修正血条比例：各占容器一半（50%），血量百分比体现
-            const p1Percent = Math.min((player1.health / 100) * 50, 50);
-            const p2Percent = Math.min((player2.health / 100) * 50, 50);
-            p1Health.style.width = p1Percent + '%';
-            p2Health.style.width = p2Percent + '%';
-        }
+            // 键盘按下
+            document.addEventListener('keydown', function(e) {
+                if (PREVENTED_KEYS.includes(e.key)) {
+                    e.preventDefault();
+                }
+                // 使用 e.key 替代 e.keyCode (更现代)
+                keys[e.key] = true;
+            });
 
-        function checkWinner() {
-            if(player1.health <= 0) {
-                gameOverText.textContent = '蓝色玩家胜利！';
-                endGame();
-            }
-            if(player2.health <= 0) {
-                gameOverText.textContent = '红色玩家胜利！';
-                endGame();
-            }
-        }
+            // 键盘抬起
+            document.addEventListener('keyup', function(e) {
+                if (PREVENTED_KEYS.includes(e.key)) {
+                    e.preventDefault();
+                }
+                keys[e.key] = false;
+            });
 
-        function endGame() {
-            gameOver = true;
-            gameOverText.style.display = 'block';
-        }
+            // 重新开始按钮
+            restartBtn.addEventListener('click', initGame);
 
-        function restartGame() {
+            // 防止页面因空格键滚动（额外保护）
+            window.addEventListener('keydown', function(e) {
+                if (e.key === ' ' || e.key === 'Spacebar') {
+                    e.preventDefault();
+                }
+            }, false);
+
+            // ---------- 启动游戏 ----------
             initGame();
-        }
 
-        function animate() {
-            if(gameOver) {
-                animFrameId = null;
-                return;
-            }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#636e72';
-            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
-
-            player1.update(player2);
-            player2.update(player1);
-            animFrameId = requestAnimationFrame(animate);
-        }
-
-        // 键盘事件：阻止默认行为+更新状态
-        document.addEventListener('keydown', (e) => {
-            if(PREVENTED_KEYS.includes(e.keyCode)) {
-                e.preventDefault();
-            }
-            keys[e.keyCode] = true;
-        });
-        document.addEventListener('keyup', (e) => {
-            if(PREVENTED_KEYS.includes(e.keyCode)) {
-                e.preventDefault();
-            }
-            keys[e.keyCode] = false;
-        });
-
-        // 启动游戏
-        initGame();
+        })();
     </script>
 </body>
 </html>
