@@ -282,9 +282,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:19:27.546Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:10:35.620Z"
+    "usageLastUsedAt": "2026-06-08T02:12:17.620Z"
   },
   {
     "id": "2c0652e5",
@@ -1686,7 +1686,10 @@
     "author": "公司",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:51:24.040Z",
-    "updatedAt": "2026-06-03T14:04:55.859Z"
+    "updatedAt": "2026-06-03T14:04:55.859Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-08T02:12:18.889Z"
   },
   {
     "id": "e025a2a4",
