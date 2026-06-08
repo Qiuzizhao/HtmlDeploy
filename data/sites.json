@@ -779,20 +779,6 @@
     "createdAt": "2026-06-04T06:57:10.769Z"
   },
   {
-    "id": "781f4c71",
-    "number": "00124",
-    "title": "刘奕鑫",
-    "author": "刘奕鑫",
-    "classId": "392f3c64",
-    "enabled": false,
-    "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:09.905Z",
-    "updatedAt": "2026-06-05T15:10:52.629Z",
-    "duplicateAuditKeepId": "7a0c2118",
-    "duplicateAuditKeepTitle": "刘奕鑫",
-    "duplicateAuditMessage": "与「刘奕鑫（00112）」代码重复"
-  },
-  {
     "id": "13171f6d",
     "number": "00123",
     "title": "跟枪游戏",
