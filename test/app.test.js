@@ -314,6 +314,13 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /formData\.append\('htmlContent'/);
 });
 
+test('public admin uses compact horizontal page padding', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /\.admin-main\s*\{[\s\S]*padding: 24px clamp\(10px, 2vw, 20px\) 48px;/);
+  assert.match(html, /@media \(max-width: 860px\)[\s\S]*\.admin-main\s*\{[\s\S]*padding: 18px 10px 40px;/);
+});
+
 test('public admin exposes AI settings controls', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
