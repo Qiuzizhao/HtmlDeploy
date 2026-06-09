@@ -683,6 +683,17 @@ async function readSites(dataFile) {
   }
 }
 
+async function readSite(dataFile, id) {
+  try {
+    return getRuntimeStoreForFile(dataFile).getSite(id);
+  } catch (error) {
+    if (error.code === 'JSON_DATA_INVALID') {
+      throw error;
+    }
+    throw createJsonDataError(dataFile, error.message);
+  }
+}
+
 async function readClasses(classesFile) {
   try {
     const store = getRuntimeStoreForFile(classesFile);
@@ -712,6 +723,17 @@ async function readClasses(classesFile) {
     }
 
     return normalizedClasses;
+  } catch (error) {
+    if (error.code === 'JSON_DATA_INVALID') {
+      throw error;
+    }
+    throw createJsonDataError(classesFile, error.message);
+  }
+}
+
+async function readClass(classesFile, id) {
+  try {
+    return getRuntimeStoreForFile(classesFile).getClass(id);
   } catch (error) {
     if (error.code === 'JSON_DATA_INVALID') {
       throw error;
@@ -1624,14 +1646,25 @@ function createApp(options = {}) {
     return toPublicAiSettings({ aiSettings, llmConfig });
   }
 
-  async function canReadSite(req, id) {
-    const sites = await readSites(dataFile);
-    const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
+  async function canReadSite(req, id, knownSite = null) {
+    const site = knownSite || await readSite(dataFile, id);
     if (!site) {
+      return false;
+    }
+    if (isSiteDeleted(site)) {
       return false;
     }
 
     if (!site.classId) {
+      return true;
+    }
+
+    const classItem = await readClass(classesFile, site.classId);
+    if (!classItem) {
+      return true;
+    }
+
+    if (hasClassAccess(req, classItem)) {
       return true;
     }
 
@@ -1644,9 +1677,7 @@ function createApp(options = {}) {
       return true;
     }
 
-    const classes = await readClasses(classesFile);
-    const classItem = classes.find((item) => item.id === site.classId);
-    return classItem ? hasClassAccess(req, classItem) : true;
+    return false;
   }
 
   function cleanupThumbnailJobs() {
@@ -2510,7 +2541,8 @@ function createApp(options = {}) {
   app.get('/thumbnails/:id.png', async (req, res, next) => {
     try {
       const { id } = req.params;
-      if (!(await canReadSite(req, id))) {
+      const site = await readSite(dataFile, id);
+      if (!(await canReadSite(req, id, site))) {
         return res.status(401).send('请输入班级密码');
       }
 
@@ -3021,10 +3053,9 @@ function createApp(options = {}) {
   app.get('/api/sites/:id/public-code', async (req, res, next) => {
     try {
       const { id } = req.params;
-      const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
+      const site = await readSite(dataFile, id);
 
-      if (!site) {
+      if (!site || isSiteDeleted(site)) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
@@ -3032,7 +3063,7 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      if (!(await canReadSite(req, id))) {
+      if (!(await canReadSite(req, id, site))) {
         return res.status(401).json({ error: '请输入班级密码' });
       }
 
@@ -3375,11 +3406,10 @@ function createApp(options = {}) {
   app.get('/preview/:id', async (req, res, next) => {
     try {
       const { id } = req.params;
-      const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
+      const site = await readSite(dataFile, id);
       const projectDir = path.join(storageDir, id);
 
-      if (!site || !fs.existsSync(projectDir)) {
+      if (!site || isSiteDeleted(site) || !fs.existsSync(projectDir)) {
         return res.status(404).send('Not found');
       }
 
@@ -3387,7 +3417,7 @@ function createApp(options = {}) {
         return res.status(404).send('Not found');
       }
 
-      if (!(await canReadSite(req, id))) {
+      if (!(await canReadSite(req, id, site))) {
         return res.status(401).send('请输入班级密码');
       }
 
@@ -3402,10 +3432,9 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const projectDir = path.join(storageDir, id);
-      const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
+      const site = await readSite(dataFile, id);
 
-      if (!site || !fs.existsSync(projectDir)) {
+      if (!site || isSiteDeleted(site) || !fs.existsSync(projectDir)) {
         return res.status(404).send('Not found');
       }
 
@@ -3413,7 +3442,7 @@ function createApp(options = {}) {
         return res.status(404).send('Not found');
       }
 
-      if (!(await canReadSite(req, id))) {
+      if (!(await canReadSite(req, id, site))) {
         return res.status(401).send('请输入班级密码');
       }
 
@@ -3433,10 +3462,9 @@ function createApp(options = {}) {
     const { id } = req.params;
     const requestedPath = req.params[0] || '';
     const projectDir = path.join(storageDir, id);
-    const sites = await readSites(dataFile);
-    const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
+    const site = await readSite(dataFile, id);
 
-    if (!site || !fs.existsSync(projectDir)) {
+    if (!site || isSiteDeleted(site) || !fs.existsSync(projectDir)) {
       return res.status(404).send('Not found');
     }
 
@@ -3444,7 +3472,7 @@ function createApp(options = {}) {
       return res.status(404).send('Not found');
     }
 
-    if (!(await canReadSite(req, id))) {
+    if (!(await canReadSite(req, id, site))) {
       return res.status(401).send('请输入班级密码');
     }
 

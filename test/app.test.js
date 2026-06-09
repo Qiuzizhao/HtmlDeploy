@@ -594,6 +594,41 @@ test('site list endpoints avoid redundant work on every request', async () => {
   assert.doesNotMatch(adminSitesRoute, /withSitesUsage/);
 });
 
+test('project preview routes avoid full site list scans', async () => {
+  const source = await fsp.readFile(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
+  const siteRoute = source.slice(
+    source.indexOf("app.get('/site/:id'"),
+    source.indexOf("app.get('/site/:id/*'")
+  );
+  const siteAssetRoute = source.slice(
+    source.indexOf("app.get('/site/:id/*'"),
+    source.indexOf('app.use((error')
+  );
+  const previewRoute = source.slice(
+    source.indexOf("app.get('/preview/:id'"),
+    source.indexOf("app.get('/site/:id'")
+  );
+  const canReadSiteFunction = source.slice(
+    source.indexOf('async function canReadSite'),
+    source.indexOf('function cleanupThumbnailJobs')
+  );
+  const runtimeSource = await fsp.readFile(path.join(__dirname, '..', 'src', 'db', 'runtime-store.js'), 'utf8');
+
+  assert.match(runtimeSource, /getSite\(siteId\)/);
+  assert.match(runtimeSource, /WHERE s\.id = \?/);
+  assert.match(runtimeSource, /return this\.getSite\(siteId\)/);
+  assert.match(source, /async function readSite/);
+  assert.match(source, /async function readClass/);
+  assert.match(canReadSiteFunction, /knownSite = null/);
+  assert.match(canReadSiteFunction, /const classItem = await readClass\(classesFile, site\.classId\)/);
+  assert.doesNotMatch(canReadSiteFunction, /readSites\(dataFile\)/);
+  assert.doesNotMatch(siteRoute, /readSites\(dataFile\)/);
+  assert.doesNotMatch(siteAssetRoute, /readSites\(dataFile\)/);
+  assert.doesNotMatch(previewRoute, /readSites\(dataFile\)/);
+  assert.match(siteRoute, /await readSite\(dataFile, id\)/);
+  assert.match(siteRoute, /canReadSite\(req, id, site\)/);
+});
+
 test('sqlite repositories expose runtime store operations', async () => {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-repositories-'));
   const store = new RuntimeStore({ dataDir: root, dbFile: path.join(root, 'app.db') });

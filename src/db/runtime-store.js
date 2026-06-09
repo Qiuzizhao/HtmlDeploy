@@ -582,6 +582,33 @@ class RuntimeStore {
     `).all().map(rowToSite);
   }
 
+  getSite(siteId) {
+    this.ensureReady();
+    const id = String(siteId || '').trim();
+    if (!id) {
+      return null;
+    }
+
+    const row = this.db.prepare(`
+      SELECT s.*, u.preview_count, u.code_count, u.last_used_at
+      FROM sites s
+      LEFT JOIN site_usage u ON u.site_id = s.id
+      WHERE s.id = ?
+    `).get(id);
+    return row ? rowToSite(row) : null;
+  }
+
+  getClass(classId) {
+    this.ensureReady();
+    const id = String(classId || '').trim();
+    if (!id) {
+      return null;
+    }
+
+    const row = this.db.prepare('SELECT * FROM classes WHERE id = ?').get(id);
+    return row ? rowToClass(row) : null;
+  }
+
   getUsageById() {
     this.ensureReady();
     const rows = this.db.prepare('SELECT * FROM site_usage').all();
@@ -648,7 +675,7 @@ class RuntimeStore {
         code_count = code_count + @codeInc,
         last_used_at = @lastUsedAt
     `).run({ siteId, previewInc, codeInc, lastUsedAt });
-    return this.listSites().find((item) => item.id === siteId) || null;
+    return this.getSite(siteId);
   }
 
   listAuditLogs() {
