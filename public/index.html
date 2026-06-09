@@ -1719,10 +1719,10 @@
 
       const endIndex = Math.min(startIndex + SITE_RENDER_BATCH_SIZE, sites.length);
       const fragment = document.createDocumentFragment();
-      sites.slice(startIndex, endIndex).forEach((site, batchIndex) => {
-        const index = startIndex + batchIndex;
+      for (let index = startIndex; index < endIndex; index += 1) {
+        const site = sites[index];
         fragment.append(createSiteCard(site, index));
-      });
+      }
       siteGrid.append(fragment);
 
       if (endIndex < sites.length) {

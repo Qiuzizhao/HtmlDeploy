@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 
+const compression = require('compression');
 const express = require('express');
 const multer = require('multer');
 const { createRuntimeStore } = require('./db/runtime-store');
@@ -13,6 +14,9 @@ const ADMIN_COOKIE_NAME = 'html_deploy_admin';
 const CLASS_COOKIE_PREFIX = 'html_deploy_class_';
 const ALL_COOKIE_NAME = 'html_deploy_all';
 const MAX_FORBIDDEN_WORDS = 100000;
+const THUMBNAIL_URL_CACHE_TTL_MS = 30000;
+
+const thumbnailUrlCache = new Map();
 
 function escapeHtml(value) {
   return String(value)
@@ -1014,11 +1018,17 @@ function toAdminSettingsResponse(settings, { includeForbiddenWords = true } = {}
 }
 
 function attachClassName(site, classes) {
-  const classItem = classes.find((item) => item.id === site.classId);
+  const classItem = classes instanceof Map
+    ? classes.get(site.classId)
+    : classes.find((item) => item.id === site.classId);
   return {
     ...site,
     className: classItem?.name || ''
   };
+}
+
+function createClassMap(classes) {
+  return new Map(classes.map((classItem) => [classItem.id, classItem]));
 }
 
 function createDownloadFileName(site) {
@@ -1072,12 +1082,30 @@ function getThumbnailPath(thumbnailDir, id) {
   return path.join(thumbnailDir, `${id}.png`);
 }
 
+function getThumbnailCacheKey(thumbnailDir, id) {
+  return path.resolve(getThumbnailPath(thumbnailDir, id));
+}
+
+function invalidateThumbnailUrlCache(thumbnailDir, id) {
+  thumbnailUrlCache.delete(getThumbnailCacheKey(thumbnailDir, id));
+}
+
 function getThumbnailUrl(thumbnailDir, id) {
   const thumbnailPath = getThumbnailPath(thumbnailDir, id);
+  const cacheKey = path.resolve(thumbnailPath);
+  const cached = thumbnailUrlCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.checkedAt < THUMBNAIL_URL_CACHE_TTL_MS) {
+    return cached.url;
+  }
+
   try {
     const stat = fs.statSync(thumbnailPath);
-    return `/thumbnails/${encodeURIComponent(id)}.png?v=${Math.round(stat.mtimeMs)}`;
+    const url = `/thumbnails/${encodeURIComponent(id)}.png?v=${Math.round(stat.mtimeMs)}`;
+    thumbnailUrlCache.set(cacheKey, { checkedAt: now, url });
+    return url;
   } catch {
+    thumbnailUrlCache.set(cacheKey, { checkedAt: now, url: '' });
     return '';
   }
 }
@@ -1257,6 +1285,7 @@ async function generateSiteThumbnail({ id, origin, thumbnailDir, adminToken }) {
       fullPage: false
     });
     await context.close();
+    invalidateThumbnailUrlCache(thumbnailDir, id);
 
     return {
       id,
@@ -1855,6 +1884,7 @@ function createApp(options = {}) {
     }
   }
 
+  app.use(compression());
   app.use(express.json({ limit: maxTotalBytes }));
   app.use(express.urlencoded({ extended: false, limit: maxTotalBytes }));
 
@@ -1899,9 +1929,8 @@ function createApp(options = {}) {
     try {
       const { classId } = req.query;
       const sites = activeSitesOnly(await readSites(dataFile));
-      const usageById = await readSiteUsage(usageFile);
-      const sitesWithUsage = withSitesUsage(sites, usageById);
       const classes = await readClasses(classesFile);
+      const classMap = createClassMap(classes);
       const settings = await readSettings(settingsFile);
 
       if (classId) {
@@ -1911,17 +1940,17 @@ function createApp(options = {}) {
         }
 
         if (!hasClassAccess(req, classItem)) {
-          const count = sitesWithUsage.filter((site) => site.classId === classId && site.enabled !== false).length;
+          const count = sites.filter((site) => site.classId === classId && site.enabled !== false).length;
           return res.status(401).json({ error: '请输入班级密码', count });
         }
       } else if (!hasAllAccess(req, settings)) {
-        return res.status(401).json({ error: '请输入全部密码', count: sitesWithUsage.filter((site) => site.enabled !== false).length });
+        return res.status(401).json({ error: '请输入全部密码', count: sites.filter((site) => site.enabled !== false).length });
       }
 
       const filteredSites = classId
-        ? sitesWithUsage.filter((site) => site.classId === classId && site.enabled !== false)
-        : sitesWithUsage.filter((site) => site.enabled !== false);
-      res.json(filteredSites.map((site) => toPublicSite(site, classes, thumbnailDir)));
+        ? sites.filter((site) => site.classId === classId && site.enabled !== false)
+        : sites.filter((site) => site.enabled !== false);
+      res.json(filteredSites.map((site) => toPublicSite(site, classMap, thumbnailDir)));
     } catch (error) {
       next(error);
     }
@@ -1948,9 +1977,9 @@ function createApp(options = {}) {
   app.get('/api/admin/sites', requireAdmin, async (req, res, next) => {
     try {
       const sites = activeSitesOnly(await readSites(dataFile));
-      const usageById = await readSiteUsage(usageFile);
       const classes = await readClasses(classesFile);
-      const publicSites = withSitesUsage(sites, usageById).map((site) => toPublicSite(site, classes, thumbnailDir));
+      const classMap = createClassMap(classes);
+      const publicSites = sites.map((site) => toPublicSite(site, classMap, thumbnailDir));
 
       if (!shouldReturnPaginatedAdminSites(req.query)) {
         return res.json(publicSites);

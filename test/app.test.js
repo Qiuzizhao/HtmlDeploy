@@ -36,6 +36,18 @@ test('pages expose a shared favicon', async () => {
   assert.match(favicon.text || favicon.body.toString('utf8'), /<svg[^>]+viewBox="0 0 64 64"/);
 });
 
+test('public pages are compressed when the browser supports it', async () => {
+  const publicDir = path.join(__dirname, '..', 'public');
+  const { app } = await makeTestApp({ publicDir });
+
+  const response = await request(app)
+    .get('/')
+    .set('Accept-Encoding', 'gzip')
+    .expect(200);
+
+  assert.equal(response.headers['content-encoding'], 'gzip');
+});
+
 test('public index does not show the project list heading or helper copy', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -59,7 +71,8 @@ test('public index renders a visible upload-order number on each project card', 
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
   assert.match(html, /function appendSiteCardBatch/);
-  assert.match(html, /const index = startIndex \+ batchIndex/);
+  assert.match(html, /for \(let index = startIndex; index < endIndex; index \+= 1\)/);
+  assert.match(html, /const site = sites\[index\]/);
   assert.match(html, /className = 'site-heading'/);
   assert.match(html, /className = 'site-number'/);
   assert.match(html, /textContent = site\.number/);
@@ -243,6 +256,8 @@ test('public index debounces search and renders cards in batches', async () => {
   assert.match(html, /window\.clearTimeout\(siteSearchDebounceTimer\)/);
   assert.match(html, /function appendSiteCardBatch/);
   assert.match(html, /requestAnimationFrame\(\(\) => appendSiteCardBatch/);
+  assert.match(html, /for \(let index = startIndex; index < endIndex; index \+= 1\)/);
+  assert.doesNotMatch(html, /sites\.slice\(startIndex, endIndex\)/);
   assert.match(html, /const renderToken = \+\+siteRenderToken/);
   assert.match(html, /projectSearchInput\.addEventListener\('input', debounceProjectSearchRender\)/);
 });
@@ -516,6 +531,29 @@ test('runtime data is excluded from Git sync paths', async () => {
   assert.match(source, /createRuntimeStore/);
   assert.match(source, /incrementSiteUsage\(usageFile, site, 'preview'\)/);
   assert.match(source, /incrementSiteUsage\(usageFile, site, 'code'\)/);
+});
+
+test('site list endpoints avoid redundant work on every request', async () => {
+  const source = await fsp.readFile(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
+  const publicSitesRoute = source.slice(
+    source.indexOf("app.get('/api/sites'"),
+    source.indexOf("app.get('/api/classes'")
+  );
+  const adminSitesRoute = source.slice(
+    source.indexOf("app.get('/api/admin/sites'"),
+    source.indexOf("app.get('/api/admin/thumbnail-jobs")
+  );
+
+  assert.match(source, /const compression = require\('compression'\)/);
+  assert.match(source, /app\.use\(compression\(\)\)/);
+  assert.match(source, /const THUMBNAIL_URL_CACHE_TTL_MS = 30000/);
+  assert.match(source, /const thumbnailUrlCache = new Map\(\)/);
+  assert.match(source, /function invalidateThumbnailUrlCache/);
+  assert.match(source, /function createClassMap/);
+  assert.doesNotMatch(publicSitesRoute, /readSiteUsage\(usageFile\)/);
+  assert.doesNotMatch(publicSitesRoute, /withSitesUsage/);
+  assert.doesNotMatch(adminSitesRoute, /readSiteUsage\(usageFile\)/);
+  assert.doesNotMatch(adminSitesRoute, /withSitesUsage/);
 });
 
 test('sqlite repositories expose runtime store operations', async () => {
