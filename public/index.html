@@ -1749,11 +1749,6 @@
       usageTag.textContent = `${usageCount} 次`;
       tagsContainer.append(usageTag);
 
-      const url = document.createElement('div');
-      url.className = 'site-url';
-      url.textContent = site.url;
-      tagsContainer.append(url);
-
       content.append(heading, tagsContainer);
       cardMain.append(cover, content);
 
