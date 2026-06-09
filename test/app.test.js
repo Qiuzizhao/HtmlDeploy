@@ -67,6 +67,17 @@ test('public index shows a loading spinner before project cards resolve', async 
   assert.match(html, /function hideLoadingState\(\)/);
 });
 
+test('public index shows loading feedback on interactive buttons', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /button\.is-loading::before/);
+  assert.match(html, /function setButtonLoading/);
+  assert.match(html, /setButtonLoading\(refreshClassSitesButton, true, '刷新中\.\.\.'\)/);
+  assert.match(html, /setButtonLoading\(previewUploadButton, true, '预览中\.\.\.'\)/);
+  assert.match(html, /setButtonLoading\(uploadSubmitButton, true, '上传中\.\.\.'\)/);
+  assert.match(html, /setButtonLoading\(button, true, '解锁中\.\.\.'\)/);
+});
+
 test('public index defers upload rule loading until upload interaction', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const bootMatch = html.match(/async function boot\(\) \{([\s\S]*?)\n    \}/);
@@ -427,6 +438,23 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /function generatePassword/);
   assert.match(html, /formData\.append\('classId'/);
   assert.match(html, /formData\.append\('htmlContent'/);
+});
+
+test('public admin shows loading feedback for tables and actions', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /button\.is-loading::before/);
+  assert.match(html, /\.message\.is-loading::before/);
+  assert.match(html, /className = 'table-loading-cell'/);
+  assert.match(html, /function setButtonLoading/);
+  assert.match(html, /function renderTableLoading/);
+  assert.match(html, /function renderListLoading/);
+  assert.match(html, /renderTableLoading\(siteRows, 9, '正在加载项目\.\.\.'\)/);
+  assert.match(html, /renderTableLoading\(rankingRows, 9, '正在加载排行榜\.\.\.'\)/);
+  assert.match(html, /renderListLoading\(forbiddenWordsResults, '正在加载违禁词\.\.\.'\)/);
+  assert.match(html, /setButtonLoading\(auditForbiddenSitesButton, true, '审查中\.\.\.'\)/);
+  assert.match(html, /setButtonLoading\(dedupeSitesButton, true, '查重中\.\.\.'\)/);
+  assert.match(html, /setButtonLoading\(generateThumbnailsButton, true, '加入中\.\.\.'\)/);
 });
 
 test('public admin uses compact horizontal page padding', async () => {

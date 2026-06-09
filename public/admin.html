@@ -53,6 +53,27 @@
       transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+      transform: none;
+    }
+
+    button.is-loading {
+      pointer-events: none;
+    }
+
+    button.is-loading::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: loading-spin 0.72s linear infinite;
+    }
+
     button:focus-visible,
     input:focus-visible,
     select:focus-visible,
@@ -326,6 +347,33 @@
     .message {
       color: var(--muted);
       font-size: 13px;
+    }
+
+    .message.is-loading::before {
+      content: "";
+      width: 13px;
+      height: 13px;
+      margin-right: 7px;
+      display: inline-block;
+      border: 2px solid #bae6fd;
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      vertical-align: -2px;
+      animation: loading-spin 0.72s linear infinite;
+    }
+
+    .code-message.is-loading::before,
+    .directed-ai-message.is-loading::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      display: inline-block;
+      border: 2px solid #bae6fd;
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      vertical-align: -3px;
+      animation: loading-spin 0.72s linear infinite;
     }
 
     .message.is-error {
@@ -776,7 +824,37 @@
     }
 
     .table-wrap {
+      position: relative;
       overflow-x: auto;
+    }
+
+    .table-loading-cell {
+      padding: 34px 20px;
+      text-align: center;
+      color: var(--brand-dark);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .table-loading-cell::before,
+    .list-loading::before {
+      content: "";
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      display: inline-block;
+      border: 3px solid #bae6fd;
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      vertical-align: -5px;
+      animation: loading-spin 0.76s linear infinite;
+    }
+
+    .list-loading {
+      padding: 24px 20px;
+      color: var(--brand-dark);
+      font-weight: 750;
+      text-align: center;
     }
 
     table {
@@ -923,6 +1001,12 @@
       color: var(--muted);
       font-size: 12px;
       font-weight: 650;
+    }
+
+    @keyframes loading-spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .class-select {
@@ -1689,9 +1773,43 @@
       toggleAllPasswordEnabled.title = enabled ? '点击解除全部项目查看密码' : '点击启用全部项目查看密码';
     }
 
-    function setMessage(element, text, isError = false) {
+    function setMessage(element, text, isError = false, options = {}) {
       element.textContent = text;
       element.classList.toggle('is-error', isError);
+      element.classList.toggle('is-loading', Boolean(options.loading) && !isError);
+    }
+
+    function setButtonLoading(button, isLoading, text) {
+      if (!button) {
+        return;
+      }
+
+      if (!button.dataset.idleText) {
+        button.dataset.idleText = button.textContent;
+      }
+
+      button.disabled = isLoading;
+      button.classList.toggle('is-loading', isLoading);
+      button.textContent = isLoading ? text : button.dataset.idleText;
+    }
+
+    function renderTableLoading(tbody, colSpan, text) {
+      tbody.innerHTML = '';
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.className = 'table-loading-cell';
+      cell.colSpan = colSpan;
+      cell.textContent = text;
+      row.append(cell);
+      tbody.append(row);
+    }
+
+    function renderListLoading(container, text) {
+      container.innerHTML = '';
+      const loading = document.createElement('div');
+      loading.className = 'list-loading';
+      loading.textContent = text;
+      container.append(loading);
     }
 
     async function readResponseError(response, fallback) {
@@ -2102,23 +2220,34 @@
       return true;
     }
 
-    function setCodeMessage(text, isError = false) {
+    function setCodeMessage(text, isError = false, options = {}) {
       codeMessage.textContent = text;
       codeMessage.classList.toggle('is-error', isError);
+      codeMessage.classList.toggle('is-loading', Boolean(options.loading) && !isError);
     }
 
-    function setCodeBusy(isBusy) {
+    function setCodeBusy(isBusy, activeButton = null, text = '处理中...') {
       codeEditor.disabled = isBusy;
-      saveCodeButton.disabled = isBusy;
-      optimizeCodeButton.disabled = isBusy;
-      previewCodeButton.disabled = isBusy;
-      reloadCodeButton.disabled = isBusy;
+      [saveCodeButton, optimizeCodeButton, previewCodeButton, reloadCodeButton].forEach((button) => {
+        if (!isBusy) {
+          setButtonLoading(button, false);
+          return;
+        }
+
+        if (button === activeButton) {
+          setButtonLoading(button, true, text);
+        } else {
+          button.disabled = true;
+          button.classList.remove('is-loading');
+        }
+      });
       codeFileInput.disabled = isBusy;
     }
 
-    function setDirectedAiMessage(text, isError = false) {
+    function setDirectedAiMessage(text, isError = false, options = {}) {
       directedAiMessage.textContent = text;
       directedAiMessage.classList.toggle('is-error', isError);
+      directedAiMessage.classList.toggle('is-loading', Boolean(options.loading) && !isError);
     }
 
     function openDirectedAiWindow(site, button) {
@@ -2177,8 +2306,8 @@
     }
 
     async function loadSiteCode(site) {
-      setCodeBusy(true);
-      setCodeMessage('正在加载代码...');
+      setCodeBusy(true, reloadCodeButton, '加载中...');
+      setCodeMessage('正在加载代码...', false, { loading: true });
       codeEditor.value = '';
       codeFileInput.value = '';
 
@@ -2218,8 +2347,8 @@
         return;
       }
 
-      setCodeBusy(true);
-      setCodeMessage('正在保存代码...');
+      setCodeBusy(true, saveCodeButton, '保存中...');
+      setCodeMessage('正在保存代码...', false, { loading: true });
       const formData = new FormData();
       formData.append('htmlContent', htmlContent);
 
@@ -2284,8 +2413,8 @@
         return;
       }
 
-      setCodeBusy(true);
-      setCodeMessage('正在调用 AI 优化代码...');
+      setCodeBusy(true, optimizeCodeButton, '优化中...');
+      setCodeMessage('正在调用 AI 优化代码...', false, { loading: true });
 
       const response = await fetchWithTimeout(`/api/sites/${encodeURIComponent(currentCodeSite.id)}/ai-optimize-code`, {
         method: 'POST',
@@ -2317,8 +2446,7 @@
 
       runningAiOptimizations.add(site.id);
       if (button) {
-        button.disabled = true;
-        button.textContent = '优化中...';
+        setButtonLoading(button, true, '优化中...');
       }
       addAiOptimizeLog(`正在提交${isDirected ? '定向 ' : ''}AI 优化任务「${site.title}」...`, 'running');
       setMessage(listMessage, getRunningAiText() || `正在提交${isDirected ? '定向 ' : ''}AI 优化任务「${site.title}」...`);
@@ -2360,8 +2488,8 @@
       } finally {
         const wasRunning = runningAiOptimizations.delete(site.id);
         if (button) {
-          button.disabled = false;
-          button.textContent = idleText;
+          button.dataset.idleText = idleText;
+          setButtonLoading(button, false);
         }
         const runningText = getRunningAiText();
         if (runningText) {
@@ -2379,8 +2507,7 @@
       }
 
       runningAiNaming.add(site.id);
-      button.disabled = true;
-      button.textContent = '命名中...';
+      setButtonLoading(button, true, '命名中...');
       addAiOptimizeLog(`正在 AI 命名「${site.title}」...`, 'running');
       setMessage(listMessage, `正在 AI 阅读代码并命名「${site.title}」...`);
 
@@ -2410,8 +2537,8 @@
         setMessage(listMessage, error.message || 'AI 命名失败', true);
       } finally {
         const wasRunning = runningAiNaming.delete(site.id);
-        button.disabled = false;
-        button.textContent = 'AI命名';
+        button.dataset.idleText = 'AI命名';
+        setButtonLoading(button, false);
         if (wasRunning) {
           refreshVisibleRows();
         }
@@ -2506,7 +2633,7 @@
         saveButton.className = 'primary-button';
         saveButton.type = 'button';
         saveButton.textContent = '保存';
-        saveButton.addEventListener('click', () => updateClass(classItem, input, passwordInput, row));
+        saveButton.addEventListener('click', () => updateClass(classItem, input, passwordInput, row, saveButton));
 
         const deleteButton = document.createElement('button');
         deleteButton.className = 'danger-button';
@@ -2563,7 +2690,8 @@
     async function loadForbiddenWords({ query = forbiddenWordsState.query, offset = forbiddenWordsState.offset } = {}) {
       forbiddenWordsState.query = query;
       forbiddenWordsState.offset = Math.max(0, offset);
-      setMessage(forbiddenWordsMessage, '正在查询违禁词...');
+      setMessage(forbiddenWordsMessage, '正在查询违禁词...', false, { loading: true });
+      renderListLoading(forbiddenWordsResults, '正在加载违禁词...');
 
       const params = new URLSearchParams({
         q: forbiddenWordsState.query,
@@ -2594,6 +2722,8 @@
     }
 
     async function loadSettings() {
+      setMessage(classMessage, '正在加载班级和密码设置...', false, { loading: true });
+      setMessage(forbiddenWordsMessage, '正在加载违禁词统计...', false, { loading: true });
       const response = await fetch('/api/admin/settings?includeForbiddenWords=false');
       if (!response.ok) {
         setMessage(classMessage, '加载全部密码失败', true);
@@ -2614,6 +2744,7 @@
 
     async function saveAdminPassword(event) {
       event.preventDefault();
+      const submitButton = event.submitter;
       const adminPassword = adminPasswordInput.value.trim();
       const adminPasswordConfirm = adminPasswordConfirmInput.value.trim();
 
@@ -2629,11 +2760,13 @@
         return;
       }
 
+      setButtonLoading(submitButton, true, '保存中...');
       const response = await fetch('/api/admin/settings?includeForbiddenWords=false', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminPassword })
       });
+      setButtonLoading(submitButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存后台密码失败' }));
@@ -2667,7 +2800,7 @@
     }
 
     async function loadAiSettings() {
-      setMessage(aiSettingsMessage, '正在加载AI设置...');
+      setMessage(aiSettingsMessage, '正在加载AI设置...', false, { loading: true });
       const response = await fetch('/api/admin/ai-settings');
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '加载AI设置失败' }));
@@ -2682,6 +2815,7 @@
 
     async function saveAiSettings(event) {
       event.preventDefault();
+      const submitButton = event.submitter;
       const payload = {
         apiKey: aiApiKeyInput.value.trim(),
         baseUrl: aiBaseUrlInput.value.trim(),
@@ -2691,11 +2825,13 @@
         thinkingType: aiThinkingTypeInput.value.trim()
       };
 
+      setButtonLoading(submitButton, true, '保存中...');
       const response = await fetch('/api/admin/ai-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      setButtonLoading(submitButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存AI设置失败' }));
@@ -2713,11 +2849,13 @@
         return;
       }
 
+      setButtonLoading(clearAiApiKeyButton, true, '清除中...');
       const response = await fetch('/api/admin/ai-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clearApiKey: true })
       });
+      setButtonLoading(clearAiApiKeyButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '清除API Key失败' }));
@@ -2732,6 +2870,7 @@
 
     async function saveAllPassword(event) {
       event.preventDefault();
+      const submitButton = event.submitter;
       const allPassword = allPasswordInput.value.trim();
 
       if (!/^\d{6}$/.test(allPassword)) {
@@ -2739,11 +2878,13 @@
         return;
       }
 
+      setButtonLoading(submitButton, true, '保存中...');
       const response = await fetch('/api/admin/settings?includeForbiddenWords=false', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ allPassword })
       });
+      setButtonLoading(submitButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存全部密码失败' }));
@@ -2759,7 +2900,7 @@
 
     async function toggleAllProjectsPasswordEnabled() {
       const nextEnabled = settings.allPasswordEnabled === false;
-      toggleAllPasswordEnabled.disabled = true;
+      setButtonLoading(toggleAllPasswordEnabled, true, '保存中...');
 
       const response = await fetch('/api/admin/settings?includeForbiddenWords=false', {
         method: 'PUT',
@@ -2767,7 +2908,7 @@
         body: JSON.stringify({ allPasswordEnabled: nextEnabled })
       });
 
-      toggleAllPasswordEnabled.disabled = false;
+      setButtonLoading(toggleAllPasswordEnabled, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存全部密码状态失败' }));
@@ -2783,17 +2924,20 @@
 
     async function saveForbiddenWords(event) {
       event.preventDefault();
+      const submitButton = event.submitter;
       const forbiddenWords = parseForbiddenWords(forbiddenWordsInput.value);
       if (!forbiddenWords.length) {
         setMessage(forbiddenWordsMessage, '请输入要追加的违禁词', true);
         return;
       }
 
+      setButtonLoading(submitButton, true, '保存中...');
       const response = await fetch('/api/admin/forbidden-words', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ forbiddenWords })
       });
+      setButtonLoading(submitButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '追加违禁词失败' }));
@@ -2815,7 +2959,7 @@
         return;
       }
 
-      button.disabled = true;
+      setButtonLoading(button, true, '删除中...');
       setMessage(forbiddenWordsMessage, `正在删除「${word}」...`);
 
       const response = await fetch('/api/admin/forbidden-words', {
@@ -2825,7 +2969,7 @@
       });
 
       if (!response.ok) {
-        button.disabled = false;
+        setButtonLoading(button, false);
         const result = await response.json().catch(() => ({ error: '删除违禁词失败' }));
         setMessage(forbiddenWordsMessage, result.error || '删除违禁词失败', true);
         return;
@@ -2842,6 +2986,8 @@
     }
 
     async function loadClasses() {
+      renderListLoading(classList, '正在加载班级...');
+      setMessage(classMessage, '正在加载班级...', false, { loading: true });
       const response = await fetch('/api/admin/classes');
       if (!response.ok) {
         setMessage(classMessage, '加载班级失败', true);
@@ -3086,7 +3232,7 @@
         saveButton.className = 'primary-button';
         saveButton.type = 'button';
         saveButton.textContent = '保存';
-        saveButton.addEventListener('click', () => updateSite(site, titleInput, authorInput, classSelect, row));
+        saveButton.addEventListener('click', () => updateSite(site, titleInput, authorInput, classSelect, row, saveButton));
 
         const starButton = document.createElement('button');
         starButton.className = starred ? 'warning-button' : 'button';
@@ -3204,7 +3350,9 @@
     }
 
     async function loadRankingSites() {
-      setMessage(rankingMessage, '加载中...');
+      setMessage(rankingMessage, '正在加载排行榜...', false, { loading: true });
+      renderTableLoading(rankingRows, 9, '正在加载排行榜...');
+      rankingEmptyState.style.display = 'none';
       const response = await fetch('/api/admin/sites');
       if (!response.ok) {
         setMessage(rankingMessage, '加载排行榜失败', true);
@@ -3233,7 +3381,9 @@
     }
 
     async function loadSites() {
-      setMessage(listMessage, '加载中...');
+      setMessage(listMessage, '正在加载项目...', false, { loading: true });
+      renderTableLoading(siteRows, 9, '正在加载项目...');
+      emptyState.style.display = 'none';
       const params = buildAdminSitesParams();
       const response = await fetch(`/api/admin/sites?${params.toString()}`);
       if (!response.ok) {
@@ -3353,33 +3503,29 @@
     }
 
     async function generateSiteThumbnail(site, button) {
-      button.disabled = true;
-      button.textContent = '已加入队列';
+      setButtonLoading(button, true, '加入中...');
       setMessage(listMessage, `「${site.title}」封面任务已加入队列`);
 
       const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/thumbnail`, {
         method: 'POST'
       });
 
-      button.disabled = false;
-
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '生成封面失败' }));
-        button.textContent = site.thumbnailUrl ? '刷新封面' : '生成封面';
+        setButtonLoading(button, false);
         setMessage(listMessage, result.error || '生成封面失败', true);
         return;
       }
 
       const result = await response.json();
-      button.textContent = site.thumbnailUrl ? '刷新封面' : '生成封面';
+      setButtonLoading(button, false);
       trackThumbnailJob(result);
       setMessage(listMessage, `「${site.title}」封面任务已加入队列，可在任务中心查看进度`);
     }
 
     async function generateAllThumbnails() {
-      generateThumbnailsButton.disabled = true;
-      generateThumbnailsButton.textContent = '已加入队列';
-      setMessage(listMessage, '全部封面任务已加入队列，可在任务中心查看进度');
+      setButtonLoading(generateThumbnailsButton, true, '加入中...');
+      setMessage(listMessage, '正在提交全部封面任务...', false, { loading: true });
 
       const response = await fetch('/api/admin/thumbnails', {
         method: 'POST',
@@ -3387,8 +3533,7 @@
         body: JSON.stringify({})
       });
 
-      generateThumbnailsButton.disabled = false;
-      generateThumbnailsButton.textContent = '刷新全部封面';
+      setButtonLoading(generateThumbnailsButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '刷新全部封面失败' }));
@@ -3406,9 +3551,8 @@
         return;
       }
 
-      enableAllSitesButton.disabled = true;
-      enableAllSitesButton.textContent = '解禁中...';
-      setMessage(listMessage, '正在解除所有被禁用项目...');
+      setButtonLoading(enableAllSitesButton, true, '解禁中...');
+      setMessage(listMessage, '正在解除所有被禁用项目...', false, { loading: true });
 
       const response = await fetch('/api/admin/sites/enable-all', {
         method: 'POST',
@@ -3416,8 +3560,7 @@
         body: JSON.stringify({})
       });
 
-      enableAllSitesButton.disabled = false;
-      enableAllSitesButton.textContent = '全部解禁';
+      setButtonLoading(enableAllSitesButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '全部解禁失败' }));
@@ -3433,9 +3576,8 @@
     }
 
     async function auditForbiddenSites() {
-      auditForbiddenSitesButton.disabled = true;
-      auditForbiddenSitesButton.textContent = '审查中...';
-      setMessage(listMessage, '正在审查项目网页名字和作者名...');
+      setButtonLoading(auditForbiddenSitesButton, true, '审查中...');
+      setMessage(listMessage, '正在审查项目网页名字和作者名...', false, { loading: true });
 
       const response = await fetch('/api/admin/sites/forbidden-audit', {
         method: 'POST',
@@ -3443,8 +3585,7 @@
         body: JSON.stringify({})
       });
 
-      auditForbiddenSitesButton.disabled = false;
-      auditForbiddenSitesButton.textContent = '违禁词审查';
+      setButtonLoading(auditForbiddenSitesButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '违禁词审查失败' }));
@@ -3460,9 +3601,8 @@
     }
 
     async function dedupeSites() {
-      dedupeSitesButton.disabled = true;
-      dedupeSitesButton.textContent = '查重中...';
-      setMessage(listMessage, '正在查找代码完全一样的项目...');
+      setButtonLoading(dedupeSitesButton, true, '查重中...');
+      setMessage(listMessage, '正在查找代码完全一样的项目...', false, { loading: true });
 
       const response = await fetch('/api/admin/sites/dedupe', {
         method: 'POST',
@@ -3470,8 +3610,7 @@
         body: JSON.stringify({})
       });
 
-      dedupeSitesButton.disabled = false;
-      dedupeSitesButton.textContent = '查重';
+      setButtonLoading(dedupeSitesButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '查重失败' }));
@@ -3488,6 +3627,7 @@
 
     async function createSite(event) {
       event.preventDefault();
+      const submitButton = event.submitter;
       setMessage(createMessage, '');
 
       const title = createTitle.value.trim();
@@ -3519,10 +3659,12 @@
         formData.append('file', file, file.name);
       }
 
+      setButtonLoading(submitButton, true, '新增中...');
       const response = await fetch('/api/sites', {
         method: 'POST',
         body: formData
       });
+      setButtonLoading(submitButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '新增失败' }));
@@ -3536,7 +3678,7 @@
       switchView('projects');
     }
 
-    async function updateSite(site, titleInput, authorInput, classSelect, row) {
+    async function updateSite(site, titleInput, authorInput, classSelect, row, button) {
       const title = titleInput.value.trim();
       const author = authorInput.value.trim();
       const classId = classSelect.value;
@@ -3567,10 +3709,12 @@
       formData.append('author', author);
       formData.append('classId', classId);
 
+      setButtonLoading(button, true, '保存中...');
       const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}`, {
         method: 'PUT',
         body: formData
       });
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存失败' }));
@@ -3586,7 +3730,7 @@
 
     async function toggleSiteEnabled(site, button) {
       const nextEnabled = site.enabled === false;
-      button.disabled = true;
+      setButtonLoading(button, true, '保存中...');
 
       const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/enabled`, {
         method: 'PATCH',
@@ -3594,7 +3738,7 @@
         body: JSON.stringify({ enabled: nextEnabled })
       });
 
-      button.disabled = false;
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存项目状态失败' }));
@@ -3610,7 +3754,7 @@
 
     async function toggleSiteStarred(site, button) {
       const nextStarred = site.starred !== true;
-      button.disabled = true;
+      setButtonLoading(button, true, '保存中...');
 
       const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/starred`, {
         method: 'PATCH',
@@ -3618,7 +3762,7 @@
         body: JSON.stringify({ starred: nextStarred })
       });
 
-      button.disabled = false;
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存星标状态失败' }));
@@ -3634,7 +3778,7 @@
 
     async function toggleForbiddenWhitelist(site, button) {
       const nextWhitelisted = site.forbiddenWhitelist !== true;
-      button.disabled = true;
+      setButtonLoading(button, true, '保存中...');
 
       const response = await fetch(`/api/sites/${encodeURIComponent(site.id)}/forbidden-whitelist`, {
         method: 'PATCH',
@@ -3642,7 +3786,7 @@
         body: JSON.stringify({ forbiddenWhitelist: nextWhitelisted })
       });
 
-      button.disabled = false;
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存白名单状态失败' }));
@@ -3658,6 +3802,7 @@
 
     async function createClass(event) {
       event.preventDefault();
+      const submitButton = event.submitter;
       const name = classNameInput.value.trim();
       const password = classPasswordInput.value.trim();
 
@@ -3671,11 +3816,13 @@
         return;
       }
 
+      setButtonLoading(submitButton, true, '新增中...');
       const response = await fetch('/api/classes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, password })
       });
+      setButtonLoading(submitButton, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '新增班级失败' }));
@@ -3691,7 +3838,7 @@
 
     async function toggleClassUpload(classItem, button, row) {
       const nextUploadEnabled = classItem.uploadEnabled === false;
-      button.disabled = true;
+      setButtonLoading(button, true, '保存中...');
 
       const response = await fetch(`/api/classes/${encodeURIComponent(classItem.id)}/upload-enabled`, {
         method: 'PATCH',
@@ -3699,7 +3846,7 @@
         body: JSON.stringify({ uploadEnabled: nextUploadEnabled })
       });
 
-      button.disabled = false;
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存上传状态失败' }));
@@ -3724,7 +3871,7 @@
 
     async function toggleClassPasswordEnabled(classItem, button) {
       const nextPasswordEnabled = classItem.passwordEnabled === false;
-      button.disabled = true;
+      setButtonLoading(button, true, '保存中...');
 
       const response = await fetch(`/api/classes/${encodeURIComponent(classItem.id)}/password-enabled`, {
         method: 'PATCH',
@@ -3732,7 +3879,7 @@
         body: JSON.stringify({ passwordEnabled: nextPasswordEnabled })
       });
 
-      button.disabled = false;
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存密码状态失败' }));
@@ -3754,7 +3901,7 @@
       setMessage(classMessage, passwordEnabled ? '已启用该班级密码' : '已解除该班级密码');
     }
 
-    async function updateClass(classItem, input, passwordInput, row) {
+    async function updateClass(classItem, input, passwordInput, row, button) {
       const name = input.value.trim();
       const password = passwordInput.value.trim();
       if (!name) {
@@ -3767,11 +3914,13 @@
         return;
       }
 
+      setButtonLoading(button, true, '保存中...');
       const response = await fetch(`/api/classes/${encodeURIComponent(classItem.id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, password })
       });
+      setButtonLoading(button, false);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: '保存班级失败' }));
@@ -3960,17 +4109,27 @@
       adminSitesPageSize = Number.parseInt(adminPageSize.value, 10) || 50;
       loadSites();
     });
-    prevSitesPage.addEventListener('click', () => {
+    prevSitesPage.addEventListener('click', async () => {
       if (adminSitesPage > 1) {
         adminSitesPage -= 1;
-        loadSites();
+        setButtonLoading(prevSitesPage, true, '加载中...');
+        try {
+          await loadSites();
+        } finally {
+          setButtonLoading(prevSitesPage, false);
+        }
       }
     });
-    nextSitesPage.addEventListener('click', () => {
+    nextSitesPage.addEventListener('click', async () => {
       const totalPages = Math.max(1, Math.ceil(adminSitesTotal / adminSitesPageSize));
       if (adminSitesPage < totalPages) {
         adminSitesPage += 1;
-        loadSites();
+        setButtonLoading(nextSitesPage, true, '加载中...');
+        try {
+          await loadSites();
+        } finally {
+          setButtonLoading(nextSitesPage, false);
+        }
       }
     });
     rankingSearchInput.addEventListener('input', renderRanking);
@@ -3978,17 +4137,29 @@
     navButtons.forEach((button) => {
       button.addEventListener('click', () => switchView(button.dataset.viewTarget));
     });
-    document.getElementById('reloadButton').addEventListener('click', async () => {
-      await loadSettings();
-      await loadClasses();
-      adminSitesPage = 1;
-      await loadSites();
+    document.getElementById('reloadButton').addEventListener('click', async (event) => {
+      setButtonLoading(event.currentTarget, true, '刷新中...');
+      try {
+        await loadSettings();
+        await loadClasses();
+        adminSitesPage = 1;
+        await loadSites();
+      } finally {
+        setButtonLoading(event.currentTarget, false);
+      }
     });
     auditForbiddenSitesButton.addEventListener('click', auditForbiddenSites);
     dedupeSitesButton.addEventListener('click', dedupeSites);
     enableAllSitesButton.addEventListener('click', enableAllSites);
     generateThumbnailsButton.addEventListener('click', generateAllThumbnails);
-    refreshTaskStatus.addEventListener('click', loadTaskStatuses);
+    refreshTaskStatus.addEventListener('click', async () => {
+      setButtonLoading(refreshTaskStatus, true, '刷新中...');
+      try {
+        await loadTaskStatuses();
+      } finally {
+        setButtonLoading(refreshTaskStatus, false);
+      }
+    });
     document.getElementById('closeCodeWindow').addEventListener('click', closeCodeWindow);
     document.getElementById('closeDirectedAiWindow').addEventListener('click', closeDirectedAiWindow);
     document.getElementById('cancelDirectedAi').addEventListener('click', closeDirectedAiWindow);

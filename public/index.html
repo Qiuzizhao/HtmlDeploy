@@ -144,6 +144,21 @@
       transform: none;
     }
 
+    button.is-loading {
+      pointer-events: none;
+    }
+
+    button.is-loading::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: loading-spin 0.72s linear infinite;
+    }
+
     .secondary-button {
       min-height: 40px;
       padding: 0 14px;
@@ -1192,6 +1207,20 @@
       loadingState.hidden = true;
     }
 
+    function setButtonLoading(button, isLoading, text) {
+      if (!button) {
+        return;
+      }
+
+      if (!button.dataset.idleText) {
+        button.dataset.idleText = button.textContent;
+      }
+
+      button.disabled = isLoading;
+      button.classList.toggle('is-loading', isLoading);
+      button.textContent = isLoading ? text : button.dataset.idleText;
+    }
+
     function showEmptyState(message) {
       emptyState.textContent = message;
       emptyState.hidden = false;
@@ -1581,7 +1610,12 @@
       panel.addEventListener('submit', async (event) => {
         event.preventDefault();
         error.textContent = '';
-        await unlockClass(currentClassId, input.value.trim(), error);
+        setButtonLoading(button, true, '解锁中...');
+        try {
+          await unlockClass(currentClassId, input.value.trim(), error);
+        } finally {
+          setButtonLoading(button, false);
+        }
       });
 
       siteGrid.append(panel);
@@ -1874,14 +1908,14 @@
     }
 
     async function refreshCurrentClassSites() {
-      refreshClassSitesButton.disabled = true;
+      setButtonLoading(refreshClassSitesButton, true, '刷新中...');
       try {
         await loadSites();
       } catch (error) {
         hideLoadingState();
         showEmptyState(error.message || '刷新项目失败');
       } finally {
-        refreshClassSitesButton.disabled = false;
+        setButtonLoading(refreshClassSitesButton, false);
       }
     }
 
@@ -1900,6 +1934,7 @@
 
     async function previewUploadDraft() {
       uploadMessage.textContent = '';
+      setButtonLoading(previewUploadButton, true, '预览中...');
 
       try {
         const htmlContent = await getUploadPreviewHtml();
@@ -1917,34 +1952,39 @@
           openUploadDraftPreview(htmlContent);
         } catch (error) {
         uploadMessage.textContent = error.message || '预览失败';
+      } finally {
+        setButtonLoading(previewUploadButton, false);
       }
     }
 
     uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       uploadMessage.textContent = '';
+      const uploadSubmitButton = uploadForm.querySelector('button[type="submit"]');
+      setButtonLoading(uploadSubmitButton, true, '上传中...');
 
-      const file = fileInput.files && fileInput.files[0];
-      const htmlContent = uploadHtmlContent.value.trim();
-      const title = titleInput.value.trim();
-      const author = authorInput.value.trim();
       try {
-        await ensureUploadRulesLoaded();
-      } catch {
-        uploadMessage.textContent = '上传规则加载失败，将继续由服务器校验。';
-      }
-      const forbiddenMessage = findForbiddenWordMatch(title, author);
-      if (forbiddenMessage) {
-        uploadMessage.textContent = forbiddenMessage;
-        return;
-      }
+        const file = fileInput.files && fileInput.files[0];
+        const htmlContent = uploadHtmlContent.value.trim();
+        const title = titleInput.value.trim();
+        const author = authorInput.value.trim();
+        try {
+          await ensureUploadRulesLoaded();
+        } catch {
+          uploadMessage.textContent = '上传规则加载失败，将继续由服务器校验。';
+        }
+        const forbiddenMessage = findForbiddenWordMatch(title, author);
+        if (forbiddenMessage) {
+          uploadMessage.textContent = forbiddenMessage;
+          return;
+        }
 
-      if (!file && !htmlContent) {
-        uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码。';
-        return;
-      }
+        if (!file && !htmlContent) {
+          uploadMessage.textContent = '请上传 HTML 文件或填写 HTML 代码。';
+          return;
+        }
 
-      const fileName = file ? file.name.toLowerCase() : '';
+        const fileName = file ? file.name.toLowerCase() : '';
         if (file && !fileName.endsWith('.html') && !fileName.endsWith('.htm')) {
           uploadMessage.textContent = '当前版本只支持上传 HTML 文件。';
           return;
@@ -1967,28 +2007,36 @@
         }
 
         const formData = new FormData();
-      formData.append('title', title);
-      formData.append('author', author);
-      formData.append('classId', currentClassId);
-      formData.append('htmlContent', htmlContent);
-      if (file) {
-        formData.append('file', file, file.name);
+        formData.append('title', title);
+        formData.append('author', author);
+        formData.append('classId', currentClassId);
+        formData.append('htmlContent', htmlContent);
+        if (file) {
+          formData.append('file', file, file.name);
+        }
+
+        const response = await fetch('/api/sites', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({ error: '上传失败' }));
+          uploadMessage.textContent = result.error || '上传失败';
+          return;
+        }
+
+        closeUpload();
+        await loadSites();
+        openUploadSuccess();
+      } finally {
+        setButtonLoading(uploadSubmitButton, false);
       }
+    });
 
-      const response = await fetch('/api/sites', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const result = await response.json().catch(() => ({ error: '上传失败' }));
-        uploadMessage.textContent = result.error || '上传失败';
-        return;
-      }
-
-      closeUpload();
-      await loadSites();
-      openUploadSuccess();
+    uploadForm.addEventListener('reset', () => {
+      const uploadSubmitButton = uploadForm.querySelector('button[type="submit"]');
+      setButtonLoading(uploadSubmitButton, false);
     });
 
     openUploadButton.addEventListener('click', openUpload);
