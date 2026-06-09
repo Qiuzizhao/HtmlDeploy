@@ -470,6 +470,8 @@ function buildGitBackupPathspecs(cwd) {
     'data/settings.json',
     'data/private-ai-settings.json',
     'data/jobs.json',
+    'data/site-usage.json',
+    'data/audit-log.json',
     'data/sites.json'
   ].filter((relativePath) => fs.existsSync(path.join(cwd, relativePath)));
 
@@ -1044,6 +1046,166 @@ async function writeSettings(settingsFile, settings) {
   syncDataToGithub();
 }
 
+function normalizeSiteUsageEntry(entry = {}) {
+  return {
+    siteId: String(entry.siteId || entry.id || '').trim(),
+    usagePreviewCount: Math.max(0, Number(entry.usagePreviewCount) || 0),
+    usageCodeCount: Math.max(0, Number(entry.usageCodeCount) || 0),
+    usageLastUsedAt: String(entry.usageLastUsedAt || '')
+  };
+}
+
+async function readSiteUsage(usageFile) {
+  await fsp.mkdir(path.dirname(usageFile), { recursive: true });
+  let parsed = {};
+  try {
+    const raw = await fsp.readFile(usageFile, 'utf8');
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return {};
+    }
+    throw createJsonDataError(usageFile, error.message);
+  }
+
+  const entries = Array.isArray(parsed)
+    ? parsed
+    : Object.entries(parsed || {}).map(([siteId, usage]) => ({ siteId, ...usage }));
+  const usageById = {};
+  for (const entry of entries) {
+    const normalized = normalizeSiteUsageEntry(entry);
+    if (normalized.siteId) {
+      usageById[normalized.siteId] = normalized;
+    }
+  }
+  return usageById;
+}
+
+async function writeSiteUsage(usageFile, usageById, { sync = false } = {}) {
+  await withJsonWriteQueue(usageFile, () => atomicWriteJson(usageFile, usageById));
+  if (sync) {
+    syncDataToGithub();
+  }
+}
+
+function withSiteUsage(site, usageById = {}) {
+  const usage = usageById[site.id] || {};
+  const legacyPreview = Math.max(0, Number(site.usagePreviewCount) || 0);
+  const legacyCode = Math.max(0, Number(site.usageCodeCount) || 0);
+  const usagePreviewCount = Math.max(legacyPreview, Math.max(0, Number(usage.usagePreviewCount) || 0));
+  const usageCodeCount = Math.max(legacyCode, Math.max(0, Number(usage.usageCodeCount) || 0));
+  const legacyLastUsed = Date.parse(site.usageLastUsedAt || '');
+  const usageLastUsed = Date.parse(usage.usageLastUsedAt || '');
+
+  return {
+    ...site,
+    usagePreviewCount,
+    usageCodeCount,
+    usageLastUsedAt: Number.isFinite(usageLastUsed) && usageLastUsed > (Number.isFinite(legacyLastUsed) ? legacyLastUsed : 0)
+      ? usage.usageLastUsedAt
+      : site.usageLastUsedAt || usage.usageLastUsedAt || ''
+  };
+}
+
+function withSitesUsage(sites, usageById = {}) {
+  return sites.map((site) => withSiteUsage(site, usageById));
+}
+
+async function incrementSiteUsage(usageFile, site, type) {
+  if (!site || !['preview', 'code'].includes(type)) {
+    return null;
+  }
+
+  return withJsonWriteQueue(usageFile, async () => {
+    const usageById = await readSiteUsage(usageFile);
+    const current = normalizeSiteUsageEntry({
+      siteId: site.id,
+      usagePreviewCount: site.usagePreviewCount,
+      usageCodeCount: site.usageCodeCount,
+      usageLastUsedAt: site.usageLastUsedAt,
+      ...(usageById[site.id] || {})
+    });
+    const next = {
+      siteId: site.id,
+      usagePreviewCount: current.usagePreviewCount + (type === 'preview' ? 1 : 0),
+      usageCodeCount: current.usageCodeCount + (type === 'code' ? 1 : 0),
+      usageLastUsedAt: new Date().toISOString()
+    };
+    usageById[site.id] = next;
+    await atomicWriteJson(usageFile, usageById);
+    return withSiteUsage(site, usageById);
+  });
+}
+
+function isSiteDeleted(site) {
+  return Boolean(site.deletedAt);
+}
+
+function activeSitesOnly(sites) {
+  return sites.filter((site) => !isSiteDeleted(site));
+}
+
+async function updateSitesMetadata(dataFile, updater, options = {}) {
+  const sites = await readSites(dataFile);
+  const nextSites = await updater(sites);
+  return writeSites(dataFile, nextSites, options);
+}
+
+async function updateSiteMetadata(dataFile, id, updater, options = {}) {
+  let updatedSite = null;
+  await updateSitesMetadata(dataFile, async (sites) => {
+    const siteIndex = sites.findIndex((site) => site.id === id && !isSiteDeleted(site));
+    if (siteIndex === -1) {
+      return sites;
+    }
+    const nextSite = await updater(sites[siteIndex], sites);
+    const nextSites = [...sites];
+    nextSites[siteIndex] = nextSite;
+    updatedSite = nextSite;
+    return nextSites;
+  }, options);
+  return updatedSite;
+}
+
+function normalizeAuditLog(log = {}) {
+  const createdAt = log.createdAt || new Date().toISOString();
+  return {
+    id: String(log.id || createDefaultId()),
+    type: String(log.type || 'general').trim() || 'general',
+    action: String(log.action || '').trim(),
+    summary: String(log.summary || '').trim(),
+    siteIds: Array.isArray(log.siteIds) ? log.siteIds.map(String) : [],
+    details: log.details && typeof log.details === 'object' && !Array.isArray(log.details) ? log.details : {},
+    createdAt
+  };
+}
+
+async function readAuditLogs(auditFile) {
+  await fsp.mkdir(path.dirname(auditFile), { recursive: true });
+  try {
+    const raw = await fsp.readFile(auditFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    const logs = Array.isArray(parsed) ? parsed : Array.isArray(parsed.logs) ? parsed.logs : [];
+    return logs.map(normalizeAuditLog).filter((log) => log.action || log.summary).slice(0, 500);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    throw createJsonDataError(auditFile, error.message);
+  }
+}
+
+async function appendAuditLog(auditFile, log) {
+  const normalized = normalizeAuditLog(log);
+  await withJsonWriteQueue(auditFile, async () => {
+    const logs = await readAuditLogs(auditFile);
+    logs.unshift(normalized);
+    await atomicWriteJson(auditFile, { logs: logs.slice(0, 500) });
+  });
+  syncDataToGithub();
+  return normalized;
+}
+
 function normalizeJobLog(log = {}) {
   const createdAt = log.createdAt || new Date().toISOString();
   return {
@@ -1293,29 +1455,6 @@ function filterAdminSites(sites, query) {
 function shouldReturnPaginatedAdminSites(query) {
   return ['page', 'pageSize', 'q', 'classId', 'starred', 'enabled']
     .some((key) => query[key] !== undefined);
-}
-
-async function incrementSiteUsage(dataFile, id, type) {
-  if (!['preview', 'code'].includes(type)) {
-    return null;
-  }
-
-  const sites = await readSites(dataFile);
-  const siteIndex = sites.findIndex((site) => site.id === id);
-  if (siteIndex === -1) {
-    return null;
-  }
-
-  const site = sites[siteIndex];
-  const nextSite = {
-    ...site,
-    usagePreviewCount: Math.max(0, Number(site.usagePreviewCount) || 0) + (type === 'preview' ? 1 : 0),
-    usageCodeCount: Math.max(0, Number(site.usageCodeCount) || 0) + (type === 'code' ? 1 : 0),
-    usageLastUsedAt: new Date().toISOString()
-  };
-  sites[siteIndex] = nextSite;
-  await writeSites(dataFile, sites, { sync: false });
-  return nextSite;
 }
 
 function getRequestOrigin(req) {
@@ -1575,6 +1714,8 @@ function createApp(options = {}) {
   const settingsFile = options.settingsFile || path.join(process.cwd(), 'data', 'settings.json');
   const aiSettingsFile = options.aiSettingsFile || path.join(process.cwd(), 'data', 'private-ai-settings.json');
   const jobsFile = options.jobsFile || path.join(path.dirname(dataFile), 'jobs.json');
+  const usageFile = options.usageFile || path.join(path.dirname(dataFile), 'site-usage.json');
+  const auditFile = options.auditFile || path.join(path.dirname(dataFile), 'audit-log.json');
   const storageDir = options.storageDir || path.join(process.cwd(), 'storage', 'sites');
   const thumbnailDir = options.thumbnailDir || path.join(process.cwd(), 'storage', 'thumbnails');
   const publicDir = options.publicDir || path.join(process.cwd(), 'public');
@@ -1665,8 +1806,12 @@ function createApp(options = {}) {
 
   async function canReadSite(req, id) {
     const sites = await readSites(dataFile);
-    const site = sites.find((item) => item.id === id);
-    if (!site?.classId) {
+    const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
+    if (!site) {
+      return false;
+    }
+
+    if (!site.classId) {
       return true;
     }
 
@@ -1994,7 +2139,9 @@ function createApp(options = {}) {
   app.get('/api/sites', async (req, res, next) => {
     try {
       const { classId } = req.query;
-      const sites = await readSites(dataFile);
+      const sites = activeSitesOnly(await readSites(dataFile));
+      const usageById = await readSiteUsage(usageFile);
+      const sitesWithUsage = withSitesUsage(sites, usageById);
       const classes = await readClasses(classesFile);
       const settings = await readSettings(settingsFile);
 
@@ -2005,16 +2152,16 @@ function createApp(options = {}) {
         }
 
         if (!hasClassAccess(req, classItem)) {
-          const count = sites.filter((site) => site.classId === classId && site.enabled !== false).length;
+          const count = sitesWithUsage.filter((site) => site.classId === classId && site.enabled !== false).length;
           return res.status(401).json({ error: '请输入班级密码', count });
         }
       } else if (!hasAllAccess(req, settings)) {
-        return res.status(401).json({ error: '请输入全部密码', count: sites.filter((site) => site.enabled !== false).length });
+        return res.status(401).json({ error: '请输入全部密码', count: sitesWithUsage.filter((site) => site.enabled !== false).length });
       }
 
       const filteredSites = classId
-        ? sites.filter((site) => site.classId === classId && site.enabled !== false)
-        : sites.filter((site) => site.enabled !== false);
+        ? sitesWithUsage.filter((site) => site.classId === classId && site.enabled !== false)
+        : sitesWithUsage.filter((site) => site.enabled !== false);
       res.json(filteredSites.map((site) => toPublicSite(site, classes, thumbnailDir)));
     } catch (error) {
       next(error);
@@ -2041,9 +2188,10 @@ function createApp(options = {}) {
 
   app.get('/api/admin/sites', requireAdmin, async (req, res, next) => {
     try {
-      const sites = await readSites(dataFile);
+      const sites = activeSitesOnly(await readSites(dataFile));
+      const usageById = await readSiteUsage(usageFile);
       const classes = await readClasses(classesFile);
-      const publicSites = sites.map((site) => toPublicSite(site, classes, thumbnailDir));
+      const publicSites = withSitesUsage(sites, usageById).map((site) => toPublicSite(site, classes, thumbnailDir));
 
       if (!shouldReturnPaginatedAdminSites(req.query)) {
         return res.json(publicSites);
@@ -2091,6 +2239,18 @@ function createApp(options = {}) {
     try {
       const log = await appendJobLog(jobsFile, req.body || {});
       return res.status(201).json(log);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get('/api/admin/audit-logs', requireAdmin, async (req, res, next) => {
+    try {
+      const type = String(req.query.type || '').trim();
+      const limit = Math.max(1, Math.min(200, Number.parseInt(req.query.limit || '50', 10) || 50));
+      const logs = await readAuditLogs(auditFile);
+      const filteredLogs = type ? logs.filter((log) => log.type === type || log.action === type) : logs;
+      return res.json({ logs: filteredLogs.slice(0, limit) });
     } catch (error) {
       return next(error);
     }
@@ -2529,7 +2689,7 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '班级不存在' });
       }
 
-      if (sites.some((site) => site.classId === id)) {
+      if (sites.some((site) => !isSiteDeleted(site) && site.classId === id)) {
         return res.status(400).json({ error: '班级下还有项目，不能删除' });
       }
 
@@ -2644,7 +2804,7 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
 
       if (!site) {
         return res.status(404).json({ error: '项目不存在' });
@@ -2659,7 +2819,7 @@ function createApp(options = {}) {
 
   app.post('/api/admin/thumbnails', requireAdmin, async (req, res, next) => {
     try {
-      const sites = await readSites(dataFile);
+      const sites = activeSitesOnly(await readSites(dataFile));
       const requestedIds = Array.isArray(req.body.siteIds)
         ? new Set(req.body.siteIds.map((id) => String(id)))
         : null;
@@ -2682,7 +2842,12 @@ function createApp(options = {}) {
       let disabledCount = 0;
       let changed = false;
 
+      const activeSites = activeSitesOnly(sites);
       const nextSites = sites.map((site) => {
+        if (isSiteDeleted(site)) {
+          return site;
+        }
+
         if (site.forbiddenWhitelist === true) {
           const clearedSite = clearForbiddenAudit(site);
           if (clearedSite !== site) {
@@ -2742,11 +2907,18 @@ function createApp(options = {}) {
 
       if (changed) {
         await writeSites(dataFile, nextSites);
+        await appendAuditLog(auditFile, {
+          type: 'site-audit',
+          action: 'forbidden-audit',
+          summary: `违禁词审查完成，命中 ${matches.length} 个项目，禁用 ${disabledCount} 个项目`,
+          siteIds: matches.map((match) => match.id),
+          details: { matched: matches.length, disabled: disabledCount }
+        });
       }
 
       return res.json({
-        checked: sites.filter((site) => site.forbiddenWhitelist !== true).length,
-        skipped: sites.filter((site) => site.forbiddenWhitelist === true).length,
+        checked: activeSites.filter((site) => site.forbiddenWhitelist !== true).length,
+        skipped: activeSites.filter((site) => site.forbiddenWhitelist === true).length,
         matched: matches.length,
         disabled: disabledCount,
         matches
@@ -2759,9 +2931,10 @@ function createApp(options = {}) {
   app.post('/api/admin/sites/dedupe', requireAdmin, async (req, res, next) => {
     try {
       const sites = await readSites(dataFile);
+      const activeSites = activeSitesOnly(sites);
       const groups = new Map();
 
-      for (const site of sites) {
+      for (const site of activeSites) {
         const fingerprint = await getSiteHtmlFingerprint(storageDir, site.id);
         if (!fingerprint) {
           continue;
@@ -2806,6 +2979,10 @@ function createApp(options = {}) {
 
       const now = new Date().toISOString();
       const nextSites = sites.map((site) => {
+        if (isSiteDeleted(site)) {
+          return site;
+        }
+
         const duplicateAudit = duplicateAuditById.get(site.id);
         if (!duplicateAudit) {
           return clearDuplicateAudit(site);
@@ -2838,10 +3015,17 @@ function createApp(options = {}) {
 
       if (JSON.stringify(nextSites) !== JSON.stringify(sites)) {
         await writeSites(dataFile, nextSites);
+        await appendAuditLog(auditFile, {
+          type: 'site-audit',
+          action: 'dedupe',
+          summary: `查重完成，发现 ${matches.length} 个重复项目，禁用 ${disabledCount} 个项目`,
+          siteIds: matches.map((match) => match.id),
+          details: { duplicateGroups, duplicates: matches.length, disabled: disabledCount }
+        });
       }
 
       return res.json({
-        checked: sites.length,
+        checked: activeSites.length,
         duplicateGroups,
         duplicates: matches.length,
         disabled: disabledCount,
@@ -2855,9 +3039,14 @@ function createApp(options = {}) {
   app.post('/api/admin/sites/enable-all', requireAdmin, async (req, res, next) => {
     try {
       const sites = await readSites(dataFile);
+      const activeSites = activeSitesOnly(sites);
       const now = new Date().toISOString();
       let enabledCount = 0;
       const nextSites = sites.map((site) => {
+        if (isSiteDeleted(site)) {
+          return site;
+        }
+
         if (site.enabled !== false) {
           return site;
         }
@@ -2872,10 +3061,17 @@ function createApp(options = {}) {
 
       if (enabledCount) {
         await writeSites(dataFile, nextSites);
+        await appendAuditLog(auditFile, {
+          type: 'site-audit',
+          action: 'enable-all',
+          summary: `全部解禁完成，启用 ${enabledCount} 个项目`,
+          siteIds: activeSites.filter((site) => site.enabled === false).map((site) => site.id),
+          details: { enabled: enabledCount }
+        });
       }
 
       return res.json({
-        checked: sites.length,
+        checked: activeSites.length,
         enabled: enabledCount
       });
     } catch (error) {
@@ -2888,7 +3084,7 @@ function createApp(options = {}) {
       const { id } = req.params;
       const enabled = Boolean(req.body.enabled);
       const sites = await readSites(dataFile);
-      const siteIndex = sites.findIndex((site) => site.id === id);
+      const siteIndex = sites.findIndex((site) => site.id === id && !isSiteDeleted(site));
 
       if (siteIndex === -1) {
         return res.status(404).json({ error: '项目不存在' });
@@ -2914,7 +3110,7 @@ function createApp(options = {}) {
       const { id } = req.params;
       const forbiddenWhitelist = Boolean(req.body.forbiddenWhitelist);
       const sites = await readSites(dataFile);
-      const siteIndex = sites.findIndex((site) => site.id === id);
+      const siteIndex = sites.findIndex((site) => site.id === id && !isSiteDeleted(site));
 
       if (siteIndex === -1) {
         return res.status(404).json({ error: '项目不存在' });
@@ -2940,7 +3136,7 @@ function createApp(options = {}) {
       const { id } = req.params;
       const starred = Boolean(req.body.starred);
       const sites = await readSites(dataFile);
-      const siteIndex = sites.findIndex((site) => site.id === id);
+      const siteIndex = sites.findIndex((site) => site.id === id && !isSiteDeleted(site));
 
       if (siteIndex === -1) {
         return res.status(404).json({ error: '项目不存在' });
@@ -2965,7 +3161,7 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
       if (!site) {
         return res.status(404).json({ error: '项目不存在' });
       }
@@ -2989,7 +3185,7 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
       if (!site) {
         return res.status(404).json({ error: '项目不存在' });
       }
@@ -3000,7 +3196,7 @@ function createApp(options = {}) {
       }
 
       const htmlContent = await fsp.readFile(indexPath, 'utf8');
-      const updatedSite = await incrementSiteUsage(dataFile, id, 'code') || site;
+      const updatedSite = await incrementSiteUsage(usageFile, site, 'code') || site;
       return res.json({
         ...(await toPublicSiteWithStorage(updatedSite, await readClasses(classesFile), thumbnailDir, storageDir)),
         htmlContent
@@ -3014,7 +3210,7 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
 
       if (!site) {
         return res.status(404).json({ error: '项目不存在' });
@@ -3040,7 +3236,7 @@ function createApp(options = {}) {
       }
 
       const { files, combinedText } = await readProjectCodeSnapshot(projectDir);
-      const updatedSite = await incrementSiteUsage(dataFile, id, 'code') || site;
+      const updatedSite = await incrementSiteUsage(usageFile, site, 'code') || site;
       const classes = await readClasses(classesFile);
       return res.json({
         ...toPublicSite(updatedSite, classes, thumbnailDir),
@@ -3058,7 +3254,7 @@ function createApp(options = {}) {
       const file = req.file;
       const htmlContent = String(req.body.htmlContent || '');
       const sites = await readSites(dataFile);
-      const siteIndex = sites.findIndex((site) => site.id === id);
+      const siteIndex = sites.findIndex((site) => site.id === id && !isSiteDeleted(site));
 
       if (siteIndex === -1) {
         return res.status(404).json({ error: '项目不存在' });
@@ -3097,7 +3293,7 @@ function createApp(options = {}) {
       const htmlContent = String(req.body.htmlContent || '');
       const instruction = String(req.body.instruction || '').trim();
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
 
       if (!site) {
         return res.status(404).json({ error: '项目不存在' });
@@ -3265,7 +3461,7 @@ function createApp(options = {}) {
       const sites = await readSites(dataFile);
       const classes = await readClasses(classesFile);
       const classItem = classes.find((item) => item.id === classId);
-      const siteIndex = sites.findIndex((site) => site.id === id);
+      const siteIndex = sites.findIndex((site) => site.id === id && !isSiteDeleted(site));
 
       if (siteIndex === -1) {
         return res.status(404).json({ error: '项目不存在' });
@@ -3329,16 +3525,34 @@ function createApp(options = {}) {
   app.delete('/api/sites/:id', requireAdmin, async (req, res, next) => {
     try {
       const { id } = req.params;
+      const deletedAt = new Date().toISOString();
       const sites = await readSites(dataFile);
-      const nextSites = sites.filter((site) => site.id !== id);
+      const deletedSite = sites.find((site) => site.id === id && !isSiteDeleted(site));
 
-      if (nextSites.length === sites.length) {
+      if (!deletedSite) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      await writeSites(dataFile, nextSites, { allowSiteRemoval: true });
-      await fsp.rm(path.join(storageDir, id), { recursive: true, force: true });
-      await fsp.rm(getThumbnailPath(thumbnailDir, id), { force: true });
+      const nextSites = sites.map((site) => {
+        if (site.id !== id) {
+          return site;
+        }
+        return {
+          ...site,
+          enabled: false,
+          deletedAt,
+          updatedAt: deletedAt
+        };
+      });
+      await writeSites(dataFile, nextSites);
+
+      await appendAuditLog(auditFile, {
+        type: 'site-delete',
+        action: 'soft-delete',
+        summary: `软删除项目「${deletedSite.title || id}」`,
+        siteIds: [id],
+        details: { id, title: deletedSite.title || '', deletedAt }
+      });
 
       return res.status(204).send();
     } catch (error) {
@@ -3350,7 +3564,7 @@ function createApp(options = {}) {
     try {
       const { id } = req.params;
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
       const projectDir = path.join(storageDir, id);
 
       if (!site || !fs.existsSync(projectDir)) {
@@ -3365,7 +3579,7 @@ function createApp(options = {}) {
         return res.status(401).send('请输入班级密码');
       }
 
-      await incrementSiteUsage(dataFile, id, 'preview');
+      await incrementSiteUsage(usageFile, site, 'preview');
       return res.type('html').send(renderPreviewPage({ id, title: site.title }));
     } catch (error) {
       next(error);
@@ -3377,7 +3591,7 @@ function createApp(options = {}) {
       const { id } = req.params;
       const projectDir = path.join(storageDir, id);
       const sites = await readSites(dataFile);
-      const site = sites.find((item) => item.id === id);
+      const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
 
       if (!site || !fs.existsSync(projectDir)) {
         return res.status(404).send('Not found');
@@ -3408,7 +3622,7 @@ function createApp(options = {}) {
     const requestedPath = req.params[0] || '';
     const projectDir = path.join(storageDir, id);
     const sites = await readSites(dataFile);
-    const site = sites.find((item) => item.id === id);
+    const site = sites.find((item) => item.id === id && !isSiteDeleted(item));
 
     if (!site || !fs.existsSync(projectDir)) {
       return res.status(404).send('Not found');

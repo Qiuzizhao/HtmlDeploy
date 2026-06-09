@@ -518,7 +518,10 @@ test('git auto sync serializes backup jobs and clears stale index locks', async 
   assert.match(source, /git add -u -- data storage\/sites/);
   assert.match(source, /git add --pathspec-from-file=/);
   assert.doesNotMatch(source, /git add \./);
-  assert.match(source, /writeSites\(dataFile, sites, \{ sync: false \}\)/);
+  assert.match(source, /'data\/site-usage\.json'/);
+  assert.match(source, /path\.join\(path\.dirname\(dataFile\), 'site-usage\.json'\)/);
+  assert.match(source, /incrementSiteUsage\(usageFile, site, 'preview'\)/);
+  assert.match(source, /incrementSiteUsage\(usageFile, site, 'code'\)/);
 });
 
 test('site writes preserve records that were added after a stale read', async () => {
@@ -2203,7 +2206,7 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
   }
 });
 
-test('DELETE /api/sites/:id removes project metadata and files', async () => {
+test('DELETE /api/sites/:id soft deletes project metadata and keeps files', async () => {
   const ids = ['class-a', 'deleted'];
   const { app, storageDir, dataDir } = await makeTestApp({
     idGenerator: () => ids.shift()
@@ -2225,9 +2228,19 @@ test('DELETE /api/sites/:id removes project metadata and files', async () => {
   await agent.delete('/api/sites/deleted').expect(204);
 
   const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
-  assert.deepEqual(sites, []);
-  assert.equal(fs.existsSync(path.join(storageDir, 'deleted')), false);
+  assert.equal(sites.length, 1);
+  assert.equal(sites[0].id, 'deleted');
+  assert.equal(sites[0].enabled, false);
+  assert.ok(sites[0].deletedAt);
+  assert.equal(fs.existsSync(path.join(storageDir, 'deleted', 'index.html')), true);
   await request(app).get('/site/deleted').expect(404);
+
+  const adminSites = await agent.get('/api/admin/sites').expect(200);
+  assert.deepEqual(adminSites.body, []);
+
+  const auditLogs = await agent.get('/api/admin/audit-logs').expect(200);
+  assert.equal(auditLogs.body.logs[0].action, 'soft-delete');
+  assert.deepEqual(auditLogs.body.logs[0].siteIds, ['deleted']);
 });
 
 test('admin can download a project HTML file', async () => {
@@ -2257,7 +2270,7 @@ test('admin can download a project HTML file', async () => {
 
 test('preview and code opens are counted for admin rankings', async () => {
   const ids = ['class-a', 'usage-site'];
-  const { app } = await makeTestApp({
+  const { app, dataDir } = await makeTestApp({
     idGenerator: () => ids.shift()
   });
   const agent = request.agent(app);
@@ -2278,6 +2291,13 @@ test('preview and code opens are counted for admin rankings', async () => {
 
   await agent.get('/preview/usage-site').expect(200);
   await agent.get('/api/sites/usage-site/code').expect(200);
+
+  const metadataSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  assert.equal(metadataSites[0].usagePreviewCount, undefined);
+  assert.equal(metadataSites[0].usageCodeCount, undefined);
+  const usage = JSON.parse(await fsp.readFile(path.join(dataDir, 'site-usage.json'), 'utf8'));
+  assert.equal(usage['usage-site'].usagePreviewCount, 1);
+  assert.equal(usage['usage-site'].usageCodeCount, 1);
 
   const after = await agent.get('/api/admin/sites').expect(200);
   const site = after.body.find((item) => item.id === 'usage-site');
