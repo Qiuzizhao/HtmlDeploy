@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凶宅·七层恐惧 - 完整版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        #gameBox {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #111;
+            overflow: hidden;
+        }
+        .light-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9;
+            background: radial-gradient(circle at var(--light-x) var(--light-y), transparent var(--light-size), rgba(0,0,0,0.96) 400px);
+        }
+        #player {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            background: #39a7ff;
+            border-radius: 6px;
+            z-index: 3;
+        }
+        #ghost {
+            position: absolute;
+            width: 52px;
+            height: 52px;
+            background: #900;
+            border-radius: 50%;
+            z-index: 2;
+            box-shadow: 0 0 30px red;
+            transition: opacity 0.3s;
+        }
+        .key {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            background: gold;
+            border-radius: 50%;
+            z-index: 2;
+            animation: shine 1.2s infinite alternate;
+        }
+        .item {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: #6a6a6a;
+            border-radius: 6px;
+            z-index: 2;
+        }
+        .battery {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #00ff6a;
+            border-radius: 4px;
+            z-index: 2;
+        }
+        .trap {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #400;
+            z-index: 1;
+        }
+        .hide-spot {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #222;
+            border: 2px solid #666;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 12px;
+        }
+        .stairs {
+            position: absolute;
+            width: 50px;
+            height: 70px;
+            background: #333;
+            border: 2px dashed #888;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+        }
+        #door {
+            position: absolute;
+            width: 60px;
+            height: 90px;
+            background: #5c3a21;
+            right: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 3px solid #222;
+            z-index: 2;
+        }
+        .ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 16px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 14px;
+            border-radius: 6px;
+            z-index: 100;
+            line-height: 1.5;
+        }
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            color: #fff;
+        }
+        .popup h2 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            color: #ff4444;
+        }
+        .popup p {
+            font-size: 15px;
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.7;
+            max-width: 600px;
+            text-align: center;
+        }
+        .btn {
+            padding: 12px 36px;
+            font-size: 20px;
+            background: #900;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #b00;
+        }
+        .hide { display: none !important; }
+        @keyframes shine {
+            from {box-shadow: 0 0 8px gold;}
+            to {box-shadow: 0 0 20px gold;}
+        }
+    </style>
+</head>
+<body>
+
+<div class="popup" id="startUI">
+    <h2>凶宅·七层恐惧</h2>
+    <p>
+        WASD/方向键移动<br>
+        1.手电会耗电，捡电池恢复<br>
+        2.跑步会出声吸引女鬼<br>
+        3.心跳越高越容易被发现<br>
+        4.收集3种道具合成钥匙<br>
+        5.踩陷阱会吸引女鬼瞬移<br>
+        6.女鬼会巡逻、搜索、蹲守<br><br>
+        集齐道具 → 1楼大门逃生
+    </p>
+    <button class="btn" onclick="start()">开始游戏</button>
+</div>
+
+<div class="popup hide" id="dieUI">
+    <h2>你被抓走了</h2>
+    <p>你成为了凶宅的一部分...</p>
+    <button class="btn" onclick="restart()">再来一次</button>
+</div>
+
+<div class="popup hide" id="winUI">
+    <h2>你成功逃离了！</h2>
+    <p>你活下来了...</p>
+    <button class="btn" onclick="restart()">再挑战</button>
+</div>
+
+<div id="gameBox">
+    <div class="ui" id="ui">
+        楼层：1<br>
+        手电电量：100%<br>
+        心跳：0%<br>
+        碎纸：0 铁钉：0 符咒：0<br>
+        合成钥匙：0
+    </div>
+    <div id="player"></div>
+    <div id="ghost"></div>
+    <div id="door"></div>
+    <div class="light-mask"></div>
+</div>
+
+<script>
+const gameBox = document.getElementById('gameBox');
+const player = document.getElementById('player');
+const ghost = document.getElementById('ghost');
+const door = document.getElementById('door');
+const light = document.querySelector('.light-mask');
+const ui = document.getElementById('ui');
+const startUI = document.getElementById('startUI');
+const dieUI = document.getElementById('dieUI');
+const winUI = document.getElementById('winUI');
+
+let game = {
+    run: false,
+    floor: 1,
+    maxFloor: 3,
+    battery: 100,
+    heart: 0,
+    paper:0, nail:0, charm:0,
+    key:0,
+    isHide: false,
+    isRun: false,
+    playerSpeed: 3.5,
+    ghostSpeed: 2.4,
+    ghostMode: "patrol",
+    lightSize: 160
+};
+
+let px=80, py=innerHeight/2;
+let gx=innerWidth/2, gy=100;
+let patrolTarget = {x:gx,y:gy};
+let key = {};
+
+document.onkeydown=(e)=>key[e.key]=true;
+document.onkeyup=(e)=>key[e.key]=false;
+
+function loadFloor(f){
+    game.floor = f;
+    document.querySelectorAll('.stairs,.hide-spot,.key,.item,.battery,.trap').forEach(e=>e.remove());
+
+    if(f==1){
+        makeStair(150, innerHeight-120, "上");
+        makeHide(400,300);
+        makeHide(600,200);
+        makeItem("paper", 220,150);
+        makeTrap(300,400);
+        door.style.display="block";
+    }
+    if(f==2){
+        makeStair(150, innerHeight-120, "下");
+        makeStair(700,100, "上");
+        makeHide(250,400);
+        makeItem("nail", 300,220);
+        makeTrap(500,200);
+        door.style.display="none";
+    }
+    if(f==3){
+        makeStair(700,100, "下");
+        makeHide(200,200);
+        makeItem("charm", 450,280);
+        makeBattery(650,420);
+        makeTrap(250,350);
+        door.style.display="none";
+    }
+}
+
+function makeStair(x,y,t){
+    let s=document.createElement('div');
+    s.className='stairs';
+    s.innerText=t;
+    s.style.left=x+'px';
+    s.style.top=y+'px';
+    gameBox.appendChild(s);
+}
+function makeHide(x,y){
+    let h=document.createElement('div');
+    h.className='hide-spot';
+    h.innerText='掩体';
+    h.style.left=x+'px';
+    h.style.top=y+'px';
+    gameBox.appendChild(h);
+}
+function makeItem(type,x,y){
+    let d=document.createElement('div');
+    d.className='item';
+    d.dataset.type=type;
+    d.style.left=x+'px';
+    d.style.top=y+'px';
+    gameBox.appendChild(d);
+}
+function makeBattery(x,y){
+    let b=document.createElement('div');
+    b.className='battery';
+    b.style.left=x+'px';
+    b.style.top=y+'px';
+    gameBox.appendChild(b);
+}
+function makeTrap(x,y){
+    let t=document.createElement('div');
+    t.className='trap';
+    t.style.left=x+'px';
+    t.style.top=y+'px';
+    gameBox.appendChild(t);
+}
+
+function updateUI(){
+    ui.innerHTML=`
+        楼层：${game.floor}<br>
+        手电电量：${game.battery}%<br>
+        心跳：${game.heart}%<br>
+        碎纸：${game.paper} 铁钉：${game.nail} 符咒：${game.charm}<br>
+        合成钥匙：${game.key}
+    `;
+    light.style.setProperty('--light-size', game.lightSize+'px');
+}
+
+function movePlayer(){
+    let sp = game.isRun ? game.playerSpeed*1.7 : game.playerSpeed;
+    if(key['w']||key['ArrowUp']) py-=sp;
+    if(key['s']||key['ArrowDown']) py+=sp;
+    if(key['a']||key['ArrowLeft']) px-=sp;
+    if(key['d']||key['ArrowRight']) px+=sp;
+
+    if(key['Shift']) game.isRun=true; else game.isRun=false;
+
+    px=Math.max(0,Math.min(px,innerWidth-36));
+    py=Math.max(0,Math.min(py,innerHeight-36));
+
+    player.style.left=px+'px';
+    player.style.top=py+'px';
+    light.style.setProperty('--light-x', px+18+'px');
+    light.style.setProperty('--light-y', py+18+'px');
+}
+
+function ghostAI(){
+    let dist = Math.hypot(px-gx, py-gy);
+    let inHide = checkHide();
+    game.isHide = inHide;
+
+    if(inHide){
+        ghost.style.opacity=0.2;
+        game.heart=0;
+        return;
+    }
+    ghost.style.opacity=1;
+
+    if(dist<200) game.heart=Math.min(100,game.heart+2);
+    else game.heart=Math.max(0,game.heart-1);
+
+    let isNoise = game.isRun && dist<400;
+    let isExpose = game.heart>70;
+
+    if(dist<150){gameOver();}
+
+    if(dist<350 || isNoise || isExpose){
+        game.ghostMode="chase";
+    }else if(game.ghostMode=="chase"){
+        game.ghostMode="search";
+        setTimeout(()=>game.ghostMode="patrol",3000);
+    }
+
+    if(game.ghostMode=="patrol"){
+        if(Math.hypot(gx-patrolTarget.x, gy-patrolTarget.y)<20){
+            patrolTarget={x:Math.random()*innerWidth,y:Math.random()*innerHeight};
+        }
+        moveGhostTo(patrolTarget.x,patrolTarget.y);
+    }
+    if(game.ghostMode=="chase"||game.ghostMode=="search"){
+        moveGhostTo(px,py);
+    }
+}
+
+function moveGhostTo(tx,ty){
+    let sp=game.ghostSpeed;
+    if(gx<tx) gx+=sp;
+    if(gx>tx) gx-=sp;
+    if(gy<ty) gy+=sp;
+    if(gy>ty) gy-=sp;
+    ghost.style.left=gx+'px';
+    ghost.style.top=gy+'px';
+}
+
+function checkHide(){
+    let p=player.getBoundingClientRect();
+    let ok=false;
+    document.querySelectorAll('.hide-spot').forEach(h=>{
+        let r=h.getBoundingClientRect();
+        if(coll(p,r)) ok=true;
+    });
+    return ok;
+}
+
+function checkAll(){
+    let p=player.getBoundingClientRect();
+
+    document.querySelectorAll('.item').forEach(i=>{
+        let r=i.getBoundingClientRect();
+        if(coll(p,r)){
+            let t=i.dataset.type;
+            if(t=='paper')game.paper=1;
+            if(t=='nail')game.nail=1;
+            if(t=='charm')game.charm=1;
+            i.remove();
+            if(game.paper&&game.nail&&game.charm){
+                game.key=1;
+            }
+        }
+    });
+
+    document.querySelectorAll('.battery').forEach(b=>{
+        if(coll(p,b.getBoundingClientRect())){
+            game.battery=100;
+            game.lightSize=160;
+            b.remove();
+        }
+    });
+
+    document.querySelectorAll('.trap').forEach(t=>{
+        if(coll(p,t.getBoundingClientRect())){
+            gx=px+Math.random()*100-50;
+            gy=py+Math.random()*100-50;
+        }
+    });
+
+    document.querySelectorAll('.stairs').forEach(s=>{
+        if(coll(p,s.getBoundingClientRect())){
+            let t=s.innerText;
+            if(t=="上"&&game.floor<3){loadFloor(game.floor+1);}
+            if(t=="下"&&game.floor>1){loadFloor(game.floor-1);}
+        }
+    });
+
+    if(game.key && coll(p,door.getBoundingClientRect())) win();
+
+    game.battery-=0.08;
+    if(game.battery<0)game.battery=0;
+    game.lightSize=80 + (game.battery/100)*80;
+}
+
+function coll(a,b){
+    return !(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom);
+}
+
+function start(){
+    startUI.classList.add('hide');
+    game.run=true;
+    reset();
+    loop();
+}
+function reset(){
+    px=80; py=innerHeight/2;
+    gx=innerWidth/2; gy=100;
+    game.battery=100;
+    game.heart=0;
+    game.paper=game.nail=game.charm=game.key=0;
+    loadFloor(1);
+}
+function restart(){
+    dieUI.classList.add('hide');
+    winUI.classList.add('hide');
+    reset();
+    game.run=true;
+}
+function gameOver(){
+    game.run=false;
+    dieUI.classList.remove('hide');
+}
+function win(){
+    game.run=false;
+    winUI.classList.remove('hide');
+}
+
+function loop(){
+    if(!game.run)return;
+    movePlayer();
+    ghostAI();
+    checkAll();
+    updateUI();
+    requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

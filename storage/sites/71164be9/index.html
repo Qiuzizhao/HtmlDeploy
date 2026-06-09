@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深圳二零二八 - 中乙联赛</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #0d5d1f, #063a11);
+            min-height: 100vh;
+            color: white;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: #d81f26;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 26px;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            margin-top: 5px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* 比赛主容器 */
+        .game-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        /* 比分板 */
+        .score-board {
+            background: rgba(0,0,0,0.6);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .teams {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .team {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .home-team {
+            color: #ffd700;
+        }
+
+        .score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #fff;
+            width: 100px;
+        }
+
+        .vs {
+            font-size: 24px;
+            color: #ccc;
+        }
+
+        .match-info {
+            font-size: 16px;
+            color: #eee;
+            margin-top: 10px;
+        }
+
+        /* 操作按钮 */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .attack-btn {
+            background: #ff3d3d;
+            color: white;
+        }
+
+        .defend-btn {
+            background: #2d8cf0;
+            color: white;
+        }
+
+        .reset-btn {
+            background: #666;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        /* 比赛进程 */
+        .match-process {
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 20px;
+            height: 180px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .process-item {
+            margin: 8px 0;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        /* 球队阵容 */
+        .squad {
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .squad h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .players {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .player {
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        /* 底部信息 */
+        .footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <div class="header">
+        <h1>中国足球协会乙级联赛</h1>
+        <p>主队：深圳二零二八足球俱乐部</p>
+    </div>
+
+    <!-- 游戏主容器 -->
+    <div class="game-container">
+        <!-- 比分面板 -->
+        <div class="score-board">
+            <div class="teams">
+                <div class="team home-team">深圳二零二八</div>
+                <div class="score" id="home-score">0</div>
+                <div class="vs">VS</div>
+                <div class="score" id="away-score">0</div>
+                <div class="team" id="away-team">对手</div>
+            </div>
+            <div class="match-info">
+                比赛时间：<span id="match-time">0'</span> | 赛事：中乙联赛第<span id="match-round">1</span>轮
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="controls">
+            <button class="btn attack-btn" id="attack">⚽ 进攻（射门）</button>
+            <button class="btn defend-btn" id="defend">🛡️ 防守</button>
+            <button class="btn reset-btn" id="reset">🔄 重新开始</button>
+        </div>
+
+        <!-- 比赛进程 -->
+        <div class="match-process" id="process">
+            <div class="process-item">比赛开始！深圳二零二八加油！</div>
+        </div>
+
+        <!-- 深圳二零二八阵容 -->
+        <div class="squad">
+            <h3>深圳二零二八 首发阵容</h3>
+            <div class="players">
+                <div class="player">1 门将</div>
+                <div class="player">3 后卫</div>
+                <div class="player">5 后卫</div>
+                <div class="player">6 中场</div>
+                <div class="player">7 前锋</div>
+                <div class="player">8 中场</div>
+                <div class="player">9 前锋</div>
+                <div class="player">10 队长</div>
+                <div class="player">11 边锋</div>
+                <div class="player">15 后卫</div>
+                <div class="player">20 中场</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="footer">
+        深圳二零二八 · 中乙联赛专属小游戏 | 为深圳而战
+    </div>
+
+    <script>
+        // 核心数据
+        let homeScore = 0;
+        let awayScore = 0;
+        let matchTime = 0;
+        const homeTeam = "深圳二零二八";
+        const awayTeams = ["江西黑马青年", "海南之星", "重庆铜梁龙", "云南玉昆", "绍兴上虞翼龙", "泉州亚新", "湖北青年星", "泰安天贶"];
+        let currentAway = awayTeams[Math.floor(Math.random() * awayTeams.length)];
+
+        // DOM元素
+        const homeScoreEl = document.getElementById("home-score");
+        const awayScoreEl = document.getElementById("away-score");
+        const awayTeamEl = document.getElementById("away-team");
+        const matchTimeEl = document.getElementById("match-time");
+        const processEl = document.getElementById("process");
+        const roundEl = document.getElementById("match-round");
+
+        // 初始化对手
+        awayTeamEl.textContent = currentAway;
+
+        // 生成比赛日志
+        function addLog(text) {
+            const item = document.createElement("div");
+            item.className = "process-item";
+            item.textContent = `${matchTime}' ${text}`;
+            processEl.appendChild(item);
+            processEl.scrollTop = processEl.scrollHeight;
+        }
+
+        // 时间流逝
+        function timeFly() {
+            matchTime += Math.floor(Math.random() * 5) + 3;
+            if (matchTime > 95) matchTime = 95;
+            matchTimeEl.textContent = matchTime + "'";
+        }
+
+        // 进攻按钮
+        document.getElementById("attack").addEventListener("click", function() {
+            if (matchTime >= 95) {
+                addLog("比赛已结束！");
+                return;
+            }
+            timeFly();
+            const random = Math.random();
+            if (random > 0.55) {
+                homeScore++;
+                homeScoreEl.textContent = homeScore;
+                addLog(`⚽ 进球啦！${homeTeam} 破门得分！`);
+            } else if (random > 0.25) {
+                addLog(`🚫 ${homeTeam} 进攻被对方后卫化解`);
+            } else {
+                addLog(`🎯 射门偏出，错失良机`);
+            }
+        });
+
+        // 防守按钮
+        document.getElementById("defend").addEventListener("click", function() {
+            if (matchTime >= 95) {
+                addLog("比赛已结束！");
+                return;
+            }
+            timeFly();
+            const random = Math.random();
+            if (random > 0.6) {
+                awayScore++;
+                awayScoreEl.textContent = awayScore;
+                addLog(`⚠️ 丢球！${currentAway} 破门`);
+            } else if (random > 0.3) {
+                addLog(`🛡️ 防守成功！化解对方进攻`);
+            } else {
+                addLog(`🧤 门将精彩扑救！`);
+            }
+        });
+
+        // 重置比赛
+        document.getElementById("reset").addEventListener("click", function() {
+            homeScore = 0;
+            awayScore = 0;
+            matchTime = 0;
+            currentAway = awayTeams[Math.floor(Math.random() * awayTeams.length)];
+            homeScoreEl.textContent = 0;
+            awayScoreEl.textContent = 0;
+            awayTeamEl.textContent = currentAway;
+            matchTimeEl.textContent = "0'";
+            processEl.innerHTML = `<div class="process-item">比赛重新开始！${homeTeam}加油！</div>`;
+            roundEl.textContent = Math.floor(Math.random() * 30) + 1;
+        });
+    </script>
+</body>
+</html>

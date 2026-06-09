@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简易枪战游戏</title>
+    <style>
+        body {margin: 0; background: #222; display: flex; justify-content: center; padding-top: 20px;}
+        #gameBox {width: 800px; height: 500px; background: #333; position: relative; overflow: hidden; border: 3px solid #fff;}
+        .player {width: 40px; height: 40px; background: #2196F3; position: absolute; bottom: 10px; left: 380px; border-radius: 4px;}
+        .enemy {width: 35px; height: 35px; background: #f44336; position: absolute; border-radius: 4px;}
+        .bullet {width: 8px; height: 16px; background: #ffeb3b; position: absolute; border-radius: 2px;}
+        .info {color: #fff; font-size: 18px; padding: 10px;}
+    </style>
+</head>
+<body>
+    <div>
+        <div class="info">血量：<span id="hp">100</span> | 击杀数：<span id="kill">0</span></div>
+        <div id="gameBox"></div>
+        <div class="info">操作：← → 移动 | 空格 射击</div>
+    </div>
+
+<script>
+// 游戏基础变量
+const gameBox = document.getElementById('gameBox');
+const hpText = document.getElementById('hp');
+const killText = document.getElementById('kill');
+let player = document.querySelector('.player');
+let playerLeft = 380;
+let playerHp = 100;
+let killNum = 0;
+let bullets = [];
+let enemies = [];
+let gameRun = true;
+
+// 玩家左右移动
+document.addEventListener('keydown', (e) => {
+    if(!gameRun) return;
+    const speed = 8;
+    if(e.key === 'ArrowLeft' && playerLeft > 0){
+        playerLeft -= speed;
+        player.style.left = playerLeft + 'px';
+    }
+    if(e.key === 'ArrowRight' && playerLeft < 760){
+        playerLeft += speed;
+        player.style.left = playerLeft + 'px';
+    }
+    // 空格射击
+    if(e.key === ' '){
+        shoot();
+    }
+});
+
+// 射击函数
+function shoot(){
+    let bullet = document.createElement('div');
+    bullet.className = 'bullet';
+    bullet.style.left = (playerLeft + 16) + 'px';
+    bullet.style.bottom = '50px';
+    gameBox.appendChild(bullet);
+    bullets.push(bullet);
+}
+
+// 生成敌人
+function createEnemy(){
+    if(!gameRun) return;
+    let enemy = document.createElement('div');
+    enemy.className = 'enemy';
+    let randomX = Math.floor(Math.random() * 760);
+    enemy.style.left = randomX + 'px';
+    enemy.style.top = '0px';
+    gameBox.appendChild(enemy);
+    enemies.push(enemy);
+}
+
+// 子弹移动+碰撞检测
+function bulletMove(){
+    bullets.forEach((b, idx) => {
+        let bottom = parseInt(b.style.bottom);
+        bottom += 12;
+        b.style.bottom = bottom + 'px';
+        // 子弹出界移除
+        if(bottom > 500){
+            b.remove();
+            bullets.splice(idx,1);
+        }
+        // 子弹击中敌人
+        enemies.forEach((e, eIdx) => {
+            let eTop = parseInt(e.style.top);
+            let bLeft = parseInt(b.style.left);
+            let eLeft = parseInt(e.style.left);
+            if(bottom > eTop && Math.abs(bLeft - eLeft) < 30){
+                e.remove();
+                b.remove();
+                enemies.splice(eIdx,1);
+                bullets.splice(idx,1);
+                killNum++;
+                killText.innerText = killNum;
+            }
+        })
+    })
+}
+
+// 敌人移动+攻击玩家
+function enemyMove(){
+    enemies.forEach((e, idx) => {
+        let top = parseInt(e.style.top);
+        top += 3;
+        e.style.top = top + 'px';
+        // 敌人接触玩家，扣血
+        if(top > 440){
+            playerHp -= 20;
+            hpText.innerText = playerHp;
+            e.remove();
+            enemies.splice(idx,1);
+            // 血量为0 游戏结束
+            if(playerHp <= 0){
+                gameRun = false;
+                alert('游戏结束！总击杀数：' + killNum);
+                location.reload();
+            }
+        }
+    })
+}
+
+// 循环执行游戏逻辑
+setInterval(bulletMove, 30);
+setInterval(enemyMove, 30);
+setInterval(createEnemy, 1500);
+</script>
+</body>
+</html>

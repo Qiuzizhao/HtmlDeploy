@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>限时方块消除</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+        }
+        .header {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .tip {
+            color: #ccc;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #gameBox {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            background: #16213e;
+            padding: 6px;
+            border-radius: 8px;
+        }
+        .block {
+            width: clamp(32px, 5vw, 48px);
+            height: clamp(32px, 5vw, 48px);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .block:hover {
+            transform: scale(1.08);
+        }
+        .block.special {
+            animation: flash 0.8s infinite alternate;
+        }
+        @keyframes flash {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
+        }
+        /* 弹窗样式 */
+        .mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .pop {
+            background: #fff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            text-align: center;
+            width: 90%;
+            max-width: 320px;
+        }
+        .pop h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .pop p {
+            font-size: 18px;
+            color: #555;
+            margin: 10px 0;
+        }
+        .pop button {
+            margin-top: 25px;
+            padding: 10px 28px;
+            border: none;
+            background: #0099ff;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .pop button:hover {
+            background: #0077cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>得分：<span id="score">0</span></div>
+        <div>剩余时间：<span id="time">60</span> s</div>
+    </div>
+    <div class="tip">点击相连同色方块消除 | 彩色闪烁方块为特效块</div>
+    <div id="gameBox"></div>
+
+    <!-- 结束弹窗 -->
+    <div class="mask" id="mask">
+        <div class="pop">
+            <h2>游戏结束</h2>
+            <p>最终得分：<span id="finalScore">0</span></p>
+            <p>段位排名：<span id="rank">新手</span></p>
+            <button onclick="restartGame()">再来一局</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const ROW = 8;
+        const COL = 8;
+        const COLORS = ['#ff4757','#ffd32a','#2ed573','#1e90ff','#a55eea','#ff7979'];
+        let gameArr = [];
+        let score = 0;
+        let time = 60;
+        let timer = null;
+        let gameOver = false;
+        const gameBox = document.getElementById('gameBox');
+        const scoreDom = document.getElementById('score');
+        const timeDom = document.getElementById('time');
+        const mask = document.getElementById('mask');
+        const finalScoreDom = document.getElementById('finalScore');
+        const rankDom = document.getElementById('rank');
+
+        // 初始化棋盘
+        function initBoard() {
+            gameArr = [];
+            gameBox.innerHTML = '';
+            for(let r = 0; r < ROW; r++){
+                gameArr[r] = [];
+                for(let c = 0; c < COL; c++){
+                    let colorIdx = Math.floor(Math.random() * COLORS.length);
+                    let isSpecial = Math.random() < 0.08; // 8%概率生成特效方块
+                    gameArr[r][c] = {
+                        color: colorIdx,
+                        special: isSpecial,
+                        exist: true
+                    };
+                    createBlock(r, c);
+                }
+            }
+        }
+
+        // 创建方块DOM
+        function createBlock(r, c) {
+            const block = document.createElement('div');
+            block.className = 'block';
+            block.dataset.r = r;
+            block.dataset.c = c;
+            block.style.backgroundColor = COLORS[gameArr[r][c].color];
+            if(gameArr[r][c].special) block.classList.add('special');
+            block.addEventListener('click', () => clickBlock(r, c));
+            gameBox.appendChild(block);
+        }
+
+        // 查找相连同色方块（广度优先）
+        function findLink(r, c, color, visited) {
+            let list = [[r,c]];
+            visited[r][c] = true;
+            const dir = [[-1,0],[1,0],[0,-1],[0,1]];
+            for(let i = 0; i < list.length; i++){
+                let [x,y] = list[i];
+                for(let [dx, dy] of dir){
+                    let nx = x + dx;
+                    let ny = y + dy;
+                    if(nx >=0 && nx < ROW && ny >=0 && ny < COL && !visited[nx][ny]
+                        && gameArr[nx][ny].exist && gameArr[nx][ny].color === color){
+                        visited[nx][ny] = true;
+                        list.push([nx, ny]);
+                    }
+                }
+            }
+            return list;
+        }
+
+        // 点击方块
+        function clickBlock(r, c) {
+            if(gameOver || !gameArr[r][c].exist) return;
+            // 特效方块：全场消除
+            if(gameArr[r][c].special){
+                let count = 0;
+                for(let i = 0; i < ROW; i++){
+                    for(let j = 0; j < COL; j++){
+                        if(gameArr[i][j].exist){
+                            gameArr[i][j].exist = false;
+                            count++;
+                        }
+                    }
+                }
+                addScore(count);
+                dropBlock();
+                return;
+            }
+            // 普通方块
+            let visited = Array(ROW).fill().map(() => Array(COL).fill(false));
+            let linkList = findLink(r, c, gameArr[r][c].color, visited);
+            if(linkList.length < 2) return; // 不足2个相连不消除
+
+            // 标记消除
+            linkList.forEach(([x,y]) => {
+                gameArr[x][y].exist = false;
+            });
+            addScore(linkList.length);
+            dropBlock();
+        }
+
+        // 加分规则：数量越多分数越高
+        function addScore(num) {
+            let add = num >= 8 ? num * 3 : num >= 5 ? num * 2 : num;
+            score += add;
+            scoreDom.innerText = score;
+        }
+
+        // 方块下落 + 顶部补新方块
+        function dropBlock() {
+            // 逐列处理
+            for(let c = 0; c < COL; c++){
+                let temp = [];
+                // 收集本列存在的方块
+                for(let r = ROW-1; r >=0; r--){
+                    if(gameArr[r][c].exist) temp.push(gameArr[r][c]);
+                }
+                // 重置列
+                for(let r = ROW-1; r >=0; r--){
+                    if(temp.length > 0){
+                        gameArr[r][c] = temp.shift();
+                    }else{
+                        let colorIdx = Math.floor(Math.random() * COLORS.length);
+                        let isSpecial = Math.random() < 0.08;
+                        gameArr[r][c] = {
+                            color: colorIdx,
+                            special: isSpecial,
+                            exist: true
+                        };
+                    }
+                }
+            }
+            // 重新渲染
+            gameBox.innerHTML = '';
+            for(let r = 0; r < ROW; r++){
+                for(let c = 0; c < COL; c++){
+                    createBlock(r, c);
+                }
+            }
+        }
+
+        // 倒计时
+        function startTimer() {
+            timer = setInterval(() => {
+                time--;
+                timeDom.innerText = time;
+                if(time <= 0){
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // 结束游戏
+        function endGame() {
+            gameOver = true;
+            clearInterval(timer);
+            // 判定排名
+            let rank = '';
+            if(score < 50) rank = "新手玩家";
+            else if(score < 120) rank = "休闲玩家";
+            else if(score < 200) rank = "消除达人";
+            else if(score < 300) rank = "方块高手";
+            else rank = "顶尖大神";
+
+            finalScoreDom.innerText = score;
+            rankDom.innerText = rank;
+            mask.style.display = 'flex';
+        }
+
+        // 重新开始
+        function restartGame() {
+            score = 0;
+            time = 60;
+            gameOver = false;
+            scoreDom.innerText = 0;
+            timeDom.innerText = 60;
+            mask.style.display = 'none';
+            clearInterval(timer);
+            initBoard();
+            startTimer();
+        }
+
+        // 页面加载自动开局
+        window.onload = function() {
+            initBoard();
+            startTimer();
+        }
+    </script>
+</body>
+</html>

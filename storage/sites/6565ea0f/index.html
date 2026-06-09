@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>网页射击小游戏</title>
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+    font-family: sans-serif;
+  }
+  canvas {
+    border: 1px solid #333;
+  }
+  #info {
+    margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+<h2>网页射击游戏</h2>
+<div id="info">分数：0 | 生命：5 | 关卡：1</div>
+<canvas id="c" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+
+// 音效（简单合成，不用音频文件）
+function playShoot() {
+  const a = new (window.AudioContext || window.webkitAudioContext)();
+  const o = a.createOscillator();
+  o.type = 'square';
+  o.frequency.value = 800;
+  o.connect(a.destination);
+  o.start();
+  o.stop(a.currentTime + 0.05);
+}
+function playExplode() {
+  const a = new (window.AudioContext || window.webkitAudioContext)();
+  const o = a.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.value = 150;
+  o.connect(a.destination);
+  o.start();
+  o.stop(a.currentTime + 0.2);
+}
+
+// 玩家
+const player = {
+  x: canvas.width / 2 - 25,
+  y: canvas.height - 60,
+  w: 50,
+  h: 50,
+  speed: 6,
+  hp: 5,
+  speedBuff: 0
+};
+
+// 游戏数据
+let bullets = [];
+let enemies = [];
+let items = [];
+let explosions = [];
+let boss = null;
+let score = 0;
+let level = 1;
+let gameOver = false;
+let bossSpawned = false;
+
+// 按键
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+canvas.addEventListener('click', () => shoot());
+
+// 射击
+function shoot() {
+  if (gameOver) return;
+  bullets.push({
+    x: player.x + player.w / 2 - 5,
+    y: player.y - 10,
+    w: 10,
+    h: 20,
+    speed: -12
+  });
+  playShoot();
+}
+
+// 生成敌机
+function spawnEnemy() {
+  if (gameOver) return;
+  const speed = 2 + level * 0.5;
+  enemies.push({
+    x: Math.random() * (canvas.width - 40),
+    y: -40,
+    w: 40,
+    h: 40,
+    speed: speed
+  });
+}
+
+// 生成道具
+function spawnItem(x, y) {
+  const type = Math.random() > 0.5 ? 'hp' : 'speed';
+  items.push({
+    x, y,
+    w: 30,
+    h: 30,
+    type,
+    speed: 3
+  });
+}
+
+// 生成BOSS
+function spawnBoss() {
+  boss = {
+    x: canvas.width / 2 - 60,
+    y: -100,
+    w: 120,
+    h: 80,
+    hp: 30,
+    speed: 2,
+    dir: 1
+  };
+  bossSpawned = true;
+}
+
+// 爆炸
+function explode(x, y) {
+  explosions.push({ x, y, life: 20 });
+  playExplode();
+}
+
+// 碰撞检测
+function coll(a, b) {
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y;
+}
+
+// 更新
+function update() {
+  if (gameOver) return;
+
+  // 玩家移动
+  let spd = player.speedBuff > 0 ? player.speed * 1.8 : player.speed;
+  if (keys['ArrowLeft'] || keys['a']) player.x -= spd;
+  if (keys['ArrowRight'] || keys['d']) player.x += spd;
+  if (keys['ArrowUp'] || keys['w']) player.y -= spd;
+  if (keys['ArrowDown'] || keys['s']) player.y += spd;
+  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+  if (player.speedBuff > 0) player.speedBuff--;
+
+  // 子弹
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.y += b.speed;
+    if (b.y + b.h < 0) bullets.splice(i, 1);
+  }
+
+  // 敌机
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    e.y += e.speed;
+    if (e.y > canvas.height) {
+      enemies.splice(i, 1);
+      player.hp--;
+    }
+  }
+
+  // 道具
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i];
+    it.y += it.speed;
+    if (it.y > canvas.height) items.splice(i, 1);
+  }
+
+  // BOSS
+  if (boss) {
+    if (boss.y < 80) boss.y += boss.speed;
+    else {
+      boss.x += boss.speed * boss.dir;
+      if (boss.x < 0 || boss.x + boss.w > canvas.width) boss.dir *= -1;
+    }
+  }
+
+  // 爆炸
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    explosions[i].life--;
+    if (explosions[i].life <= 0) explosions.splice(i, 1);
+  }
+
+  // 子弹撞敌机
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const e = enemies[j];
+      if (coll(b, e)) {
+        explode(e.x + e.w / 2, e.y + e.h / 2);
+        enemies.splice(j, 1);
+        bullets.splice(i, 1);
+        score += 10;
+        if (Math.random() < 0.2) spawnItem(e.x, e.y);
+        break;
+      }
+    }
+  }
+
+  // 子弹撞BOSS
+  if (boss) {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      if (coll(b, boss)) {
+        boss.hp--;
+        bullets.splice(i, 1);
+        if (boss.hp <= 0) {
+          explode(boss.x + boss.w / 2, boss.y + boss.h / 2);
+          boss = null;
+          score += 200;
+          gameOver = true;
+        }
+      }
+    }
+  }
+
+  // 玩家撞敌机
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (coll(player, e)) {
+      explode(e.x + e.w / 2, e.y + e.h / 2);
+      enemies.splice(i, 1);
+      player.hp--;
+    }
+  }
+
+  // 玩家撞道具
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i];
+    if (coll(player, it)) {
+      if (it.type === 'hp' && player.hp < 10) player.hp++;
+      if (it.type === 'speed') player.speedBuff = 180;
+      items.splice(i, 1);
+    }
+  }
+
+  // 关卡 & BOSS
+  if (score >= 300 && !bossSpawned) spawnBoss();
+  if (player.hp <= 0) gameOver = true;
+
+  // 简单关卡提升
+  if (score > 0 && score % 500 === 0) level++;
+}
+
+// 绘制
+function draw() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 玩家（蓝色三角）
+  ctx.fillStyle = '#00f';
+  ctx.beginPath();
+  ctx.moveTo(player.x + player.w / 2, player.y);
+  ctx.lineTo(player.x, player.y + player.h);
+  ctx.lineTo(player.x + player.w, player.y + player.h);
+  ctx.closePath();
+  ctx.fill();
+
+  // 子弹（红色）
+  ctx.fillStyle = '#f00';
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+  // 敌机（青色）
+  ctx.fillStyle = '#0ff';
+  enemies.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+
+  // 道具
+  items.forEach(it => {
+    ctx.fillStyle = it.type === 'hp' ? '#0f0' : '#ff0';
+    ctx.fillRect(it.x, it.y, it.w, it.h);
+  });
+
+  // BOSS（橙色）
+  if (boss) {
+    ctx.fillStyle = '#ffa500';
+    ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+    // BOSS血条
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(boss.x, boss.y - 10, boss.w * (boss.hp / 30), 5);
+  }
+
+  // 爆炸（黄闪）
+  explosions.forEach(ex => {
+    ctx.fillStyle = `rgba(255,255,0,${ex.life / 20})`;
+    ctx.beginPath();
+    ctx.arc(ex.x, ex.y, 20, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // UI
+  info.textContent = `分数：${score} | 生命：${player.hp} | 关卡：${level}`;
+  if (gameOver) {
+    ctx.fillStyle = '#fff';
+    ctx.font = '40px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(boss === null ? '恭喜通关！' : '游戏结束', canvas.width / 2, canvas.height / 2);
+  }
+}
+
+// 循环
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// 定时生成敌机
+setInterval(spawnEnemy, 1000);
+
+loop();
+</script>
+</body>
+</html>

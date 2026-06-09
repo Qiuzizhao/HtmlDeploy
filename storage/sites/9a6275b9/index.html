@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>欢乐三人快斗 - 极简斗地主</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background: #2c7a30;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 10px;
+            color: #ffeb3b;
+        }
+        .info {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #ff9800;
+            border: none;
+            border-radius: 6px;
+            color: white;
+        }
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin: 15px 0;
+        }
+        .card {
+            width: 70px;
+            height: 100px;
+            background: white;
+            color: black;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .card.selected {
+            border-color: #ffeb3b;
+            background: #fff9c4;
+        }
+        .player-area {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #fff5;
+            border-radius: 10px;
+        }
+        .play-area {
+            min-height: 120px;
+            background: #1e5c22;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>欢乐三人快斗</h1>
+        <div class="info" id="status">点击开始游戏 → 发牌 → 抢地主</div>
+        
+        <button class="btn" onclick="startGame()">开始新游戏</button>
+        <button class="btn" onclick="qiangDizhu()" id="btnQiang" disabled>抢地主</button>
+        <button class="btn" onclick="buQiang()" id="btnBuQiang" disabled>不抢</button>
+        <button class="btn" onclick="playCards()" id="btnPlay" disabled>出牌</button>
+        <button class="btn" onclick="passPlay()" id="btnPass" disabled>不出</button>
+
+        <div class="player-area">
+            <h3>我的牌</h3>
+            <div class="cards" id="myCards"></div>
+        </div>
+
+        <div class="play-area">
+            <h3>桌面牌</h3>
+            <div class="cards" id="deskCards"></div>
+        </div>
+
+        <div class="info">底牌：<span id="diPai"></span></div>
+        <div class="info">地主：<span id="dizhu"></span></div>
+    </div>
+
+    <script>
+        // 游戏数据
+        const allCards = [
+            '3','4','5','6','7','8','9','10','J','Q','K','A','2',
+            '3','4','5','6','7','8','9','10','J','Q','K','A','2',
+            '3','4','5','6','7','8','9','10','J','Q','K','A','2',
+            '3','4','5','6','7','8','9','10','J','Q','K','A','2',
+            '小王','大王'
+        ];
+        let playerCards = [], robot1Cards = [], robot2Cards = [], diPai = [];
+        let dizhu = -1; // 0=我 1=机器人1 2=机器人2
+        let gameStatus = 'start'; // start, qiang, play, over
+        let lastPlayCards = [];
+        let lastPlayPlayer = -1;
+        let turn = 0;
+
+        // 洗牌
+        function shuffle(arr) {
+            return arr.sort(() => Math.random() - 0.5);
+        }
+
+        // 开始游戏
+        function startGame() {
+            const cards = shuffle([...allCards]);
+            playerCards = cards.slice(0, 17).sort();
+            robot1Cards = cards.slice(17, 34).sort();
+            robot2Cards = cards.slice(34, 51).sort();
+            diPai = cards.slice(51, 54);
+            
+            gameStatus = 'qiang';
+            turn = 0;
+            lastPlayCards = [];
+            lastPlayPlayer = -1;
+            dizhu = -1;
+            
+            document.getElementById('btnQiang').disabled = false;
+            document.getElementById('btnBuQiang').disabled = false;
+            document.getElementById('btnPlay').disabled = true;
+            document.getElementById('btnPass').disabled = true;
+            document.getElementById('status').innerText = '轮到你抢地主！';
+            updateUI();
+        }
+
+        // 抢地主
+        function qiangDizhu() {
+            dizhu = 0;
+            playerCards = [...playerCards, ...diPai].sort();
+            endQiang();
+        }
+
+        // 不抢
+        function buQiang() {
+            // 机器人随机抢
+            const r = Math.random();
+            if (r < 0.5) {
+                dizhu = 1;
+                robot1Cards = [...robot1Cards, ...diPai].sort();
+            } else {
+                dizhu = 2;
+                robot2Cards = [...robot2Cards, ...diPai].sort();
+            }
+            endQiang();
+        }
+
+        // 结束抢地主
+        function endQiang() {
+            gameStatus = 'play';
+            document.getElementById('btnQiang').disabled = true;
+            document.getElementById('btnBuQiang').disabled = true;
+            document.getElementById('btnPlay').disabled = false;
+            document.getElementById('btnPass').disabled = false;
+            document.getElementById('status').innerText = '游戏开始！地主先出牌';
+            updateUI();
+        }
+
+        // 更新界面
+        function updateUI() {
+            const myCardsEl = document.getElementById('myCards');
+            myCardsEl.innerHTML = '';
+            playerCards.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerText = c;
+                div.onclick = () => div.classList.toggle('selected');
+                myCardsEl.appendChild(div);
+            });
+
+            document.getElementById('diPai').innerText = diPai.join(' ');
+            document.getElementById('dizhu').innerText = dizhu === 0 ? '你' : (dizhu === 1 ? '机器人1' : '机器人2');
+        }
+
+        // 出牌
+        function playCards() {
+            const selected = Array.from(document.querySelectorAll('.card.selected')).map(e => e.innerText);
+            if (selected.length === 0) return;
+            
+            lastPlayCards = selected;
+            playerCards = playerCards.filter(c => !selected.includes(c));
+            document.getElementById('deskCards').innerHTML = selected.map(c => `<div class="card">${c}</div>`).join('');
+            
+            checkWin();
+            updateUI();
+        }
+
+        // 不出
+        function passPlay() {
+            document.getElementById('status').innerText = '你选择不出，机器人出牌';
+        }
+
+        // 检查胜利
+        function checkWin() {
+            if (playerCards.length === 0) {
+                alert(dizhu === 0 ? '你是地主，你赢了！' : '你是农民，你赢了！');
+                gameStatus = 'over';
+            }
+        }
+    </script>
+</body>
+</html>

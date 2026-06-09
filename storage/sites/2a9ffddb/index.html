@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>慢速贪吃蛇</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 30px;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .info {
+            color: #ccc;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #gameCanvas {
+            border: 3px solid #4CAF50;
+            background: #000;
+        }
+        .tip {
+            color: #aaa;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>慢速贪吃蛇</h1>
+    <div class="info">得分：<span id="score">0</span></div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="tip">方向键 ↑ ↓ ← → 控制，撞到边界/自己游戏结束</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreText = document.getElementById('score');
+
+        // 格子大小
+        const size = 20;
+        // 慢速间隔（毫秒，数值越大越慢）
+        const speed = 180;
+
+        // 蛇初始数据
+        let snake = [
+            {x: 5 * size, y: 5 * size}
+        ];
+        let dx = size;
+        let dy = 0;
+        let food = {};
+        let score = 0;
+        let gameLoop;
+        let isGameOver = false;
+
+        // 随机生成食物
+        function createFood() {
+            return {
+                x: Math.floor(Math.random() * (canvas.width / size)) * size,
+                y: Math.floor(Math.random() * (canvas.height / size)) * size
+            };
+        }
+        food = createFood();
+
+        // 绘制方块
+        function drawRect(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, size - 1, size - 1); // -1留缝隙
+        }
+
+        // 整体渲染
+        function render() {
+            // 清空画布
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 画食物
+            drawRect(food.x, food.y, '#ff4444');
+
+            // 画蛇
+            snake.forEach((seg, index) => {
+                if (index === 0) {
+                    drawRect(seg.x, seg.y, '#4CAF50'); // 蛇头绿色
+                } else {
+                    drawRect(seg.x, seg.y, '#88e888'); // 身体浅绿
+                }
+            });
+        }
+
+        // 更新蛇位置
+        function update() {
+            if (isGameOver) return;
+
+            // 新头部
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+            // 撞墙判断
+            if (
+                head.x < 0 ||
+                head.y < 0 ||
+                head.x >= canvas.width ||
+                head.y >= canvas.height
+            ) {
+                gameOver();
+                return;
+            }
+
+            // 撞到自己
+            for (let seg of snake) {
+                if (seg.x === head.x && seg.y === head.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // 吃到食物
+            snake.unshift(head);
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreText.textContent = score;
+                food = createFood();
+            } else {
+                snake.pop();
+            }
+        }
+
+        // 游戏结束
+        function gameOver() {
+            isGameOver = true;
+            clearInterval(gameLoop);
+            alert(`游戏结束！得分：${score}\n刷新页面重新开始`);
+        }
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
+            switch(e.key) {
+                case 'ArrowUp':
+                    if (dy !== size) { dx = 0; dy = -size; }
+                    break;
+                case 'ArrowDown':
+                    if (dy !== -size) { dx = 0; dy = size; }
+                    break;
+                case 'ArrowLeft':
+                    if (dx !== size) { dx = -size; dy = 0; }
+                    break;
+                case 'ArrowRight':
+                    if (dx !== -size) { dx = size; dy = 0; }
+                    break;
+            }
+        });
+
+        // 游戏循环
+        function loop() {
+            update();
+            render();
+        }
+        gameLoop = setInterval(loop, speed);
+        render();
+    </script>
+</body>
+</html>

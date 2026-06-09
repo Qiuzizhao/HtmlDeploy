@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>躺平发育 一秒100金币版</title>
+<style>
+*{margin:0;padding:0;font-family:Microsoft Yahei;box-sizing:border-box}
+body{background:#111420;color:#eee;padding:10px}
+#gameBox{max-width:900px;margin:0 auto}
+.topBar{display:flex;justify-content:space-between;padding:8px 12px;background:#222740;border-radius:6px;margin-bottom:8px}
+.canvasWrap{position:relative}
+#gameCanvas{background:#1b2038;border:2px solid #444a66;width:100%;display:block}
+.operate{margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+button{padding:10px;background:#364070;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:14px}
+button:disabled{background:#222740;color:#777;cursor:not-allowed}
+.info{margin-top:8px;color:#ccc;font-size:14px}
+</style>
+</head>
+<body>
+<div id="gameBox">
+    <div class="topBar">
+        <div>金币：<span id="gold">100</span></div>
+        <div>电力：<span id="power">0</span>/<span id="maxPower">0</span></div>
+        <div>大门血量：<span id="doorHp">100</span>/<span id="doorMaxHp">100</span></div>
+        <div>猎梦者血量：<span id="ghostHp">2000</span></div>
+    </div>
+    <div class="canvasWrap">
+        <canvas id="gameCanvas" height="520"></canvas>
+    </div>
+    <div class="operate">
+        <button id="upBed">升级床(50金)</button>
+        <button id="upDoor">升级大门(100金)</button>
+        <button id="makeGen">建造发电机(150金)</button>
+        <button id="makeTurret">建造炮台(200金)</button>
+        <button id="repairDoor">修复大门(50金)</button>
+        <button id="restart">重新开局</button>
+    </div>
+    <div class="info" id="msg">超高金币版！初始床每秒100金币！</div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 880;
+
+// 游戏数据 初始床一秒100金币
+let gold = 100;
+let bedLv = 1;
+let bedIncome = 100; // 核心修改：每秒100金币
+let doorLv = 1;
+let doorHp = 100;
+let doorMaxHp = 100;
+let genNum = 0;
+let maxPower = 0;
+let usePower = 0;
+let turretNum = 0;
+let turretDmg = 8;
+let ghostHp = 2000;
+let ghostMaxHp = 2000;
+let ghostAtk = 12;
+let ghostX = 700, ghostY = 220;
+let gameOver = false;
+let win = false;
+
+// 界面元素
+const goldDom = document.getElementById('gold');
+const powerDom = document.getElementById('power');
+const maxPowerDom = document.getElementById('maxPower');
+const doorHpDom = document.getElementById('doorHp');
+const doorMaxHpDom = document.getElementById('doorMaxHp');
+const ghostHpDom = document.getElementById('ghostHp');
+const msgDom = document.getElementById('msg');
+
+// 按钮绑定
+document.getElementById('upBed').onclick = upgradeBed;
+document.getElementById('upDoor').onclick = upgradeDoor;
+document.getElementById('makeGen').onclick = buildGen;
+document.getElementById('makeTurret').onclick = buildTurret;
+document.getElementById('repairDoor').onclick = repairDoor;
+document.getElementById('restart').onclick = restartGame;
+
+// 升级床
+function upgradeBed(){
+    if(gameOver)return;
+    let cost = bedLv * 50;
+    if(gold >= cost){
+        gold -= cost;
+        bedLv++;
+        bedIncome *= 2; // 升级后收益翻倍
+        msgDom.innerText = `床铺升至${bedLv}级，每秒${bedIncome}金币！`;
+    }else msgDom.innerText = '金币不足！';
+}
+
+// 升级大门
+function upgradeDoor(){
+    if(gameOver)return;
+    let cost = doorLv * 100;
+    if(gold >= cost){
+        gold -= cost;
+        doorLv++;
+        doorMaxHp *= 2;
+        doorHp = doorMaxHp;
+        msgDom.innerText = `大门升至${doorLv}级，血量提升！`;
+    }else msgDom.innerText = '金币不足！';
+}
+
+// 发电机
+function buildGen(){
+    if(gameOver)return;
+    if(gold >= 150){
+        gold -= 150;
+        genNum++;
+        maxPower +=3;
+        msgDom.innerText = `发电机x${genNum}，电力+3`;
+    }else msgDom.innerText = '金币不足！';
+}
+
+// 炮台 消耗2电力一台
+function buildTurret(){
+    if(gameOver)return;
+    if(gold >=200 && usePower +2 <= maxPower){
+        gold -=200;
+        turretNum++;
+        usePower +=2;
+        msgDom.innerText = `炮台数量${turretNum}，自动攻击猎梦者`;
+    }else if(usePower +2 > maxPower){
+        msgDom.innerText = '电力不够，先造发电机！';
+    }else msgDom.innerText = '金币不足！';
+}
+
+// 修门
+function repairDoor(){
+    if(gameOver)return;
+    if(gold >=50 && doorHp < doorMaxHp){
+        gold -=50;
+        doorHp = doorMaxHp;
+        msgDom.innerText = '大门已完全修复';
+    }else if(doorHp >= doorMaxHp){
+        msgDom.innerText = '大门满血无需修复';
+    }else msgDom.innerText = '金币不足';
+}
+
+// 重置游戏
+function restartGame(){
+    gold = 100;
+    bedLv = 1; bedIncome =100; // 重置依旧一秒100金
+    doorLv=1; doorHp=100; doorMaxHp=100;
+    genNum=0; maxPower=0; usePower=0; turretNum=0;
+    ghostHp=2000; ghostMaxHp=2000; ghostAtk=12;
+    ghostX=700; ghostY=220;
+    gameOver=false; win=false;
+    msgDom.innerText = '重新开局，每秒100金币速发育！';
+}
+
+// 游戏主循环
+function loop(){
+    if(!gameOver){
+        // 金币增长 60帧一秒
+        gold += bedIncome /60;
+
+        // 猎梦者移动朝大门
+        let targetX = 180;
+        let targetY = 220;
+        let dx = targetX - ghostX;
+        let dy = targetY - ghostY;
+        ghostX += dx * 0.012;
+        ghostY += dy * 0.012;
+
+        // 猎梦者挠门
+        if(Math.abs(ghostX-targetX) < 40){
+            doorHp -= ghostAtk /60;
+        }
+
+        // 炮台打鬼
+        if(turretNum>0){
+            let totalDmg = turretDmg * turretNum /60;
+            ghostHp -= totalDmg;
+        }
+
+        // 胜负判定
+        if(doorHp <=0){
+            gameOver = true;
+            win = false;
+            msgDom.innerText = '大门破碎！你被猎梦者抓住，游戏失败';
+        }
+        if(ghostHp <=0){
+            gameOver = true;
+            win = true;
+            msgDom.innerText = '猎梦者被击败！你胜利啦！';
+        }
+    }
+
+    // 刷新数值显示
+    goldDom.innerText = Math.floor(gold);
+    powerDom.innerText = usePower;
+    maxPowerDom.innerText = maxPower;
+    doorHpDom.innerText = Math.floor(doorHp);
+    doorMaxHpDom.innerText = doorMaxHp;
+    ghostHpDom.innerText = Math.floor(ghostHp);
+
+    render();
+    requestAnimationFrame(loop);
+}
+
+// 绘制画面
+function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // 背景走廊
+    ctx.fillStyle='#242b4a';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // 宿舍房间
+    ctx.fillStyle='#323b66';
+    ctx.fillRect(20,100,300,320);
+    ctx.fillStyle='#444e88';
+    ctx.fillRect(170,100,30,320); // 大门墙体
+
+    // 床
+    ctx.fillStyle='#7b5ea7';
+    ctx.fillRect(50,140,90,60);
+    ctx.fillStyle='#fff';
+    ctx.font='14px Arial';
+    ctx.fillText(`床Lv${bedLv} 每秒${bedIncome}金`,45,175);
+
+    // 发电机标识
+    for(let i=0;i<genNum;i++){
+        ctx.fillStyle='#5292d1';
+        ctx.fillRect(50,220+i*35,40,25);
+    }
+
+    // 炮台标识
+    for(let i=0;i<turretNum;i++){
+        ctx.fillStyle='#d15252';
+        ctx.fillRect(120,220+i*35,40,25);
+    }
+
+    // 大门血条底色
+    ctx.fillStyle='#333';
+    ctx.fillRect(170,100,30,320);
+    // 门血量
+    let hpRate = doorHp/doorMaxHp;
+    ctx.fillStyle = hpRate>0.5?'#4cd964':hpRate>0.2?'#ffcc00':'#ff3b30';
+    ctx.fillRect(170,100,30,320*hpRate);
+
+    // 猎梦者
+    ctx.fillStyle='#992244';
+    ctx.beginPath();
+    ctx.arc(ghostX,ghostY,22,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.fillText('猎梦者',ghostX-25,ghostY+5);
+}
+
+loop();
+</script>
+</body>
+</html>

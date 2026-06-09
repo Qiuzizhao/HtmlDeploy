@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>休闲跑酷小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+        body {
+            background: #222;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .score-box {
+            color: #0ff;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        #gameCanvas {
+            border: 3px solid #0cf;
+            background: #87CEEB;
+        }
+        .tips {
+            color: #ccc;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>休闲跑酷</h1>
+    <div class="score-box">得分：<span id="score">0</span></div>
+    <canvas id="gameCanvas" width="700" height="300"></canvas>
+    <div class="tips">空格键 / 鼠标点击 跳跃，躲避黑色障碍物</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDom = document.getElementById('score');
+
+        // 基础参数
+        let score = 0;
+        let gameSpeed = 6;
+        let gravity = 0.6;
+        let jumpForce = -14;
+        let gameOver = false;
+
+        // 玩家角色
+        const player = {
+            w: 40,
+            h: 40,
+            x: 80,
+            y: canvas.height - 80,
+            vy: 0,
+            onGround: true
+        };
+
+        // 地面高度
+        const groundY = canvas.height - 40;
+
+        // 障碍物数组
+        let obstacles = [];
+        // 计时器生成障碍物
+        let obstacleTimer;
+
+        // 绘制矩形工具
+        function drawRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        // 绘制背景、地面
+        function drawBg() {
+            // 天空
+            drawRect(0, 0, canvas.width, canvas.height, '#87CEEB');
+            // 地面
+            drawRect(0, groundY, canvas.width, 40, '#654321');
+        }
+
+        // 绘制玩家
+        function drawPlayer() {
+            drawRect(player.x, player.y, player.w, player.h, '#2ecc71');
+        }
+
+        // 生成障碍物
+        function createObstacle() {
+            const height = 30 + Math.random() * 40;
+            obstacles.push({
+                x: canvas.width,
+                y: groundY - height,
+                w: 30,
+                h: height
+            });
+        }
+
+        // 更新障碍物位置
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                // 移出屏幕删除
+                if (obs.x + obs.w < 0) {
+                    obstacles.splice(i, 1);
+                    score += 10;
+                    scoreDom.textContent = score;
+                }
+
+                // 碰撞检测
+                if (
+                    player.x < obs.x + obs.w &&
+                    player.x + player.w > obs.x &&
+                    player.y < obs.y + obs.h &&
+                    player.y + player.h > obs.y
+                ) {
+                    endGame();
+                }
+            }
+            // 绘制所有障碍
+            obstacles.forEach(obs => {
+                drawRect(obs.x, obs.y, obs.w, obs.h, '#222222');
+            });
+        }
+
+        // 玩家物理跳跃
+        function updatePlayer() {
+            // 重力
+            player.vy += gravity;
+            player.y += player.vy;
+
+            // 落地判定
+            if (player.y >= groundY - player.h) {
+                player.y = groundY - player.h;
+                player.vy = 0;
+                player.onGround = true;
+            }
+        }
+
+        // 跳跃函数
+        function jump() {
+            if (gameOver || !player.onGround) return;
+            player.vy = jumpForce;
+            player.onGround = false;
+        }
+
+        // 游戏结束
+        function endGame() {
+            gameOver = true;
+            cancelAnimationFrame(animateId);
+            clearInterval(obstacleTimer);
+            alert(`游戏结束！最终得分：${score}\n刷新页面重新开始`);
+        }
+
+        // 游戏主循环
+        let animateId;
+        function animate() {
+            if (gameOver) return;
+            // 清空重绘
+            drawBg();
+            updatePlayer();
+            drawPlayer();
+            updateObstacles();
+
+            animateId = requestAnimationFrame(animate);
+        }
+
+        // 监听按键和点击跳跃
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Space') jump();
+        });
+        canvas.addEventListener('click', jump);
+
+        // 定时生成障碍（间隔随机，难度平缓）
+        obstacleTimer = setInterval(() => {
+            if (!gameOver) createObstacle();
+        }, 1200);
+
+        // 启动游戏
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>移动小球消除游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .info-box {
+            font-size: 28px;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #333;
+        }
+        #gameBox {
+            width: 800px;
+            height: 600px;
+            background: #fff;
+            border: 2px solid #999;
+            position: relative;
+            overflow: hidden;
+        }
+        #ball {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #ff4444;
+            position: absolute;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-box">
+        得分：<span id="score">0</span>
+    </div>
+    <div id="gameBox">
+        <div id="ball"></div>
+    </div>
+
+    <script>
+        const gameBox = document.getElementById('gameBox');
+        const ball = document.getElementById('ball');
+        const scoreDom = document.getElementById('score');
+
+        const boxW = gameBox.clientWidth;
+        const boxH = gameBox.clientHeight;
+        const ballSize = 60;
+        let speed = 2;
+        let dirX = speed;
+        let score = 0;
+        let isFollow = false;
+        const followDuration = 2000; // 跟随2秒
+
+        // 随机位置
+        function randomPos() {
+            const x = Math.floor(Math.random() * (boxW - ballSize));
+            const y = Math.floor(Math.random() * (boxH - ballSize));
+            ball.style.left = x + 'px';
+            ball.style.top = y + 'px';
+        }
+
+        randomPos();
+
+        // 小球自由移动
+        function moveBall() {
+            if (isFollow) {
+                requestAnimationFrame(moveBall);
+                return;
+            }
+            let left = parseInt(ball.style.left);
+            if (left <= 0 || left >= boxW - ballSize) {
+                dirX = -dirX;
+            }
+            ball.style.left = left + dirX + 'px';
+            requestAnimationFrame(moveBall);
+        }
+        moveBall();
+
+        // 鼠标跟随
+        function mouseFollow(e) {
+            if (!isFollow) return;
+            const rect = gameBox.getBoundingClientRect();
+            const x = e.clientX - rect.left - ballSize / 2;
+            const y = e.clientY - rect.top - ballSize / 2;
+            ball.style.left = Math.max(0, Math.min(x, boxW - ballSize)) + 'px';
+            ball.style.top = Math.max(0, Math.min(y, boxH - ballSize)) + 'px';
+        }
+
+        // 点击小球
+        ball.addEventListener('click', () => {
+            if (isFollow) return;
+            
+            score++;
+            scoreDom.innerText = score;
+
+            // 开启跟随2秒
+            isFollow = true;
+            gameBox.addEventListener('mousemove', mouseFollow);
+
+            setTimeout(() => {
+                isFollow = false;
+                gameBox.removeEventListener('mousemove', mouseFollow);
+                randomPos();
+            }, followDuration);
+        });
+    </script>
+</body>
+</html>

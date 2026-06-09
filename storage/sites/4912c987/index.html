@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>足球射门小游戏 - 优化版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #98FB98);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 90vw;
+            max-width: 800px;
+            height: 600px;
+            background: #2E8B57;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        /* 草坪 */
+        .field {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(#2E8B57 0%, #32CD32 100%);
+        }
+
+        .grass-line {
+            position: absolute;
+            top: 150px;
+            width: 100%;
+            height: 2px;
+            background: rgba(255,255,255,0.5);
+        }
+
+        /* ========== 球门：移至画面下方 ========== */
+        .goal {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 130px;
+            border-bottom: 8px solid #fff;
+            border-left: 8px solid #fff;
+            border-right: 8px solid #fff;
+            border-radius: 5px;
+        }
+
+        .goal-net {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* 守门员 */
+        .goalkeeper {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 60px;
+            background: #FF4500;
+            border-radius: 5px;
+            transition: left 0.3s ease;
+            z-index: 2;
+        }
+
+        .goalkeeper::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 25px;
+            height: 25px;
+            background: #FFD700;
+            border-radius: 50%;
+        }
+
+        /* 足球：初始在画面上方，朝向下方球门射门 */
+        .ball {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border-radius: 50%;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 3;
+            background-image: radial-gradient(circle at 30% 30%, #fff 0%, #f0f0f0 100%);
+        }
+
+        .ball::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: 
+                linear-gradient(45deg, transparent 48%, #000 48%, #000 52%, transparent 52%),
+                linear-gradient(-45deg, transparent 48%, #000 48%, #000 52%, transparent 52%);
+        }
+
+        /* 瞄准线 */
+        .aim-line {
+            position: absolute;
+            height: 2px;
+            background: rgba(255,255,0,0.9);
+            transform-origin: top center;
+            top: 80px;
+            left: 50%;
+            z-index: 1;
+            pointer-events: none;
+            display: none;
+        }
+
+        /* 力量条 */
+        .power-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            z-index: 5;
+        }
+
+        .power-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, green, yellow, red);
+        }
+
+        /* 计分板 */
+        .scoreboard {
+            position: absolute;
+            top: 45px;
+            left: 10px;
+            color: white;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* 提示文字 */
+        .tips {
+            position: absolute;
+            top: 20px;
+            right: 10px;
+            color: white;
+            font-size: 16px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* 进球特效 */
+        .goal-effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            opacity: 0;
+            z-index: 100;
+            animation: goalAnim 1.5s ease forwards;
+        }
+
+        @keyframes goalAnim {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        .game-title {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <h1 class="game-title">⚽ 足球射门小游戏</h1>
+    
+    <div class="game-container">
+        <div class="field">
+            <div class="grass-line"></div>
+        </div>
+
+        <!-- 球门（已移至下方） -->
+        <div class="goal">
+            <div class="goal-net"></div>
+        </div>
+
+        <!-- 守门员 -->
+        <div class="goalkeeper"></div>
+        <!-- 足球 -->
+        <div class="ball"></div>
+        <!-- 瞄准线 -->
+        <div class="aim-line"></div>
+        <!-- 力量条 -->
+        <div class="power-container">
+            <div class="power-bar"></div>
+        </div>
+        <!-- 计分板 -->
+        <div class="scoreboard">进球: <span id="goals">0</span> | 射门: <span id="shots">0</span></div>
+        <!-- 提示 -->
+        <div class="tips">移动鼠标瞄准 | 按住蓄力 | 松开射门</div>
+    </div>
+
+    <script>
+        // DOM 元素
+        const ball = document.querySelector('.ball');
+        const goalkeeper = document.querySelector('.goalkeeper');
+        const aimLine = document.querySelector('.aim-line');
+        const powerBar = document.querySelector('.power-bar');
+        const goalsEl = document.getElementById('goals');
+        const shotsEl = document.getElementById('shots');
+        const gameContainer = document.querySelector('.game-container');
+
+        // 游戏状态
+        let isCharging = false;
+        let power = 0;
+        let powerTimer = null;
+        let goals = 0;
+        let shots = 0;
+        let ballMoving = false;
+
+        // 足球初始坐标（瞄准线原点）
+        const ballOriginTop = 80;
+        const ballOriginLeft = gameContainer.offsetWidth / 2;
+
+        // 球门区域参数
+        const goalW = 220;
+        const goalH = 130;
+        const goalBottom = 30;
+
+        // 鼠标移动 → 实时瞄准（核心优化：鼠标精准控制方向）
+        gameContainer.addEventListener('mousemove', e => {
+            if (ballMoving) return;
+            const rect = gameContainer.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // 计算偏移与角度
+            const dx = mouseX - ballOriginLeft;
+            const dy = mouseY - ballOriginTop;
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            const lineLen = Math.hypot(dx, dy);
+
+            // 更新瞄准线
+            aimLine.style.display = 'block';
+            aimLine.style.width = lineLen + 'px';
+            aimLine.style.transform = `rotate(${angle}deg)`;
+        });
+
+        // 鼠标按下 → 开始蓄力
+        gameContainer.addEventListener('mousedown', () => {
+            if (ballMoving) return;
+            isCharging = true;
+            power = 0;
+            powerBar.style.width = '0%';
+
+            powerTimer = setInterval(() => {
+                if (power < 100) {
+                    power += 2;
+                    powerBar.style.width = power + '%';
+                }
+            }, 40);
+        });
+
+        // 鼠标松开 → 执行射门
+        gameContainer.addEventListener('mouseup', () => {
+            if (!isCharging || ballMoving) return;
+            clearInterval(powerTimer);
+            isCharging = false;
+            ballMoving = true;
+            shots++;
+            shotsEl.textContent = shots;
+            aimLine.style.display = 'none';
+
+            // 获取瞄准角度
+            const aimRotate = aimLine.style.transform;
+            const angleStr = aimRotate.match(/-?\d+\.?\d+/)[0];
+            const angle = parseFloat(angleStr);
+            const rad = angle * Math.PI / 180;
+
+            // 射门速度（根据力量值）
+            const baseSpeed = power * 1.4;
+            let vx = Math.cos(rad) * baseSpeed;
+            let vy = Math.sin(rad) * baseSpeed;
+
+            // 守门员随机移动扑救
+            const containerW = gameContainer.offsetWidth;
+            const goalLeft = (containerW - goalW) / 2;
+            const randomPos = goalLeft + Math.random() * goalW;
+            goalkeeper.style.left = randomPos + 'px';
+
+            // 足球当前位置
+            let x = ballOriginLeft;
+            let y = ballOriginTop;
+
+            // 射门动画帧
+            const shootAnim = setInterval(() => {
+                x += vx;
+                y += vy;
+                // 轻微重力下坠
+                vy += 0.2;
+
+                // 更新球位置
+                ball.style.left = x + 'px';
+                ball.style.top = y + 'px';
+
+                // 判断是否进球 / 出界
+                const isGoal = checkGoal(x, y);
+                const outBound = y > gameContainer.offsetHeight || x < 0 || x > containerW;
+
+                if (isGoal || outBound) {
+                    clearInterval(shootAnim);
+                    if (isGoal) {
+                        goals++;
+                        goalsEl.textContent = goals;
+                        showGoalEffect();
+                    }
+                    // 延迟重置球
+                    setTimeout(resetBall, 1200);
+                }
+            }, 25);
+        });
+
+        // 鼠标离开区域，隐藏瞄准线
+        gameContainer.addEventListener('mouseleave', () => {
+            aimLine.style.display = 'none';
+        });
+
+        // 检测是否进入球门
+        function checkGoal(ballX, ballY) {
+            const containerW = gameContainer.offsetWidth;
+            const gLeft = (containerW - goalW) / 2;
+            const gRight = gLeft + goalW;
+            const gTop = gameContainer.offsetHeight - goalBottom - goalH;
+            const gBot = gameContainer.offsetHeight - goalBottom;
+
+            return ballX > gLeft && ballX < gRight && ballY > gTop && ballY < gBot;
+        }
+
+        // 进球特效
+        function showGoalEffect() {
+            const effect = document.createElement('div');
+            effect.className = 'goal-effect';
+            effect.innerText = '🎉 进球啦！';
+            gameContainer.appendChild(effect);
+            setTimeout(() => effect.remove(), 1500);
+        }
+
+        // 重置足球与状态
+        function resetBall() {
+            ball.style.left = ballOriginLeft + 'px';
+            ball.style.top = ballOriginTop + 'px';
+            powerBar.style.width = '0%';
+            goalkeeper.style.left = '50%';
+            ballMoving = false;
+        }
+
+        // 页面加载初始化
+        window.addEventListener('load', resetBall);
+    </script>
+</body>
+</html>

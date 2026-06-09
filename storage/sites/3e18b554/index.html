@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍳 厨房模拟器 - 完整版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: #fdf6ec;
+            padding: 20px;
+        }
+
+        .kitchen-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            text-align: center;
+            color: #e67e22;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .main-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* 食材区 */
+        .ingredients-panel {
+            width: 250px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .panel-title {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+            border-bottom: 2px solid #e67e22;
+            padding-bottom: 5px;
+        }
+
+        .ingredient-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .ingredient-btn:hover {
+            background: #e67e22;
+            color: white;
+        }
+        .ingredient-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            color: #666;
+        }
+
+        /* 烹饪区 */
+        .cook-area {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .pot {
+            width: 200px;
+            height: 120px;
+            background: #7f8c8d;
+            margin: 20px auto;
+            border-radius: 10px 10px 50px 50px;
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #555;
+        }
+
+        .food-in-pot {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-height: 40px;
+            background: #d35400;
+            transition: 0.3s;
+            display: none;
+        }
+        /* 翻炒动画 */
+        @keyframes stir {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .stir-animate {
+            animation: stir 0.3s ease-in-out;
+        }
+        /* 洗菜晃动动画 */
+        @keyframes wash {
+            0%,100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        .wash-animate {
+            animation: wash 0.4s ease-in-out;
+        }
+
+        .cook-status {
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            min-height: 80px;
+            line-height: 1.6;
+            border: 1px solid #ddd;
+        }
+
+        /* 控制按钮 */
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .control-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        .wash-btn { background: #1abc9c; color: white; }
+        .cut-btn { background: #9b59b6; color: white; }
+        .fire-high { background: #e74c3c; color: white; }
+        .fire-low { background: #f39c12; color: white; }
+        .fire-off { background: #95a5a6; color: white; }
+        .stir-btn { background: #3498db; color: white; }
+        .finish-btn { background: #2ecc71; color: white; }
+        .eat-btn { background: #ff7979; color: white; }
+        .reset-btn { background: #636e72; color: white; }
+
+        /* 成品展示 */
+        .result-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            border: 2px dashed #e67e22;
+        }
+
+        .result-title {
+            color: #e67e22;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .tip-text {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #888;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="kitchen-container">
+    <h1 class="title">🍳 我的厨房模拟器</h1>
+    <p class="tip-text" style="text-align:center;">完整流程：选食材 → 洗菜 → 切菜 → 开火 → 翻炒 → 完成 → 用餐</p>
+
+    <div class="main-area">
+        <!-- 左侧食材区 -->
+        <div class="ingredients-panel">
+            <h3 class="panel-title">🥦 食材</h3>
+            <button class="ingredient-btn" onclick="addIngredient('鸡蛋')">鸡蛋</button>
+            <button class="ingredient-btn" onclick="addIngredient('西红柿')">西红柿</button>
+            <button class="ingredient-btn" onclick="addIngredient('青菜')">青菜</button>
+            <button class="ingredient-btn" onclick="addIngredient('猪肉')">猪肉</button>
+            <button class="ingredient-btn" onclick="addIngredient('米饭')">米饭</button>
+            <button class="ingredient-btn" onclick="addIngredient('面条')">面条</button>
+            <br>
+            <h3 class="panel-title">🧂 调料</h3>
+            <button class="ingredient-btn" onclick="addIngredient('盐')">盐</button>
+            <button class="ingredient-btn" onclick="addIngredient('油')">油</button>
+            <button class="ingredient-btn" onclick="addIngredient('酱油')">酱油</button>
+        </div>
+
+        <!-- 右侧烹饪区 -->
+        <div class="cook-area">
+            <h3 class="panel-title">🍳 烹饪台</h3>
+            <div class="pot">
+                <div class="food-in-pot" id="food"></div>
+            </div>
+
+            <div class="cook-status" id="status">
+                请先选择食材开始烹饪～
+            </div>
+
+            <div class="control-buttons">
+                <button class="control-btn wash-btn" onclick="washFood()">💧 洗菜</button>
+                <button class="control-btn cut-btn" onclick="cutFood()">🔪 切菜</button>
+                <button class="control-btn fire-high" onclick="setFire('大火')">🔥 大火</button>
+                <button class="control-btn fire-low" onclick="setFire('小火')">🔥 小火</button>
+                <button class="control-btn fire-off" onclick="setFire('关火')">⏹️ 关火</button>
+                <button class="control-btn stir-btn" onclick="stirFood()">🔄 翻炒</button>
+                <button class="control-btn finish-btn" onclick="finishCook()">✅ 完成</button>
+                <button class="control-btn eat-btn" onclick="eatFood()">🍚 吃饭</button>
+                <button class="control-btn reset-btn" onclick="resetKitchen()">🔄 重置厨房</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成品展示区 -->
+    <div class="result-area" id="result">
+        <h3 class="result-title">🍽️ 菜品完成！</h3>
+        <p id="resultText"></p>
+        <p id="eatText" style="margin-top:10px;color:#2d3436;"></p>
+    </div>
+</div>
+
+<script>
+    // 游戏全局状态
+    let selectedIngredients = [];
+    let isWash = false;    // 新增：是否已洗菜
+    let isCut = false;
+    let fireStatus = "关火";
+    let stirCount = 0;
+    let cookTimer = null;
+    let cookSecond = 0;
+    let isFinished = false; // 新增：是否已完成烹饪
+
+    const foodDom = document.getElementById('food');
+    const statusDom = document.getElementById('status');
+    const resultDom = document.getElementById('result');
+    const resultTextDom = document.getElementById('resultText');
+    const eatTextDom = document.getElementById('eatText');
+    const ingredientBtns = document.querySelectorAll('.ingredient-btn');
+
+    // 重置食材按钮禁用状态
+    function resetBtnStatus() {
+        ingredientBtns.forEach(btn => {
+            btn.disabled = false;
+        });
+    }
+
+    // 添加食材（去重+禁用按钮+提示）
+    function addIngredient(food) {
+        if(selectedIngredients.includes(food)) {
+            statusDom.innerText = `【提示】${food} 已经添加过啦！`;
+            return;
+        }
+        selectedIngredients.push(food);
+        ingredientBtns.forEach(btn => {
+            if(btn.innerText === food) btn.disabled = true;
+        });
+        statusDom.innerText = `已加入食材：${selectedIngredients.join('、')}\n下一步：点击【洗菜】`;
+        // 新增食材后重置洗菜、切菜、完成状态
+        isWash = false;
+        isCut = false;
+        isFinished = false;
+    }
+
+    // 新增：洗菜功能
+    function washFood() {
+        if(selectedIngredients.length === 0) {
+            statusDom.innerText = "❌ 请先选择食材，再清洗！";
+            return;
+        }
+        if(isWash) {
+            statusDom.innerText = "✅ 食材已经洗干净啦，无需重复清洗！";
+            return;
+        }
+        // 洗菜动画
+        foodDom.classList.add('wash-animate');
+        setTimeout(() => foodDom.classList.remove('wash-animate'), 400);
+
+        isWash = true;
+        statusDom.innerText = `💧 食材清洗完毕！\n下一步：点击【切菜】`;
+    }
+
+    // 切菜
+    function cutFood() {
+        if(selectedIngredients.length === 0) {
+            statusDom.innerText = "❌ 请先选择食材！";
+            return;
+        }
+        if(!isWash) {
+            statusDom.innerText = "❌ 食材还没洗干净，不能切菜哦！";
+            return;
+        }
+        if(isCut) {
+            statusDom.innerText = "✅ 食材已经切好啦，无需重复操作！";
+            return;
+        }
+        isCut = true;
+        statusDom.innerText = `✅ 切菜完成！\n请选择火候开始烹饪`;
+    }
+
+    // 设置火候 + 计时
+    function setFire(status) {
+        if(selectedIngredients.length === 0) {
+            statusDom.innerText = "❌ 没有食材，无法开火！";
+            return;
+        }
+        if(!isWash || !isCut) {
+            statusDom.innerText = "❌ 请先完成洗菜、切菜步骤！";
+            return;
+        }
+
+        fireStatus = status;
+        if(cookTimer) {
+            clearInterval(cookTimer);
+            cookTimer = null;
+        }
+
+        if(status === "关火") {
+            foodDom.style.display = 'none';
+            statusDom.innerText = `⏹️ 已关火 | 累计翻炒：${stirCount}次 | 烹饪时长：${cookSecond}秒`;
+            return;
+        }
+
+        foodDom.style.display = 'block';
+        cookSecond = 0;
+        cookTimer = setInterval(() => {
+            cookSecond++;
+            statusDom.innerText = `🔥 当前火候：${fireStatus}\n累计翻炒：${stirCount}次 | 烹饪时长：${cookSecond}秒`;
+        }, 1000);
+    }
+
+    // 翻炒 + 动画
+    function stirFood() {
+        if(fireStatus === "关火") {
+            statusDom.innerText = "❌ 请先开火，再进行翻炒！";
+            return;
+        }
+        stirCount++;
+        foodDom.classList.add('stir-animate');
+        setTimeout(() => foodDom.classList.remove('stir-animate'), 300);
+
+        statusDom.innerText = `🔥 当前火候：${fireStatus}\n累计翻炒：${stirCount}次 | 烹饪时长：${cookSecond}秒`;
+    }
+
+    // 判定专属菜品名称
+    function getDishName(list) {
+        if(list.includes("西红柿") && list.includes("鸡蛋")) return "西红柿炒鸡蛋";
+        if(list.includes("青菜") && list.includes("面条")) return "青菜面";
+        if(list.includes("猪肉") && list.includes("米饭")) return "猪肉盖浇饭";
+        if(list.includes("猪肉") && list.includes("青菜")) return "清炒青菜猪肉";
+        return "创意混搭料理";
+    }
+
+    // 完成烹饪 + 多结局判定
+    function finishCook() {
+        if(cookTimer) {
+            clearInterval(cookTimer);
+            cookTimer = null;
+        }
+
+        if(selectedIngredients.length === 0) {
+            statusDom.innerText = "❌ 没有食材，无法完成烹饪！";
+            return;
+        }
+        if(!isWash || !isCut) {
+            statusDom.innerText = "❌ 洗菜、切菜还没完成，不能出锅！";
+            return;
+        }
+
+        let dishName = getDishName(selectedIngredients);
+        let evaluate = "";
+        let color = "";
+
+        if(fireStatus === "大火" && cookSecond > 20) {
+            evaluate = "💥 火候太大、煮太久，菜品糊掉了！【失败】";
+            color = "#555";
+        } else if(fireStatus === "小火" && cookSecond < 5) {
+            evaluate = "🥩 火候太小、时间太短，食材还是生的！【失败】";
+            color = "#888";
+        } else if(stirCount < 2) {
+            evaluate = "😐 翻炒太少，味道一般，勉强能吃。【普通】";
+            color = "#e67e22";
+        } else if(stirCount >= 2 && stirCount <= 4) {
+            evaluate = "👍 火候适中、翻炒到位，味道很不错！【良好】";
+            color = "#f39c12";
+        } else if(stirCount > 4) {
+            evaluate = "🌟 翻炒充分、火候完美，色香味满分！【极品】";
+            color = "#27ae60";
+        }
+
+        foodDom.style.background = color;
+        resultTextDom.innerText = `菜品：${dishName}\n食材组合：${selectedIngredients.join(' + ')}\n烹饪时长：${cookSecond}秒 | 翻炒次数：${stirCount}次\n评价：${evaluate}`;
+        resultDom.style.display = "block";
+        statusDom.innerText = "🍽️ 烹饪结束！可以点击【吃饭】享用美食啦";
+        isFinished = true;
+        eatTextDom.innerText = ""; // 清空上次用餐文案
+    }
+
+    // 新增：吃饭功能
+    function eatFood() {
+        if(!isFinished) {
+            statusDom.innerText = "❌ 菜品还没做好，不能吃饭哦！";
+            return;
+        }
+        // 根据菜品评价显示不同用餐文案
+        let eatWords = "";
+        if(foodDom.style.background === "rgb(85, 85, 85)"){
+            eatWords = "😣 饭菜糊了，味道一言难尽，勉强吃完啦~";
+        } else if(foodDom.style.background === "rgb(136, 136, 136)"){
+            eatWords = "🤢 食材没煮熟，吃起来怪怪的。";
+        } else if(foodDom.style.background === "rgb(230, 126, 34)"){
+            eatWords = "🙂 味道中规中矩，填饱肚子没问题。";
+        } else if(foodDom.style.background === "rgb(243, 156, 18)"){
+            eatWords = "😋 味道鲜香，吃得很满足！";
+        } else if(foodDom.style.background === "rgb(39, 174, 96)"){
+            eatWords = "🤩 美味佳肴！大口吃光，回味无穷~";
+        }
+        eatTextDom.innerText = eatWords;
+        statusDom.innerText = "🍚 用餐完毕！可以重置厨房继续游玩";
+    }
+
+    // 重置所有状态
+    function resetKitchen() {
+        if(cookTimer) {
+            clearInterval(cookTimer);
+            cookTimer = null;
+        }
+        selectedIngredients = [];
+        isWash = false;
+        isCut = false;
+        fireStatus = "关火";
+        stirCount = 0;
+        cookSecond = 0;
+        isFinished = false;
+
+        resetBtnStatus();
+        foodDom.style.display = 'none';
+        resultDom.style.display = 'none';
+        eatTextDom.innerText = "";
+        statusDom.innerText = "厨房已清空，请重新选择食材开始烹饪～";
+    }
+</script>
+</body>
+</html>
