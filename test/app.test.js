@@ -67,6 +67,16 @@ test('public index shows a loading spinner before project cards resolve', async 
   assert.match(html, /function hideLoadingState\(\)/);
 });
 
+test('public index defers upload rule loading until upload interaction', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const bootMatch = html.match(/async function boot\(\) \{([\s\S]*?)\n    \}/);
+
+  assert.ok(bootMatch);
+  assert.doesNotMatch(bootMatch[1], /loadUploadRules|ensureUploadRulesLoaded/);
+  assert.match(html, /function openUpload\(\) \{[\s\S]*?ensureUploadRulesLoaded\(\)\.catch/);
+  assert.match(html, /await ensureUploadRulesLoaded\(\)/);
+});
+
 test('public index renders a visible upload-order number on each project card', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 

@@ -65,15 +65,25 @@ function normalizeForbiddenWords(value) {
   return words.slice(0, 100000);
 }
 
-function normalizeSettings(settings = {}) {
-  return {
-    ...settings,
+function normalizeSettings(settings = {}, { includeForbiddenWords = true, forbiddenWordsCount } = {}) {
+  const { forbiddenWordsCount: _ignoredForbiddenWordsCount, ...baseSettings } = settings;
+  const normalized = {
+    ...baseSettings,
     allPassword: String(settings.allPassword || ''),
     allPasswordEnabled: settings.allPasswordEnabled !== false,
-    forbiddenWords: normalizeForbiddenWords(settings.forbiddenWords),
     lastUsedSiteNumber: Math.max(0, Number(settings.lastUsedSiteNumber) || 0),
     updatedAt: String(settings.updatedAt || '')
   };
+
+  if (includeForbiddenWords) {
+    normalized.forbiddenWords = normalizeForbiddenWords(settings.forbiddenWords);
+  }
+
+  if (forbiddenWordsCount !== undefined) {
+    normalized.forbiddenWordsCount = Math.max(0, Number(forbiddenWordsCount) || 0);
+  }
+
+  return normalized;
 }
 
 function normalizeAiSettings(settings = {}) {
@@ -380,7 +390,7 @@ class RuntimeStore {
     return this.db.prepare('SELECT * FROM classes ORDER BY created_at ASC, name ASC').all().map(rowToClass);
   }
 
-  getSettings() {
+  getSettings({ includeForbiddenWords = true, includeForbiddenWordsCount = true } = {}) {
     this.ensureReady();
     const rows = this.db.prepare('SELECT key, value FROM settings').all();
     const settings = {};
@@ -391,8 +401,14 @@ class RuntimeStore {
         settings[row.key] = row.value;
       }
     }
-    settings.forbiddenWords = this.listForbiddenWords();
-    return normalizeSettings(settings);
+    let forbiddenWordsCount;
+    if (includeForbiddenWords) {
+      settings.forbiddenWords = this.listForbiddenWords();
+      forbiddenWordsCount = settings.forbiddenWords.length;
+    } else if (includeForbiddenWordsCount) {
+      forbiddenWordsCount = this.countForbiddenWords();
+    }
+    return normalizeSettings(settings, { includeForbiddenWords, forbiddenWordsCount });
   }
 
   writeSettings(settings) {
@@ -418,6 +434,11 @@ class RuntimeStore {
 
   listForbiddenWords() {
     return this.db.prepare('SELECT word FROM forbidden_words ORDER BY position ASC, word ASC').all().map((row) => row.word);
+  }
+
+  countForbiddenWords() {
+    this.ensureReady();
+    return Number(this.db.prepare('SELECT COUNT(*) AS count FROM forbidden_words').get()?.count) || 0;
   }
 
   replaceForbiddenWords(words) {

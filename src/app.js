@@ -720,9 +720,9 @@ async function readClasses(classesFile) {
   }
 }
 
-async function readSettings(settingsFile) {
+async function readSettings(settingsFile, { includeForbiddenWords = false, includeForbiddenWordsCount = true } = {}) {
   const store = getRuntimeStoreForFile(settingsFile);
-  let settings = store.getSettings();
+  let settings = store.getSettings({ includeForbiddenWords, includeForbiddenWordsCount });
 
   if (!isValidClassPassword(String(settings.allPassword || ''))) {
     settings = {
@@ -735,7 +735,9 @@ async function readSettings(settingsFile) {
   return {
     ...settings,
     allPasswordEnabled: settings.allPasswordEnabled !== false,
-    forbiddenWords: normalizeForbiddenWords(settings.forbiddenWords)
+    ...(includeForbiddenWords
+      ? { forbiddenWords: normalizeForbiddenWords(settings.forbiddenWords) }
+      : {})
   };
 }
 
@@ -863,7 +865,7 @@ async function writeClasses(classesFile, classes) {
 async function writeSettings(settingsFile, settings) {
   await withJsonWriteQueue(settingsFile, async () => {
     const store = getRuntimeStoreForFile(settingsFile);
-    const currentSettings = store.getSettings();
+    const currentSettings = store.getSettings({ includeForbiddenWords: true });
 
     const nextSettings = {
       ...currentSettings,
@@ -1004,10 +1006,13 @@ async function appendJobLog(jobsFile, log) {
 
 function toAdminSettingsResponse(settings, { includeForbiddenWords = true } = {}) {
   const { adminPassword, forbiddenWords, ...summarySettings } = settings;
+  const forbiddenWordsCount = Array.isArray(forbiddenWords)
+    ? forbiddenWords.length
+    : (Number.isFinite(Number(settings.forbiddenWordsCount)) ? Number(settings.forbiddenWordsCount) : 0);
   const response = {
     ...summarySettings,
     adminPasswordConfigured: isValidAdminPassword(adminPassword),
-    forbiddenWordsCount: forbiddenWords?.length || 0
+    forbiddenWordsCount
   };
 
   if (includeForbiddenWords) {
@@ -2073,11 +2078,12 @@ function createApp(options = {}) {
 
   app.get('/api/admin/settings', requireAdmin, async (req, res, next) => {
     try {
-      const settings = await readSettings(settingsFile);
       if (req.query.includeForbiddenWords === 'false') {
+        const settings = await readSettings(settingsFile, { includeForbiddenWords: false });
         return res.json(toAdminSettingsResponse(settings, { includeForbiddenWords: false }));
       }
 
+      const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
       return res.json(toAdminSettingsResponse(settings));
     } catch (error) {
       next(error);
@@ -2086,7 +2092,7 @@ function createApp(options = {}) {
 
   app.get('/api/admin/forbidden-words', requireAdmin, async (req, res, next) => {
     try {
-      const settings = await readSettings(settingsFile);
+      const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
       const words = Array.isArray(settings.forbiddenWords) ? settings.forbiddenWords : [];
       const query = String(req.query.q || '').trim();
       const offset = Math.max(0, Number.parseInt(req.query.offset, 10) || 0);
@@ -2115,7 +2121,7 @@ function createApp(options = {}) {
 
   app.post('/api/admin/forbidden-words', requireAdmin, async (req, res, next) => {
     try {
-      const previousSettings = await readSettings(settingsFile);
+      const previousSettings = await readSettings(settingsFile, { includeForbiddenWords: true });
       const previousWords = Array.isArray(previousSettings.forbiddenWords) ? previousSettings.forbiddenWords : [];
       const addedWords = normalizeForbiddenWords(req.body.forbiddenWords);
       const forbiddenWords = normalizeForbiddenWords([...previousWords, ...addedWords]);
@@ -2142,7 +2148,7 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '请选择要删除的违禁词' });
       }
 
-      const previousSettings = await readSettings(settingsFile);
+      const previousSettings = await readSettings(settingsFile, { includeForbiddenWords: true });
       const previousWords = Array.isArray(previousSettings.forbiddenWords) ? previousSettings.forbiddenWords : [];
       const normalizedWord = word.toLocaleLowerCase();
       const forbiddenWords = previousWords.filter((item) => String(item).toLocaleLowerCase() !== normalizedWord);
@@ -2170,7 +2176,7 @@ function createApp(options = {}) {
 
   app.get('/api/upload-rules', async (req, res, next) => {
     try {
-      const settings = await readSettings(settingsFile);
+      const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
       return res.json({
         forbiddenWords: settings.forbiddenWords
       });
@@ -2181,7 +2187,7 @@ function createApp(options = {}) {
 
   app.put('/api/admin/settings', requireAdmin, async (req, res, next) => {
     try {
-      const previousSettings = await readSettings(settingsFile);
+      const previousSettings = await readSettings(settingsFile, { includeForbiddenWords: true });
       const allPassword = req.body.allPassword === undefined
         ? previousSettings.allPassword
         : String(req.body.allPassword || '').trim();
@@ -2538,7 +2544,7 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '作者署名不能为空' });
       }
 
-      const settings = await readSettings(settingsFile);
+      const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
       const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
       if (forbiddenMatch) {
         return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
@@ -2642,7 +2648,7 @@ function createApp(options = {}) {
   app.post('/api/admin/sites/forbidden-audit', requireAdmin, async (req, res, next) => {
     try {
       const sites = await readSites(dataFile);
-      const settings = await readSettings(settingsFile);
+      const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
       const forbiddenWords = Array.isArray(settings.forbiddenWords) ? settings.forbiddenWords : [];
       const matches = [];
       let disabledCount = 0;
@@ -3222,7 +3228,7 @@ function createApp(options = {}) {
       });
 
       if (sites[siteIndex].forbiddenWhitelist !== true) {
-        const settings = await readSettings(settingsFile);
+        const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
         const forbiddenMatch = findForbiddenWordMatch(
           { title, author: sites[siteIndex].author || '' },
           settings.forbiddenWords
@@ -3282,7 +3288,7 @@ function createApp(options = {}) {
       }
 
       if (sites[siteIndex].forbiddenWhitelist !== true) {
-        const settings = await readSettings(settingsFile);
+        const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
         const forbiddenMatch = findForbiddenWordMatch({ title, author }, settings.forbiddenWords);
         if (forbiddenMatch) {
           return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });

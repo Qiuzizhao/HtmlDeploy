@@ -306,6 +306,8 @@
     }
 
     .site-card {
+      content-visibility: auto;
+      contain-intrinsic-size: 182px 260px;
       min-height: 182px;
       display: flex;
       flex-direction: column;
@@ -317,7 +319,7 @@
       border-left: 5px solid #38bdf8;
       box-shadow: var(--soft-shadow);
       text-align: left;
-      transition: all 0.2s ease;
+      transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     .site-card.is-starred {
@@ -921,6 +923,7 @@
       }
 
       .site-card {
+        contain-intrinsic-size: 174px 320px;
         min-height: 174px;
         padding: 10px;
       }
@@ -1169,6 +1172,8 @@
     let siteSearchQuery = '';
     let starredOnly = false;
     let uploadRules = { forbiddenWords: [] };
+    let uploadRulesLoaded = false;
+    let uploadRulesPromise = null;
     let currentClassId = getStoredClassId();
     let siteSearchDebounceTimer = null;
     let siteRenderToken = 0;
@@ -1293,6 +1298,9 @@
       currentClassLabel.textContent = `当前班级：${currentClass ? currentClass.name : '未选择'}`;
       openOverlay(uploadOverlay);
       titleInput.focus();
+      ensureUploadRulesLoaded().catch(() => {
+        uploadMessage.textContent = '上传规则加载失败，将以服务器校验为准。';
+      });
     }
 
     function closeUpload() {
@@ -1617,7 +1625,7 @@
       }, 300);
     }
 
-    function createSiteCard(site) {
+    function createSiteCard(site, index = 0) {
       const card = document.createElement('article');
       card.className = site.starred === true ? 'site-card is-starred' : 'site-card';
 
@@ -1630,7 +1638,9 @@
         const image = document.createElement('img');
         image.src = site.thumbnailUrl;
         image.alt = `${site.title} 的封面图`;
-        image.loading = 'lazy';
+        image.decoding = 'async';
+        image.loading = index < 8 ? 'eager' : 'lazy';
+        image.fetchPriority = index < 8 ? 'high' : 'low';
         cover.append(image);
       } else {
         const placeholder = document.createElement('div');
@@ -1790,13 +1800,36 @@
     }
 
     async function loadUploadRules() {
-      const response = await fetch('/api/upload-rules');
-      if (!response.ok) {
+      try {
+        const response = await fetch('/api/upload-rules');
+        if (!response.ok) {
+          uploadRules = { forbiddenWords: [] };
+          uploadRulesLoaded = true;
+          return uploadRules;
+        }
+
+        uploadRules = await response.json();
+        uploadRulesLoaded = true;
+        return uploadRules;
+      } catch (error) {
         uploadRules = { forbiddenWords: [] };
-        return;
+        uploadRulesLoaded = true;
+        throw error;
+      }
+    }
+
+    async function ensureUploadRulesLoaded() {
+      if (uploadRulesLoaded) {
+        return uploadRules;
       }
 
-      uploadRules = await response.json();
+      if (!uploadRulesPromise) {
+        uploadRulesPromise = loadUploadRules().finally(() => {
+          uploadRulesPromise = null;
+        });
+      }
+
+      return uploadRulesPromise;
     }
 
     async function selectClass(classId) {
@@ -1895,6 +1928,11 @@
       const htmlContent = uploadHtmlContent.value.trim();
       const title = titleInput.value.trim();
       const author = authorInput.value.trim();
+      try {
+        await ensureUploadRulesLoaded();
+      } catch {
+        uploadMessage.textContent = '上传规则加载失败，将继续由服务器校验。';
+      }
       const forbiddenMessage = findForbiddenWordMatch(title, author);
       if (forbiddenMessage) {
         uploadMessage.textContent = forbiddenMessage;
@@ -2006,7 +2044,6 @@
 
     async function boot() {
       updateProjectFilterControls();
-      await loadUploadRules();
       await loadClasses();
       await loadSites();
     }
