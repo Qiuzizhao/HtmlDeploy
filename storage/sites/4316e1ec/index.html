@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>枪战小游戏</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑;}
+        body{
+            background:#1a1a1a;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            padding:10px;
+            color:white;
+        }
+        #gameBox{
+            width:800px;
+            height:600px;
+            background:#222;
+            border:3px solid #555;
+            position:relative;
+            overflow:hidden;
+            border-radius:8px;
+            cursor:none;
+            background-image: radial-gradient(circle at 50% 50%, #2d2d2d, #111);
+        }
+        /* 玩家准星 */
+        #player{
+            width:20px;
+            height:20px;
+            border-radius:50%;
+            background:#00ff6a;
+            position:absolute;
+            pointer-events:none;
+            box-shadow:0 0 12px #00ff6a;
+            transform:translate(-50%,-50%);
+            z-index:10;
+        }
+        /* 子弹 */
+        .bullet{
+            width:4px;
+            height:12px;
+            background:#fff33f;
+            position:absolute;
+            border-radius:2px;
+        }
+        /* 敌人 */
+        .enemy{
+            width:40px;
+            height:40px;
+            background:#ff4444;
+            border-radius:8px;
+            position:absolute;
+            box-shadow:0 0 10px #ff0000;
+        }
+        /* 爆炸特效 */
+        .boom{
+            position:absolute;
+            width:50px;
+            height:50px;
+            background:radial-gradient(circle,#ff9500,#ff0000);
+            border-radius:50%;
+            animation:boom 0.5s forwards;
+        }
+        @keyframes boom{
+            0%{transform:scale(0.5);opacity:1;}
+            100%{transform:scale(2);opacity:0;}
+        }
+        .info{
+            width:800px;
+            display:flex;
+            justify-content:space-between;
+            padding:10px;
+            font-size:20px;
+            font-weight:bold;
+        }
+        #score{color:#ffd000;}
+        #hp{color:#ff4444;}
+        #restart{
+            margin-top:10px;
+            padding:10px 25px;
+            font-size:18px;
+            background:#00ff6a;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+            font-weight:bold;
+            display:none;
+        }
+        #restart:hover{background:#00cc55;}
+        #gameOver{
+            position:absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            font-size:48px;
+            color:#ff2222;
+            font-weight:bold;
+            text-shadow:0 0 20px #000;
+            display:none;
+            z-index:999;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div>得分：<span id="score">0</span></div>
+        <div>生命值：<span id="hp">5</span></div>
+    </div>
+    <div id="gameBox">
+        <div id="player"></div>
+        <div id="gameOver">游戏结束</div>
+    </div>
+    <button id="restart" onclick="restartGame()">重新开始</button>
+
+    <script>
+        const gameBox = document.getElementById('gameBox')
+        const player = document.getElementById('player')
+        const scoreText = document.getElementById('score')
+        const hpText = document.getElementById('hp')
+        const gameOverText = document.getElementById('gameOver')
+        const restartBtn = document.getElementById('restart')
+
+        let score = 0
+        let hp = 5
+        let gameOver = false
+        let bullets = []
+        let enemies = []
+
+        // 准星跟随鼠标
+        gameBox.addEventListener('mousemove',(e)=>{
+            if(gameOver) return
+            let rect = gameBox.getBoundingClientRect()
+            let x = e.clientX - rect.left
+            let y = e.clientY - rect.top
+            player.style.left = x + 'px'
+            player.style.top = y + 'px'
+        })
+
+        // 点击射击
+        gameBox.addEventListener('click',shoot)
+
+        // 射击
+        function shoot(){
+            if(gameOver) return
+            let rect = player.getBoundingClientRect()
+            let x = rect.left - gameBox.getBoundingClientRect().left + rect.width/2 - 2
+            let y = rect.top - gameBox.getBoundingClientRect().top
+
+            let bullet = document.createElement('div')
+            bullet.className = 'bullet'
+            bullet.style.left = x + 'px'
+            bullet.style.top = y + 'px'
+            gameBox.appendChild(bullet)
+            bullets.push({dom:bullet,x,y})
+        }
+
+        // 生成敌人
+        function createEnemy(){
+            if(gameOver) return
+            let x = Math.random() * (gameBox.clientWidth - 40)
+            let enemy = document.createElement('div')
+            enemy.className = 'enemy'
+            enemy.style.left = x + 'px'
+            enemy.style.top = '0px'
+            gameBox.appendChild(enemy)
+            enemies.push({dom:enemy,x,y:0,speed:Math.random()*2 + 1})
+        }
+
+        // 游戏主循环
+        function gameLoop(){
+            if(gameOver) return
+
+            // 子弹移动
+            bullets.forEach((b,idx)=>{
+                b.y -= 8
+                b.dom.style.top = b.y + 'px'
+                if(b.y < -20) {
+                    b.dom.remove()
+                    bullets.splice(idx,1)
+                }
+            })
+
+            // 敌人移动
+            enemies.forEach((e,idx)=>{
+                e.y += e.speed
+                e.dom.style.top = e.y + 'px'
+
+                // 敌人到底部 → 掉血
+                if(e.y > gameBox.clientHeight - 40){
+                    e.dom.remove()
+                    enemies.splice(idx,1)
+                    hp--
+                    updateHp()
+                    checkGameOver()
+                }
+
+                // 碰撞检测
+                bullets.forEach((b,j)=>{
+                    if(
+                        b.x < e.x + 40 &&
+                        b.x + 4 > e.x &&
+                        b.y < e.y + 40 &&
+                        b.y + 12 > e.y
+                    ){
+                        // 爆炸特效
+                        createBoom(e.x,e.y)
+                        // 删除敌人和子弹
+                        e.dom.remove()
+                        b.dom.remove()
+                        enemies.splice(idx,1)
+                        bullets.splice(j,1)
+                        // 加分
+                        score += 10
+                        updateScore()
+                    }
+                })
+            })
+            requestAnimationFrame(gameLoop)
+        }
+
+        // 爆炸
+        function createBoom(x,y){
+            let boom = document.createElement('div')
+            boom.className = 'boom'
+            boom.style.left = x + 'px'
+            boom.style.top = y + 'px'
+            gameBox.appendChild(boom)
+            setTimeout(()=>boom.remove(),500)
+        }
+
+        // 自动生成敌人
+        setInterval(createEnemy,800)
+
+        // 更新分数
+        function updateScore(){
+            scoreText.innerText = score
+        }
+
+        // 更新血量
+        function updateHp(){
+            hpText.innerText = hp
+        }
+
+        // 游戏结束
+        function checkGameOver(){
+            if(hp <= 0){
+                gameOver = true
+                gameOverText.style.display = 'block'
+                restartBtn.style.display = 'block'
+            }
+        }
+
+        // 重新开始
+        function restartGame(){
+            bullets.forEach(b=>b.dom.remove())
+            enemies.forEach(e=>e.dom.remove())
+            bullets = []
+            enemies = []
+            score = 0
+            hp = 5
+            gameOver = false
+            updateScore()
+            updateHp()
+            gameOverText.style.display = 'none'
+            restartBtn.style.display = 'none'
+            gameLoop()
+        }
+
+        // 开始游戏
+        gameLoop()
+    </script>
+</body>
+</html>

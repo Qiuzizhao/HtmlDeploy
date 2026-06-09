@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猛鬼宿舍-网页完整版</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif}
+        body{background:#111;color:#fff;overflow:hidden;user-select: none;}
+        #gameBox{width:100vw;height:100vh;position:relative;background:#222633}
+
+        /* 房间样式 */
+        .room{
+            width:120px;height:140px;border:2px solid #666;
+            position:absolute;background:#333848;cursor:pointer;
+            display:flex;flex-direction:column;align-items:center;padding:5px;
+            transition: all 0.2s;
+        }
+        .room:hover{border-color:#999;}
+        .room.used{background:#264036;cursor:default;}
+        .room.otherUsed{background:#444;border-color:#555;cursor:not-allowed;opacity:0.8;}
+
+        .bed{width:60px;height:40px;background:#795548;margin-top:10px;border-radius:4px;position:relative;}
+        .bed::after{content:"Lv1";position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:12px;color:#ccc;}
+        .doorWrap{width:50px}
+        .door{width:50px;height:20px;background:#8b4513;border:2px solid #522810}
+
+        /* 门血条 */
+        .hpBarBox{width:50px;height:6px;background:#333;margin-bottom:2px}
+        .doorHp{height:100%;background:#2ecc71;transition:0.2s}
+        .turret{width:30px;height:30px;background:#555;border-radius:50%;margin-top:5px;border:2px solid #888;}
+
+        /* 猎梦者 */
+        #ghost{
+            width:50px;height:60px;background:#992222;
+            border-radius:8px;position:absolute;transition:0.8s ease-in-out;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            font-weight:bold;font-size:14px;z-index:10;
+        }
+        .ghostHpBox{width:46px;height:7px;background:#222;margin-bottom:3px}
+        .ghostHp{height:100%;background:#e74c3c;transition:0.2s}
+
+        /* 顶部UI */
+        #ui{
+            position:fixed;top:10px;left:10px;z-index:99;
+            background:rgba(0,0,0,0.8);padding:12px;border-radius:6px;
+            line-height:1.6;
+        }
+        .btn{
+            padding:6px 10px;margin:3px 0;background:#2868c9;border:none;color:#fff;
+            border-radius:3px;cursor:pointer;transition:0.2s;
+        }
+        .btn:hover{background:#3478e0;}
+        .btn:disabled{background:#555;cursor:not-allowed;opacity:0.7;}
+
+        /* 底部提示 */
+        .tip{
+            position:fixed;bottom:10px;left:50%;transform:translateX(-50%);
+            background:rgba(0,0,0,0.8);padding:8px 16px;border-radius:4px;
+            font-size:14px;z-index:99;
+        }
+        .msg{
+            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+            background:rgba(0,0,0,0.9);padding:20px 40px;border-radius:8px;
+            font-size:20px;z-index:100;display:none;
+        }
+    </style>
+</head>
+<body>
+<div id="gameBox">
+    <div id="ui">
+        <div>💰 金币：<span id="gold">0</span></div>
+        <div>🛏️ 床铺等级：<span id="bedLv">1</span></div>
+        <div>🚪 大门等级：<span id="doorLv">1</span></div>
+        <div>🔫 炮台数量：<span id="turretNum">0</span></div>
+        <div id="doorHpText">大门血量：--</div>
+        <div id="ghostHpText">猎梦者血量：--</div>
+        <button class="btn" id="btnBed" onclick="upBed()">升级床铺(20金)</button>
+        <button class="btn" id="btnDoor" onclick="upDoor()">升级大门(20金)</button>
+        <button class="btn" id="btnTurret" onclick="buildTurret()">建造炮台(80金)</button>
+    </div>
+
+    <!-- 猎梦者 -->
+    <div id="ghost">
+        <div class="ghostHpBox"><div class="ghostHp" id="ghostHpDom"></div></div>
+        猎梦者
+    </div>
+
+    <!-- 提示弹窗 -->
+    <div class="tip">点击空房间上床发育，猎梦者残血会返回原位回血！</div>
+    <div class="msg" id="gameMsg"></div>
+</div>
+
+<script>
+// 游戏全局数据
+let gold = 0;
+let bedLv = 1;
+let doorLv = 1;
+let turretNum = 0;
+let inRoom = null;
+let gameStart = false;
+const MAX_LV = 10; // 最大等级上限
+let ghostOriginX = 0; // 猎梦者出生原位X
+let ghostOriginY = 0; // 猎梦者出生原位Y
+
+// 血量配置：大门基础血量恢复为 300
+let doorMaxHp = 300;
+let doorCurHp = 300;
+let ghostMaxHp = 200;
+let ghostCurHp = 200;
+const GHOST_LOW_HP = 60; // 猎梦者残血判定阈值
+
+// 炮台配置：价格80金，单发伤害10（可自行修改）
+const TURRET_COST = 80;
+const TURRET_DAMAGE = 10;
+
+// DOM元素
+const ghost = document.getElementById('ghost');
+const goldDom = document.getElementById('gold');
+const gameBox = document.getElementById('gameBox');
+const ghostHpDom = document.getElementById('ghostHpDom');
+const doorHpText = document.getElementById('doorHpText');
+const ghostHpText = document.getElementById('ghostHpText');
+const bedLvDom = document.getElementById('bedLv');
+const doorLvDom = document.getElementById('doorLv');
+const turretNumDom = document.getElementById('turretNum');
+const gameMsg = document.getElementById('gameMsg');
+const btnBed = document.getElementById('btnBed');
+const btnDoor = document.getElementById('btnDoor');
+const btnTurret = document.getElementById('btnTurret');
+
+// 房间坐标
+const roomPos = [
+    {x:50,y:80},{x:200,y:80},{x:350,y:80},
+    {x:50,y:250},{x:200,y:250},{x:350,y:250},
+    {x:50,y:420},{x:200,y:420},{x:350,y:420}
+];
+let roomList = [];
+let doorHpDom = null;
+
+// 生成所有房间
+function createRoom(){
+    roomPos.forEach((pos,i)=>{
+        let div = document.createElement('div');
+        div.className = 'room';
+        div.style.left = pos.x+'px';
+        div.style.top = pos.y+'px';
+        div.dataset.id = i;
+        div.innerHTML = `
+            <div class="doorWrap">
+                <div class="hpBarBox"><div class="doorHp"></div></div>
+                <div class="door"></div>
+            </div>
+            <div class="bed"></div>
+        `;
+        div.onclick = ()=>enterRoom(div,i);
+        gameBox.appendChild(div);
+        roomList.push({dom:div,used:false,x:pos.x,y:pos.y});
+    })
+}
+
+// 进入房间 游戏开始
+function enterRoom(dom,idx){
+    if(inRoom) return;
+    // 标记所有房间为已占用
+    roomList.forEach(item=>{
+        if(item.dom !== dom) item.dom.classList.add('otherUsed');
+    })
+    roomList[idx].used = true;
+    dom.classList.add('used');
+    inRoom = roomList[idx];
+    doorHpDom = dom.querySelector('.doorHp');
+
+    // 重置属性 大门基础血量300
+    bedLv = 1;
+    doorLv = 1;
+    turretNum = 0;
+    doorMaxHp = 300 * doorLv;
+    doorCurHp = doorMaxHp;
+    ghostMaxHp = 200;
+    ghostCurHp = ghostMaxHp;
+
+    // 猎梦者随机出生位置，并记录原位
+    ghostOriginX = Math.random() * 500 + 450;
+    ghostOriginY = Math.random() * 200;
+    ghost.style.left = ghostOriginX + 'px';
+    ghost.style.top = ghostOriginY + 'px';
+
+    gameStart = true;
+    updateAllUI();
+}
+
+// 统一更新所有UI
+function updateAllUI(){
+    goldDom.innerText = gold;
+    bedLvDom.innerText = bedLv;
+    doorLvDom.innerText = doorLv;
+    turretNumDom.innerText = turretNum;
+    updateHpUI();
+    updateBtnStatus();
+}
+
+// 更新血条与血量文字
+function updateHpUI(){
+    if(!inRoom) return;
+    // 大门血条
+    let doorPercent = doorCurHp / doorMaxHp * 100;
+    doorHpDom.style.width = doorPercent + '%';
+    if(doorPercent < 30) doorHpDom.style.background = '#e74c3c';
+    else if(doorPercent < 60) doorHpDom.style.background = '#f39c12';
+    else doorHpDom.style.background = '#2ecc71';
+
+    // 猎梦者血条
+    let ghostPer = ghostCurHp / ghostMaxHp * 100;
+    ghostHpDom.style.width = ghostPer + '%';
+
+    doorHpText.innerText = `大门血量：${doorCurHp}/${doorMaxHp}`;
+    ghostHpText.innerText = `猎梦者血量：${ghostCurHp}/${ghostMaxHp}`;
+}
+
+// 按钮状态禁用/启用
+function updateBtnStatus(){
+    btnBed.disabled = gold < 20 || bedLv >= MAX_LV;
+    btnDoor.disabled = gold < 20 || doorLv >= MAX_LV;
+    btnTurret.disabled = gold < TURRET_COST;
+}
+
+// 显示消息弹窗
+function showMsg(text){
+    gameMsg.innerText = text;
+    gameMsg.style.display = 'block';
+}
+
+// 升级床铺
+window.upBed = function(){
+    if(gold >= 20 && inRoom && bedLv < MAX_LV){
+        gold -= 20;
+        bedLv++;
+        updateAllUI();
+    }else if(bedLv >= MAX_LV){
+        showMsg("床铺已达最高等级！");
+        setTimeout(()=>gameMsg.style.display='none',1500);
+    }
+}
+
+// 升级大门（费用20金）
+window.upDoor = function(){
+    if(gold >= 20 && inRoom && doorLv < MAX_LV){
+        gold -= 20;
+        doorLv++;
+        doorMaxHp = 300 * doorLv;
+        doorCurHp = doorMaxHp;
+        updateAllUI();
+    }else if(doorLv >= MAX_LV){
+        showMsg("大门已达最高等级！");
+        setTimeout(()=>gameMsg.style.display='none',1500);
+    }
+}
+
+// 建造炮台
+window.buildTurret = function(){
+    if(gold >= TURRET_COST && inRoom){
+        gold -= TURRET_COST;
+        turretNum++;
+        let tur = document.createElement('div');
+        tur.className='turret';
+        inRoom.dom.appendChild(tur);
+        updateAllUI();
+    }
+}
+
+// 金币自动产出：每级床铺 +1 金币
+setInterval(()=>{
+    if(inRoom && gameStart){
+        gold += bedLv;
+        updateAllUI();
+    }
+},1000);
+
+// 猎梦者AI + 战斗逻辑
+setInterval(()=>{
+    if(!inRoom || !gameStart) return;
+
+    // 猎梦者残血 → 返回原位回血
+    if(ghostCurHp <= GHOST_LOW_HP){
+        ghost.style.left = ghostOriginX + 'px';
+        ghost.style.top = ghostOriginY + 'px';
+        // 原地回血
+        ghostCurHp = Math.min(ghostMaxHp, ghostCurHp + 15);
+        updateHpUI();
+        return;
+    }
+
+    // 血量正常 → 前去攻击大门
+    ghost.style.left = (inRoom.x + 30) + 'px';
+    ghost.style.top = (inRoom.y - 20) + 'px';
+
+    // 炮台攻击猎梦者
+    let turDmg = turretNum * TURRET_DAMAGE;
+    ghostCurHp -= turDmg;
+
+    // 猎梦者攻击大门（等级越高防御越高）
+    let ghostAtk = Math.max(4, 12 - doorLv);
+    doorCurHp -= ghostAtk;
+
+    // 猎梦者被击杀 → 胜利
+    if(ghostCurHp <= 0){
+        gameStart = false;
+        showMsg("🎉 胜利！成功击退猎梦者！3秒后重新开始");
+        setTimeout(()=>location.reload(),3000);
+        return;
+    }
+
+    // 大门被攻破 → 失败
+    if(doorCurHp <= 0){
+        gameStart = false;
+        showMsg("💀 游戏结束！大门被攻破！3秒后重新开始");
+        setTimeout(()=>location.reload(),3000);
+        return;
+    }
+
+    updateHpUI();
+}, 1800);
+
+// 初始化游戏
+createRoom();
+</script>
+</body>
+</html>

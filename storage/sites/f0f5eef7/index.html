@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>仿地铁跑酷 - 完美版</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            background:#222;
+            padding:10px;
+            font-family:system-ui;
+            overflow:hidden;
+        }
+        #game{
+            width:320px;height:600px;
+            background:linear-gradient(#71c554,#88d666);
+            position:relative;
+            overflow:hidden;
+            border:3px solid #111;
+            border-radius:6px;
+        }
+        .road{
+            width:100px;height:600px;
+            background:linear-gradient(#999,#aaa);
+            float:left;
+            border-right:2px dashed #fff;
+            position:relative;
+        }
+        .road:last-child{border:none}
+        .line{
+            width:8px;height:40px;
+            background:#fff;
+            position:absolute;left:46px;top:-50px;
+            border-radius:2px;
+        }
+        #player{
+            width:50px;height:70px;
+            background:#ff5555;
+            border-radius:8px;
+            position:absolute;
+            bottom:30px;left:135px;
+            transition:left 0.15s ease-out, height 0.2s, bottom 0.08s;
+            z-index:9;
+            box-shadow:0 4px 0 #b33333;
+        }
+        #player.jump{
+            box-shadow:0 10px 0 rgba(0,0,0,0.2);
+        }
+        #player.down{
+            border-radius:12px;
+            box-shadow:0 2px 0 #b33333;
+        }
+        .block{
+            width:55px;height:70px;
+            background:linear-gradient(#663300,#884411);
+            border-radius:4px;
+            position:absolute;bottom:0;
+            box-shadow:inset 0 0 0 3px #442200;
+        }
+        .coin{
+            width:30px;height:30px;
+            background:radial-gradient(#fff,#ffd700,#cc9900);
+            border-radius:50%;
+            position:absolute;
+            animation:coinRotate 0.8s linear infinite;
+            box-shadow:0 0 8px #ffdd00;
+        }
+        @keyframes coinRotate{
+            0%{transform:scaleX(1)}
+            50%{transform:scaleX(0.3)}
+            100%{transform:scaleX(1)}
+        }
+        .light{
+            width:60px;height:60px;
+            border-radius:50%;
+            background:radial-gradient(#fff,rgba(255,215,0,0));
+            position:absolute;
+            pointer-events:none;
+            animation:lightAnim 0.3s forwards;
+        }
+        @keyframes lightAnim{
+            0%{transform:scale(0.5);opacity:1}
+            100%{transform:scale(2);opacity:0}
+        }
+        #score{
+            position:absolute;top:10px;left:10px;color:#fff;font-size:22px;font-weight:bold;
+            text-shadow:2px 2px 0 #000;
+            z-index:99;
+        }
+        #highScore{
+            position:absolute;top:40px;left:10px;color:#ffdd00;font-size:18px;font-weight:bold;
+            text-shadow:2px 2px 0 #000;
+            z-index:99;
+        }
+        #tips{
+            color:#fff;text-align:center;width:320px;margin-top:8px;
+            font-size:14px;text-shadow:1px 1px #000;
+        }
+        #startMask{
+            position:absolute;
+            inset:0;
+            background:rgba(0,0,0,0.75);
+            z-index:999;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            text-align:center;
+        }
+        #startMask h2{font-size:32px;margin-bottom:10px}
+        #startMask p{margin:4px 0;font-size:16px}
+        #startBtn{
+            margin-top:20px;
+            padding:10px 30px;
+            font-size:20px;
+            background:#ff5555;
+            border:none;
+            color:#fff;
+            border-radius:8px;
+            cursor:pointer;
+        }
+        #gameOver{
+            position:absolute;
+            inset:0;
+            background:rgba(0,0,0,0.85);
+            z-index:999;
+            display:none;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            text-align:center;
+        }
+        #restartBtn{
+            margin-top:20px;
+            padding:10px 26px;
+            font-size:18px;
+            background:#71c554;
+            border:none;
+            border-radius:6px;
+            color:#000;
+            cursor:pointer;
+        }
+        #pauseMask{
+            position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:999;
+            display:none;align-items:center;justify-content:center;color:#fff;font-size:36px;
+            font-weight:bold;text-shadow:2px 2px #000;
+        }
+    </style>
+</head>
+<body>
+<div id="game">
+    <div id="score">分数：0</div>
+    <div id="highScore">最高分：0</div>
+
+    <div id="startMask">
+        <h2>地铁跑酷小游戏</h2>
+        <p>键盘：← → 换道 | ↑ 跳跃 | ↓ 下蹲 | P 暂停</p>
+        <p>手机：左右滑动切换跑道，上滑跳，下滑蹲</p>
+        <button id="startBtn">点击开始游戏</button>
+    </div>
+
+    <div id="pauseMask">⏸ 已暂停</div>
+
+    <div id="gameOver">
+        <h2>游戏结束</h2>
+        <p id="finalScore"></p>
+        <p id="newBest" style="color:#ffdd00;margin-top:6px"></p>
+        <button id="restartBtn">重新开始</button>
+    </div>
+
+    <div class="road" data-lane="0"></div>
+    <div class="road" data-lane="1"></div>
+    <div class="road" data-lane="2"></div>
+    <div id="player"></div>
+</div>
+<div id="tips">←→切换跑道｜↑跳跃｜↓下蹲｜P键暂停｜手机滑动操作</div>
+
+<script>
+const game = document.getElementById('game');
+const player = document.getElementById('player');
+const scoreText = document.getElementById('score');
+const highScoreText = document.getElementById('highScore');
+const startMask = document.getElementById('startMask');
+const startBtn = document.getElementById('startBtn');
+const gameOverMask = document.getElementById('gameOver');
+const pauseMask = document.getElementById('pauseMask');
+const finalScoreText = document.getElementById('finalScore');
+const newBestText = document.getElementById('newBest');
+const restartBtn = document.getElementById('restartBtn');
+
+const laneX = [22,122,222];
+let nowLane = 1;
+let isJump = false,isDown = false;
+let score = 0;
+let highScore = localStorage.getItem('subwayHighScore') || 0;
+let baseSpeed = 6;
+let gameSpeed = baseSpeed;
+let gameRun = null;
+let blockArr = [];
+let coinArr = [];
+let gameStart = false;
+let isPaused = false;
+
+let touchStartY = 0;
+let touchStartX = 0;
+
+let blockTimer, coinTimer;
+
+highScoreText.innerText = '最高分：' + highScore;
+
+function setPlayerPos(){
+    player.style.left = laneX[nowLane]+'px';
+}
+setPlayerPos();
+
+function saveHighScore(){
+    if(score > highScore){
+        highScore = score;
+        localStorage.setItem('subwayHighScore', highScore);
+        newBestText.innerText = '🎉 新纪录！';
+    } else {
+        newBestText.innerText = '';
+    }
+    highScoreText.innerText = '最高分：' + highScore;
+}
+
+function clearAllElements(){
+    blockArr.forEach(item=>item.dom.remove());
+    coinArr.forEach(item=>item.dom.remove());
+    blockArr = [];
+    coinArr = [];
+}
+
+function resetGame(){
+    clearInterval(blockTimer);
+    clearInterval(coinTimer);
+    cancelAnimationFrame(gameRun);
+    
+    clearAllElements();
+    
+    score = 0;
+    gameSpeed = baseSpeed;
+    nowLane = 1;
+    isJump = false;
+    isDown = false;
+    isPaused = false;
+    
+    scoreText.innerText='分数：0';
+    player.className = '';
+    player.style.height='70px';
+    player.style.bottom='30px';
+    setPlayerPos();
+    
+    pauseMask.style.display = 'none';
+    gameOverMask.style.display = 'none';
+}
+
+function gameOver(){
+    cancelAnimationFrame(gameRun);
+    clearInterval(blockTimer);
+    clearInterval(coinTimer);
+    saveHighScore();
+    finalScoreText.innerText = '本次得分：'+score;
+    gameOverMask.style.display = 'flex';
+}
+
+function togglePause(){
+    if(!gameStart) return;
+    isPaused = !isPaused;
+    pauseMask.style.display = isPaused ? 'flex' : 'none';
+    if(!isPaused){
+        gameLoop();
+    }
+}
+
+function jumpAction(){
+    if(isJump || isDown || isPaused) return;
+    isJump = true;
+    player.classList.add('jump');
+    let jumpHeight = 120;
+    let jumpSpeed = 8;
+    let currentBottom = 30;
+    
+    const up = setInterval(()=>{
+        if(isPaused) return;
+        currentBottom += jumpSpeed;
+        player.style.bottom = currentBottom+'px';
+        if(currentBottom >= jumpHeight){
+            clearInterval(up);
+            const down = setInterval(()=>{
+                if(isPaused) return;
+                currentBottom -= jumpSpeed;
+                player.style.bottom = currentBottom+'px';
+                if(currentBottom <= 30){
+                    clearInterval(down);
+                    player.style.bottom = '30px';
+                    player.classList.remove('jump');
+                    isJump = false;
+                }
+            },16)
+        }
+    },16)
+}
+
+function downAction(){
+    if(isDown || isJump || isPaused) return;
+    isDown = true;
+    player.classList.add('down');
+    player.style.height='30px';
+    setTimeout(()=>{
+        if(isPaused) return;
+        player.style.height='70px';
+        player.classList.remove('down');
+        isDown=false;
+    },400)
+}
+
+document.addEventListener('keydown',e=>{
+    if(!gameStart) return;
+    if(e.key === 'p' || e.key === 'P'){
+        togglePause();
+        return;
+    }
+    if(isPaused) return;
+    
+    switch(e.key){
+        case 'ArrowLeft':
+            if(nowLane>0){nowLane--;setPlayerPos()}
+            break;
+        case 'ArrowRight':
+            if(nowLane<2){nowLane++;setPlayerPos()}
+            break;
+        case 'ArrowUp':
+            jumpAction();
+            break;
+        case 'ArrowDown':
+            downAction();
+            break;
+    }
+})
+
+game.addEventListener('touchstart',e=>{
+    if(!gameStart || isPaused) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+})
+game.addEventListener('touchend',e=>{
+    if(!gameStart || isPaused) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const diffX = endX - touchStartX;
+    const diffY = endY - touchStartY;
+    
+    if(Math.abs(diffX) > Math.abs(diffY)){
+        if(diffX < -30 && nowLane>0){ nowLane--; setPlayerPos(); }
+        else if(diffX > 30 && nowLane<2){ nowLane++; setPlayerPos(); }
+    }else{
+        if(diffY < -30){ jumpAction(); }
+        else if(diffY > 30){ downAction(); }
+    }
+})
+
+function createBlock(){
+    if(!gameStart || isPaused) return;
+    let lane = Math.floor(Math.random()*3);
+    let b = document.createElement('div');
+    b.className='block';
+    b.style.left=laneX[lane]+'px';
+    b.style.top='-80px';
+    game.appendChild(b);
+    blockArr.push({dom:b,lane,top:-80});
+}
+
+function createCoin(){
+    if(!gameStart || isPaused) return;
+    let lane = Math.floor(Math.random()*3);
+    let c = document.createElement('div');
+    c.className='coin';
+    c.style.left=laneX[lane]+'px';
+    c.style.top='-40px';
+    game.appendChild(c);
+    coinArr.push({dom:c,lane,top:-40});
+}
+
+function createLight(x,y){
+    let light = document.createElement('div');
+    light.className='light';
+    light.style.left = (x-15)+'px';
+    light.style.top = y+'px';
+    game.appendChild(light);
+    setTimeout(()=>light.remove(),300)
+}
+
+function updateDifficulty(){
+    gameSpeed = Math.min(baseSpeed + Math.floor(score / 80), 16);
+}
+
+function gameLoop(){
+    if(isPaused){
+        cancelAnimationFrame(gameRun);
+        return;
+    }
+    
+    updateDifficulty();
+    score++;
+    scoreText.innerText = '分数：' + score;
+
+    document.querySelectorAll('.line').forEach(line=>{
+        let t = parseInt(line.style.top)+gameSpeed;
+        if(t>600) t=-50;
+        line.style.top = t+'px';
+    })
+
+    for(let i=blockArr.length-1;i>=0;i--){
+        let item = blockArr[i];
+        item.top += gameSpeed;
+        item.dom.style.top = item.top+'px';
+        
+        if(item.top>480 && item.top<540 && item.lane===nowLane){
+            if(!isDown && !isJump){
+                gameOver();
+                return;
+            }
+        }
+        if(item.top>650){
+            item.dom.remove();
+            blockArr.splice(i,1);
+        }
+    }
+
+    for(let i=coinArr.length-1;i>=0;i--){
+        let item = coinArr[i];
+        item.top += gameSpeed;
+        item.dom.style.top = item.top+'px';
+        
+        if(item.top>480 && item.top<530 && item.lane===nowLane){
+            score += 15;
+            scoreText.innerText='分数：'+score;
+            createLight(laneX[item.lane], item.top);
+            item.dom.remove();
+            coinArr.splice(i,1);
+        }else if(item.top>650){
+            item.dom.remove();
+            coinArr.splice(i,1);
+        }
+    }
+    gameRun = requestAnimationFrame(gameLoop);
+}
+
+for(let i=0;i<12;i++){
+    document.querySelectorAll('.road').forEach(rd=>{
+        let line = document.createElement('div');
+        line.className='line';
+        line.style.top = (i*70)+'px';
+        rd.appendChild(line);
+    })
+}
+
+function startSpawn(){
+    clearInterval(blockTimer);
+    clearInterval(coinTimer);
+    blockTimer = setInterval(createBlock, 1300);
+    coinTimer = setInterval(createCoin, 650);
+}
+
+startBtn.onclick = ()=>{
+    gameStart = true;
+    startMask.style.display = 'none';
+    startSpawn();
+    gameLoop();
+}
+
+restartBtn.onclick = ()=>{
+    resetGame();
+    gameStart = true;
+    startSpawn();
+    gameLoop();
+}
+</script>
+</body>
+</html>

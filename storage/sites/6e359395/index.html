@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JOJO回合格斗 - 承太郎VS DIO</title>
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+}
+body{
+  background:#050505;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  font-family:"Microsoft YaHei",sans-serif;
+  overflow:hidden;
+}
+
+/* 游戏主容器 */
+.game-container{
+  width:1000px;
+  height:600px;
+  background:linear-gradient(#100520,#251040,#080808);
+  border:4px solid #c9a227;
+  border-radius:8px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 0 40px #c9a22740;
+  transition:transform 0.05s;
+}
+/* 屏幕震动动画 */
+.game-container.shake{
+  animation:shake 0.1s alternate 2;
+}
+@keyframes shake{
+  0%{transform:translate(0,0);}
+  50%{transform:translate(-3px,3px);}
+  100%{transform:translate(3px,-3px);}
+}
+
+/* 开局开始遮罩 */
+.start-mask{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.9);
+  z-index:999;
+  display:grid;
+  place-items:center;
+  color:#ffdd00;
+  text-align:center;
+}
+.start-mask h1{
+  font-size:48px;
+  margin-bottom:20px;
+  letter-spacing:3px;
+}
+.start-mask p{
+  font-size:16px;
+  color:#ccc;
+  margin-bottom:40px;
+}
+.start-btn{
+  padding:14px 40px;
+  font-size:22px;
+  background:#c9a227;
+  color:#000;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+.start-btn:active{transform:scale(0.95);}
+
+/* 回合提示文字 */
+.round-tip{
+  position:absolute;
+  top:60px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:24px;
+  font-weight:bold;
+  color:#fff;
+  letter-spacing:2px;
+}
+.player-round{color:#6699ff;}
+.enemy-round{color:#ffdd00;}
+
+/* 血条 */
+.hp-bar{
+  position:absolute;
+  top:20px;
+  width:350px;
+  height:30px;
+  background:#222;
+  border:2px solid #fff;
+  border-radius:4px;
+  overflow:hidden;
+}
+.player-hp{left:30px;}
+.enemy-hp{right:30px;}
+.hp-fill{
+  height:100%;
+  background:linear-gradient(90deg,#ff3333,#aa0000);
+  transition:width 0.2s ease-out;
+}
+.hp-text{
+  position:absolute;
+  top:-25px;
+  color:#fff;
+  font-weight:bold;
+  font-size:16px;
+  letter-spacing:1px;
+}
+
+/* 奥义能量条 */
+.ultimate-bar{
+  position:absolute;
+  bottom:110px;
+  right:30px;
+  width:200px;
+  height:14px;
+  background:#222;
+  border:1px solid #ffdd00;
+  border-radius:2px;
+}
+.ultimate-fill{
+  height:100%;
+  background:#ffdd00;
+  width:0%;
+  transition:width 0.3s;
+}
+
+/* 纯CSS角色 带头部 */
+.character{
+  width:140px;
+  height:200px;
+  position:absolute;
+  bottom:100px;
+  transition:all 0.1s ease;
+  z-index:10;
+  border-radius:10px;
+}
+/* 角色头部 */
+.character::before{
+  content:"";
+  width:40px;
+  height:40px;
+  background:#ffdbac;
+  border-radius:50%;
+  position:absolute;
+  top:-30px;
+  left:50%;
+  transform:translateX(-50%);
+  border:2px solid #222;
+}
+/* 底部文字标识 */
+.character::after{
+  content:"替身";
+  position:absolute;
+  width:100%;
+  text-align:center;
+  bottom:10px;
+  color:#fff;
+  font-weight:bold;
+  font-size:14px;
+}
+.player{
+  left:200px;
+  background:linear-gradient(#152060 60%,#6699ff 60%);
+  border:3px solid #6699ff;
+}
+.enemy{
+  right:200px;
+  background:linear-gradient(#704000 60%,#ffdd00 60%);
+  border:3px solid #ffdd00;
+  transform:scaleX(-1);
+}
+/* 受伤闪烁 */
+.enemy.hurt{animation:hurt 0.2s alternate 2;}
+.player.hurt{animation:hurt 0.2s alternate 2;}
+@keyframes hurt{
+  0%{opacity:1;}
+  100%{opacity:0.4;}
+}
+
+/* 战斗特效 */
+.effect{
+  position:absolute;
+  z-index:5;
+  pointer-events:none;
+}
+.hit-effect{
+  width:90px;
+  height:90px;
+  border-radius:50%;
+  background:radial-gradient(#fff,#ffdd00,transparent);
+  animation:hit 0.3s forwards;
+}
+.ultimate-effect{
+  width:100%;
+  height:100%;
+  background:radial-gradient(circle,#ffdd00 0%,#ff8800 30%,transparent 70%);
+  animation:ultimate 1.2s forwards;
+}
+/* 文字特效 */
+.ora-text{
+  position:absolute;
+  color:#6699ff;
+  font-size:26px;
+  font-weight:bold;
+  z-index:6;
+  animation:ora 0.4s forwards;
+}
+.muda-text{
+  position:absolute;
+  color:#ffdd00;
+  font-size:26px;
+  font-weight:bold;
+  z-index:6;
+  animation:ora 0.4s forwards;
+}
+@keyframes hit{
+  0%{transform:scale(0);opacity:1;}
+  100%{transform:scale(1.8);opacity:0;}
+}
+@keyframes ultimate{
+  0%{transform:scale(0.4);opacity:0;}
+  40%{transform:scale(1);opacity:1;}
+  100%{transform:scale(1.2);opacity:0;}
+}
+@keyframes ora{
+  0%{transform:scale(0.5);opacity:1;}
+  100%{transform:scale(1.4);opacity:0;}
+}
+
+/* 移动按钮 */
+.move-buttons{
+  position:absolute;
+  bottom:30px;
+  left:30px;
+  display:flex;
+  gap:15px;
+}
+.move-btn{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  border:2px solid #fff;
+  background:#1a1a1a;
+  color:#fff;
+  font-size:20px;
+  cursor:pointer;
+  transition:transform 0.1s;
+}
+.move-btn:active{transform:scale(0.9);background:#333;}
+.move-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* 技能面板 */
+.skill-panel{
+  position:absolute;
+  bottom:30px;
+  right:30px;
+  display:flex;
+  gap:15px;
+  align-items:center;
+}
+.skill-btn{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  border:3px solid #c9a227;
+  background:#1a1a1a;
+  color:#fff;
+  font-weight:bold;
+  font-size:14px;
+  cursor:pointer;
+  transition:transform 0.1s,background 0.1s;
+  position:relative;
+  overflow:hidden;
+}
+.skill-btn:active{transform:scale(0.9);background:#333;}
+.skill-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.skill-cooldown{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  color:#fff;
+  font-size:18px;
+}
+.ultimate-btn{
+  width:90px;
+  height:90px;
+  border-radius:50%;
+  border:4px solid #ffd000;
+  background:linear-gradient(#885000,#503000);
+  color:#fff;
+  font-weight:bold;
+  font-size:16px;
+  cursor:pointer;
+  margin-left:10px;
+}
+.ultimate-btn:disabled{
+  background:#222;
+  border-color:#555;
+  cursor:not-allowed;
+  opacity:0.6;
+}
+
+/* 底部操作提示 */
+.tip-text{
+  position:absolute;
+  bottom:8px;
+  left:50%;
+  transform:translateX(-50%);
+  color:#ddd;
+  font-size:13px;
+  letter-spacing:0.5px;
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+  <!-- 开局遮罩 -->
+  <div class="start-mask" id="startMask">
+    <h1>JOJO回合格斗游戏</h1>
+    <p>承太郎 VS DIO | 一回合一人行动，DIO伤害更高</p>
+    <button class="start-btn" onclick="startGame()">点击开始对战</button>
+  </div>
+
+  <!-- 回合提示 -->
+  <div class="round-tip" id="roundTip">你的回合（承太郎）</div>
+
+  <!-- 血条 -->
+  <div class="hp-bar player-hp">
+    <div class="hp-text">空条承太郎</div>
+    <div class="hp-fill" style="width:100%"></div>
+  </div>
+  <div class="hp-bar enemy-hp">
+    <div class="hp-text" style="right:0;text-align:right;">DIO</div>
+    <div class="hp-fill" style="width:100%"></div>
+  </div>
+
+  <!-- 奥义能量条 -->
+  <div class="ultimate-bar">
+    <div class="ultimate-fill" id="ultiFill"></div>
+  </div>
+
+  <!-- 对战角色 -->
+  <div class="character player" id="player"></div>
+  <div class="character enemy" id="enemy"></div>
+
+  <!-- 移动按钮 -->
+  <div class="move-buttons">
+    <button class="move-btn" id="btnLeft" onclick="moveLeft()">←</button>
+    <button class="move-btn" id="btnRight" onclick="moveRight()">→</button>
+  </div>
+
+  <!-- 技能按钮 -->
+  <div class="skill-panel">
+    <button class="skill-btn" id="btnAtk" onclick="normalAttack()">普攻</button>
+    <button class="skill-btn" id="btnS1" onclick="skill1()">
+      欧拉拳
+      <div class="skill-cooldown" id="cd1"></div>
+    </button>
+    <button class="skill-btn" id="btnS2" onclick="skill2()">
+      时停冲击
+      <div class="skill-cooldown" id="cd2"></div>
+    </button>
+    <button class="ultimate-btn" id="ultimateBtn" onclick="ultimateSkill()" disabled>白金之星</button>
+  </div>
+
+  <!-- 操作提示 -->
+  <div class="tip-text">
+    键盘：A/←左移 | D/→右移 | J普攻 | K欧拉拳 | L时停冲击 | U奥义白金之星
+  </div>
+</div>
+
+<script>
+// 全局游戏数据
+let playerHP = 100;
+let enemyHP = 100;
+let ultimateEnergy = 0;
+let gameStart = false;
+let isPlayerTurn = true; // 回合开关：true玩家，false敌人
+const player = document.getElementById('player');
+const enemy = document.getElementById('enemy');
+const ultimateBtn = document.getElementById('ultimateBtn');
+const ultiFill = document.getElementById('ultiFill');
+const startMask = document.getElementById('startMask');
+const roundTip = document.getElementById('roundTip');
+const cdTimers = {};
+
+// 全部按钮集合，控制锁定
+const allBtns = [
+  document.getElementById('btnLeft'),
+  document.getElementById('btnRight'),
+  document.getElementById('btnAtk'),
+  document.getElementById('btnS1'),
+  document.getElementById('btnS2')
+];
+
+// 锁定/解锁玩家所有操作按钮
+function lockPlayerBtn(lock) {
+  allBtns.forEach(btn => btn.disabled = lock);
+}
+
+// 切换回合
+function switchTurn() {
+  isPlayerTurn = !isPlayerTurn;
+  if (isPlayerTurn) {
+    roundTip.innerHTML = `<span class="player-round">你的回合（承太郎）</span>`;
+    lockPlayerBtn(false);
+  } else {
+    roundTip.innerHTML = `<span class="enemy-round">敌方回合（DIO）</span>`;
+    lockPlayerBtn(true);
+    // 延迟执行敌人攻击
+    setTimeout(enemyAttack, 800);
+  }
+}
+
+// 开始游戏
+function startGame(){
+  gameStart = true;
+  startMask.style.display = 'none';
+  lockPlayerBtn(false);
+}
+
+// 屏幕震动
+function screenShake(){
+  const box = document.querySelector('.game-container');
+  box.classList.add('shake');
+  setTimeout(()=>box.classList.remove('shake'),100);
+}
+
+// 生成打击特效
+function createHitEffect(x,y,cls){
+  const div = document.createElement('div');
+  div.className = 'effect ' + cls;
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  document.querySelector('.game-container').appendChild(div);
+  setTimeout(()=>div.remove(),1200);
+}
+
+// 欧拉文字（玩家攻击）
+function createOraText(x,y){
+  const text = document.createElement('div');
+  text.className = 'ora-text';
+  text.innerText = '欧拉！';
+  text.style.left = x + 'px';
+  text.style.top = y + 'px';
+  document.querySelector('.game-container').appendChild(text);
+  setTimeout(()=>text.remove(),400);
+}
+
+// 無駄文字（敌人攻击）
+function createMudaText(x,y){
+  const text = document.createElement('div');
+  text.className = 'muda-text';
+  text.innerText = '無駄！';
+  text.style.left = x + 'px';
+  text.style.top = y + 'px';
+  document.querySelector('.game-container').appendChild(text);
+  setTimeout(()=>text.remove(),400);
+}
+
+// 角色移动（仅玩家回合可动）
+function moveLeft(){
+  if(!gameStart || !isPlayerTurn) return;
+  let leftVal = parseInt(window.getComputedStyle(player).left);
+  if(leftVal > 50) player.style.left = leftVal - 30 + 'px';
+}
+function moveRight(){
+  if(!gameStart || !isPlayerTurn) return;
+  let leftVal = parseInt(window.getComputedStyle(player).left);
+  if(leftVal < 700) player.style.left = leftVal + 30 + 'px';
+}
+
+// 玩家普攻
+function normalAttack(){
+  if(!gameStart || !isPlayerTurn) return;
+  player.style.transform = 'translateX(20px)';
+  createHitEffect(enemy.offsetLeft + 40, enemy.offsetTop + 30, 'hit-effect');
+  createOraText(enemy.offsetLeft + 50, enemy.offsetTop - 20);
+  damageEnemy(5);
+  addUltimateEnergy(10);
+  screenShake();
+  enemy.classList.add('hurt');
+  setTimeout(()=>enemy.classList.remove('hurt'),200);
+  setTimeout(()=>{
+    player.style.transform = '';
+    switchTurn();
+  },300);
+}
+
+// 玩家技能1
+function skill1(){
+  if(!gameStart || !isPlayerTurn || checkCooldown('cd1')) return;
+  player.style.transform = 'translateX(40px) scale(1.1)';
+  createHitEffect(enemy.offsetLeft + 20, enemy.offsetTop, 'hit-effect');
+  createOraText(enemy.offsetLeft, enemy.offsetTop - 40);
+  damageEnemy(15);
+  addUltimateEnergy(20);
+  setCooldown('cd1',3);
+  screenShake();
+  enemy.classList.add('hurt');
+  setTimeout(()=>enemy.classList.remove('hurt'),200);
+  setTimeout(()=>{
+    player.style.transform = '';
+    switchTurn();
+  },300);
+}
+
+// 玩家技能2
+function skill2(){
+  if(!gameStart || !isPlayerTurn || checkCooldown('cd2')) return;
+  player.style.transform = 'translateX(50px) scale(1.2)';
+  createHitEffect(enemy.offsetLeft, enemy.offsetTop - 30, 'hit-effect');
+  damageEnemy(20);
+  addUltimateEnergy(25);
+  setCooldown('cd2',5);
+  screenShake();
+  enemy.classList.add('hurt');
+  setTimeout(()=>enemy.classList.remove('hurt'),200);
+  setTimeout(()=>{
+    player.style.transform = '';
+    switchTurn();
+  },300);
+}
+
+// 玩家奥义
+function ultimateSkill(){
+  if(!gameStart || !isPlayerTurn || ultimateEnergy < 100) return;
+  createHitEffect(0,0,'ultimate-effect');
+  damageEnemy(50);
+  ultimateEnergy = 0;
+  ultiFill.style.width = '0%';
+  ultimateBtn.disabled = true;
+  setTimeout(switchTurn,1200);
+}
+
+// 敌人受伤扣血
+function damageEnemy(dmg){
+  enemyHP = Math.max(0, enemyHP - dmg);
+  document.querySelector('.enemy-hp .hp-fill').style.width = enemyHP + '%';
+  if(enemyHP <= 0){
+    setTimeout(()=>{
+      alert('欧拉欧拉欧拉！承太郎击败DIO，获得胜利！');
+      resetGame();
+    },300);
+  }
+}
+
+// 玩家受伤扣血（DIO伤害更高）
+function damagePlayer(dmg){
+  playerHP = Math.max(0, playerHP - dmg);
+  document.querySelector('.player-hp .hp-fill').style.width = playerHP + '%';
+  if(playerHP <= 0){
+    setTimeout(()=>{
+      alert('無駄無駄無駄！DIO获胜，你失败了！');
+      resetGame();
+    },300);
+  }
+}
+
+// DIO敌方AI攻击（伤害高于玩家）
+function enemyAttack(){
+  if(enemyHP <= 0) return;
+  // 随机选择普攻/高伤时停反击
+  const rand = Math.random();
+  if(rand > 0.6){
+    // DIO高伤时停反击 25伤害
+    enemy.style.transform = 'scaleX(-1) translateX(-40px) scale(1.15)';
+    createHitEffect(player.offsetLeft + 40, player.offsetTop + 30, 'hit-effect');
+    createMudaText(player.offsetLeft + 50, player.offsetTop - 20);
+    damagePlayer(25);
+  }else{
+    // DIO普通反击 12伤害（高于玩家普攻5）
+    enemy.style.transform = 'scaleX(-1) translateX(-20px)';
+    createHitEffect(player.offsetLeft + 40, player.offsetTop + 30, 'hit-effect');
+    createMudaText(player.offsetLeft + 50, player.offsetTop - 20);
+    damagePlayer(12);
+  }
+  screenShake();
+  player.classList.add('hurt');
+  setTimeout(()=>player.classList.remove('hurt'),200);
+  setTimeout(()=>{
+    enemy.style.transform = 'scaleX(-1)';
+    switchTurn();
+  },300);
+}
+
+// 积攒奥义能量
+function addUltimateEnergy(num){
+  ultimateEnergy = Math.min(100, ultimateEnergy + num);
+  ultiFill.style.width = ultimateEnergy + '%';
+  if(ultimateEnergy >= 100) ultimateBtn.disabled = false;
+}
+
+// 冷却管理
+function setCooldown(id,time){
+  const cdDom = document.getElementById(id);
+  if(cdTimers[id]) clearInterval(cdTimers[id]);
+  cdDom.style.display = 'flex';
+  let count = time;
+  cdDom.innerText = count;
+  cdTimers[id] = setInterval(()=>{
+    count--;
+    cdDom.innerText = count;
+    if(count <= 0){
+      clearInterval(cdTimers[id]);
+      delete cdTimers[id];
+      cdDom.style.display = 'none';
+    }
+  },1000);
+}
+function checkCooldown(id){
+  return document.getElementById(id).style.display === 'flex';
+}
+
+// 游戏全部重置
+function resetGame(){
+  playerHP = 100;
+  enemyHP = 100;
+  ultimateEnergy = 0;
+  isPlayerTurn = true;
+  document.querySelector('.enemy-hp .hp-fill').style.width = '100%';
+  document.querySelector('.player-hp .hp-fill').style.width = '100%';
+  ultiFill.style.width = '0%';
+  ultimateBtn.disabled = true;
+  roundTip.innerHTML = `<span class="player-round">你的回合（承太郎）</span>`;
+  lockPlayerBtn(false);
+}
+
+// 键盘监听
+document.addEventListener('keydown',(e)=>{
+  if(!gameStart) return;
+  switch(e.key){
+    case 'a': case 'ArrowLeft': moveLeft(); break;
+    case 'd': case 'ArrowRight': moveRight(); break;
+    case 'j': normalAttack(); break;
+    case 'k': skill1(); break;
+    case 'l': skill2(); break;
+    case 'u': ultimateSkill(); break;
+  }
+});
+</script>
+</body>
+</html>
