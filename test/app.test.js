@@ -7,7 +7,7 @@ const path = require('node:path');
 const test = require('node:test');
 const request = require('supertest');
 
-const { createApp } = require('../src/app');
+const { createApp, __test } = require('../src/app');
 
 test('public index uses a single HTML file picker', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
@@ -514,7 +514,52 @@ test('git auto sync serializes backup jobs and clears stale index locks', async 
   assert.match(source, /runGitSync/);
   assert.match(source, /setTimeout\(runGitSync, GIT_SYNC_DELAY_MS\)/);
   assert.match(source, /removeStaleGitIndexLock\(process\.cwd\(\)\)/);
+  assert.match(source, /writeGitBackupPathspecFile/);
+  assert.match(source, /git add -u -- data storage\/sites/);
+  assert.match(source, /git add --pathspec-from-file=/);
+  assert.doesNotMatch(source, /git add \./);
   assert.match(source, /writeSites\(dataFile, sites, \{ sync: false \}\)/);
+});
+
+test('site writes preserve records that were added after a stale read', async () => {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-data-guard-'));
+  const sitesPath = path.join(root, 'sites.json');
+  const original = {
+    id: 'old-site',
+    number: '00001',
+    title: '旧项目',
+    createdAt: '2026-06-01T00:00:00.000Z',
+    usagePreviewCount: 1,
+    usageCodeCount: 0
+  };
+  const fresh = {
+    id: 'fresh-site',
+    number: '00002',
+    title: '新项目',
+    createdAt: '2026-06-02T00:00:00.000Z'
+  };
+
+  await fsp.writeFile(sitesPath, JSON.stringify([fresh, original], null, 2));
+  await __test.writeSites(sitesPath, [{
+    ...original,
+    usagePreviewCount: 2,
+    usageLastUsedAt: '2026-06-03T00:00:00.000Z'
+  }], { sync: false });
+
+  const savedSites = JSON.parse(await fsp.readFile(sitesPath, 'utf8'));
+  assert.deepEqual(savedSites.map((site) => site.id), ['fresh-site', 'old-site']);
+  assert.equal(savedSites.find((site) => site.id === 'old-site').usagePreviewCount, 2);
+});
+
+test('site data corruption fails closed instead of returning an empty project list', async () => {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-corrupt-'));
+  const sitesPath = path.join(root, 'sites.json');
+  await fsp.writeFile(sitesPath, '{"not valid json"');
+
+  await assert.rejects(
+    () => __test.readSites(sitesPath),
+    /sites\.json 数据文件损坏/
+  );
 });
 
 test('admin can trigger a manual GitHub sync', async () => {

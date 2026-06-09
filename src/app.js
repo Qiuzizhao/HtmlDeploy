@@ -458,6 +458,45 @@ const GIT_SYNC_DELAY_MS = 10 * 60 * 1000;
 let syncTimeout = null;
 let syncInProgress = false;
 let syncQueued = false;
+const jsonWriteQueues = new Map();
+
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+function buildGitBackupPathspecs(cwd) {
+  const paths = [
+    'data/classes.json',
+    'data/settings.json',
+    'data/private-ai-settings.json',
+    'data/jobs.json',
+    'data/sites.json'
+  ].filter((relativePath) => fs.existsSync(path.join(cwd, relativePath)));
+
+  try {
+    const sitesPath = path.join(cwd, 'data', 'sites.json');
+    const sites = JSON.parse(fs.readFileSync(sitesPath, 'utf8'));
+    if (Array.isArray(sites)) {
+      for (const site of sites) {
+        const id = String(site.id || '').trim();
+        if (/^[a-f0-9]{8}$/i.test(id) && fs.existsSync(path.join(cwd, 'storage', 'sites', id))) {
+          paths.push(`storage/sites/${id}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('[Git Sync] Cannot read site pathspecs:', error.message);
+  }
+
+  return [...new Set(paths)];
+}
+
+function writeGitBackupPathspecFile(cwd) {
+  const pathspecs = buildGitBackupPathspecs(cwd);
+  const pathspecFile = path.join(cwd, '.git', 'html-deploy-backup-paths');
+  fs.writeFileSync(pathspecFile, `${pathspecs.join('\n')}\n`);
+  return pathspecFile;
+}
 
 function removeStaleGitIndexLock(cwd) {
   const lockPath = path.join(cwd, '.git', 'index.lock');
@@ -484,11 +523,19 @@ function runGitSyncNow() {
 
   syncInProgress = true;
   removeStaleGitIndexLock(process.cwd());
+  const cwd = process.cwd();
+  const pathspecFile = writeGitBackupPathspecFile(cwd);
+  const command = [
+    'git add -u -- data storage/sites',
+    `git add --pathspec-from-file=${shellQuote(pathspecFile)}`,
+    'git commit -m "Auto backup data"',
+    'git push'
+  ].join(' && ');
   console.log('[Git Sync] Starting backup to GitHub...');
 
   return new Promise((resolve, reject) => {
-    exec('git add . && git commit -m "Auto backup data" && git push', {
-      cwd: process.cwd(),
+    exec(command, {
+      cwd,
       timeout: 120000
     }, (error, stdout, stderr) => {
       syncInProgress = false;
@@ -612,8 +659,52 @@ async function ensureJsonFile(dataFile) {
   try {
     await fsp.access(dataFile, fs.constants.F_OK);
   } catch {
-    await fsp.writeFile(dataFile, '[]');
+    await atomicWriteJson(dataFile, []);
   }
+}
+
+function createJsonDataError(file, message) {
+  const error = new Error(`${path.basename(file)} 数据文件损坏：${message}`);
+  error.code = 'JSON_DATA_INVALID';
+  return error;
+}
+
+async function atomicWriteJson(file, value) {
+  await fsp.mkdir(path.dirname(file), { recursive: true });
+  const tempFile = path.join(
+    path.dirname(file),
+    `.${path.basename(file)}.${process.pid}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`
+  );
+  const content = `${JSON.stringify(value, null, 2)}\n`;
+  let handle;
+
+  try {
+    handle = await fsp.open(tempFile, 'w');
+    await handle.writeFile(content, 'utf8');
+    await handle.sync();
+    await handle.close();
+    handle = null;
+    await fsp.rename(tempFile, file);
+  } catch (error) {
+    if (handle) {
+      await handle.close().catch(() => {});
+    }
+    await fsp.rm(tempFile, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+function withJsonWriteQueue(file, task) {
+  const key = path.resolve(file);
+  const previous = jsonWriteQueues.get(key) || Promise.resolve();
+  const current = previous.catch(() => {}).then(task);
+  const queued = current.finally(() => {
+    if (jsonWriteQueues.get(key) === queued) {
+      jsonWriteQueues.delete(key);
+    }
+  });
+  jsonWriteQueues.set(key, queued);
+  return current;
 }
 
 function formatSiteNumber(value) {
@@ -686,7 +777,7 @@ async function readSites(dataFile) {
   try {
     const sites = JSON.parse(raw);
     if (!Array.isArray(sites)) {
-      return [];
+      throw createJsonDataError(dataFile, '内容必须是项目数组');
     }
 
     const normalized = normalizeSiteNumbers(sites);
@@ -695,8 +786,11 @@ async function readSites(dataFile) {
     }
 
     return normalized.sites;
-  } catch {
-    return [];
+  } catch (error) {
+    if (error.code === 'JSON_DATA_INVALID') {
+      throw error;
+    }
+    throw createJsonDataError(dataFile, error.message);
   }
 }
 
@@ -706,7 +800,7 @@ async function readClasses(classesFile) {
   try {
     const classes = JSON.parse(raw);
     if (!Array.isArray(classes)) {
-      return [];
+      throw createJsonDataError(classesFile, '内容必须是班级数组');
     }
 
     let changed = false;
@@ -729,12 +823,15 @@ async function readClasses(classesFile) {
     });
 
     if (changed) {
-      await fsp.writeFile(classesFile, JSON.stringify(normalizedClasses, null, 2));
+      await writeClasses(classesFile, normalizedClasses);
     }
 
     return normalizedClasses;
-  } catch {
-    return [];
+  } catch (error) {
+    if (error.code === 'JSON_DATA_INVALID') {
+      throw error;
+    }
+    throw createJsonDataError(classesFile, error.message);
   }
 }
 
@@ -747,8 +844,16 @@ async function readSettings(settingsFile) {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       settings = parsed;
+    } else {
+      throw createJsonDataError(settingsFile, '内容必须是设置对象');
     }
-  } catch {
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      if (error.code === 'JSON_DATA_INVALID') {
+        throw error;
+      }
+      throw createJsonDataError(settingsFile, error.message);
+    }
     settings = {};
   }
 
@@ -784,28 +889,158 @@ async function readAiSettings(aiSettingsFile) {
 
 async function writeAiSettings(aiSettingsFile, settings) {
   const normalized = normalizeAiSettings(settings);
-  await fsp.mkdir(path.dirname(aiSettingsFile), { recursive: true });
-  await fsp.writeFile(aiSettingsFile, JSON.stringify(normalized, null, 2));
+  await atomicWriteJson(aiSettingsFile, normalized);
   return normalized;
 }
 
-async function writeSites(dataFile, sites, { sync = true } = {}) {
-  await fsp.mkdir(path.dirname(dataFile), { recursive: true });
-  await fsp.writeFile(dataFile, JSON.stringify(sites, null, 2));
-  if (sync) {
-    syncDataToGithub();
+async function readSitesForWrite(dataFile) {
+  try {
+    await ensureJsonFile(dataFile);
+    const raw = await fsp.readFile(dataFile, 'utf8');
+    const sites = JSON.parse(raw);
+    if (!Array.isArray(sites)) {
+      throw createJsonDataError(dataFile, '内容必须是项目数组');
+    }
+    return normalizeSiteNumbers(sites).sites;
+  } catch (error) {
+    if (error.code === 'JSON_DATA_INVALID') {
+      throw error;
+    }
+    throw createJsonDataError(dataFile, error.message);
   }
 }
 
+function compareSitesByNumberDesc(left, right) {
+  const leftNumber = getSiteNumberValue(left);
+  const rightNumber = getSiteNumberValue(right);
+  if (leftNumber !== rightNumber) {
+    return rightNumber - leftNumber;
+  }
+
+  const leftTime = Date.parse(left.createdAt || '');
+  const rightTime = Date.parse(right.createdAt || '');
+  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+    return rightTime - leftTime;
+  }
+
+  return String(left.id || '').localeCompare(String(right.id || ''));
+}
+
+function mergeUsageFields(currentSite, nextSite) {
+  const currentPreview = Math.max(0, Number(currentSite.usagePreviewCount) || 0);
+  const nextPreview = Math.max(0, Number(nextSite.usagePreviewCount) || 0);
+  const currentCode = Math.max(0, Number(currentSite.usageCodeCount) || 0);
+  const nextCode = Math.max(0, Number(nextSite.usageCodeCount) || 0);
+  const currentLastUsed = Date.parse(currentSite.usageLastUsedAt || '');
+  const nextLastUsed = Date.parse(nextSite.usageLastUsedAt || '');
+
+  return {
+    ...nextSite,
+    usagePreviewCount: Math.max(currentPreview, nextPreview),
+    usageCodeCount: Math.max(currentCode, nextCode),
+    usageLastUsedAt: Number.isFinite(currentLastUsed) && currentLastUsed > (Number.isFinite(nextLastUsed) ? nextLastUsed : 0)
+      ? currentSite.usageLastUsedAt
+      : nextSite.usageLastUsedAt
+  };
+}
+
+function hasSiteNumberIssues(sites) {
+  const usedNumbers = new Set();
+  for (const site of sites) {
+    const numberValue = getSiteNumberValue(site);
+    if (!numberValue || usedNumbers.has(numberValue)) {
+      return true;
+    }
+    usedNumbers.add(numberValue);
+  }
+  return false;
+}
+
+function normalizeMergedSites(sites) {
+  if (!hasSiteNumberIssues(sites)) {
+    return sites;
+  }
+  return normalizeSiteNumbers(sites).sites.sort(compareSitesByNumberDesc);
+}
+
+function mergeSitesForWrite(currentSites, nextSites, { allowSiteRemoval = false } = {}) {
+  if (allowSiteRemoval) {
+    return normalizeMergedSites(nextSites);
+  }
+
+  const currentById = new Map(currentSites.map((site) => [site.id, site]));
+  const nextById = new Map(nextSites.map((site) => [site.id, site]));
+  const missingCurrentSites = currentSites.filter((site) => !nextById.has(site.id));
+
+  if (missingCurrentSites.length > 0) {
+    const currentIds = new Set(currentSites.map((site) => site.id));
+    const merged = currentSites.map((site) => {
+      const nextSite = nextById.get(site.id);
+      return nextSite ? mergeUsageFields(site, nextSite) : site;
+    });
+    for (const nextSite of nextSites) {
+      if (!currentIds.has(nextSite.id)) {
+        merged.push(nextSite);
+      }
+    }
+    return normalizeMergedSites(merged);
+  }
+
+  const merged = nextSites.map((site) => {
+    const currentSite = currentById.get(site.id);
+    return currentSite ? mergeUsageFields(currentSite, site) : site;
+  });
+
+  return normalizeMergedSites(merged);
+}
+
+async function writeSites(dataFile, sites, { sync = true, allowSiteRemoval = false } = {}) {
+  const savedSites = await withJsonWriteQueue(dataFile, async () => {
+    const currentSites = await readSitesForWrite(dataFile);
+    const normalized = normalizeSiteNumbers(Array.isArray(sites) ? sites : []).sites;
+    const nextSites = mergeSitesForWrite(currentSites, normalized, { allowSiteRemoval });
+    if (!allowSiteRemoval && nextSites.length > normalized.length) {
+      console.warn('[Data Guard] Preserved site records missing from a stale write.');
+    }
+    await atomicWriteJson(dataFile, nextSites);
+    return nextSites;
+  });
+  if (sync) {
+    syncDataToGithub();
+  }
+  return savedSites;
+}
+
 async function writeClasses(classesFile, classes) {
-  await fsp.mkdir(path.dirname(classesFile), { recursive: true });
-  await fsp.writeFile(classesFile, JSON.stringify(classes, null, 2));
+  await withJsonWriteQueue(classesFile, () => atomicWriteJson(classesFile, classes));
   syncDataToGithub();
 }
 
 async function writeSettings(settingsFile, settings) {
-  await fsp.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fsp.writeFile(settingsFile, JSON.stringify(settings, null, 2));
+  await withJsonWriteQueue(settingsFile, async () => {
+    let currentSettings = {};
+    try {
+      const raw = await fsp.readFile(settingsFile, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        currentSettings = parsed;
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw createJsonDataError(settingsFile, error.message);
+      }
+    }
+
+    const nextSettings = {
+      ...currentSettings,
+      ...settings,
+      lastUsedSiteNumber: Math.max(
+        Number(currentSettings.lastUsedSiteNumber) || 0,
+        Number(settings.lastUsedSiteNumber) || 0
+      )
+    };
+    await atomicWriteJson(settingsFile, nextSettings);
+  });
   syncDataToGithub();
 }
 
@@ -3101,7 +3336,7 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      await writeSites(dataFile, nextSites);
+      await writeSites(dataFile, nextSites, { allowSiteRemoval: true });
       await fsp.rm(path.join(storageDir, id), { recursive: true, force: true });
       await fsp.rm(getThumbnailPath(thumbnailDir, id), { force: true });
 
@@ -3218,5 +3453,9 @@ function createApp(options = {}) {
 
 module.exports = {
   createApp,
-  resolveInside
+  resolveInside,
+  __test: {
+    readSites,
+    writeSites
+  }
 };
