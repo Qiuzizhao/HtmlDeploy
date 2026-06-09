@@ -2986,19 +2986,43 @@
     }
 
     async function loadClasses() {
-      renderListLoading(classList, '正在加载班级...');
-      setMessage(classMessage, '正在加载班级...', false, { loading: true });
+      const cacheKey = 'admin_classes_cache';
+      let hasCachedData = false;
+
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          classes = JSON.parse(cached);
+          renderClassList();
+          fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
+          updateSummary();
+          setMessage(classMessage, `${classes.length} 个班级`);
+          hasCachedData = true;
+        }
+      } catch (e) {}
+
+      if (!hasCachedData) {
+        renderListLoading(classList, '正在加载班级...');
+        setMessage(classMessage, '正在加载班级...', false, { loading: true });
+      }
+
       const response = await fetch('/api/admin/classes');
       if (!response.ok) {
-        setMessage(classMessage, '加载班级失败', true);
+        if (!hasCachedData) setMessage(classMessage, '加载班级失败', true);
         return;
       }
 
-      classes = await response.json();
-      renderClassList();
-      fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
-      updateSummary();
-      setMessage(classMessage, `${classes.length} 个班级`);
+      const newClasses = await response.json();
+      if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
+        classes = newClasses;
+        renderClassList();
+        fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
+        updateSummary();
+        setMessage(classMessage, `${classes.length} 个班级`);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(classes));
+        } catch (e) {}
+      }
     }
 
     function renderRanking() {
@@ -3350,17 +3374,38 @@
     }
 
     async function loadRankingSites() {
-      setMessage(rankingMessage, '正在加载排行榜...', false, { loading: true });
-      renderTableLoading(rankingRows, 9, '正在加载排行榜...');
+      const cacheKey = 'admin_ranking_sites_cache';
+      let hasCachedData = false;
+
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          rankingSites = JSON.parse(cached);
+          renderRanking();
+          hasCachedData = true;
+        }
+      } catch (e) {}
+
+      if (!hasCachedData) {
+        setMessage(rankingMessage, '正在加载排行榜...', false, { loading: true });
+        renderTableLoading(rankingRows, 9, '正在加载排行榜...');
+      }
       rankingEmptyState.style.display = 'none';
+
       const response = await fetch('/api/admin/sites');
       if (!response.ok) {
-        setMessage(rankingMessage, '加载排行榜失败', true);
+        if (!hasCachedData) setMessage(rankingMessage, '加载排行榜失败', true);
         return;
       }
 
-      rankingSites = await response.json();
-      renderRanking();
+      const result = await response.json();
+      if (!hasCachedData || JSON.stringify(rankingSites) !== JSON.stringify(result)) {
+        rankingSites = result;
+        renderRanking();
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(result));
+        } catch (e) {}
+      }
     }
 
     function buildAdminSitesParams() {
@@ -3381,27 +3426,56 @@
     }
 
     async function loadSites() {
-      setMessage(listMessage, '正在加载项目...', false, { loading: true });
-      renderTableLoading(siteRows, 9, '正在加载项目...');
-      emptyState.style.display = 'none';
       const params = buildAdminSitesParams();
+      const cacheKey = `admin_sites_cache_${params.toString()}`;
+      let hasCachedData = false;
+
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const result = JSON.parse(cached);
+          sites = result.items || [];
+          adminSitesTotal = result.total || sites.length;
+          adminSitesPage = result.page || adminSitesPage;
+          adminSitesPageSize = result.pageSize || adminSitesPageSize;
+          adminSitesSummary = result.summary || adminSitesSummary;
+          renderRows();
+          updateSummary();
+          updateSitesPaginationControls();
+          loadedAdminViews.add('projects');
+          setMessage(listMessage, `${adminSitesTotal} 个项目，当前显示 ${sites.length} 个`);
+          hasCachedData = true;
+        }
+      } catch (e) {}
+
+      if (!hasCachedData) {
+        setMessage(listMessage, '正在加载项目...', false, { loading: true });
+        renderTableLoading(siteRows, 9, '正在加载项目...');
+      }
+      emptyState.style.display = 'none';
+
       const response = await fetch(`/api/admin/sites?${params.toString()}`);
       if (!response.ok) {
-        setMessage(listMessage, '加载项目失败', true);
+        if (!hasCachedData) setMessage(listMessage, '加载项目失败', true);
         return;
       }
 
       const result = await response.json();
-      sites = result.items || [];
-      adminSitesTotal = result.total || sites.length;
-      adminSitesPage = result.page || adminSitesPage;
-      adminSitesPageSize = result.pageSize || adminSitesPageSize;
-      adminSitesSummary = result.summary || adminSitesSummary;
-      renderRows();
-      updateSummary();
-      updateSitesPaginationControls();
-      loadedAdminViews.add('projects');
-      setMessage(listMessage, `${adminSitesTotal} 个项目，当前显示 ${sites.length} 个`);
+      if (!hasCachedData || JSON.stringify(sites) !== JSON.stringify(result.items)) {
+        sites = result.items || [];
+        adminSitesTotal = result.total || sites.length;
+        adminSitesPage = result.page || adminSitesPage;
+        adminSitesPageSize = result.pageSize || adminSitesPageSize;
+        adminSitesSummary = result.summary || adminSitesSummary;
+        renderRows();
+        updateSummary();
+        updateSitesPaginationControls();
+        loadedAdminViews.add('projects');
+        setMessage(listMessage, `${adminSitesTotal} 个项目，当前显示 ${sites.length} 个`);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(result));
+        } catch (e) {}
+      }
     }
 
     function getTaskStatusText(job) {

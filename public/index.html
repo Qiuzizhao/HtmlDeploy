@@ -1829,15 +1829,35 @@
     }
 
     async function loadClasses() {
+      const cacheKey = 'classes_cache_public';
+      let hasCachedData = false;
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          classes = JSON.parse(cached);
+          if (!classes.some((item) => item.id === currentClassId)) {
+            currentClassId = '';
+            rememberSelectedClassId('');
+          }
+          renderClasses();
+          hasCachedData = true;
+        }
+      } catch (e) {}
+
       const response = await fetch('/api/classes');
-      classes = await response.json();
+      const newClasses = await response.json();
 
-      if (!classes.some((item) => item.id === currentClassId)) {
-        currentClassId = '';
-        rememberSelectedClassId('');
+      if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
+        classes = newClasses;
+        if (!classes.some((item) => item.id === currentClassId)) {
+          currentClassId = '';
+          rememberSelectedClassId('');
+        }
+        renderClasses();
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(classes));
+        } catch (e) {}
       }
-
-      renderClasses();
     }
 
     async function loadUploadRules() {
@@ -1891,15 +1911,33 @@
         }
       }
 
-      if (needsPassword) {
-        renderClassPasswordPrompt('请输入班级密码后查看项目。', '...');
-      } else {
-        showLoadingState();
-      }
-
       const sitesUrl = currentClassId
         ? `/api/sites?classId=${encodeURIComponent(currentClassId)}`
         : '/api/sites';
+
+      const cacheKey = `sites_cache_${currentClassId || 'all'}`;
+      let hasCachedData = false;
+
+      if (!needsPassword) {
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            loadedSites = parsed;
+            if (currentClassId) unlockedClassIds.add(currentClassId);
+            updateUploadButtonState();
+            renderFilteredSites();
+            hasCachedData = true;
+          }
+        } catch (e) {}
+      }
+
+      if (needsPassword) {
+        renderClassPasswordPrompt('请输入班级密码后查看项目。', '...');
+      } else if (!hasCachedData) {
+        showLoadingState();
+      }
+
       const response = await fetch(sitesUrl);
       if (loadToken !== siteLoadToken) {
         return;
@@ -1914,18 +1952,27 @@
       }
 
       if (!response.ok) {
-        hideLoadingState();
-        updateUploadButtonState();
-        throw new Error('加载项目失败');
+        if (!hasCachedData) {
+          hideLoadingState();
+          updateUploadButtonState();
+          throw new Error('加载项目失败');
+        }
+        return;
       }
 
       const sites = await response.json();
-      loadedSites = sites;
-      if (currentClassId) {
-        unlockedClassIds.add(currentClassId);
+      
+      if (!hasCachedData || JSON.stringify(loadedSites) !== JSON.stringify(sites)) {
+        loadedSites = sites;
+        if (currentClassId) {
+          unlockedClassIds.add(currentClassId);
+        }
+        updateUploadButtonState();
+        renderFilteredSites();
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(sites));
+        } catch (e) {}
       }
-      updateUploadButtonState();
-      renderFilteredSites();
     }
 
     async function refreshCurrentClassSites() {
