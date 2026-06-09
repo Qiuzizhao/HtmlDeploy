@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>火影忍者 - 格斗对战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+
+        body {
+            background: #0c0c0c;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-wrap {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 血量条区域 */
+        .hp-bar {
+            width: 90%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .player-hp {
+            width: 42%;
+        }
+        .hp-title {
+            color: #fff;
+            font-size: 18px;
+            text-shadow: 2px 2px #000;
+            margin-bottom: 4px;
+        }
+        .hp-bg {
+            width: 100%;
+            height: 24px;
+            background: #333;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(#ff4444, #cc0000);
+            transition: width 0.3s ease;
+        }
+
+        /* 对战场地 —— 改大、给足移动空间 */
+        .fight-stage {
+            width: 90%;
+            max-width: 1200px;
+            height: 600px;
+            background: #222 url(https://picsum.photos/id/1039/1200/600) center/cover;
+            border: 4px solid #ff9900;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 角色模型 —— 确保可见、尺寸合理 */
+        .role {
+            width: 140px;
+            height: 200px;
+            position: absolute;
+            bottom: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .role img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .role1 {
+            left: 80px;
+        }
+        .role2 {
+            right: 80px;
+            transform: scaleX(-1);
+        }
+
+        /* 攻击特效 —— 保证显示、层级靠前 */
+        .effect {
+            position: absolute;
+            width: 180px;
+            height: 140px;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+        .spiral {
+            left: 250px;
+            bottom: 100px;
+        }
+        .chidori {
+            right: 250px;
+            bottom: 100px;
+            transform: scaleX(-1);
+        }
+
+        /* 受伤抖动动画 */
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .hurt {
+            animation: shake 0.3s ease;
+        }
+
+        /* 暴击文字 */
+        .crit-text {
+            position: absolute;
+            font-size: 40px;
+            color: #ff2222;
+            font-weight: bold;
+            text-shadow: 2px 2px #fff;
+            display: none;
+            z-index: 20;
+            animation: floatUp 1s ease forwards;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-60px); }
+        }
+
+        /* 战斗提示 */
+        .msg {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            color: #ffdd00;
+            text-shadow: 3px 3px #000;
+            font-weight: bold;
+            z-index: 15;
+        }
+
+        /* 操作提示 */
+        .tip {
+            color: #ccc;
+            margin: 8px 0;
+            font-size: 14px;
+            text-align:center;
+        }
+
+        /* 按钮区域 */
+        .skill-box {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #ff7700;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #b35900;
+            transition: all 0.1s;
+        }
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #b35900;
+        }
+        button:disabled {
+            background: #666;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 胜负弹窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .modal-content {
+            background: #111;
+            border: 3px solid #ff9900;
+            padding: 40px 60px;
+            text-align: center;
+            border-radius: 10px;
+        }
+        .modal h2 {
+            color: #fff;
+            font-size: 36px;
+            margin-bottom: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrap">
+        <!-- 血量条 -->
+        <div class="hp-bar">
+            <div class="player-hp">
+                <div class="hp-title">漩涡鸣人</div>
+                <div class="hp-bg">
+                    <div class="hp-fill" id="hp1" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="player-hp">
+                <div class="hp-title">宇智波佐助</div>
+                <div class="hp-bg">
+                    <div class="hp-fill" id="hp2" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 对战场地 -->
+        <div class="fight-stage" id="stage">
+            <div class="msg" id="fightMsg">火影格斗 开始！</div>
+            <div class="crit-text" id="critText">暴击！</div>
+
+            <!-- 鸣人角色模型（换用稳定图） -->
+            <div class="role role1" id="role1">
+                <img src="https://cdn-icons-png.flaticon.com/512/614/614517.png" alt="鸣人">
+            </div>
+            <!-- 佐助角色模型（换用稳定图） -->
+            <div class="role role2" id="role2">
+                <img src="https://cdn-icons-png.flaticon.com/512/614/614509.png" alt="佐助">
+            </div>
+
+            <!-- 攻击特效（稳定透明png） -->
+            <img class="effect spiral" id="spiralEffect" src="https://cdn-icons-png.flaticon.com/512/3204/3204123.png" alt="螺旋丸">
+            <img class="effect chidori" id="chidoriEffect" src="https://cdn-icons-png.flaticon.com/512/3204/3204125.png" alt="千鸟">
+        </div>
+
+        <div class="tip">
+            鸣人：A/D 左右 | W/S 上下 &nbsp;&nbsp;
+            佐助：←/→ 左右 | ↑/↓ 上下 &nbsp;&nbsp;
+            按钮释放技能
+        </div>
+
+        <!-- 技能按钮 -->
+        <div class="skill-box">
+            <button id="atk1">鸣人·螺旋丸</button>
+            <button id="atk2">佐助·千鸟</button>
+            <button id="reset">重新开始</button>
+        </div>
+    </div>
+
+    <!-- 胜负弹窗 -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <h2 id="resultText"></h2>
+            <button onclick="restartGame()">再来一局</button>
+        </div>
+    </div>
+
+    <script>
+        let hp1 = 100, hp2 = 100;
+        const hpDom1 = document.getElementById('hp1');
+        const hpDom2 = document.getElementById('hp2');
+        const msgDom = document.getElementById('fightMsg');
+        const modal = document.getElementById('resultModal');
+        const resultText = document.getElementById('resultText');
+        const btn1 = document.getElementById('atk1');
+        const btn2 = document.getElementById('atk2');
+        const role1 = document.getElementById('role1');
+        const role2 = document.getElementById('role2');
+        const spiralEffect = document.getElementById('spiralEffect');
+        const chidoriEffect = document.getElementById('chidoriEffect');
+        const critText = document.getElementById('critText');
+        const stage = document.getElementById('stage');
+
+        const roleWidth = 140;
+        const roleHeight = 200;
+        const moveStep = 6;
+
+        // 场地范围
+        let stageW, stageH;
+        function updateStageSize() {
+            stageW = stage.clientWidth;
+            stageH = stage.clientHeight;
+        }
+        updateStageSize();
+        window.addEventListener('resize', updateStageSize);
+
+        // 角色位置（x,y）
+        let pos1 = { x: 80, y: 50 };
+        let pos2 = { x: 0, y: 50 };
+
+        function resetPos2() {
+            pos2.x = stageW - 80 - roleWidth;
+        }
+        resetPos2();
+
+        // 更新血量
+        function updateHp() {
+            hpDom1.style.width = hp1 + '%';
+            hpDom2.style.width = hp2 + '%';
+        }
+
+        // 游戏结束判定
+        function checkGameOver() {
+            if (hp1 <= 0) {
+                resultText.innerText = '宇智波佐助 获胜！';
+                modal.style.display = 'flex';
+                btn1.disabled = true;
+                btn2.disabled = true;
+            } else if (hp2 <= 0) {
+                resultText.innerText = '漩涡鸣人 获胜！';
+                modal.style.display = 'flex';
+                btn1.disabled = true;
+                btn2.disabled = true;
+            }
+        }
+
+        // 显示攻击特效
+        function showEffect(el, time = 400) {
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', time);
+        }
+
+        // 显示暴击
+        function showCrit(targetX, targetY) {
+            critText.style.left = targetX + 'px';
+            critText.style.top = targetY + 'px';
+            critText.style.display = 'block';
+            setTimeout(() => critText.style.display = 'none', 1000);
+        }
+
+        // 鸣人攻击
+        btn1.addEventListener('click', function () {
+            if (hp1 <= 0 || hp2 <= 0) return;
+            let isCrit = Math.random() < 0.2;
+            let baseDmg = Math.floor(Math.random() * 20) + 15;
+            let damage = isCrit ? baseDmg * 2 : baseDmg;
+
+            hp2 -= damage;
+            if (hp2 < 0) hp2 = 0;
+            updateHp();
+
+            // 特效定位到佐助附近
+            spiralEffect.style.left = (pos2.x - 50) + 'px';
+            spiralEffect.style.bottom = pos2.y + 'px';
+            showEffect(spiralEffect);
+
+            role2.classList.add('hurt');
+            setTimeout(() => role2.classList.remove('hurt'), 300);
+
+            if(isCrit) showCrit(pos2.x + 50, stageH - pos2.y - 50);
+            msgDom.innerText = isCrit
+                ? `鸣人螺旋丸暴击！造成 ${damage} 点伤害`
+                : `鸣人发动螺旋丸！造成 ${damage} 点伤害`;
+
+            checkGameOver();
+        });
+
+        // 佐助攻击
+        btn2.addEventListener('click', function () {
+            if (hp1 <= 0 || hp2 <= 0) return;
+            let isCrit = Math.random() < 0.2;
+            let baseDmg = Math.floor(Math.random() * 20) + 15;
+            let damage = isCrit ? baseDmg * 2 : baseDmg;
+
+            hp1 -= damage;
+            if (hp1 < 0) hp1 = 0;
+            updateHp();
+
+            chidoriEffect.style.right = (stageW - pos1.x - roleWidth - 50) + 'px';
+            chidoriEffect.style.bottom = pos1.y + 'px';
+            showEffect(chidoriEffect);
+
+            role1.classList.add('hurt');
+            setTimeout(() => role1.classList.remove('hurt'), 300);
+
+            if(isCrit) showCrit(pos1.x + 50, stageH - pos1.y - 50);
+            msgDom.innerText = isCrit
+                ? `佐助千鸟暴击！造成 ${damage} 点伤害`
+                : `佐助发动千鸟！造成 ${damage} 点伤害`;
+
+            checkGameOver();
+        });
+
+        // 键盘移动：上下左右 + 边界宽松
+        document.addEventListener('keydown', (e) => {
+            updateStageSize();
+            const maxX = stageW - roleWidth;
+            const minX = 0;
+            const maxY = stageH - roleHeight;
+            const minY = 0;
+
+            // 鸣人：A/D W/S
+            if(e.key === 'a' || e.key === 'A') pos1.x -= moveStep;
+            if(e.key === 'd' || e.key === 'D') pos1.x += moveStep;
+            if(e.key === 'w' || e.key === 'W') pos1.y += moveStep;
+            if(e.key === 's' || e.key === 'S') pos1.y -= moveStep;
+
+            // 佐助：←/→ ↑/↓
+            if(e.key === 'ArrowLeft') pos2.x -= moveStep;
+            if(e.key === 'ArrowRight') pos2.x += moveStep;
+            if(e.key === 'ArrowUp') pos2.y += moveStep;
+            if(e.key === 'ArrowDown') pos2.y -= moveStep;
+
+            // 宽松边界，不卡死
+            if(pos1.x < minX) pos1.x = minX;
+            if(pos1.x > maxX) pos1.x = maxX;
+            if(pos1.y < minY) pos1.y = minY;
+            if(pos1.y > maxY) pos1.y = maxY;
+
+            if(pos2.x < minX) pos2.x = minX;
+            if(pos2.x > maxX) pos2.x = maxX;
+            if(pos2.y < minY) pos2.y = minY;
+            if(pos2.y > maxY) pos2.y = maxY;
+
+            // 应用位置
+            role1.style.left = pos1.x + 'px';
+            role1.style.bottom = pos1.y + 'px';
+
+            role2.style.left = pos2.x + 'px';
+            role2.style.bottom = pos2.y + 'px';
+        });
+
+        // 重置游戏
+        document.getElementById('reset').addEventListener('click', restartGame);
+        function restartGame() {
+            hp1 = 100;
+            hp2 = 100;
+            updateHp();
+            msgDom.innerText = '火影格斗 开始！';
+            modal.style.display = 'none';
+            btn1.disabled = false;
+            btn2.disabled = false;
+
+            updateStageSize();
+            pos1 = { x: 80, y: 50 };
+            resetPos2();
+
+            role1.style.left =pos1.x + 'px';
+            role1.style.bottom = ps1.y + 'px';
+            role2.style.e
