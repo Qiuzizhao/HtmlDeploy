@@ -1208,6 +1208,52 @@ test('POST /api/sites can create a project from pasted HTML code', async () => {
     );
   });
 
+test('POST /api/sites rejects duplicate HTML code before creating a project', async () => {
+  const ids = ['class-a', 'first-site', 'second-site'];
+  const { app, storageDir, dataDir } = await makeTestApp({
+    idGenerator: () => ids.shift()
+  });
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  const duplicateHtml = '<!doctype html><html><body><h1>Same project</h1></body></html>';
+  await request(app)
+    .post('/api/sites')
+    .field('title', '原始作品')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', duplicateHtml)
+    .expect(201);
+
+  const duplicate = await request(app)
+    .post('/api/sites')
+    .field('title', '重复作品')
+    .field('author', '另一个作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', duplicateHtml)
+    .expect(400);
+  assert.match(duplicate.body.error, /代码与「原始作品（00001）」重复/);
+
+  const savedAfterReject = await __test.readSites(path.join(dataDir, 'sites.json'));
+  assert.deepEqual(savedAfterReject.map((site) => site.id), ['first-site']);
+  assert.deepEqual(
+    (await fsp.readdir(storageDir, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name),
+    ['first-site']
+  );
+
+  const unique = await request(app)
+    .post('/api/sites')
+    .field('title', '不同作品')
+    .field('author', '测试作者')
+    .field('classId', 'class-a')
+    .field('htmlContent', '<!doctype html><html><body><h1>Different project</h1></body></html>')
+    .expect(201);
+  assert.equal(unique.body.id, 'second-site');
+});
+
 test('POST /api/sites rejects content that is not a basic HTML document', async () => {
   const ids = ['class-a', 'bad-a', 'bad-b', 'bad-c'];
   const { app } = await makeTestApp({
@@ -1268,7 +1314,7 @@ test('GET /api/sites can filter projects by class', async () => {
     .field('title', '二班作品')
     .field('author', '测试作者')
     .field('classId', 'class-b')
-    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'two.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Class B Test</h1>'), { filename: 'two.html' })
     .expect(201);
 
   await request(app).get('/api/sites?classId=class-a').expect(401);
@@ -1774,7 +1820,7 @@ test('GET /api/sites without a class filter requires the all-projects password',
     .field('title', '二班作品')
     .field('author', '测试作者')
     .field('classId', 'class-b')
-    .attach('file', Buffer.from('<!doctype html><h1>Test</h1>'), { filename: 'two.html' })
+    .attach('file', Buffer.from('<!doctype html><h1>Class B Test</h1>'), { filename: 'two.html' })
     .expect(201);
 
   const visitor = request.agent(app);

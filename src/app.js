@@ -1067,6 +1067,33 @@ async function getSiteHtmlFingerprint(storageDir, siteId) {
   }
 }
 
+function getHtmlContentFingerprint(htmlContent) {
+  return crypto
+    .createHash('sha256')
+    .update(String(htmlContent || ''), 'utf8')
+    .digest('hex');
+}
+
+async function findDuplicateSiteForHtml(storageDir, sites, htmlContent) {
+  const submittedFingerprint = getHtmlContentFingerprint(htmlContent);
+  for (const site of activeSitesOnly(sites)) {
+    const fingerprint = await getSiteHtmlFingerprint(storageDir, site.id);
+    if (fingerprint && fingerprint === submittedFingerprint) {
+      return site;
+    }
+  }
+  return null;
+}
+
+function createDuplicateUploadError(site) {
+  const title = String(site?.title || '').trim();
+  const number = String(site?.number || '').trim();
+  const label = title
+    ? `「${title}${number ? `（${number}）` : ''}」`
+    : '已有项目';
+  return `上传失败：代码与${label}重复，请修改后再上传。`;
+}
+
 function toPublicClass(classItem) {
   return {
     id: classItem.id,
@@ -2539,12 +2566,17 @@ function createApp(options = {}) {
           return res.status(400).json({ error: htmlStructureError });
         }
 
+        const sites = await readSites(dataFile);
+        const duplicateSite = await findDuplicateSiteForHtml(storageDir, sites, submittedHtmlContent);
+        if (duplicateSite) {
+          return res.status(400).json({ error: createDuplicateUploadError(duplicateSite) });
+        }
+
         const id = await createUniqueId({ dataFile, storageDir, idGenerator });
         const projectDir = path.join(storageDir, id);
         await fsp.mkdir(projectDir, { recursive: true });
         await fsp.writeFile(path.join(projectDir, 'index.html'), submittedHtmlContent);
 
-      const sites = await readSites(dataFile);
       const currentMax = sites.reduce((max, s) => Math.max(max, getSiteNumberValue(s)), 0);
       const nextNumberValue = Math.max(currentMax, settings.lastUsedSiteNumber || 0) + 1;
 
