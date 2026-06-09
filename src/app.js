@@ -2,10 +2,10 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
-const { exec } = require('node:child_process');
 
 const express = require('express');
 const multer = require('multer');
+const { createRuntimeStore } = require('./db/runtime-store');
 
 const DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
 const DEFAULT_ADMIN_PASSWORD = 'qqqyyy';
@@ -453,148 +453,35 @@ function parseCookies(header = '') {
   );
 }
 
-const GIT_SYNC_DELAY_MS = 10 * 60 * 1000;
-
-let syncTimeout = null;
-let syncInProgress = false;
-let syncQueued = false;
 const jsonWriteQueues = new Map();
+const runtimeStoresByFile = new Map();
 
-function shellQuote(value) {
-  return `'${String(value).replaceAll("'", "'\\''")}'`;
+function getDefaultDbFileForDataFile(dataFile) {
+  return path.join(path.dirname(dataFile), 'app.db');
 }
 
-function buildGitBackupPathspecs(cwd) {
-  const paths = [
-    'data/classes.json',
-    'data/settings.json',
-    'data/private-ai-settings.json',
-    'data/jobs.json',
-    'data/site-usage.json',
-    'data/audit-log.json',
-    'data/sites.json'
-  ].filter((relativePath) => fs.existsSync(path.join(cwd, relativePath)));
-
-  try {
-    const sitesPath = path.join(cwd, 'data', 'sites.json');
-    const sites = JSON.parse(fs.readFileSync(sitesPath, 'utf8'));
-    if (Array.isArray(sites)) {
-      for (const site of sites) {
-        const id = String(site.id || '').trim();
-        if (/^[a-f0-9]{8}$/i.test(id) && fs.existsSync(path.join(cwd, 'storage', 'sites', id))) {
-          paths.push(`storage/sites/${id}`);
-        }
-      }
+function registerRuntimeStore(runtimeStore, files) {
+  for (const file of files) {
+    if (file) {
+      runtimeStoresByFile.set(path.resolve(file), runtimeStore);
     }
-  } catch (error) {
-    console.warn('[Git Sync] Cannot read site pathspecs:', error.message);
-  }
-
-  return [...new Set(paths)];
-}
-
-function writeGitBackupPathspecFile(cwd) {
-  const pathspecs = buildGitBackupPathspecs(cwd);
-  const pathspecFile = path.join(cwd, '.git', 'html-deploy-backup-paths');
-  fs.writeFileSync(pathspecFile, `${pathspecs.join('\n')}\n`);
-  return pathspecFile;
-}
-
-function removeStaleGitIndexLock(cwd) {
-  const lockPath = path.join(cwd, '.git', 'index.lock');
-  try {
-    const stats = fs.statSync(lockPath);
-    if (Date.now() - stats.mtimeMs < 60 * 1000) {
-      return false;
-    }
-
-    fs.unlinkSync(lockPath);
-    console.warn('[Git Sync] Removed stale .git/index.lock.');
-    return true;
-  } catch {
-    return false;
   }
 }
 
-function runGitSyncNow() {
-  if (syncInProgress) {
-    const error = new Error('已有同步任务正在执行，请稍后再试');
-    error.code = 'SYNC_BUSY';
-    return Promise.reject(error);
+function getRuntimeStoreForFile(file) {
+  const resolved = path.resolve(file);
+  const existing = runtimeStoresByFile.get(resolved);
+  if (existing) {
+    return existing;
   }
 
-  syncInProgress = true;
-  removeStaleGitIndexLock(process.cwd());
-  const cwd = process.cwd();
-  const pathspecFile = writeGitBackupPathspecFile(cwd);
-  const command = [
-    'git add -u -- data storage/sites',
-    `git add --pathspec-from-file=${shellQuote(pathspecFile)}`,
-    'git commit -m "Auto backup data"',
-    'git push'
-  ].join(' && ');
-  console.log('[Git Sync] Starting backup to GitHub...');
-
-  return new Promise((resolve, reject) => {
-    exec(command, {
-      cwd,
-      timeout: 120000
-    }, (error, stdout, stderr) => {
-      syncInProgress = false;
-      const hasNoChanges = stdout.includes('nothing to commit') || stderr.includes('nothing to commit');
-
-      if (error) {
-        if (hasNoChanges) {
-          console.log('[Git Sync] No changes to backup.');
-          resolve({
-            status: 'clean',
-            message: '当前没有需要同步的数据'
-          });
-        } else {
-          console.error('[Git Sync] Error:', error.message);
-          reject(error);
-        }
-      } else {
-        console.log('[Git Sync] Backup successful!');
-        resolve({
-          status: 'success',
-          message: '同步完成，数据已推送到 GitHub'
-        });
-      }
-
-      if (syncQueued) {
-        syncQueued = false;
-        syncDataToGithub();
-      }
-    });
+  const dataDir = path.dirname(resolved);
+  const store = createRuntimeStore({
+    dataDir,
+    dbFile: path.join(dataDir, 'app.db')
   });
-}
-
-function runGitSync() {
-  syncTimeout = null;
-  runGitSyncNow().catch(() => {});
-}
-
-function syncDataToGithub() {
-  if (syncInProgress) {
-    syncQueued = true;
-    return;
-  }
-
-  if (syncTimeout) {
-    clearTimeout(syncTimeout);
-  }
-  syncTimeout = setTimeout(runGitSync, GIT_SYNC_DELAY_MS);
-  syncTimeout.unref?.();
-}
-
-function syncDataToGithubNow() {
-  if (syncTimeout) {
-    clearTimeout(syncTimeout);
-    syncTimeout = null;
-  }
-
-  return runGitSyncNow();
+  registerRuntimeStore(store, [file]);
+  return store;
 }
 
 function renderAdminLoginPage(errorMessage = '') {
@@ -774,13 +661,9 @@ function normalizeSiteNumbers(sites) {
 
 
 async function readSites(dataFile) {
-  await ensureJsonFile(dataFile);
-  const raw = await fsp.readFile(dataFile, 'utf8');
   try {
-    const sites = JSON.parse(raw);
-    if (!Array.isArray(sites)) {
-      throw createJsonDataError(dataFile, '内容必须是项目数组');
-    }
+    const store = getRuntimeStoreForFile(dataFile);
+    const sites = store.listSites();
 
     const normalized = normalizeSiteNumbers(sites);
     if (normalized.changed) {
@@ -797,13 +680,9 @@ async function readSites(dataFile) {
 }
 
 async function readClasses(classesFile) {
-  await ensureJsonFile(classesFile);
-  const raw = await fsp.readFile(classesFile, 'utf8');
   try {
-    const classes = JSON.parse(raw);
-    if (!Array.isArray(classes)) {
-      throw createJsonDataError(classesFile, '内容必须是班级数组');
-    }
+    const store = getRuntimeStoreForFile(classesFile);
+    const classes = store.listClasses();
 
     let changed = false;
     const normalizedClasses = classes.map((classItem) => {
@@ -838,26 +717,8 @@ async function readClasses(classesFile) {
 }
 
 async function readSettings(settingsFile) {
-  await fsp.mkdir(path.dirname(settingsFile), { recursive: true });
-  let settings = {};
-
-  try {
-    const raw = await fsp.readFile(settingsFile, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      settings = parsed;
-    } else {
-      throw createJsonDataError(settingsFile, '内容必须是设置对象');
-    }
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      if (error.code === 'JSON_DATA_INVALID') {
-        throw error;
-      }
-      throw createJsonDataError(settingsFile, error.message);
-    }
-    settings = {};
-  }
+  const store = getRuntimeStoreForFile(settingsFile);
+  let settings = store.getSettings();
 
   if (!isValidClassPassword(String(settings.allPassword || ''))) {
     settings = {
@@ -875,35 +736,16 @@ async function readSettings(settingsFile) {
 }
 
 async function readAiSettings(aiSettingsFile) {
-  await fsp.mkdir(path.dirname(aiSettingsFile), { recursive: true });
-  try {
-    const raw = await fsp.readFile(aiSettingsFile, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return normalizeAiSettings(parsed);
-    }
-  } catch {
-    // Missing or invalid private AI settings fall back to environment config.
-  }
-
-  return normalizeAiSettings();
+  return getRuntimeStoreForFile(aiSettingsFile).getAiSettings();
 }
 
 async function writeAiSettings(aiSettingsFile, settings) {
-  const normalized = normalizeAiSettings(settings);
-  await atomicWriteJson(aiSettingsFile, normalized);
-  return normalized;
+  return getRuntimeStoreForFile(aiSettingsFile).writeAiSettings(settings);
 }
 
 async function readSitesForWrite(dataFile) {
   try {
-    await ensureJsonFile(dataFile);
-    const raw = await fsp.readFile(dataFile, 'utf8');
-    const sites = JSON.parse(raw);
-    if (!Array.isArray(sites)) {
-      throw createJsonDataError(dataFile, '内容必须是项目数组');
-    }
-    return normalizeSiteNumbers(sites).sites;
+    return normalizeSiteNumbers(await readSites(dataFile)).sites;
   } catch (error) {
     if (error.code === 'JSON_DATA_INVALID') {
       throw error;
@@ -997,41 +839,27 @@ function mergeSitesForWrite(currentSites, nextSites, { allowSiteRemoval = false 
 }
 
 async function writeSites(dataFile, sites, { sync = true, allowSiteRemoval = false } = {}) {
-  const savedSites = await withJsonWriteQueue(dataFile, async () => {
+  return withJsonWriteQueue(dataFile, async () => {
+    const store = getRuntimeStoreForFile(dataFile);
     const currentSites = await readSitesForWrite(dataFile);
     const normalized = normalizeSiteNumbers(Array.isArray(sites) ? sites : []).sites;
     const nextSites = mergeSitesForWrite(currentSites, normalized, { allowSiteRemoval });
     if (!allowSiteRemoval && nextSites.length > normalized.length) {
       console.warn('[Data Guard] Preserved site records missing from a stale write.');
     }
-    await atomicWriteJson(dataFile, nextSites);
-    return nextSites;
+    store.replaceSites(nextSites);
+    return store.listSites();
   });
-  if (sync) {
-    syncDataToGithub();
-  }
-  return savedSites;
 }
 
 async function writeClasses(classesFile, classes) {
-  await withJsonWriteQueue(classesFile, () => atomicWriteJson(classesFile, classes));
-  syncDataToGithub();
+  await withJsonWriteQueue(classesFile, () => getRuntimeStoreForFile(classesFile).replaceClasses(classes));
 }
 
 async function writeSettings(settingsFile, settings) {
   await withJsonWriteQueue(settingsFile, async () => {
-    let currentSettings = {};
-    try {
-      const raw = await fsp.readFile(settingsFile, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        currentSettings = parsed;
-      }
-    } catch (error) {
-      if (error.code !== 'ENOENT') {
-        throw createJsonDataError(settingsFile, error.message);
-      }
-    }
+    const store = getRuntimeStoreForFile(settingsFile);
+    const currentSettings = store.getSettings();
 
     const nextSettings = {
       ...currentSettings,
@@ -1041,9 +869,8 @@ async function writeSettings(settingsFile, settings) {
         Number(settings.lastUsedSiteNumber) || 0
       )
     };
-    await atomicWriteJson(settingsFile, nextSettings);
+    store.writeSettings(nextSettings);
   });
-  syncDataToGithub();
 }
 
 function normalizeSiteUsageEntry(entry = {}) {
@@ -1056,36 +883,11 @@ function normalizeSiteUsageEntry(entry = {}) {
 }
 
 async function readSiteUsage(usageFile) {
-  await fsp.mkdir(path.dirname(usageFile), { recursive: true });
-  let parsed = {};
-  try {
-    const raw = await fsp.readFile(usageFile, 'utf8');
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return {};
-    }
-    throw createJsonDataError(usageFile, error.message);
-  }
-
-  const entries = Array.isArray(parsed)
-    ? parsed
-    : Object.entries(parsed || {}).map(([siteId, usage]) => ({ siteId, ...usage }));
-  const usageById = {};
-  for (const entry of entries) {
-    const normalized = normalizeSiteUsageEntry(entry);
-    if (normalized.siteId) {
-      usageById[normalized.siteId] = normalized;
-    }
-  }
-  return usageById;
+  return getRuntimeStoreForFile(usageFile).getUsageById();
 }
 
 async function writeSiteUsage(usageFile, usageById, { sync = false } = {}) {
-  await withJsonWriteQueue(usageFile, () => atomicWriteJson(usageFile, usageById));
-  if (sync) {
-    syncDataToGithub();
-  }
+  await withJsonWriteQueue(usageFile, () => getRuntimeStoreForFile(usageFile).replaceUsage(usageById));
 }
 
 function withSiteUsage(site, usageById = {}) {
@@ -1117,23 +919,7 @@ async function incrementSiteUsage(usageFile, site, type) {
   }
 
   return withJsonWriteQueue(usageFile, async () => {
-    const usageById = await readSiteUsage(usageFile);
-    const current = normalizeSiteUsageEntry({
-      siteId: site.id,
-      usagePreviewCount: site.usagePreviewCount,
-      usageCodeCount: site.usageCodeCount,
-      usageLastUsedAt: site.usageLastUsedAt,
-      ...(usageById[site.id] || {})
-    });
-    const next = {
-      siteId: site.id,
-      usagePreviewCount: current.usagePreviewCount + (type === 'preview' ? 1 : 0),
-      usageCodeCount: current.usageCodeCount + (type === 'code' ? 1 : 0),
-      usageLastUsedAt: new Date().toISOString()
-    };
-    usageById[site.id] = next;
-    await atomicWriteJson(usageFile, usageById);
-    return withSiteUsage(site, usageById);
+    return getRuntimeStoreForFile(usageFile).incrementUsage(site, type);
   });
 }
 
@@ -1181,29 +967,11 @@ function normalizeAuditLog(log = {}) {
 }
 
 async function readAuditLogs(auditFile) {
-  await fsp.mkdir(path.dirname(auditFile), { recursive: true });
-  try {
-    const raw = await fsp.readFile(auditFile, 'utf8');
-    const parsed = JSON.parse(raw);
-    const logs = Array.isArray(parsed) ? parsed : Array.isArray(parsed.logs) ? parsed.logs : [];
-    return logs.map(normalizeAuditLog).filter((log) => log.action || log.summary).slice(0, 500);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return [];
-    }
-    throw createJsonDataError(auditFile, error.message);
-  }
+  return getRuntimeStoreForFile(auditFile).listAuditLogs();
 }
 
 async function appendAuditLog(auditFile, log) {
-  const normalized = normalizeAuditLog(log);
-  await withJsonWriteQueue(auditFile, async () => {
-    const logs = await readAuditLogs(auditFile);
-    logs.unshift(normalized);
-    await atomicWriteJson(auditFile, { logs: logs.slice(0, 500) });
-  });
-  syncDataToGithub();
-  return normalized;
+  return withJsonWriteQueue(auditFile, () => getRuntimeStoreForFile(auditFile).appendAuditLog(log));
 }
 
 function normalizeJobLog(log = {}) {
@@ -1219,35 +987,15 @@ function normalizeJobLog(log = {}) {
 }
 
 async function readJobLogs(jobsFile) {
-  await fsp.mkdir(path.dirname(jobsFile), { recursive: true });
-  try {
-    const raw = await fsp.readFile(jobsFile, 'utf8');
-    const parsed = JSON.parse(raw);
-    const logs = Array.isArray(parsed) ? parsed : Array.isArray(parsed.logs) ? parsed.logs : [];
-    return logs.map(normalizeJobLog).filter((log) => log.text).slice(0, 300);
-  } catch {
-    return [];
-  }
+  return getRuntimeStoreForFile(jobsFile).listJobLogs();
 }
 
 async function writeJobLogs(jobsFile, logs) {
-  await fsp.mkdir(path.dirname(jobsFile), { recursive: true });
-  await fsp.writeFile(jobsFile, JSON.stringify({ logs: logs.slice(0, 300) }, null, 2));
-  syncDataToGithub();
+  await withJsonWriteQueue(jobsFile, () => getRuntimeStoreForFile(jobsFile).replaceJobLogs(logs));
 }
 
 async function appendJobLog(jobsFile, log) {
-  const normalized = normalizeJobLog(log);
-  if (!normalized.text) {
-    const error = new Error('日志内容不能为空');
-    error.status = 400;
-    throw error;
-  }
-
-  const logs = await readJobLogs(jobsFile);
-  logs.unshift(normalized);
-  await writeJobLogs(jobsFile, logs);
-  return normalized;
+  return withJsonWriteQueue(jobsFile, () => getRuntimeStoreForFile(jobsFile).appendJobLog(log));
 }
 
 function toAdminSettingsResponse(settings, { includeForbiddenWords = true } = {}) {
@@ -1722,7 +1470,18 @@ function createApp(options = {}) {
   const idGenerator = options.idGenerator || createDefaultId;
   const maxTotalBytes = options.maxTotalBytes || DEFAULT_MAX_TOTAL_BYTES;
   const fallbackAdminPassword = options.adminPassword || DEFAULT_ADMIN_PASSWORD;
-  const gitSyncNow = options.gitSyncNow || syncDataToGithubNow;
+  const dataDir = path.dirname(dataFile);
+  const dbFile = options.dbFile || getDefaultDbFileForDataFile(dataFile);
+  const runtimeStore = options.runtimeStore || createRuntimeStore({ dataDir, dbFile });
+  registerRuntimeStore(runtimeStore, [
+    dataFile,
+    classesFile,
+    settingsFile,
+    aiSettingsFile,
+    jobsFile,
+    usageFile,
+    auditFile
+  ]);
   const thumbnailGenerator = options.thumbnailGenerator || generateSiteThumbnail;
   const thumbnailConcurrency = Math.max(1, Math.min(2, Number.parseInt(
     options.thumbnailConcurrency ?? process.env.THUMBNAIL_CONCURRENCY ?? '1',
@@ -2407,20 +2166,6 @@ function createApp(options = {}) {
       return res.json(toAdminSettingsResponse(settings));
     } catch (error) {
       next(error);
-    }
-  });
-
-  app.post('/api/admin/github-sync', requireAdmin, async (req, res) => {
-    try {
-      const result = await gitSyncNow();
-      return res.json(result);
-    } catch (error) {
-      const status = error.code === 'SYNC_BUSY' ? 409 : 500;
-      return res.status(status).json({
-        error: error.code === 'SYNC_BUSY'
-          ? error.message
-          : `同步到 GitHub 失败：${error.message}`
-      });
     }
   });
 
@@ -3670,6 +3415,9 @@ module.exports = {
   resolveInside,
   __test: {
     readSites,
-    writeSites
+    writeSites,
+    readSettings,
+    writeSettings,
+    readSiteUsage
   }
 };

@@ -1,6 +1,18 @@
 node_modules/
-storage/thumbnails/
 *.exp
 .env
 .env.*
-data/private-ai-settings.json
+
+# Runtime data must not be committed.
+/data/*.json
+/data/*.db
+/data/*.db-wal
+/data/*.db-shm
+/data/*.db-journal
+/storage/sites/*
+/storage/thumbnails/*
+
+# Keep runtime directories available in fresh checkouts.
+!/data/.gitkeep
+!/storage/.gitkeep
+!/storage/sites/.gitkeep

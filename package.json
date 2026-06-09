@@ -5,9 +5,12 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "migrate:sqlite": "node scripts/migrate-json-to-sqlite.js",
+    "verify:sqlite": "node scripts/verify-sqlite-data.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "express": "^4.19.2",
     "multer": "^2.0.2",
     "playwright": "^1.60.0"

@@ -8,6 +8,8 @@ const test = require('node:test');
 const request = require('supertest');
 
 const { createApp, __test } = require('../src/app');
+const { RuntimeStore } = require('../src/db/runtime-store');
+const { createRepositories } = require('../src/db/repositories');
 
 test('public index uses a single HTML file picker', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
@@ -437,16 +439,14 @@ test('public admin exposes AI settings controls', async () => {
   assert.match(html, /await loadAiSettings\(\)/);
 });
 
-test('public admin exposes manual GitHub sync controls in settings', async () => {
+test('public admin explains runtime data backups instead of GitHub data sync', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
-  assert.match(html, /GitHub 数据同步/);
-  assert.match(html, /id="githubSyncMessage"/);
-  assert.match(html, /id="syncGithubButton"[^>]*>同步到GitHub<\/button>/);
-  assert.match(html, /const syncGithubButton = document\.getElementById\('syncGithubButton'\)/);
-  assert.match(html, /async function syncGithubData/);
-  assert.match(html, /fetch\('\/api\/admin\/github-sync'/);
-  assert.match(html, /syncGithubButton\.addEventListener\('click', syncGithubData\)/);
+  assert.match(html, /运行数据备份/);
+  assert.match(html, /SQLite 与服务器备份保护/);
+  assert.doesNotMatch(html, /GitHub 数据同步/);
+  assert.doesNotMatch(html, /id="syncGithubButton"/);
+  assert.doesNotMatch(html, /\/api\/admin\/github-sync/);
 });
 
 test('public admin class passwords are hidden by default with one show-hide toggle before random', async () => {
@@ -502,26 +502,62 @@ test('public admin can preview edited project code before saving', async () => {
   assert.match(html, /window\.URL\.revokeObjectURL\(previewUrl\)/);
 });
 
-test('git auto sync serializes backup jobs and clears stale index locks', async () => {
+test('runtime data is excluded from Git sync paths', async () => {
   const source = await fsp.readFile(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
 
-  assert.match(source, /const GIT_SYNC_DELAY_MS = 10 \* 60 \* 1000/);
-  assert.match(source, /let syncInProgress = false/);
-  assert.match(source, /let syncQueued = false/);
-  assert.match(source, /function removeStaleGitIndexLock/);
-  assert.match(source, /index\.lock/);
-  assert.match(source, /syncQueued = true/);
-  assert.match(source, /runGitSync/);
-  assert.match(source, /setTimeout\(runGitSync, GIT_SYNC_DELAY_MS\)/);
-  assert.match(source, /removeStaleGitIndexLock\(process\.cwd\(\)\)/);
-  assert.match(source, /writeGitBackupPathspecFile/);
-  assert.match(source, /git add -u -- data storage\/sites/);
-  assert.match(source, /git add --pathspec-from-file=/);
+  assert.doesNotMatch(source, new RegExp('syncData' + 'ToGithub'));
+  assert.doesNotMatch(source, /GIT_SYNC_DELAY_MS/);
+  assert.doesNotMatch(source, /removeStaleGitIndexLock/);
+  assert.doesNotMatch(source, /writeGitBackupPathspecFile/);
+  assert.doesNotMatch(source, /git add -u -- data/);
+  assert.doesNotMatch(source, /git add .*storage\/sites/);
+  assert.doesNotMatch(source, new RegExp('Auto backup' + ' data'));
   assert.doesNotMatch(source, /git add \./);
-  assert.match(source, /'data\/site-usage\.json'/);
-  assert.match(source, /path\.join\(path\.dirname\(dataFile\), 'site-usage\.json'\)/);
+  assert.match(source, /createRuntimeStore/);
   assert.match(source, /incrementSiteUsage\(usageFile, site, 'preview'\)/);
   assert.match(source, /incrementSiteUsage\(usageFile, site, 'code'\)/);
+});
+
+test('sqlite repositories expose runtime store operations', async () => {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-repositories-'));
+  const store = new RuntimeStore({ dataDir: root, dbFile: path.join(root, 'app.db') });
+  const repositories = createRepositories(store);
+
+  try {
+    repositories.classes.replace([{
+      id: 'class-a',
+      name: '六5',
+      password: '123456',
+      uploadEnabled: true,
+      passwordEnabled: false
+    }]);
+    repositories.settings.write({
+      allPassword: '000000',
+      allPasswordEnabled: false,
+      forbiddenWords: ['bad-word'],
+      lastUsedSiteNumber: 1
+    });
+    repositories.sites.replace([{
+      id: 'site-a',
+      number: '00001',
+      title: '示例项目',
+      author: '学生',
+      classId: 'class-a',
+      createdAt: '2026-06-09T00:00:00.000Z'
+    }]);
+    repositories.usage.increment({ id: 'site-a' }, 'preview');
+    repositories.auditLogs.append({ type: 'audit', action: 'check', summary: 'ok', siteIds: ['site-a'] });
+    repositories.jobLogs.append({ type: 'ai', text: 'AI 优化完成', status: 'success' });
+
+    assert.equal(repositories.classes.list()[0].name, '六5');
+    assert.deepEqual(repositories.forbiddenWords.list(), ['bad-word']);
+    assert.equal(repositories.sites.list()[0].usagePreviewCount, 1);
+    assert.equal(repositories.usage.getById()['site-a'].usagePreviewCount, 1);
+    assert.equal(repositories.auditLogs.list()[0].summary, 'ok');
+    assert.equal(repositories.jobLogs.list()[0].text, 'AI 优化完成');
+  } finally {
+    store.db.close();
+  }
 });
 
 test('site writes preserve records that were added after a stale read', async () => {
@@ -549,7 +585,7 @@ test('site writes preserve records that were added after a stale read', async ()
     usageLastUsedAt: '2026-06-03T00:00:00.000Z'
   }], { sync: false });
 
-  const savedSites = JSON.parse(await fsp.readFile(sitesPath, 'utf8'));
+  const savedSites = await __test.readSites(sitesPath);
   assert.deepEqual(savedSites.map((site) => site.id), ['fresh-site', 'old-site']);
   assert.equal(savedSites.find((site) => site.id === 'old-site').usagePreviewCount, 2);
 });
@@ -565,22 +601,13 @@ test('site data corruption fails closed instead of returning an empty project li
   );
 });
 
-test('admin can trigger a manual GitHub sync', async () => {
-  const { app } = await makeTestApp({
-    gitSyncNow: async () => ({
-      status: 'success',
-      message: '同步完成，数据已推送到 GitHub'
-    })
-  });
+test('manual GitHub data sync endpoint is removed', async () => {
+  const { app } = await makeTestApp();
   const agent = request.agent(app);
 
-  await request(app).post('/api/admin/github-sync').send({}).expect(401);
+  await request(app).post('/api/admin/github-sync').send({}).expect(404);
   await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
-
-  const response = await agent.post('/api/admin/github-sync').send({}).expect(200);
-
-  assert.equal(response.body.status, 'success');
-  assert.equal(response.body.message, '同步完成，数据已推送到 GitHub');
+  await agent.post('/api/admin/github-sync').send({}).expect(404);
 });
 
 async function makeTestApp(options = {}) {
@@ -673,7 +700,7 @@ test('GET /api/sites assigns five-digit numbers to existing projects by creation
     ]
   );
 
-  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.deepEqual(
     sites.map((site) => [site.id, site.number]),
     [
@@ -1110,7 +1137,7 @@ test('POST /api/sites saves one HTML file as index.html and records metadata', a
     '<!doctype html><h1>Game</h1>'
   );
 
-  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.equal(sites.length, 1);
   assert.equal(sites[0].id, 'abc123');
   assert.equal(sites[0].title, '我的小游戏');
@@ -1336,7 +1363,7 @@ test('admin can enable all disabled projects', async () => {
     enabled: 1
   });
 
-  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const savedSites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.deepEqual(
     savedSites.map((site) => [site.id, site.enabled !== false]),
     [
@@ -1392,7 +1419,7 @@ test('admin can star a project and public APIs expose the star state', async () 
     .expect(200);
   assert.equal(unstarred.body.starred, false);
 
-  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const savedSites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.equal(savedSites.find((site) => site.id === 'starred-site').starred, false);
 });
 
@@ -1533,7 +1560,7 @@ test('admin dedupe disables later projects with identical HTML code', async () =
     ]
   );
 
-  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const savedSites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.deepEqual(
     savedSites.map((site) => [site.id, site.enabled, site.duplicateAuditMessage || '']),
     [
@@ -1550,7 +1577,7 @@ test('admin dedupe disables later projects with identical HTML code', async () =
   );
   const secondResult = await admin.post('/api/admin/sites/dedupe').send({}).expect(200);
   assert.equal(secondResult.body.duplicateGroups, 1);
-  const savedSitesAfterSecondRun = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const savedSitesAfterSecondRun = await __test.readSites(path.join(dataDir, 'sites.json'));
   const changedSite = savedSitesAfterSecondRun.find((site) => site.id === 'disable-later');
   assert.equal(changedSite.duplicateAuditMessage, undefined);
 });
@@ -1632,7 +1659,7 @@ test('admin can whitelist a project from forbidden audits and edits', async () =
   assert.equal(edited.body.author, '坏作者也允许');
   assert.equal(edited.body.forbiddenWhitelist, true);
 
-  const savedSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const savedSites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.equal(savedSites.find((site) => site.id === 'whitelist-site').forbiddenWhitelist, true);
 });
 
@@ -1828,7 +1855,7 @@ test('admin can change the backend password from settings', async () => {
   assert.equal(response.body.adminPasswordConfigured, true);
   assert.equal(Object.hasOwn(response.body, 'adminPassword'), false);
 
-  const settings = JSON.parse(await fsp.readFile(path.join(dataDir, 'settings.json'), 'utf8'));
+  const settings = await __test.readSettings(path.join(dataDir, 'settings.json'));
   assert.equal(settings.adminPassword, 'newAdmin123');
 
   await agent.get('/admin.html').expect(200);
@@ -1886,7 +1913,7 @@ test('PUT /api/sites/:id updates project title and optionally replaces HTML', as
     '<!doctype html><h1>New</h1>'
   );
 
-  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.equal(sites[0].title, '新名字');
   assert.equal(sites[0].classId, 'class-b');
   assert.ok(sites[0].updatedAt);
@@ -1956,7 +1983,7 @@ test('POST /api/sites/:id/ai-optimize-save optimizes and saves project HTML', as
       optimizedHtml
     );
 
-    const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+    const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
     assert.ok(sites[0].updatedAt);
     assert.equal(requestPayload.model, 'fake-model');
     assert.equal(requestPayload.stream, false);
@@ -2061,7 +2088,7 @@ test('POST /api/sites/:id/ai-name names and saves a project title', async () => 
     assert.equal(requestPayload.thinking.type, 'disabled');
     assert.match(requestPayload.messages[1].content, /canvas/);
 
-    const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+    const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
     assert.equal(sites[0].title, '霓虹星跃');
     assert.ok(sites[0].updatedAt);
   } finally {
@@ -2114,7 +2141,7 @@ test('POST /api/sites/:id/ai-name rejects forbidden AI titles', async () => {
     const response = await agent.post('/api/sites/bad-ai-name/ai-name').send({}).expect(400);
     assert.match(response.body.error, /违禁词/);
 
-    const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+    const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
     assert.equal(sites[0].title, '原名');
   } finally {
     llmServer.closeAllConnections?.();
@@ -2178,13 +2205,13 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
     await llmReceivedPromise;
 
     const sitesPath = path.join(dataDir, 'sites.json');
-    const sites = JSON.parse(await fsp.readFile(sitesPath, 'utf8'));
+    const sites = await __test.readSites(sitesPath);
     sites[0] = {
       ...sites[0],
       title: '并发修改后的标题',
       author: '并发修改作者'
     };
-    await fsp.writeFile(sitesPath, JSON.stringify(sites, null, 2));
+    await __test.writeSites(sitesPath, sites, { sync: false });
 
     releaseLlm();
     const job = await waitForAiOptimizeJob(agent, optimizeResponse.body.jobId);
@@ -2196,7 +2223,7 @@ test('POST /api/sites/:id/ai-optimize-save preserves metadata changed while LLM 
       optimizedHtml
     );
 
-    const savedSites = JSON.parse(await fsp.readFile(sitesPath, 'utf8'));
+    const savedSites = await __test.readSites(sitesPath);
     assert.equal(savedSites[0].title, '并发修改后的标题');
     assert.equal(savedSites[0].author, '并发修改作者');
     assert.ok(savedSites[0].updatedAt);
@@ -2227,7 +2254,7 @@ test('DELETE /api/sites/:id soft deletes project metadata and keeps files', asyn
 
   await agent.delete('/api/sites/deleted').expect(204);
 
-  const sites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
+  const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
   assert.equal(sites.length, 1);
   assert.equal(sites[0].id, 'deleted');
   assert.equal(sites[0].enabled, false);
@@ -2292,10 +2319,8 @@ test('preview and code opens are counted for admin rankings', async () => {
   await agent.get('/preview/usage-site').expect(200);
   await agent.get('/api/sites/usage-site/code').expect(200);
 
-  const metadataSites = JSON.parse(await fsp.readFile(path.join(dataDir, 'sites.json'), 'utf8'));
-  assert.equal(metadataSites[0].usagePreviewCount, undefined);
-  assert.equal(metadataSites[0].usageCodeCount, undefined);
-  const usage = JSON.parse(await fsp.readFile(path.join(dataDir, 'site-usage.json'), 'utf8'));
+  assert.equal(fs.existsSync(path.join(dataDir, 'site-usage.json')), false);
+  const usage = await __test.readSiteUsage(path.join(dataDir, 'site-usage.json'));
   assert.equal(usage['usage-site'].usagePreviewCount, 1);
   assert.equal(usage['usage-site'].usageCodeCount, 1);
 
