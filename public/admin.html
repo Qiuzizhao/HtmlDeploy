@@ -2722,24 +2722,56 @@
     }
 
     async function loadSettings() {
-      setMessage(classMessage, '正在加载班级和密码设置...', false, { loading: true });
-      setMessage(forbiddenWordsMessage, '正在加载违禁词统计...', false, { loading: true });
-      const response = await fetch('/api/admin/settings?includeForbiddenWords=false');
-      if (!response.ok) {
-        setMessage(classMessage, '加载全部密码失败', true);
-        setMessage(forbiddenWordsMessage, '加载违禁词失败', true);
-        return;
-      }
+      const cacheKey = 'admin_settings_cache';
+      let hasCachedData = false;
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          settings = JSON.parse(cached);
+          allPasswordInput.value = settings.allPassword || '';
+          setMessage(adminPasswordMessage, settings.adminPasswordConfigured ? '后台密码已自定义配置' : '当前使用默认后台密码');
+          renderAllPasswordEnabledButton();
+          forbiddenWordsInput.value = '';
+          forbiddenWordsState.allTotal = settings.forbiddenWordsCount || 0;
+          forbiddenWordsState.total = settings.forbiddenWordsCount || 0;
+          updateForbiddenWordsPagination();
+          setMessage(forbiddenWordsMessage, `${settings.forbiddenWordsCount || 0} 个违禁词`);
+          hasCachedData = true;
+        }
+      } catch (e) {}
 
-      settings = await response.json();
-      allPasswordInput.value = settings.allPassword || '';
-      setMessage(adminPasswordMessage, settings.adminPasswordConfigured ? '后台密码已自定义配置' : '当前使用默认后台密码');
-      renderAllPasswordEnabledButton();
-      forbiddenWordsInput.value = '';
-      forbiddenWordsState.allTotal = settings.forbiddenWordsCount || 0;
-      forbiddenWordsState.total = settings.forbiddenWordsCount || 0;
-      updateForbiddenWordsPagination();
-      setMessage(forbiddenWordsMessage, `${settings.forbiddenWordsCount || 0} 个违禁词`);
+      const fetchPromise = (async () => {
+        try {
+          const response = await fetch('/api/admin/settings?includeForbiddenWords=false');
+          if (!response.ok) {
+            if (!hasCachedData) {
+              setMessage(classMessage, '加载全部密码失败', true);
+              setMessage(forbiddenWordsMessage, '加载违禁词失败', true);
+            }
+            return;
+          }
+
+          const newSettings = await response.json();
+          if (!hasCachedData || JSON.stringify(settings) !== JSON.stringify(newSettings)) {
+            settings = newSettings;
+            allPasswordInput.value = settings.allPassword || '';
+            setMessage(adminPasswordMessage, settings.adminPasswordConfigured ? '后台密码已自定义配置' : '当前使用默认后台密码');
+            renderAllPasswordEnabledButton();
+            forbiddenWordsInput.value = '';
+            forbiddenWordsState.allTotal = settings.forbiddenWordsCount || 0;
+            forbiddenWordsState.total = settings.forbiddenWordsCount || 0;
+            updateForbiddenWordsPagination();
+            setMessage(forbiddenWordsMessage, `${settings.forbiddenWordsCount || 0} 个违禁词`);
+            try { sessionStorage.setItem(cacheKey, JSON.stringify(settings)); } catch (e) {}
+          }
+        } catch(e) {}
+      })();
+
+      if (!hasCachedData) {
+        setMessage(classMessage, '正在加载班级和密码设置...', false, { loading: true });
+        setMessage(forbiddenWordsMessage, '正在加载违禁词统计...', false, { loading: true });
+        await fetchPromise;
+      }
     }
 
     async function saveAdminPassword(event) {
@@ -3001,27 +3033,32 @@
         }
       } catch (e) {}
 
+      const fetchPromise = (async () => {
+        try {
+          const response = await fetch('/api/admin/classes');
+          if (!response.ok) {
+            if (!hasCachedData) setMessage(classMessage, '加载班级失败', true);
+            return;
+          }
+
+          const newClasses = await response.json();
+          if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
+            classes = newClasses;
+            renderClassList();
+            fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
+            updateSummary();
+            setMessage(classMessage, `${classes.length} 个班级`);
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(classes));
+            } catch (e) {}
+          }
+        } catch(e) {}
+      })();
+
       if (!hasCachedData) {
         renderListLoading(classList, '正在加载班级...');
         setMessage(classMessage, '正在加载班级...', false, { loading: true });
-      }
-
-      const response = await fetch('/api/admin/classes');
-      if (!response.ok) {
-        if (!hasCachedData) setMessage(classMessage, '加载班级失败', true);
-        return;
-      }
-
-      const newClasses = await response.json();
-      if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
-        classes = newClasses;
-        renderClassList();
-        fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
-        updateSummary();
-        setMessage(classMessage, `${classes.length} 个班级`);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(classes));
-        } catch (e) {}
+        await fetchPromise;
       }
     }
 
@@ -3386,25 +3423,32 @@
         }
       } catch (e) {}
 
+      const fetchPromise = (async () => {
+        try {
+          const response = await fetch('/api/admin/sites');
+          if (!response.ok) {
+            if (!hasCachedData) setMessage(rankingMessage, '加载排行榜失败', true);
+            return;
+          }
+
+          const result = await response.json();
+          if (!hasCachedData || JSON.stringify(rankingSites) !== JSON.stringify(result)) {
+            rankingSites = result;
+            renderRanking();
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(result));
+            } catch (e) {}
+          }
+        } catch(e) {}
+      })();
+
       if (!hasCachedData) {
         setMessage(rankingMessage, '正在加载排行榜...', false, { loading: true });
         renderTableLoading(rankingRows, 9, '正在加载排行榜...');
-      }
-      rankingEmptyState.style.display = 'none';
-
-      const response = await fetch('/api/admin/sites');
-      if (!response.ok) {
-        if (!hasCachedData) setMessage(rankingMessage, '加载排行榜失败', true);
-        return;
-      }
-
-      const result = await response.json();
-      if (!hasCachedData || JSON.stringify(rankingSites) !== JSON.stringify(result)) {
-        rankingSites = result;
-        renderRanking();
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(result));
-        } catch (e) {}
+        rankingEmptyState.style.display = 'none';
+        await fetchPromise;
+      } else {
+        rankingEmptyState.style.display = 'none';
       }
     }
 
@@ -3448,33 +3492,40 @@
         }
       } catch (e) {}
 
+      const fetchPromise = (async () => {
+        try {
+          const response = await fetch(`/api/admin/sites?${params.toString()}`);
+          if (!response.ok) {
+            if (!hasCachedData) setMessage(listMessage, '加载项目失败', true);
+            return;
+          }
+
+          const result = await response.json();
+          if (!hasCachedData || JSON.stringify(sites) !== JSON.stringify(result.items)) {
+            sites = result.items || [];
+            adminSitesTotal = result.total || sites.length;
+            adminSitesPage = result.page || adminSitesPage;
+            adminSitesPageSize = result.pageSize || adminSitesPageSize;
+            adminSitesSummary = result.summary || adminSitesSummary;
+            renderRows();
+            updateSummary();
+            updateSitesPaginationControls();
+            loadedAdminViews.add('projects');
+            setMessage(listMessage, `${adminSitesTotal} 个项目，当前显示 ${sites.length} 个`);
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(result));
+            } catch (e) {}
+          }
+        } catch(e) {}
+      })();
+
       if (!hasCachedData) {
         setMessage(listMessage, '正在加载项目...', false, { loading: true });
         renderTableLoading(siteRows, 9, '正在加载项目...');
-      }
-      emptyState.style.display = 'none';
-
-      const response = await fetch(`/api/admin/sites?${params.toString()}`);
-      if (!response.ok) {
-        if (!hasCachedData) setMessage(listMessage, '加载项目失败', true);
-        return;
-      }
-
-      const result = await response.json();
-      if (!hasCachedData || JSON.stringify(sites) !== JSON.stringify(result.items)) {
-        sites = result.items || [];
-        adminSitesTotal = result.total || sites.length;
-        adminSitesPage = result.page || adminSitesPage;
-        adminSitesPageSize = result.pageSize || adminSitesPageSize;
-        adminSitesSummary = result.summary || adminSitesSummary;
-        renderRows();
-        updateSummary();
-        updateSitesPaginationControls();
-        loadedAdminViews.add('projects');
-        setMessage(listMessage, `${adminSitesTotal} 个项目，当前显示 ${sites.length} 个`);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(result));
-        } catch (e) {}
+        emptyState.style.display = 'none';
+        await fetchPromise;
+      } else {
+        emptyState.style.display = 'none';
       }
     }
 

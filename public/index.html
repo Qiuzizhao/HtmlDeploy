@@ -1193,7 +1193,20 @@
     let siteSearchDebounceTimer = null;
     let siteRenderToken = 0;
     let siteLoadToken = 0;
-    const unlockedClassIds = new Set();
+    
+    function getUnlockedClasses() {
+      try {
+        return new Set(JSON.parse(sessionStorage.getItem('unlocked_classes') || '[]'));
+      } catch {
+        return new Set();
+      }
+    }
+    const unlockedClassIds = getUnlockedClasses();
+    function saveUnlockedClasses() {
+      try {
+        sessionStorage.setItem('unlocked_classes', JSON.stringify([...unlockedClassIds]));
+      } catch {}
+    }
 
     function showLoadingState() {
       loadingState.hidden = false;
@@ -1556,6 +1569,7 @@
       }
 
       unlockedClassIds.add(classId);
+      saveUnlockedClasses();
       if (currentClassId === classId) {
         await loadSites();
       }
@@ -1844,19 +1858,27 @@
         }
       } catch (e) {}
 
-      const response = await fetch('/api/classes');
-      const newClasses = await response.json();
-
-      if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
-        classes = newClasses;
-        if (!classes.some((item) => item.id === currentClassId)) {
-          currentClassId = '';
-          rememberSelectedClassId('');
-        }
-        renderClasses();
+      const fetchPromise = (async () => {
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(classes));
-        } catch (e) {}
+          const response = await fetch('/api/classes');
+          const newClasses = await response.json();
+
+          if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
+            classes = newClasses;
+            if (!classes.some((item) => item.id === currentClassId)) {
+              currentClassId = '';
+              rememberSelectedClassId('');
+            }
+            renderClasses();
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(classes));
+            } catch (e) {}
+          }
+        } catch(e) {}
+      })();
+
+      if (!hasCachedData) {
+        await fetchPromise;
       }
     }
 
@@ -1924,7 +1946,10 @@
           if (cached) {
             const parsed = JSON.parse(cached);
             loadedSites = parsed;
-            if (currentClassId) unlockedClassIds.add(currentClassId);
+            if (currentClassId) {
+              unlockedClassIds.add(currentClassId);
+              saveUnlockedClasses();
+            }
             updateUploadButtonState();
             renderFilteredSites();
             hasCachedData = true;
@@ -1933,45 +1958,63 @@
       }
 
       if (needsPassword) {
-        renderClassPasswordPrompt('请输入班级密码后查看项目。', '...');
+        const countCacheKey = `class_count_${currentClassId || 'all'}`;
+        const cachedCount = sessionStorage.getItem(countCacheKey) || '...';
+        renderClassPasswordPrompt('请输入班级密码后查看项目。', cachedCount);
       } else if (!hasCachedData) {
         showLoadingState();
       }
 
-      const response = await fetch(sitesUrl);
-      if (loadToken !== siteLoadToken) {
-        return;
-      }
-
-      if (response.status === 401) {
-        loadedSites = [];
-        updateUploadButtonState();
-        const data = await response.json().catch(() => ({}));
-        renderClassPasswordPrompt('请输入班级密码后查看项目。', data.count || 0);
-        return;
-      }
-
-      if (!response.ok) {
-        if (!hasCachedData) {
-          hideLoadingState();
-          updateUploadButtonState();
-          throw new Error('加载项目失败');
-        }
-        return;
-      }
-
-      const sites = await response.json();
-      
-      if (!hasCachedData || JSON.stringify(loadedSites) !== JSON.stringify(sites)) {
-        loadedSites = sites;
-        if (currentClassId) {
-          unlockedClassIds.add(currentClassId);
-        }
-        updateUploadButtonState();
-        renderFilteredSites();
+      const fetchPromise = (async () => {
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(sites));
-        } catch (e) {}
+          const response = await fetch(sitesUrl);
+          if (loadToken !== siteLoadToken) return;
+
+          if (response.status === 401) {
+            loadedSites = [];
+            updateUploadButtonState();
+            const data = await response.json().catch(() => ({}));
+            if (data.count !== undefined) {
+              sessionStorage.setItem(`class_count_${currentClassId || 'all'}`, data.count);
+            }
+            renderClassPasswordPrompt('请输入班级密码后查看项目。', data.count !== undefined ? data.count : '...');
+            return;
+          }
+
+          if (!response.ok) {
+            if (!hasCachedData) {
+              hideLoadingState();
+              updateUploadButtonState();
+              throw new Error('加载项目失败');
+            }
+            return;
+          }
+
+          const sites = await response.json();
+          
+          if (!hasCachedData || JSON.stringify(loadedSites) !== JSON.stringify(sites)) {
+            loadedSites = sites;
+            if (currentClassId) {
+              unlockedClassIds.add(currentClassId);
+              saveUnlockedClasses();
+            }
+            updateUploadButtonState();
+            renderFilteredSites();
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(sites));
+            } catch (e) {}
+          }
+        } catch (e) {
+          if (!hasCachedData) {
+            hideLoadingState();
+            updateUploadButtonState();
+            throw e;
+          }
+        }
+      })();
+
+      if (!hasCachedData && !needsPassword) {
+        await fetchPromise;
       }
     }
 
