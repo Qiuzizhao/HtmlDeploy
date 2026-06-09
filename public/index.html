@@ -1222,6 +1222,7 @@
     }
 
     function showEmptyState(message) {
+      siteGrid.innerHTML = '';
       emptyState.textContent = message;
       emptyState.hidden = false;
       emptyState.style.display = 'block';
@@ -1562,12 +1563,18 @@
 
     function renderClassPasswordPrompt(message = '请输入班级密码后查看项目。', count = 0) {
       loadedSites = [];
-      siteGrid.innerHTML = '';
       hideLoadingState();
       hideEmptyState();
 
       const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
-      classProjectCount.textContent = `${currentClassName}共有 ${count} 个项目`;
+      const countText = count === '...' ? '...' : count;
+      classProjectCount.textContent = `${currentClassName}共有 ${countText} 个项目`;
+
+      if (siteGrid.querySelector('.unlock-panel')) {
+        return;
+      }
+
+      siteGrid.innerHTML = '';
 
       const currentClass = classes.find((item) => item.id === currentClassId);
       const panel = document.createElement('form');
@@ -1875,7 +1882,21 @@
 
     async function loadSites() {
       const loadToken = ++siteLoadToken;
-      showLoadingState();
+      
+      let needsPassword = false;
+      if (currentClassId) {
+        const currentClass = classes.find(c => c.id === currentClassId);
+        if (currentClass && currentClass.passwordEnabled !== false && !unlockedClassIds.has(currentClassId)) {
+          needsPassword = true;
+        }
+      }
+
+      if (needsPassword) {
+        renderClassPasswordPrompt('请输入班级密码后查看项目。', '...');
+      } else {
+        showLoadingState();
+      }
+
       const sitesUrl = currentClassId
         ? `/api/sites?classId=${encodeURIComponent(currentClassId)}`
         : '/api/sites';
