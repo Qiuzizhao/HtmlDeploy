@@ -13,9 +13,9 @@
     "name": "六5",
     "password": "003794",
     "createdAt": "2026-06-02T12:01:31.958Z",
-    "updatedAt": "2026-06-08T16:36:19.469Z",
-    "uploadEnabled": true,
-    "passwordEnabled": false
+    "updatedAt": "2026-06-09T03:35:08.675Z",
+    "uploadEnabled": false,
+    "passwordEnabled": true
   },
   {
     "id": "b3f7dd30",
@@ -31,9 +31,9 @@
     "name": "六7",
     "password": "765140",
     "createdAt": "2026-06-02T12:01:52.127Z",
-    "uploadEnabled": false,
-    "passwordEnabled": true,
-    "updatedAt": "2026-06-05T01:45:40.660Z"
+    "uploadEnabled": true,
+    "passwordEnabled": false,
+    "updatedAt": "2026-06-09T03:35:06.312Z"
   },
   {
     "id": "c37011bf",
