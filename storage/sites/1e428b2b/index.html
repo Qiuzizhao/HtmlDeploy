@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企鹅兄弟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #87CEEB;
+            font-family: "微软雅黑", sans-serif;
+        }
+        h1 {
+            margin: 10px 0;
+            color: #222;
+        }
+        .info {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        #gameBox {
+            width: 800px;
+            height: 400px;
+            background: #f0f8ff;
+            border: 3px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+        /* 地面 */
+        .ground {
+            width: 100%;
+            height: 60px;
+            background: #4a7c59;
+            position: absolute;
+            bottom: 0;
+        }
+        /* 企鹅角色 */
+        .penguin {
+            width: 50px;
+            height: 60px;
+            background: #000;
+            border-radius: 20px 20px 10px 10px;
+            position: absolute;
+            bottom: 60px;
+            left: 50px;
+        }
+        .penguin::before {
+            content: "";
+            width: 40px;
+            height: 35px;
+            background: #fff;
+            position: absolute;
+            bottom: 0;
+            left: 5px;
+            border-radius: 10px;
+        }
+        /* 障碍物 */
+        .block {
+            width: 40px;
+            height: 40px;
+            background: #ff6b6b;
+            position: absolute;
+            bottom: 60px;
+            border-radius: 5px;
+        }
+        /* 游戏提示 */
+        .tip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #e63946;
+            display: none;
+            text-shadow: 2px 2px #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐧 企鹅兄弟小游戏</h1>
+    <div class="info">分数：<span id="score">0</span> | 操作：← → 移动 | 空格 跳跃</div>
+    <div id="gameBox">
+        <div class="ground"></div>
+        <div class="penguin" id="penguin"></div>
+        <div class="tip" id="gameTip">游戏结束！按 R 重新开始</div>
+    </div>
+
+    <script>
+        // 获取元素
+        const gameBox = document.getElementById('gameBox');
+        const penguin = document.getElementById('penguin');
+        const scoreDom = document.getElementById('score');
+        const gameTip = document.getElementById('gameTip');
+
+        // 游戏配置
+        const gameConfig = {
+            penguinLeft: 50,     // 企鹅初始X坐标
+            penguinBottom: 60,    // 企鹅初始Y坐标
+            speed: 6,            // 移动速度
+            jumpHeight: 120,     // 跳跃高度
+            isJump: false,       // 是否正在跳跃
+            isGameOver: false,   // 游戏是否结束
+            score: 0,            // 分数
+            blockArr: [],        // 障碍物数组
+            blockSpeed: 5,       // 障碍物移动速度
+            blockTimer: null,    // 生成障碍物定时器
+            gameLoop: null       // 游戏主循环
+        };
+
+        // 键盘监听
+        const keyMap = {};
+        document.addEventListener('keydown', e => {
+            keyMap[e.code] = true;
+            // 空格跳跃
+            if (e.code === 'Space' && !gameConfig.isJump && !gameConfig.isGameOver) {
+                jump();
+            }
+            // R键重启游戏
+            if (e.code === 'KeyR' && gameConfig.isGameOver) {
+                restartGame();
+            }
+        });
+        document.addEventListener('keyup', e => {
+            keyMap[e.code] = false;
+        });
+
+        // 企鹅跳跃
+        function jump() {
+            gameConfig.isJump = true;
+            let upTimer = setInterval(() => {
+                gameConfig.penguinBottom += 8;
+                penguin.style.bottom = gameConfig.penguinBottom + 'px';
+                if (gameConfig.penguinBottom >= gameConfig.jumpHeight + 60) {
+                    clearInterval(upTimer);
+                    // 下落
+                    let downTimer = setInterval(() => {
+                        gameConfig.penguinBottom -= 8;
+                        penguin.style.bottom = gameConfig.penguinBottom + 'px';
+                        if (gameConfig.penguinBottom <= 60) {
+                            gameConfig.penguinBottom = 60;
+                            penguin.style.bottom = '60px';
+                            clearInterval(downTimer);
+                            gameConfig.isJump = false;
+                        }
+                    }, 20);
+                }
+            }, 20);
+        }
+
+        // 生成障碍物
+        function createBlock() {
+            if (gameConfig.isGameOver) return;
+            const block = document.createElement('div');
+            block.className = 'block';
+            let randomTop = Math.random() * 80; // 随机高低障碍物
+            block.style.bottom = (60 + randomTop) + 'px';
+            block.style.left = gameBox.offsetWidth + 'px';
+            gameBox.appendChild(block);
+            gameConfig.blockArr.push(block);
+        }
+
+        // 碰撞检测
+        function checkCollision(p1, p2) {
+            const p1Rect = p1.getBoundingClientRect();
+            const p2Rect = p2.getBoundingClientRect();
+            return !(
+                p1Rect.right < p2Rect.left ||
+                p1Rect.left > p2Rect.right ||
+                p1Rect.bottom < p2Rect.top ||
+                p1Rect.top > p2Rect.bottom
+            );
+        }
+
+        // 游戏主循环
+        function runGame() {
+            if (gameConfig.isGameOver) return;
+
+            // 左右移动
+            if (keyMap['ArrowLeft'] && gameConfig.penguinLeft > 0) {
+                gameConfig.penguinLeft -= gameConfig.speed;
+            }
+            if (keyMap['ArrowRight'] && gameConfig.penguinLeft < gameBox.offsetWidth - 50) {
+                gameConfig.penguinLeft += gameConfig.speed;
+            }
+            penguin.style.left = gameConfig.penguinLeft + 'px';
+
+            // 移动障碍物
+            gameConfig.blockArr.forEach((block, index) => {
+                let blockLeft = parseInt(block.style.left);
+                blockLeft -= gameConfig.blockSpeed;
+                block.style.left = blockLeft + 'px';
+
+                // 障碍物走出屏幕，移除+加分
+                if (blockLeft < -40) {
+                    gameBox.removeChild(block);
+                    gameConfig.blockArr.splice(index, 1);
+                    gameConfig.score++;
+                    scoreDom.innerText = gameConfig.score;
+                }
+
+                // 碰撞检测
+                if (checkCollision(penguin, block)) {
+                    gameOver();
+                }
+            });
+
+            gameConfig.gameLoop = requestAnimationFrame(runGame);
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameConfig.isGameOver = true;
+            gameTip.style.display = 'block';
+            cancelAnimationFrame(gameConfig.gameLoop);
+            clearInterval(gameConfig.blockTimer);
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            // 重置数据
+            gameConfig.penguinLeft = 50;
+            gameConfig.penguinBottom = 60;
+            gameConfig.score = 0;
+            gameConfig.isGameOver = false;
+            gameConfig.blockArr = [];
+            penguin.style.left = '50px';
+            penguin.style.bottom = '60px';
+            scoreDom.innerText = '0';
+            gameTip.style.display = 'none';
+
+            // 清空所有障碍物
+            document.querySelectorAll('.block').forEach(item => item.remove());
+
+            // 重启定时器和主循环
+            gameConfig.blockTimer = setInterval(createBlock, 1200);
+            runGame();
+        }
+
+        // 初始化游戏
+        window.onload = function () {
+            gameConfig.blockTimer = setInterval(createBlock, 1200);
+            runGame();
+        };
+    </script>
+</body>
+</html>

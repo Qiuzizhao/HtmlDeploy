@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>双人打斗小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #222;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            width: 1200px;
+            height: 600px;
+            background: #5a9;
+            position: relative;
+            overflow: hidden;
+            border: 4px solid #fff;
+        }
+
+        /* 地面 */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 80px;
+            background: #743;
+        }
+
+        /* 玩家通用样式 */
+        .player {
+            width: 60px;
+            height: 120px;
+            position: absolute;
+            bottom: 80px;
+            transition: left 0.05s linear;
+        }
+
+        /* 玩家1 红色 */
+        #player1 {
+            background: #f33;
+            left: 100px;
+        }
+
+        /* 玩家2 蓝色 */
+        #player2 {
+            background: #33f;
+            left: 1000px;
+        }
+
+        /* 攻击判定区域 */
+        .attack-box {
+            position: absolute;
+            width: 40px;
+            height: 80px;
+            background: rgba(255,255,0,0.5);
+            display: none;
+        }
+
+        /* 血条容器 */
+        .hp-bar {
+            position: absolute;
+            top: 20px;
+            width: 300px;
+            height: 30px;
+            border: 2px solid #fff;
+            background: #333;
+        }
+
+        /* 玩家1血条 */
+        .hp1 {
+            left: 50px;
+        }
+
+        /* 玩家2血条 */
+        .hp2 {
+            right: 50px;
+        }
+
+        /* 血条值 */
+        .hp-value {
+            height: 100%;
+            background: #f33;
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        /* 胜利文字 */
+        .win-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 60px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 血条 -->
+        <div class="hp-bar hp1">
+            <div class="hp-value" id="hp1"></div>
+        </div>
+        <div class="hp-bar hp2">
+            <div class="hp-value" id="hp2"></div>
+        </div>
+
+        <!-- 玩家 -->
+        <div class="player" id="player1">
+            <div class="attack-box" id="attack1"></div>
+        </div>
+        <div class="player" id="player2">
+            <div class="attack-box" id="attack2"></div>
+        </div>
+
+        <!-- 地面 -->
+        <div class="ground"></div>
+
+        <!-- 胜利提示 -->
+        <div class="win-text" id="winText"></div>
+    </div>
+
+    <script>
+        // 获取元素
+        const player1 = document.getElementById('player1');
+        const player2 = document.getElementById('player2');
+        const hp1 = document.getElementById('hp1');
+        const hp2 = document.getElementById('hp2');
+        const winText = document.getElementById('winText');
+        const attack1 = document.getElementById('attack1');
+        const attack2 = document.getElementById('attack2');
+
+        // 游戏数据
+        let p1 = { x: 100, y: 0, w: 60, h: 120, hp: 100, speed: 8, jumpPower: 17, gravity: 0.8, vy: 0, isJumping: false, isAttacking: false };
+        let p2 = { x: 1000, y: 0, w: 60, h: 120, hp: 100, speed: 8, jumpPower: 17, gravity: 0.8, vy: 0, isJumping: false, isAttacking: false };
+        const groundY = 80;
+        let gameOver = false;
+
+        // 按键状态
+        const keys = {
+            w: false, a: false, d: false, space: false,
+            up: false, left: false, right: false, num0: false
+        };
+
+        // 键盘按下
+        document.addEventListener('keydown', (e) => {
+            if(gameOver) return;
+            switch(e.key) {
+                case 'w': keys.w = true; break;
+                case 'a': keys.a = true; break;
+                case 'd': keys.d = true; break;
+                case ' ': keys.space = true; break;
+                case 'ArrowUp': keys.up = true; break;
+                case 'ArrowLeft': keys.left = true; break;
+                case 'ArrowRight': keys.right = true; break;
+                case '0': keys.num0 = true; break;
+            }
+        });
+
+        // 键盘松开
+        document.addEventListener('keyup', (e) => {
+            switch(e.key) {
+                case 'w': keys.w = false; break;
+                case 'a': keys.a = false; break;
+                case 'd': keys.d = false; break;
+                case ' ': keys.space = false; break;
+                case 'ArrowUp': keys.up = false; break;
+                case 'ArrowLeft': keys.left = false; break;
+                case 'ArrowRight': keys.right = false; break;
+                case '0': keys.num0 = false; break;
+            }
+        });
+
+        // 碰撞检测
+        function isCollide(a, b) {
+            return a.x < b.x + b.w &&
+                   a.x + a.w > b.x &&
+                   a.y < b.y + b.h &&
+                   a.y + a.h > b.y;
+        }
+
+        // 更新游戏
+        function update() {
+            if(gameOver) return;
+
+            // ============= 玩家1逻辑 =============
+            // 左右移动
+            if(keys.a && p1.x > 0) p1.x -= p1.speed;
+            if(keys.d && p1.x < 1140) p1.x += p1.speed;
+
+            // 跳跃
+            if(keys.w && !p1.isJumping) {
+                p1.isJumping = true;
+                p1.vy = -p1.jumpPower;
+            }
+
+            // 重力
+            p1.vy += p1.gravity;
+            p1.y += p1.vy;
+
+            // 落地检测
+            if(p1.y >= 0) {
+                p1.y = 0;
+                p1.vy = 0;
+                p1.isJumping = false;
+            }
+
+            // 攻击
+            if(keys.space && !p1.isAttacking) {
+                p1.isAttacking = true;
+                attack1.style.display = 'block';
+                attack1.style.left = '60px';
+
+                // 攻击判定
+                let attackPos = {x: p1.x + 60, y: p1.y, w: 40, h: 80};
+                if(isCollide(attackPos, p2)) {
+                    p2.hp -= 10;
+                    p2.x += 30; // 击退
+                    if(p2.x > 1140) p2.x = 1140;
+                    hp2.style.width = p2.hp + '%';
+                }
+
+                setTimeout(() => {
+                    attack1.style.display = 'none';
+                    p1.isAttacking = false;
+                }, 200);
+            }
+
+            // ============= 玩家2逻辑 =============
+            if(keys.left && p2.x > 0) p2.x -= p2.speed;
+            if(keys.right && p2.x < 1140) p2.x += p2.speed;
+
+            if(keys.up && !p2.isJumping) {
+                p2.isJumping = true;
+                p2.vy = -p2.jumpPower;
+            }
+
+            p2.vy += p2.gravity;
+            p2.y += p2.vy;
+
+            if(p2.y >= 0) {
+                p2.y = 0;
+                p2.vy = 0;
+                p2.isJumping = false;
+            }
+
+            if(keys.num0 && !p2.isAttacking) {
+                p2.isAttacking = true;
+                attack2.style.display = 'block';
+                attack2.style.left = '-40px';
+
+                let attackPos = {x: p2.x - 40, y: p2.y, w: 40, h: 80};
+                if(isCollide(attackPos, p1)) {
+                    p1.hp -= 10;
+                    p1.x -= 30;
+                    if(p1.x < 0) p1.x = 0;
+                    hp1.style.width = p1.hp + '%';
+                }
+
+                setTimeout(() => {
+                    attack2.style.display = 'none';
+                    p2.isAttacking = false;
+                }, 200);
+            }
+
+            // 渲染位置
+            player1.style.left = p1.x + 'px';
+            player1.style.bottom = groundY + p1.y + 'px';
+            player2.style.left = p2.x + 'px';
+            player2.style.bottom = groundY + p2.y + 'px';
+
+            // 胜负判断
+            if(p1.hp <= 0) {
+                gameOver = true;
+                winText.textContent = '玩家2胜利！';
+                winText.style.display = 'block';
+            }
+            if(p2.hp <= 0) {
+                gameOver = true;
+                winText.textContent = '玩家1胜利！';
+                winText.style.display = 'block';
+            }
+        }
+
+        // 游戏循环
+        function gameLoop() {
+            update();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 初始化血条
+        hp1.style.width = '100%';
+        hp2.style.width = '100%';
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗区突围 · 战术小游戏</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0b0e14;
+            color: #c8d6e5;
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .game-container {
+            max-width: 720px;
+            width: 100%;
+            background: #1a1f2b;
+            border-radius: 24px;
+            padding: 24px 20px 32px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+            border: 1px solid #2f3a4a;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px dashed #3e4b5e;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            color: #f5c842;
+            text-shadow: 0 0 6px #b8860b;
+        }
+        .header .sub {
+            color: #8a9bb5;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .status-bar {
+            background: #0f131c;
+            padding: 12px 16px;
+            border-radius: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            border: 1px solid #2f3a4a;
+            margin-bottom: 18px;
+            font-size: 0.95rem;
+        }
+        .status-item {
+            background: #1e2635;
+            padding: 4px 12px;
+            border-radius: 30px;
+            margin: 4px 0;
+        }
+        .status-item span {
+            color: #b3c7e5;
+        }
+        .badge {
+            color: #f5c842;
+            font-weight: bold;
+        }
+        .danger-hp {
+            color: #e74c5e !important;
+            font-weight: bold;
+        }
+        .log-area {
+            background: #0b0e14;
+            border-radius: 16px;
+            padding: 16px 18px;
+            min-height: 180px;
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid #2b3547;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .log-area .highlight {
+            color: #f5c842;
+        }
+        .log-area .danger {
+            color: #e74c5e;
+        }
+        .log-area .success {
+            color: #2ecc71;
+        }
+        .log-area .info {
+            color: #5dade2;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .action-btn {
+            background: #232b3d;
+            border: 1px solid #3a465c;
+            color: #d0def0;
+            padding: 12px 0;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+            font-family: inherit;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 0 #0f131c;
+        }
+        .action-btn:hover:not(:disabled) {
+            background: #2f3b52;
+            border-color: #f5c842;
+            color: #f5c842;
+            transform: scale(0.97);
+        }
+        .action-btn:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.6);
+        }
+        .action-btn.primary {
+            background: #3d4d2b;
+            border-color: #6b8c42;
+            color: #d8f0b0;
+        }
+        .action-btn.primary:hover:not(:disabled) {
+            background: #4f6638;
+            border-color: #a8d46a;
+        }
+        .action-btn.danger {
+            background: #4d2b2b;
+            border-color: #8c4242;
+            color: #f0b0b0;
+        }
+        .action-btn.danger:hover:not(:disabled) {
+            background: #663838;
+            border-color: #d46a6a;
+        }
+        .action-btn.full {
+            grid-column: span 2;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #5b6a7e;
+            border-top: 1px solid #2a3345;
+            padding-top: 14px;
+        }
+        .footer button {
+            background: transparent;
+            border: 1px solid #3e4b5e;
+            color: #b0c4de;
+            padding: 6px 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.1s;
+        }
+        .footer button:hover {
+            background: #2a3345;
+            color: #f5c842;
+            border-color: #f5c842;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f131c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a465c;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="app">
+    <div class="header">
+        <h1>⚔ 暗区突围</h1>
+        <div class="sub">控制台 · 单兵战术</div>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+        <div class="status-item">❤️ <span id="hpDisplay">100</span>/<span id="maxHpDisplay">100</span></div>
+        <div class="status-item">🔫 <span id="weaponDisplay">小刀</span></div>
+        <div class="status-item">🎒 <span id="backpackCount">0</span>/6</div>
+        <div class="status-item">📍 <span id="positionDisplay">农场出生点</span></div>
+        <div class="status-item">🩸 K/D <span id="killCount">0</span></div>
+    </div>
+
+    <div class="log-area" id="logArea">
+        <span class="info">🔹 欢迎回来，特遣队员。</span><br>
+        <span>点击下方按钮开始行动。</span>
+    </div>
+
+    <div class="action-grid" id="actionGrid">
+        <button class="action-btn" data-action="move">🚶 移动</button>
+        <button class="action-btn" data-action="search">🔍 搜索</button>
+        <button class="action-btn" data-action="rest">💤 休息</button>
+        <button class="action-btn" data-action="useMed">🩹 使用医疗包</button>
+        <button class="action-btn primary" data-action="evacuate">🏁 撤离</button>
+        <button class="action-btn danger full" data-action="giveup">✖ 放弃本局</button>
+    </div>
+
+    <div class="footer">
+        <span>🏚 仓库 <strong id="warehouseCount">0</strong> 件</span>
+        <button id="warehouseBtn">📦 查看仓库</button>
+        <button id="resetBtn">🔄 新游戏</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const WEAPONS = ["小刀", "手枪", "冲锋枪", "步枪", "狙击枪"];
+        const LOOTS = ["医疗包", "止痛药", "子弹", "现金", "高级配件", "加密文档", "金条"];
+        const ENEMIES = ["游荡者", "精英游荡者", "特遣队员"];
+        const POSITIONS = [
+            { name: "农场平房区", danger: 0 },
+            { name: "谷物交易站", danger: 1 },
+            { name: "装卸区", danger: 2 },
+            { name: "民宅区", danger: 1 },
+            { name: "撤离点附近", danger: 0 }
+        ];
+
+        const player = {
+            hp: 100,
+            max_hp: 100,
+            weapon: "小刀",
+            backpack: [],
+            warehouse: [],
+            position: "农场出生点",
+            killCount: 0,
+            restCooldown: false
+        };
+
+        const logArea = document.getElementById('logArea');
+        const hpDisplay = document.getElementById('hpDisplay');
+        const maxHpDisplay = document.getElementById('maxHpDisplay');
+        const weaponDisplay = document.getElementById('weaponDisplay');
+        const backpackCount = document.getElementById('backpackCount');
+        const positionDisplay = document.getElementById('positionDisplay');
+        const warehouseCount = document.getElementById('warehouseCount');
+        const killCount = document.getElementById('killCount');
+        const actionBtns = document.querySelectorAll('[data-action]');
+        const warehouseBtn = document.getElementById('warehouseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function clearScreen() {
+            logArea.innerHTML = '';
+        }
+
+        function refreshUI() {
+            hpDisplay.textContent = player.hp;
+            if (player.hp <= 20) {
+                hpDisplay.classList.add('danger-hp');
+            } else {
+                hpDisplay.classList.remove('danger-hp');
+            }
+            maxHpDisplay.textContent = player.max_hp;
+            weaponDisplay.textContent = player.weapon;
+            backpackCount.textContent = player.backpack.length;
+            positionDisplay.textContent = player.position;
+            warehouseCount.textContent = player.warehouse.length;
+            killCount.textContent = player.killCount;
+        }
+
+        function addLog(message, className = '') {
+            const line = document.createElement('div');
+            line.innerHTML = message;
+            if (className) line.className = className;
+            logArea.appendChild(line);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function resetLogScreen(title) {
+            clearScreen();
+            const sep = document.createElement('div');
+            sep.textContent = '═'.repeat(30);
+            logArea.appendChild(sep);
+            if (title) {
+                const t = document.createElement('div');
+                t.textContent = title;
+                t.style.fontWeight = 'bold';
+                t.style.color = '#f5c842';
+                logArea.appendChild(t);
+            }
+            logArea.appendChild(sep.cloneNode(true));
+        }
+
+        function enableActions(active) {
+            actionBtns.forEach(btn => btn.disabled = !active);
+        }
+
+        function resetRound() {
+            player.hp = player.max_hp;
+            player.backpack = [];
+            player.weapon = Math.random() < 0.5 ? "小刀" : "手枪";
+            player.position = "农场平房区";
+            player.killCount = 0;
+            player.restCooldown = false;
+            refreshUI();
+            resetLogScreen('        游戏开始！');
+            addLog(`📍 位置：${player.position}`);
+            addLog(`❤️ HP：${player.hp}  🔫 武器：${player.weapon}`);
+            addLog(`🎒 背包容量：6格`);
+            addLog('─'.repeat(28));
+            enableActions(true);
+        }
+
+        function returnToMainMenu(msg) {
+            if (msg) addLog(msg);
+            resetLogScreen('     暗区突围 · 控制台');
+            addLog(`🏚 仓库物资：<strong>${player.warehouse.length}</strong> 件`);
+            addLog('点击【新游戏】开始一局');
+            addLog('点击【查看仓库】管理物资');
+            enableActions(false);
+            refreshUI();
+        }
+
+        function getPosDanger() {
+            const p = POSITIONS.find(x => x.name === player.position);
+            return p ? p.danger : 0;
+        }
+
+        function move() {
+            const newPos = POSITIONS[Math.floor(Math.random() * POSITIONS.length)];
+            player.position = newPos.name;
+            refreshUI();
+            addLog(`🚶 你移动到：<span class="highlight">${newPos.name}</span>`);
+            
+            const encounter = Math.random() < (0.3 + newPos.danger * 0.1);
+            if (encounter) enemyEncounter();
+        }
+
+        function searchLoot() {
+            if (player.backpack.length >= 6) {
+                addLog(`🎒 背包已满！无法拾取物资！`, 'danger');
+                return;
+            }
+            const loot = LOOTS[Math.floor(Math.random() * LOOTS.length)];
+            player.backpack.push(loot);
+            refreshUI();
+            addLog(`🔍 获得物资：<span class="success">${loot}</span>`);
+
+            if (Math.random() < 0.2) {
+                const current = WEAPONS.indexOf(player.weapon);
+                const better = WEAPONS.slice(current + 1);
+                if (better.length > 0) {
+                    player.weapon = better[Math.floor(Math.random() * better.length)];
+                    refreshUI();
+                    addLog(`🎉 获得更强武器：<span class="highlight">${player.weapon}</span>`);
+                }
+            }
+
+            if (Math.random() < 0.35 + getPosDanger() * 0.1) enemyEncounter();
+        }
+
+        function rest() {
+            if (player.restCooldown) {
+                addLog(`⏳ 休息中冷却，无法连续休息！`, 'info');
+                return;
+            }
+            if (player.hp >= player.max_hp) {
+                addLog('💤 生命值已满！');
+                return;
+            }
+            const heal = Math.floor(Math.random() * 15) + 10;
+            player.hp = Math.min(player.hp + heal, player.max_hp);
+            refreshUI();
+            addLog(`💤 恢复 <span class="success">${heal}</span> 点生命值 (${player.hp})`);
+            player.restCooldown = true;
+            setTimeout(() => player.restCooldown = false, 3000);
+
+            if (Math.random() < 0.25) enemyEncounter();
+        }
+
+        function useMed() {
+            const hasMed = player.backpack.includes('医疗包');
+            if (!hasMed) {
+                addLog(`❌ 背包中没有医疗包！`, 'danger');
+                return;
+            }
+            if (player.hp >= player.max_hp) {
+                addLog(`✅ 生命值已满，无需使用！`, 'success');
+                return;
+            }
+            player.backpack = player.backpack.filter(i => i !== '医疗包');
+            player.hp = Math.min(player.hp + 50, player.max_hp);
+            refreshUI();
+            addLog(`🩹 使用医疗包，恢复 50 HP！<span class="success">(${player.hp})</span>`);
+        }
+
+        function enemyEncounter() {
+            const danger = getPosDanger();
+            const enemyType = danger >= 2 ? 2 : Math.floor(Math.random() * (2 + danger));
+            const enemy = ENEMIES[enemyType];
+            addLog(`<span class="danger">⚠️ 遭遇敌人！【${enemy}】</span>`);
+
+            const pAtk = WEAPONS.indexOf(player.weapon) + 1;
+            const eAtk = enemyType + 1 + Math.floor(Math.random() * 2);
+
+            if (pAtk > eAtk) {
+                player.killCount++;
+                refreshUI();
+                addLog(`⚔️ <span class="success">胜利！击败 ${enemy}</span>`);
+                if (player.backpack.length < 6) {
+                    const loot = LOOTS[Math.floor(Math.random() * LOOTS.length)];
+                    player.backpack.push(loot);
+                    addLog(`📦 缴获：<span class="success">${loot}</span>`);
+                    refreshUI();
+                }
+            } else {
+                const dmg = 25 + enemyType * 15 + Math.floor(Math.random() * 20);
+                player.hp = Math.max(0, player.hp - dmg);
+                refreshUI();
+                addLog(`💥 战斗失败！受到 <span class="danger">${dmg}</span> 伤害！HP：${player.hp}`);
+                if (player.hp <= 0) {
+                    addLog(`<span class="danger">☠️ 你已被淘汰！物资全部丢失！</span>`);
+                    player.backpack = [];
+                    enableActions(false);
+                    setTimeout(() => returnToMainMenu('已阵亡，返回主界面'), 1200);
+                }
+            }
+        }
+
+        function evacuate() {
+            const danger = getPosDanger();
+            const successRate = 0.8 - danger * 0.15;
+            const success = Math.random() < successRate;
+
+            if (success) {
+                addLog(`<span class="success">✅ 撤离成功！</span>`);
+                if (player.backpack.length > 0) {
+                    addLog(`📦 带回物资：${player.backpack.join('、')}`);
+                    player.warehouse.push(...player.backpack);
+                    player.backpack = [];
+                } else {
+                    addLog(`安全撤离，但背包为空。`);
+                }
+            } else {
+                addLog(`<span class="danger">❌ 撤离失败！遭遇伏击！</span>`);
+                player.backpack = [];
+            }
+            refreshUI();
+            enableActions(false);
+            setTimeout(() => returnToMainMenu('撤离结束，返回主界面'), 1200);
+        }
+
+        function giveUp() {
+            addLog(`🏳️ 你放弃了本局，物资全部丢失！`, 'danger');
+            player.backpack = [];
+            refreshUI();
+            enableActions(false);
+            setTimeout(() => returnToMainMenu('已放弃本局'), 800);
+        }
+
+        function showWarehouse() {
+            resetLogScreen('        个人仓库');
+            if (player.warehouse.length === 0) {
+                addLog('仓库空空如也');
+            } else {
+                player.warehouse.forEach((item, i) => addLog(`${i+1}. ${item}`));
+            }
+            addLog('─'.repeat(20));
+            addLog('点击【新游戏】返回');
+            enableActions(false);
+        }
+
+        function initEventListeners() {
+            actionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.disabled) return;
+                    switch (btn.dataset.action) {
+                        case 'move': move(); break;
+                        case 'search': searchLoot(); break;
+                        case 'rest': rest(); break;
+                        case 'useMed': useMed(); break;
+                        case 'evacuate': evacuate(); break;
+                        case 'giveup': giveUp(); break;
+                    }
+                });
+            });
+
+            warehouseBtn.addEventListener('click', showWarehouse);
+            resetBtn.addEventListener('click', resetRound);
+        }
+
+        function initGame() {
+            player.hp = 100;
+            player.max_hp = 100;
+            player.weapon = "小刀";
+            player.backpack = [];
+            player.warehouse = [];
+            player.position = "农场出生点";
+            player.killCount = 0;
+            refreshUI();
+            returnToMainMenu('');
+            enableActions(false);
+            initEventListeners();
+        }
+
+        initGame();
+    })();
+</script>
+</body>
+</html>

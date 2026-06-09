@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吴金骏 - 舞蹈视频</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #4158D0, #C850C0);
+            color: #fff;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .video-box {
+            padding: 30px;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            outline: none;
+        }
+
+        .intro {
+            margin-top: 25px;
+            line-height: 1.8;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .tip {
+            margin-top: 15px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .video-box {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部标题区 -->
+        <div class="header">
+            <h1>吴金骏 舞蹈作品</h1>
+            <p>精彩舞蹈视频展示</p>
+        </div>
+
+        <!-- 视频播放区域 -->
+        <div class="video-box">
+            <!-- 替换 src 为你的视频链接/本地视频路径 -->
+            <video controls autoplay muted preload="auto">
+                <source src="你的视频地址.mp4" type="video/mp4">
+                你的浏览器不支持视频播放，请更换浏览器查看。
+            </video>
+
+            <!-- 视频简介 -->
+            <div class="intro">
+                <h3>视频简介</h3>
+                <p>本视频为吴金骏的舞蹈表演片段，舞姿灵动、节奏流畅，展现独特的舞蹈风格与舞台表现力。</p>
+            </div>
+
+            <div class="tip">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

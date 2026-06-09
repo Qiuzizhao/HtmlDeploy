@@ -1,0 +1,203 @@
+===== index.html =====
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>原神祈愿模拟器｜无限纠缠之缘</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"微软雅黑",sans-serif}
+body{
+    background:#191426 url(https://p.qqan.com/up/2022-9/1663162433834390.jpg) center/cover fixed;
+    min-height:100vh;color:#fff;padding:20px;
+}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:-1}
+.wrap{max-width:1100px;margin:0 auto;position:relative;z-index:2}
+.top-info{
+    background:rgba(30,22,48,0.75);border:1px solid #9d4edd55;
+    border-radius:16px;padding:22px;margin-bottom:25px;backdrop-filter:blur(6px);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;
+}
+.title h1{color:#ffd733;text-shadow:0 0 12px #ffc107;font-size:28px}
+.data-box{display:flex;gap:30px}
+.data-item{text-align:center}
+.data-item p:nth-child(1){opacity:0.7;font-size:14px}
+.data-item p:nth-child(2){font-size:24px;font-weight:bold}
+.yuan{color:#ffd733}
+.baodi{color:#c77dff}
+/*抽卡展示区*/
+.result-box{
+    min-height:220px;background:rgba(30,22,48,0.75);border-radius:16px;
+    padding:20px;margin-bottom:25px;backdrop-filter:blur(6px);
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:14px;
+}
+.empty-tip{grid-column:1/-1;text-align:center;padding:60px 0;opacity:0.6;font-size:18px}
+/*卡牌样式*/
+.card{
+    border-radius:10px;padding:12px;text-align:center;
+    animation:cardShow 0.7s ease-out;
+}
+.star5{border:2px solid #ffd733;box-shadow:0 0 14px #ffd73380;background:#382c1f99}
+.star4{border:2px solid #b159ff;box-shadow:0 0 10px #b159ff77;background:#31204099}
+.star3{border:2px solid #6489ff88;background:#1e274099}
+@keyframes cardShow{
+    from{transform:scale(0.3);opacity:0}to{transform:scale(1);opacity:1}
+}
+/*按钮区*/
+.btn-group{display:flex;gap:20px;justify-content:center;margin-bottom:25px;flex-wrap:wrap}
+button{
+    padding:15px 36px;border:none;border-radius:10px;font-size:18px;font-weight:bold;cursor:pointer;
+    transition:0.25s all;
+}
+.single{background:#7b2cbf;color:#fff;box-shadow:0 0 10px #7b2cbf77}
+.ten{background:linear-gradient(90deg,#7b2cbf,#ffc107);color:#111}
+button:hover{transform:scale(1.05)}
+/*记录区*/
+.record{
+    background:rgba(30,22,48,0.75);border-radius:16px;padding:20px;backdrop-filter:blur(6px);
+    max-height:280px;overflow-y:auto;border:1px solid #9d4edd55;
+}
+.record h3{margin-bottom:12px;color:#ffd733}
+.record-item{padding:6px 0;border-bottom:1px solid #ffffff22;font-size:15px}
+/*五星全屏弹窗*/
+.five-pop{
+    position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:999;
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+}
+.five-pop h2{font-size:52px;color:#ffd733;text-shadow:0 0 20px gold;animation:goldAni 1.3s infinite alternate}
+@keyframes goldAni{from{filter:brightness(1)}to{filter:brightness(1.4)}}
+.close-pop{margin-top:30px;background:#7b2cbf;color:#fff}
+</style>
+</head>
+<body>
+<div class="mask"></div>
+<div class="wrap">
+    <div class="top-info">
+        <div class="title">
+            <h1>角色活动祈愿</h1>
+            <p style="opacity:0.7">无限纠缠之缘｜复刻原神官方抽卡概率</p>
+        </div>
+        <div class="data-box">
+            <div class="data-item">
+                <p>纠缠之缘</p>
+                <p class="yuan">∞</p>
+            </div>
+            <div class="data-item">
+                <p>五星保底计数</p>
+                <p id="pityNum" class="baodi">0</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultBox" class="result-box">
+        <div class="empty-tip">点击下方按钮开始祈愿</div>
+    </div>
+
+    <div class="btn-group">
+        <button class="single" onclick="pullOne()">单抽×1</button>
+        <button class="ten" onclick="pullTen()">十连×10</button>
+    </div>
+
+    <div class="record">
+        <h3>📜 抽卡记录</h3>
+        <div id="recordList"></div>
+    </div>
+</div>
+
+<div id="fiveWinPop" class="five-pop">
+    <h2>★五星角色登场★</h2>
+    <button class="close-pop" onclick="closePop()">确认收下</button>
+</div>
+
+<script>
+//卡池数据
+const pool={
+    five:['芙宁娜','那维莱特','钟离','枫原万叶','雷电将军','胡桃','神里绫华','夜兰'],
+    four:['班尼特','香菱','行秋','砂糖','诺艾尔','菲谢尔','莱依拉','九条裟罗'],
+    three:['讨龙英杰谭','魔导绪论','铁影阔剑','弹弓','神射手之誓','翡玉法球']
+}
+//概率：基础五星0.6%，四星5.1%，三星94.3%，90抽大保底五星，十连必1四星
+let pity=0; //五星累计抽数
+let recordArr=[];
+const resultDom=document.getElementById('resultBox');
+const pityDom=document.getElementById('pityNum');
+const recordDom=document.getElementById('recordList');
+const pop=document.getElementById('fiveWinPop');
+
+//随机抽卡单张
+function getOneCard(){
+    pity++;
+    let rate5=0.006;
+    //保底提升概率，90抽必出五星
+    if(pity>=89) rate5=1;
+    let rand=Math.random();
+    let res,star;
+    if(rand<rate5){
+        res=pool.five[Math.floor(Math.random()*pool.five.length)];
+        star=5;pity=0;
+        setTimeout(()=>pop.style.display='flex',400)
+    }else if(rand<rate5+0.051){
+        res=pool.four[Math.floor(Math.random()*pool.four.length)];star=4;
+    }else{
+        res=pool.three[Math.floor(Math.random()*pool.three.length)];star=3;
+    }
+    pityDom.innerText=pity;
+    return {name:res,star};
+}
+
+//渲染卡牌
+function renderCard(list){
+    resultDom.innerHTML='';
+    list.forEach(item=>{
+        let d=document.createElement('div');
+        d.className=`card star${item.star}`;
+        d.innerHTML=`
+            <div style="font-size:32px;margin:6px 0">${'★'.repeat(item.star)}</div>
+            <div>${item.name}</div>
+        `
+        resultDom.appendChild(d);
+    })
+}
+
+//新增记录
+function addLog(str){
+    recordArr.unshift(str);
+    recordDom.innerHTML='';
+    recordArr.forEach(i=>{
+        let d=document.createElement('div');
+        d.className='record-item';d.innerText=i;
+        recordDom.appendChild(d);
+    })
+}
+
+//单抽
+function pullOne(){
+    let card=getOneCard();
+    renderCard([card]);
+    addLog(`单抽｜${card.star}星：${card.name}`)
+}
+
+//十连（必出至少1四星）
+function pullTen(){
+    let tenList=[];
+    let hasFour=false;
+    for(let i=0;i<10;i++){
+        let c=getOneCard();
+        if(c.star>=4) hasFour=true;
+        tenList.push(c);
+    }
+    //没四星强制替换一张为四星
+    if(!hasFour){
+        let fourCard={name:pool.four[Math.floor(Math.random()*pool.four.length)],star:4};
+        tenList[Math.floor(Math.random()*10)]=fourCard;
+    }
+    renderCard(tenList);
+    let fiveNum=tenList.filter(x=>x.star===5).length;
+    addLog(`十连｜五星×${fiveNum} 四星×${tenList.filter(x=>x.star===4).length}`)
+}
+
+//关闭五星弹窗
+function closePop(){pop.style.display='none'}
+</script>
+</body>
+</html>
