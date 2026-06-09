@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>炼狱终极版·上学模拟器 超多选项+全陷阱</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"微软雅黑",sans-serif}
+        body{background:#0a0a0a;display:flex;justify-content:center;padding:20px 10px}
+        .game{max-width:620px;width:100%;background:#111;border-radius:22px;overflow:hidden;box-shadow:0 0 50px rgba(255,10,10,0.4)}
+        .title{background:linear-gradient(90deg,#990000,#220000);color:#fff;text-align:center;padding:22px;font-size:26px;font-weight:bold;letter-spacing:2px}
+        .status{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:15px;background:#1f1f1f;color:#ddd;font-size:14px}
+        .scene{height:360px;background-size:cover;background-position:center;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;text-shadow:0 0 15px #000;padding:35px;text-align:center;gap:20px}
+        .scene h2{font-size:28px}
+        .scene p{font-size:17px;line-height:1.8}
+        .log{background:#2b0000;color:#ffaaaa;padding:15px;text-align:center;min-height:55px;font-size:15px;border-top:1px solid #770000;border-bottom:1px solid #770000}
+        .btns{display:flex;flex-wrap:wrap;gap:12px;padding:25px;justify-content:center}
+        button{padding:12px 20px;border:none;border-radius:8px;background:#880000;color:#fff;font-size:15px;cursor:pointer;transition:0.2s;min-width:110px}
+        button:hover{background:#bb0000;transform:scale(1.06)}
+        button:disabled{background:#333;color:#777;cursor:not-allowed;transform:none}
+        .dead-page{background:#000;color:#ff2020;padding:45px 20px;text-align:center;font-size:24px;font-weight:bold}
+        .win-page{background:#001100;color:#33ff55;padding:45px 20px;text-align:center;font-size:24px;font-weight:bold}
+    </style>
+</head>
+<body>
+<div class="game">
+    <div class="title">🎒 炼狱终极上学模拟器</div>
+    <div class="status">
+        <div>⏰ 时间：<span id="t">7:00</span></div>
+        <div>😊 心情：<span id="m">100</span></div>
+        <div>💪 体力：<span id="e">100</span></div>
+        <div>🧠 学识：<span id="i">0</span></div>
+        <div>💰 金币：<span id="g">40</span></div>
+        <div>⭐ 声望：<span id="r">50</span></div>
+    </div>
+    <div id="scene" class="scene" style="background-image:url(https://picsum.photos/id/1048/800/400)">
+        <h2>🛏️ 清晨卧室</h2>
+        <p>炼狱模式开启！选项极多、陷阱密布、随机灾厄频发，一步错全盘皆输！</p>
+    </div>
+    <div id="log" class="log">⚠️ 规则：选错、触发灾厄、状态归零 = 直接游戏结束</div>
+    <div class="btns">
+        <button id="b1">极速起身</button>
+        <button id="b2">正常起床</button>
+        <button id="b3">慢动作起床</button>
+        <button id="b4">躺平闭目</button>
+        <button id="b5">拍打闹钟</button>
+        <button id="res" disabled>重新开局</button>
+    </div>
+</div>
+
+<script>
+// 全局游戏数据
+const G = {
+    time: 7 * 60,
+    mood: 100,
+    energy: 100,
+    intel: 0,
+    gold: 40,
+    rep: 50,
+    stage: 0,
+    isDead: false,
+    isLate: false,
+    hasHomework: true,
+    hasBag: true,
+    eatFood: false,
+    teacherTrack: false,
+    badMark: false
+};
+
+// 工具函数
+function formatTime(min) {
+    let h = Math.floor(min / 60);
+    let m = min % 60;
+    return `${h}:${m < 10 ? "0" + m : m}`;
+}
+function random(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function updateUI() {
+    document.getElementById("t").innerText = formatTime(G.time);
+    document.getElementById("m").innerText = G.mood;
+    document.getElementById("e").innerText = G.energy;
+    document.getElementById("i").innerText = G.intel;
+    document.getElementById("g").innerText = G.gold;
+    document.getElementById("r").innerText = G.rep;
+}
+function gameOver(text) {
+    G.isDead = true;
+    document.getElementById("scene").className = "dead-page";
+    document.getElementById("scene").innerHTML = `❌ 游戏失败<br>${text}`;
+    document.querySelectorAll(".btns button").forEach(btn => btn.disabled = true);
+    document.getElementById("res").disabled = false;
+}
+function gameWin(text) {
+    G.isDead = true;
+    document.getElementById("scene").className = "win-page";
+    document.getElementById("scene").innerHTML = `✅ 炼狱通关成功<br>${text}`;
+    document.querySelectorAll(".btns button").forEach(btn => btn.disabled = true);
+    document.getElementById("res").disabled = false;
+}
+function setLog(text) {
+    document.getElementById("log").innerText = text;
+}
+function goStage(num) {
+    if (G.isDead) return;
+    G.stage = num;
+    renderScene();
+}
+
+// ===================== 全场景配置【超多选项 + 海量陷阱 + 50+随机事件】 =====================
+const stageList = [
+    // 0 卧室：5个选项 + 多重随机灾厄
+    {
+        bg: "https://picsum.photos/id/1048/800/400",
+        title: "🛏️ 清晨卧室",
+        desc: "闹钟持续轰鸣，五种行为各有隐患，部分选项看似安全实则致命。",
+        btn: ["极速起身","正常起床","慢动作起床","躺平闭目","拍打闹钟"],
+        action: [
+            () => {
+                G.time += 3;
+                // 随机灾厄 1
+                let r = random(1,20);
+                if(r <= 3) return gameOver("床下窜出毒蜘蛛，当场中毒！");
+                if(r === 4) return gameOver("窗帘坠落砸伤身体！");
+                setLog("快速起床，暂时平安");
+                goStage(1);
+            },
+            () => {
+                G.time += 6;
+                let r = random(1,20);
+                if(r === 5) return gameOver("地板缝隙钻出毒虫！");
+                setLog("平稳起床，状态正常");
+                goStage(1);
+            },
+            () => {
+                G.time += 15;
+                G.isLate = true;
+                let r = random(1,20);
+                if(r <= 6) return gameOver("衣柜门板脱落被砸！");
+                setLog("动作拖沓，已经迟到");
+                goStage(1);
+            },
+            () => {
+                return gameOver("彻底放弃起床，全天旷课被开除！");
+            },
+            () => {
+                return gameOver("用力拍打闹钟，零件飞溅受伤！");
+            }
+        ]
+    },
+    // 1 洗漱间：6个选项 最多选项场景 + 大量迷惑项
+    {
+        bg: "https://picsum.photos/id/1060/800/400",
+        title: "🧴 洗漱卫生间",
+        desc: "台面摆放六类用品，真假陷阱混杂，多数用品带有危险属性。",
+        btn: ["清水洗漱","绿色牙膏","紫色牙膏","泡沫洁面膏","直接离开","玩水嬉戏"],
+        action: [
+            () => {
+                G.time += 8;
+                let r = random(1,22);
+                if(r <= 4) return gameOver("全屋停水，无法出行！");
+                if(r === 5) return gameOver("水管漏水地面打滑摔倒！");
+                setLog("只用清水，安全完成洗漱");
+                goStage(2);
+            },
+            () => {
+                return gameOver("绿色牙膏为工业清洁剂，腐蚀口腔！");
+            },
+            () => {
+                G.time += 9;
+                let r = random(1,22);
+                if(r === 7) return gameOver("洗漱杯碎裂划伤手部！");
+                setLog("紫色牙膏正常，洗漱完毕");
+                goStage(2);
+            },
+            () => {
+                return gameOver("洁面膏含有致敏成分，全身过敏休克！");
+            },
+            () => {
+                G.energy -= 40;
+                if(G.energy <= 0) return gameOver("状态暴跌，体力透支倒地！");
+                setLog("放弃洗漱，身体虚弱");
+                goStage(2);
+            },
+            () => {
+                G.time += 20;
+                G.isLate = true;
+                return gameOver("玩水拖延过久，严重迟到被记大过！");
+            }
+        ]
+    },
+    // 2 早餐店：6个选项 价格/风险各不相同
+    {
+        bg: "https://picsum.photos/id/292/800/400",
+        title: "🍞 街边早餐铺",
+        desc: "六种餐品可选，金币有限，部分食物暗藏剧毒、变质、高温风险。",
+        btn: ["肉包(-7金)","甜豆浆(-6金)","咸粥(-5金)","炸糕(-4金)","卤蛋(-3金)","不吃早餐"],
+        action: [
+            () => {
+                if(G.gold <7) return gameOver("金币不足，争执被店主驱逐！");
+                G.gold -=7; G.energy +=24; G.eatFood = true;
+                let r = random(1,25);
+                if(r <= 8) return gameOver("肉馅变质，严重食物中毒！");
+                setLog("肉包安全，补充体力");
+                goStage(3);
+            },
+            () => {
+                return gameOver("豆浆被恶意添加药剂，当场昏迷！");
+            },
+            () => {
+                if(G.gold <5) return gameOver("余额不足，错失就餐时间！");
+                G.gold -=5; G.energy +=18; G.eatFood = true;
+                let r = random(1,25);
+                if(r === 9) return gameOver("粥品温度过高，口腔烫伤！");
+                setLog("热粥下肚，状态回升");
+                goStage(3);
+            },
+            () => {
+                return gameOver("炸糕热油飞溅，大面积烫伤！");
+            },
+            () => {
+                if(G.gold <3) return gameOver("没钱购买，尴尬离场！");
+                G.gold -=3; G.energy +=12; G.eatFood = true;
+                setLog("小小卤蛋，勉强充饥");
+                goStage(3);
+            },
+            () => {
+                G.energy -=38;
+                if(G.energy <=0) return gameOver("空腹赶路，饿到失去行动能力！");
+                setLog("放弃早餐，身体持续虚弱");
+                goStage(3);
+            }
+        ]
+    },
+    // 3 上学路：5种出行方式 + 独立随机灾厄库
+    {
+        bg: "https://picsum.photos/id/1031/800/400",
+        title: "🚶 上学主干道",
+        desc: "五种出行路线，每条路都有专属危险事件，概率触发致命意外。",
+        btn: ["快步步行","悠闲散步","骑单车","坐公交","搭乘共享电车"],
+        action: [
+            () => {
+                G.time +=17;
+                let r = random(1,28);
+                if(r <=4) return gameOver("横穿道路被车辆撞击！");
+                if(r ===5) return gameOver("遭遇碰瓷团伙，被勒令退学！");
+                if(r ===6) {G.hasBag=false; setLog("书包被路人撞落，作业丢失！");}
+                if(r ===7) {G.teacherTrack=true; setLog("⚠️ 班主任暗中跟随！");}
+                if(r ===8) return gameOver("高空坠物砸中头部！");
+                setLog("步行前进，暂时无恙");
+                goStage(4);
+            },
+            () => {
+                G.time +=25; G.isLate=true;
+                return gameOver("散步速度太慢，彻底迟到被处分！");
+            },
+            () => {
+                G.time +=11;
+                let r = random(1,28);
+                if(r <=5) return gameOver("刹车失灵，单车失控重伤！");
+                if(r ===9) {G.hasBag=false; setLog("骑行颠簸，书包掉落！");}
+                if(r ===10) return gameOver("逆行被交警拦下，耽误全天课程！");
+                setLog("骑行赶路，速度较快");
+                goStage(4);
+            },
+            () => {
+                G.time +=14;
+                let r = random(1,28);
+                if(r <=3) return gameOver("全线堵车，到校严重迟到！");
+                if(r ===11) {G.teacherTrack=true; setLog("班主任同乘一辆车！");}
+                if(r ===12) return gameOver("车内冲突被牵连处分！");
+                setLog("乘坐公交，平稳行驶");
+                goStage(4);
+            },
+            () => {
+                return gameOver("共享电车故障，行驶途中侧翻！");
+            }
+        ]
+    },
+    // 4 校门口：5个选项 严查多重判定
+    {
+        bg: "https://picsum.photos/id/1059/800/400",
+        title: "🏫 学校正门",
+        desc: "门卫+值日老师双重检查，迟到、丢书包、被尾随、小动作都会直接判负。",
+        btn: ["正门正常进入","东侧小门进入","西侧偏门进入","原地整理书包","故意放慢脚步"],
+        action: [
+            () => {
+                if(G.isLate) return gameOver("迟到被抓，直接开除！");
+                if(!G.hasBag || !G.hasHomework) return gameOver("无作业无书包，勒令退学！");
+                if(G.teacherTrack) return gameOver("被尾随老师抓包，从重处罚！");
+                setLog("顺利通过检查，进入校园");
+                goStage(5);
+            },
+            () => {
+                return gameOver("东侧小门专职保安巡逻，偷进被抓！");
+            },
+            () => {
+                return gameOver("西侧偏门封闭，违规闯入受处分！");
+            },
+            () => {
+                G.time +=10; G.isLate=true;
+                return gameOver("原地拖延，超时迟到！");
+            },
+            () => {
+                G.time +=12; G.isLate=true;
+                return gameOver("刻意慢行，迟到处罚加倍！");
+            }
+        ]
+    },
+    // 5 走廊行为：6个选项 全是陷阱+迷惑项
+    {
+        bg: "https://picsum.photos/id/1040/800/400",
+        title: "📖 教学楼走廊",
+        desc: "临近教室，六种行为选择，巡查老师无处不在。",
+        btn: ["径直进教室","靠墙休息","追逐打闹","找人闲聊","假装肚子疼","躲进消防通道"],
+        action: [
+            () => {
+                setLog("安分进入教室，准备早读检查");
+                goStage(6);
+            },
+            () => {
+                return gameOver("走廊禁止逗留，被巡查老师发现！");
+            },
+            () => {
+                return gameOver("追逐打闹违反校规，记过处分！");
+            },
+            () => {
+                let r = random(1,20);
+                if(r <=7) return gameOver("大声交谈被教导主任抓获！");
+                G.rep -=45;
+                setLog("短暂聊天，声望大幅下降");
+                goStage(6);
+            },
+            () => {
+                return gameOver("装病被校医当场识破，严厉批评！");
+            },
+            () => {
+                return gameOver("占用消防通道，严重违纪开除！");
+            }
+        ]
+    },
+    // 6 作业检查：5种应对方式 全是谎言陷阱
+    {
+        bg: "https://picsum.photos/id/1015/800/400",
+        title: "📝 早读作业核查",
+        desc: "班主任逐人查作业，五种说辞，除如实上交外其余全部会被识破。",
+        btn: ["主动上交作业","谎称忘在家","说被同学借走","声称路上丢失","借口昨晚生病"],
+        action: [
+            () => {
+                if(!G.hasBag || !G.hasHomework) return gameOver("拿不出作业，直接退学！");
+                G.intel +=30; G.rep +=18;
+                setLog("作业完整，获得老师好评");
+                goStage(7);
+            },
+            () => {
+                return gameOver("谎言被戳穿，从重处罚！");
+            },
+            () => {
+                return gameOver("借口不合理，老师当场求证！");
+            },
+            () => {
+                return gameOver("丢失理由不成立，记大过！");
+            },
+            () => {
+                return gameOver("生病借口无证明，判定撒谎！");
+            }
+        ]
+    },
+    // 7 终极连环答题：5选答题 + 四轮连续考题 伪答案大量增加
+    {
+        bg: "https://picsum.photos/id/1033/800/400",
+        title: "✏️ 炼狱四轮测验",
+        desc: "四轮连续答题，每题5个选项，大量伪正确答案，答错一题立即失败。\n第一题：9 × (6 - 2) = ?",
+        btn: ["32","36","40","28","44"],
+        action: [
+            ()=>{gameOver("第一题答错，测验失败！");},
+            ()=>{
+                G.intel +=26;
+                setLog("第一题正确！第二题：72 ÷ (3+5) = ?");
+                stageList[7].desc = "第二题：72 ÷ (3+5) = ?";
+                stageList[7].btn = ["8","9","10","7","11"];
+                stageList[7].action = [
+                    ()=>{gameOver("第二题答错！");},
+                    ()=>{
+                        G.intel +=26;
+                        setLog("第二题正确！第三题：'春风又绿江南岸'作者是？");
+                        stageList[7].desc = "第三题：古诗词：春风又绿江南岸，作者是谁？";
+                        stageList[7].btn = ["李白","杜甫","王安石","白居易","孟浩然"];
+                        stageList[7].action = [
+                            ()=>{gameOver("第三题答错！");},
+                            ()=>{gameOver("第三题答错！");},
+                            ()=>{
+                                G.intel +=28;
+                                setLog("第三题正确！最后一题：直角三角形内角和是？");
+                                stageList[7].desc = "第四题：数学常识：任意三角形内角和为？";
+                                stageList[7].btn = ["90°","180°","270°","360°","120°"];
+                                stageList[7].action = [
+                                    ()=>{gameOver("最终题答错，闯关失败！");},
+                                    ()=>{gameWin("四轮考题全部答对！成功通关炼狱模式！");},
+                                    ()=>{gameOver("最终题答错，闯关失败！");},
+                                    ()=>{gameOver("最终题答错，闯关失败！");},
+                                    ()=>{gameOver("最终题答错，闯关失败！");}
+                                ];
+                                updateUI();renderScene();
+                            },
+                            ()=>{gameOver("第三题答错！");},
+                            ()=>{gameOver("第三题答错！");}
+                        ];
+                        updateUI();renderScene();
+                    },
+                    ()=>{gameOver("第二题答错！");},
+                    ()=>{gameOver("第二题答错！");},
+                    ()=>{gameOver("第二题答错！");}
+                ];
+                updateUI();renderScene();
+            },
+            ()=>{gameOver("第一题答错，测验失败！");},
+            ()=>{gameOver("第一题答错，测验失败！");},
+            ()=>{gameOver("第一题答错，测验失败！");}
+        ]
+    }
+];
+
+// 渲染场景
+function renderScene() {
+    const s = stageList[G.stage];
+    const sceneDom = document.getElementById("scene");
+    sceneDom.style.backgroundImage = `url(${s.bg})`;
+    sceneDom.innerHTML = `<h2>${s.title}</h2><p>${s.desc}</p>`;
+
+    const b1 = document.getElementById("b1");
+    const b2 = document.getElementById("b2");
+    const b3 = document.getElementById("b3");
+    const b4 = document.getElementById("b4");
+    const b5 = document.getElementById("b5");
+
+    b1.innerText = s.btn[0] || "";
+    b2.innerText = s.btn[1] || "";
+    b3.innerText = s.btn[2] || "";
+    b4.innerText = s.btn[3] || "";
+    b5.innerText = s.btn[4] || "";
+
+    b1.style.display = s.btn[0] ? "inline-block" : "none";
+    b2.style.display = s.btn[1] ? "inline-block" : "none";
+    b3.style.display = s.btn[2] ? "inline-block" : "none";
+    b4.style.display = s.btn[3] ? "inline-block" : "none";
+    b5.style.display = s.btn[4] ? "inline-block" : "none";
+
+    b1.disabled = false;
+    b2.disabled = false;
+    b3.disabled = false;
+    b4.disabled = false;
+    b5.disabled = false;
+    updateUI();
+}
+
+// 绑定点击事件
+document.getElementById("b1").onclick = () => stageList[G.stage].action[0]();
+document.getElementById("b2").onclick = () => stageList[G.stage].action[1]();
+document.getElementById("b3").onclick = () => stageList[G.stage].action[2]();
+document.getElementById("b4").onclick = () => stageList[G.stage].action[3]();
+document.getElementById("b5").onclick = () => stageList[G.stage].action[4]();
+document.getElementById("res").onclick = () => location.reload();
+
+// 初始化
+renderScene();
+</script>
+</body>
+</html>

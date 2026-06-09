@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini MC 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .ui {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px 16px;
+            border-radius: 6px;
+            z-index: 10;
+            font-size: 14px;
+            line-height: 1.6;
+            user-select: none;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .cross {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .cross::before,
+        .cross::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+        }
+        .cross::before {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .cross::after {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @media (max-width: 480px) {
+            .ui {
+                font-size: 12px;
+                padding: 8px 12px;
+                top: 6px;
+                left: 6px;
+            }
+            .cross {
+                width: 20px;
+                height: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        WASD：移动<br>
+        鼠标拖拽：旋转视角<br>
+        左键：消除方块<br>
+        右键：放置方块<br>
+        滚轮：远近缩放
+    </div>
+    <div class="cross" aria-hidden="true"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js">
+    </script>
+    <script>
+        // ============================================================
+        // 1. 场景 / 相机 / 渲染器
+        // ============================================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.Fog(0x87ceeb, 20, 80);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 15, 15);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: "high-performance",
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.domElement.id = 'gameCanvas';
+        document.body.prepend(renderer.domElement);
+
+        // ============================================================
+        // 2. 轨道控制器
+        // ============================================================
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = 3;
+        controls.maxDistance = 60;
+        controls.target.set(0, 0, 0);
+
+        // ============================================================
+        // 3. 光照
+        // ============================================================
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(30, 50, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 100;
+        dirLight.shadow.camera.left = -30;
+        dirLight.shadow.camera.right = 30;
+        dirLight.shadow.camera.top = 30;
+        dirLight.shadow.camera.bottom = -30;
+        scene.add(dirLight);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x8b5a2b, 0.3);
+        scene.add(hemiLight);
+
+        // ============================================================
+        // 4. 方块材质（共享）
+        // ============================================================
+        const blockGeo = new THREE.BoxGeometry(1, 1, 1);
+        const grassMat = new THREE.MeshLambertMaterial({ color: 0x5d994c });
+        const dirtMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+        const stoneMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+
+        // ============================================================
+        // 5. 世界方块容器
+        //    - baseTerrain : 不可删除的地基 (y = -1)
+        //    - worldBlocks : 可交互方块 (草方块 + 玩家放置)
+        // ============================================================
+        const baseTerrain = new THREE.Group();
+        const worldBlocks = new THREE.Group();
+
+        const GROUND_SIZE = 16;
+        const HALF = GROUND_SIZE / 2;
+
+        // 5a. 地基 (石头层, y = -1) — 受到保护，不可删除
+        for (let x = -HALF; x < HALF; x++) {
+            for (let z = -HALF; z < HALF; z++) {
+                const stone = new THREE.Mesh(blockGeo, dirtMat);
+                stone.position.set(x, -1, z);
+                stone.receiveShadow = true;
+                stone.castShadow = false;
+                stone.userData.isProtected = true;
+                baseTerrain.add(stone);
+            }
+        }
+
+        // 5b. 草地层 (y = 0) — 可删除
+        for (let x = -HALF; x < HALF; x++) {
+            for (let z = -HALF; z < HALF; z++) {
+                const grass = new THREE.Mesh(blockGeo, grassMat);
+                grass.position.set(x, 0, z);
+                grass.castShadow = true;
+                grass.receiveShadow = true;
+                grass.userData.type = 'grass';
+                grass.userData.isProtected = false;
+                worldBlocks.add(grass);
+            }
+        }
+
+        scene.add(baseTerrain);
+        scene.add(worldBlocks);
+
+        // ============================================================
+        // 6. 射线拾取
+        // ============================================================
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        function getIntersects(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+            // 只检测可交互的 worldBlocks (非递归，所有方块都是直接子级)
+            return raycaster.intersectObjects(worldBlocks.children, false);
+        }
+
+        // ============================================================
+        // 7. 鼠标交互：左键删除 / 右键放置
+        // ============================================================
+        renderer.domElement.addEventListener('mousedown', (event) => {
+            // 仅处理左键(0) 和 右键(2)
+            if (event.button !== 0 && event.button !== 2) return;
+
+            const hits = getIntersects(event);
+            if (hits.length === 0) return;
+
+            const hit = hits[0];
+            const target = hit.object;
+
+            if (event.button === 0) {
+                // ---------- 左键：删除方块 ----------
+                // 保护地基：不可删除标记 或 y <= -1 的方块拒绝删除
+                if (target.userData.isProtected) return;
+                if (target.position.y <= -1) return;
+
+                worldBlocks.remove(target);
+                // 释放几何与材质引用（共享资源无需 dispose，但帮助 GC）
+                target.geometry = undefined;
+                target.material = undefined;
+            } else if (event.button === 2) {
+                // ---------- 右键：放置石头方块 ----------
+                const normal = hit.face.normal.clone();
+                const pos = hit.point.clone().add(normal.multiplyScalar(0.5));
+
+                // 坐标取整到最近的整数，确保对齐网格
+                pos.x = Math.round(pos.x);
+                pos.y = Math.round(pos.y);
+                pos.z = Math.round(pos.z);
+
+                // 防止放置在受保护的地基层 (y < 0 禁止放置)
+                if (pos.y < 0) return;
+
+                // 检查该位置是否已存在方块 (遍历 worldBlocks)
+                let occupied = false;
+                const children = worldBlocks.children;
+                for (let i = 0, len = children.length; i < len; i++) {
+                    const c = children[i];
+                    if (c.position.x === pos.x && c.position.y === pos.y && c.position.z === pos.z) {
+                        occupied = true;
+                        break;
+                    }
+                }
+                if (occupied) return;
+
+                const newBlock = new THREE.Mesh(blockGeo, stoneMat);
+                newBlock.position.copy(pos);
+                newBlock.castShadow = true;
+                newBlock.receiveShadow = true;
+                newBlock.userData.type = 'stone';
+                newBlock.userData.isProtected = false;
+                worldBlocks.add(newBlock);
+            }
+        });
+
+        // 禁用右键菜单
+        renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // ============================================================
+        // 8. 键盘移动 (WASD)
+        // ============================================================
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (['w', 'a', 's', 'd', 'shift', 'control'].includes(key)) {
+                keys[key] = true;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (['w', 'a', 's', 'd', 'shift', 'control'].includes(key)) {
+                keys[key] = false;
+            }
+        });
+
+        function movePlayer() {
+            const speed = 0.20;
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            if (forward.lengthSq() < 0.001) return;
+            forward.normalize();
+
+            const right = new THREE.Vector3();
+            right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+            let moved = false;
+            if (keys['w']) { camera.position.addScaledVector(forward, speed);
+                moved = true; }
+            if (keys['s']) { camera.position.addScaledVector(forward, -speed);
+                moved = true; }
+            if (keys['a']) { camera.position.addScaledVector(right, speed);
+                moved = true; }
+            if (keys['d']) { camera.position.addScaledVector(right, -speed);
+                moved = true; }
+
+            // 防止相机陷入地面
+            if (camera.position.y < 0.5) {
+                camera.position.y = 0.5;
+            }
+
+            // 边界限制 (防止走出世界太远)
+            const limit = HALF + 4;
+            camera.position.x = Math.max(-limit, Math.min(limit, camera.position.x));
+            camera.position.z = Math.max(-limit, Math.min(limit, camera.position.z));
+
+            if (moved) {
+                controls.update();
+            }
+        }
+
+        // ============================================================
+        // 9. 窗口自适应 (带防抖)
+        // ============================================================
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            if (resizeTimer) cancelAnimationFrame(resizeTimer);
+            resizeTimer = requestAnimationFrame(() => {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+                resizeTimer = null;
+            });
+        });
+
+        // ============================================================
+        // 10. 渲染循环
+        // ============================================================
+        function animate() {
+            requestAnimationFrame(animate);
+            movePlayer();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ============================================================
+        // 11. 开发辅助：暴露关键对象到控制台(便于调试)
+        // ============================================================
+        if (window.__DEV__) {
+            window.scene = scene;
+            window.camera = camera;
+            window.renderer = renderer;
+            window.controls = controls;
+            window.worldBlocks = worldBlocks;
+            window.baseTerrain = baseTerrain;
+        }
+
+        console.log('[Mini MC 3D] 优化版已启动 — 地基受保护，放置方块已对齐网格');
+    </script>
+</body>
+</html>

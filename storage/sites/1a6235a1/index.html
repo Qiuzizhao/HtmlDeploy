@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>紫雾蓝渊 · 浮游水母</title>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    user-select:none;
+}
+body{
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    /* 粉紫蓝渐变深海 */
+    background:linear-gradient(180deg,#2b1e42,#402c5c,#604080,#8058a8,#b088cc,#c8a8e0,#b8c8f2);
+    background-size:200% 220%;
+    animation:seaDrift 35s ease infinite alternate;
+    position:relative;
+    font-family:"Microsoft YaHei",sans-serif;
+}
+@keyframes seaDrift{
+    0%{background-position:0% 0%}
+    100%{background-position:0% 100%}
+}
+/* 水下粉紫柔光光晕 */
+.seaHalo{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(70px);
+    opacity:0.35;
+    animation:haloSlow 28s linear infinite;
+}
+.halo1{
+    width:600px;height:600px;
+    background:#c8b8ff;
+    top:-120px;right:-100px;
+}
+.halo2{
+    width:750px;height:750px;
+    background:#f0b8e8;
+    bottom:-200px;left:-150px;
+    animation-duration:32s;
+}
+@keyframes haloSlow{
+    0%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(-60px,40px) scale(1.2)}
+    100%{transform:translate(0,0) scale(1)}
+}
+#collectNum{
+    position:absolute;
+    top:30px;
+    left:30px;
+    font-size:22px;
+    color:#e8d8ff;
+    text-shadow:0 0 12px #d0a8f0;
+    z-index:99;
+}
+#tipsText{
+    position:absolute;
+    top:70px;
+    left:30px;
+    font-size:14px;
+    color:#d8c0e8;
+    opacity:0.75;
+    z-index:99;
+}
+.jellyfish{
+    position:absolute;
+    cursor:pointer;
+    animation:jellySwim linear infinite;
+    z-index:8;
+}
+.jellyHead{
+    width:100%;
+    height:100%;
+    /* 粉紫水母配色 */
+    background-image:url("data:image/svg+xml,%3Csvg width='40' height='48' viewBox='0 0 40 48' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 4C8 4 4 16 4 24C4 32 12 36 20 36C28 36 36 32 36 24C36 16 32 4 20 4Z' fill='%23e8c8f8' fill-opacity='0.7'/%3E%3Cpath d='M12 36V46M16 36V48M20 38V47M24 36V48M28 36V46' stroke='%23f2d8f8' stroke-opacity='0.6' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:contain;
+    filter:drop-shadow(0 0 12px #d8a8f0);
+}
+@keyframes jellySwim{
+    0%{transform:translateX(0) translateY(0) rotate(-4deg)}
+    50%{transform:translateX(30px) translateY(-15px) rotate(4deg)}
+    100%{transform:translateX(0) translateY(0) rotate(-4deg)}
+}
+.bubble{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(255,230,255,0.18);
+    border:1px solid rgba(230,200,255,0.35);
+    animation:bubbleRise linear infinite;
+    filter:blur(1px);
+}
+@keyframes bubbleRise{
+    0%{transform:translateY(110vh);opacity:0}
+    15%{opacity:0.6}
+    85%{opacity:0.6}
+    100%{transform:translateY(-100px);opacity:0}
+}
+.plankton{
+    position:absolute;
+    width:4px;height:4px;
+    border-radius:50%;
+    background:#f2e0ff;
+    box-shadow:0 0 6px #d8b8f0;
+    opacity:0.6;
+    animation:planktonFloat 12s ease-in-out infinite;
+}
+@keyframes planktonFloat{
+    0%{transform:translate(0,0)}
+    50%{transform:translate(40px,-20px)}
+    100%{transform:translate(0,0)}
+}
+.boomLight{
+    position:absolute;
+    width:1px;height:1px;
+    border-radius:50%;
+    background:rgba(220,180,255,0.7);
+    box-shadow:0 0 40px 20px rgba(200,150,240,0.5);
+    animation:boomExpand 1.3s ease-out forwards;
+    pointer-events:none;
+}
+@keyframes boomExpand{
+    0%{transform:scale(0);opacity:1}
+    100%{transform:scale(8);opacity:0}
+}
+.starParticle{
+    position:absolute;
+    width:5px;height:5px;
+    border-radius:50%;
+    pointer-events:none;
+    filter:blur(1px);
+    animation:particleFly 1s ease-out forwards;
+}
+@keyframes particleFly{
+    0%{opacity:1;transform:scale(1)}
+    100%{opacity:0;transform:scale(0) translate(var(--x),var(--y))}
+}
+</style>
+</head>
+<body>
+<div class="seaHalo halo1"></div>
+<div class="seaHalo halo2"></div>
+
+<div id="collectNum">收集水母荧光：0</div>
+<div id="tipsText">触碰粉紫深海浮游水母，捕捉梦境柔光 ✦</div>
+
+<script>
+const body = document.body;
+let totalCollect = 0;
+const numText = document.getElementById("collectNum");
+// 粉紫蓝粒子配色
+const particleColors = ["#e8c8f8","#f0c8e8","#c8c8f8","#e0d0f8","#d8b8f2"];
+
+function createJelly(){
+    const jellyWrap = document.createElement("div");
+    jellyWrap.className = "jellyfish";
+    const size = Math.random() * 35 + 30;
+    jellyWrap.style.width = size + "px";
+    jellyWrap.style.height = size + "px";
+    const posX = Math.random() * (window.innerWidth - size);
+    const posY = Math.random() * (window.innerHeight * 0.45) + window.innerHeight * 0.25;
+    jellyWrap.style.left = posX + "px";
+    jellyWrap.style.top = posY + "px";
+    jellyWrap.style.animationDuration = (Math.random() * 7 + 6) + "s";
+
+    const jellyBody = document.createElement("div");
+    jellyBody.className = "jellyHead";
+    jellyWrap.appendChild(jellyBody);
+
+    jellyWrap.onclick = function(){
+        totalCollect++;
+        numText.innerText = "收集水母荧光：" + totalCollect;
+        createBoomEffect(posX + size/2, posY + size/2);
+        body.removeChild(jellyWrap);
+    }
+    body.appendChild(jellyWrap);
+    setTimeout(()=>{
+        if(body.contains(jellyWrap)){
+            jellyWrap.style.opacity = "0";
+            setTimeout(()=>body.removeChild(jellyWrap), 400);
+        }
+    }, 11000)
+}
+
+function createBoomEffect(cx, cy){
+    const boom = document.createElement("div");
+    boom.className = "boomLight";
+    boom.style.left = cx + "px";
+    boom.style.top = cy + "px";
+    body.appendChild(boom);
+    setTimeout(()=>body.removeChild(boom),1300);
+
+    for(let i=0;i<12;i++){
+        const p = document.createElement("div");
+        p.className = "starParticle";
+        p.style.background = particleColors[Math.floor(Math.random()*particleColors.length)];
+        const angle = (i / 12) * Math.PI * 2;
+        const dist = Math.random() * 70 + 35;
+        p.style.left = cx + "px";
+        p.style.top = cy + "px";
+        p.style.setProperty("--x", Math.cos(angle)*dist + "px");
+        p.style.setProperty("--y", Math.sin(angle)*dist + "px");
+        body.appendChild(p);
+        setTimeout(()=>body.removeChild(p),1000);
+    }
+}
+
+function createBubble(){
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    const size = Math.random() * 12 + 4;
+    bubble.style.width = size + "px";
+    bubble.style.height = size + "px";
+    bubble.style.left = Math.random() * window.innerWidth + "px";
+    bubble.style.animationDuration = (Math.random() * 10 + 8) + "s";
+    body.appendChild(bubble);
+    setTimeout(()=>body.removeChild(bubble), 18000);
+}
+
+function createPlankton(){
+    const plank = document.createElement("div");
+    plank.className = "plankton";
+    plank.style.left = Math.random() * window.innerWidth + "px";
+    plank.style.top = Math.random() * window.innerHeight + "px";
+    body.appendChild(plank);
+}
+
+setInterval(createJelly, 1400);
+setInterval(createBubble, 600);
+setInterval(createPlankton, 2200);
+
+for(let i=0;i<6;i++) createJelly();
+for(let i=0;i<15;i++) createBubble();
+for(let i=0;i<30;i++) createPlankton();
+</script>
+</body>
+</html>

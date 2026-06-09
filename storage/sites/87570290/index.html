@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>魏无羡心动攻略</title>
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:"微软雅黑",sans-serif;
+}
+body{
+  background:#fce9ef;
+  text-align:center;
+  padding:20px;
+}
+.game-box{
+  width:700px;
+  margin:20px auto;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 0 20px rgba(0,0,0,0.1);
+  padding:30px;
+}
+.title{
+  font-size:28px;
+  color:#e64384;
+  margin-bottom:10px;
+}
+.subtitle{
+  color:#888;
+  margin-bottom:20px;
+}
+.heart-box{
+  font-size:18px;
+  color:#e64384;
+  margin:10px 0;
+}
+#heart{
+  font-size:24px;
+  font-weight:bold;
+}
+.img-box{
+  width:260px;
+  height:320px;
+  margin:0 auto;
+  background:#fdf0f5;
+  border-radius:12px;
+  overflow:hidden;
+}
+.img-box img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.dialog{
+  font-size:17px;
+  min-height:50px;
+  margin:20px 0;
+  color:#333;
+}
+.choice-btn{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:center;
+  margin:20px 0;
+}
+.choice-btn button{
+  padding:10px 20px;
+  font-size:16px;
+  background:#e698b7;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+.choice-btn button:hover{
+  background:#e64384;
+}
+.reset-btn{
+  padding:10px 25px;
+  background:#c2567d;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+.kiss-anim{
+  animation:kiss 0.6s ease-in-out;
+}
+@keyframes kiss{
+  0%{transform:scale(1);}
+  50%{transform:scale(1.12);}
+  100%{transform:scale(1);}
+}
+</style>
+</head>
+<body>
+
+<div class="game-box">
+  <div class="title">魏无羡心动攻略</div>
+  <div class="subtitle">蓝湛，快来把魏婴撩到脸红心跳～</div>
+
+  <div class="heart-box">
+    魏无羡心动值：<span id="heart">0</span>
+  </div>
+
+  <div class="img-box">
+    <img id="wxImg" src="https://p.qqan.com/up/2021-3/16165573986116666.jpg">
+  </div>
+
+  <div class="dialog" id="dialog">
+    魏无羡正在云深不知处闲逛，看起来轻松又自在，对你还没特别心动～
+  </div>
+
+  <div class="choice-btn">
+    <button onclick="choose(1)">给他买天子笑</button>
+    <button onclick="choose(2)">温柔看着他</button>
+    <button onclick="choose(3)">轻轻牵他的手</button>
+    <button onclick="choose(4)">靠近他轻声说话</button>
+  </div>
+
+  <button class="reset-btn" onclick="resetGame()">重新攻略</button>
+</div>
+
+<script>
+let heart = 0;
+const dialog = document.getElementById('dialog');
+const heartText = document.getElementById('heart');
+const wxImg = document.getElementById('wxImg');
+
+const img = {
+  normal: "https://p.qqan.com/up/2021-3/16165573986116666.jpg",
+  shy:    "https://p.qqan.com/up/2021-3/16165574066666666.jpg",
+  kiss:   "https://p.qqan.com/up/2021-4/16172956888888888.jpg"
+}
+
+function updateUI(){
+  heartText.innerText = heart;
+  if(heart >= 80){
+    wxImg.src = img.shy;
+  }else{
+    wxImg.src = img.normal;
+  }
+}
+
+function choose(t){
+  switch(t){
+    case 1: heart+=15; dialog.innerText="你给魏无羡买天子笑，他眼睛一亮～心动+15"; break;
+    case 2: heart+=10; dialog.innerText="你温柔看着他，魏无羡有点不好意思～心动+10"; break;
+    case 3: heart+=30; dialog.innerText="你轻轻牵住他的手，魏无羡瞬间脸红！心动+30！"; break;
+    case 4: heart+=20; dialog.innerText="你靠近他轻声说话，他心跳加速～心动+20"; break;
+  }
+  if(heart>100) heart=100;
+  updateUI();
+  checkEnd();
+}
+
+function checkEnd(){
+  if(heart >= 100){
+    dialog.innerText="💞 心动值满！魏无羡害羞地吻了你——攻略成功！";
+    wxImg.src = img.kiss;
+    wxImg.classList.add("kiss-anim");
+    document.querySelectorAll(".choice-btn button").forEach(b=>b.disabled=true);
+  }
+}
+
+function resetGame(){
+  heart=0;
+  updateUI();
+  wxImg.classList.remove("kiss-anim");
+  document.querySelectorAll(".choice-btn button").forEach(b=>b.disabled=false);
+  dialog.innerText="魏无羡正在云深不知处闲逛，对你还没特别心动～";
+}
+
+updateUI();
+</script>
+</body>
+</html>

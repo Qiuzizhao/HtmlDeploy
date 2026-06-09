@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三角洲冒险</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #2E8B57;
+            margin-bottom: 15px;
+            font-size: 2.2em;
+            text-shadow: 1px 1px 2px #fff;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #gameCanvas {
+            border: 3px solid #2E8B57;
+            border-radius: 8px;
+            background: #4682B4;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .controls {
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 16px;
+            margin: 0 8px;
+            border: none;
+            border-radius: 8px;
+            background: #2E8B57;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #3CB371;
+            transform: scale(1.05);
+        }
+
+        .tips {
+            margin-top: 15px;
+            color: #555;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🌴 三角洲冒险 🌴</h1>
+        <div class="game-info">
+            <div>得分: <span id="score">0</span></div>
+            <div>生命: <span id="lives">3</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        
+        <div class="controls">
+            <button id="startBtn">开始游戏</button>
+            <button id="pauseBtn">暂停</button>
+            <button id="resetBtn">重新开始</button>
+        </div>
+        
+        <div class="tips">
+            🎮 操作：方向键 ← → 控制小船移动 | 收集绿色物资得分 | 躲避红色障碍物
+        </div>
+    </div>
+
+    <script>
+        // 获取画布和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 游戏变量
+        let score = 0;
+        let lives = 3;
+        let gameRunning = false;
+        let gamePaused = false;
+        
+        // 玩家小船
+        const boat = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 60,
+            width: 50,
+            height: 40,
+            speed: 8
+        };
+        
+        // 游戏元素数组
+        const supplies = [];
+        const obstacles = [];
+        
+        // 键盘控制
+        const keys = {
+            right: false,
+            left: false
+        };
+        
+        // 事件监听
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowLeft') keys.left = true;
+            if(e.key === 'ArrowRight') keys.right = true;
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if(e.key === 'ArrowLeft') keys.left = false;
+            if(e.key === 'ArrowRight') keys.right = false;
+        });
+        
+        // 按钮控制
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        
+        // 绘制小船
+        function drawBoat() {
+            // 船身
+            ctx.fillStyle = '#FF6347';
+            ctx.fillRect(boat.x, boat.y, boat.width, boat.height);
+            
+            // 船帆
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.moveTo(boat.x + boat.width/2, boat.y - 10);
+            ctx.lineTo(boat.x + 5, boat.y + 10);
+            ctx.lineTo(boat.x + boat.width - 5, boat.y + 10);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // 创建物资
+        function createSupply() {
+            return {
+                x: Math.random() * (canvas.width - 20),
+                y: -20,
+                size: 20,
+                speed: 3 + Math.random() * 2
+            };
+        }
+        
+        // 创建障碍物
+        function createObstacle() {
+            return {
+                x: Math.random() * (canvas.width - 30),
+                y: -30,
+                size: 30,
+                speed: 4 + Math.random() * 3
+            };
+        }
+        
+        // 绘制物资
+        function drawSupply(supply) {
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(supply.x + supply.size/2, supply.y + supply.size/2, supply.size/2, 0, Math.PI*2);
+            ctx.fill();
+        }
+        
+        // 绘制障碍物
+        function drawObstacle(obstacle) {
+            ctx.fillStyle = '#DC143C';
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
+        }
+        
+        // 碰撞检测
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.size &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.size &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // 更新游戏
+        function updateGame() {
+            if(!gameRunning || gamePaused) return;
+            
+            // 移动小船
+            if(keys.left && boat.x > 0) boat.x -= boat.speed;
+            if(keys.right && boat.x < canvas.width - boat.width) boat.x += boat.speed;
+            
+            // 随机生成物资
+            if(Math.random() < 0.02) supplies.push(createSupply());
+            
+            // 随机生成障碍物
+            if(Math.random() < 0.015) obstacles.push(createObstacle());
+            
+            // 更新物资
+            for(let i = supplies.length - 1; i >= 0; i--) {
+                supplies[i].y += supplies[i].speed;
+                
+                // 收集物资
+                if(checkCollision(boat, supplies[i])) {
+                    score += 10;
+                    supplies.splice(i, 1);
+                    updateScore();
+                }
+                // 移除超出屏幕的物资
+                else if(supplies[i].y > canvas.height) supplies.splice(i, 1);
+            }
+            
+            // 更新障碍物
+            for(let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += obstacles[i].speed;
+                
+                // 撞到障碍物
+                if(checkCollision(boat, obstacles[i])) {
+                    lives--;
+                    obstacles.splice(i, 1);
+                    updateLives();
+                    
+                    if(lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+                // 移除超出屏幕的障碍物
+                else if(obstacles[i].y > canvas.height) obstacles.splice(i, 1);
+            }
+        }
+        
+        // 绘制游戏
+        function drawGame() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制背景波纹
+            ctx.fillStyle = 'rgba(173, 216, 230, 0.3)';
+            for(let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.arc(i, canvas.height - 20, 15, 0, Math.PI*2);
+                ctx.fill();
+            }
+            
+            // 绘制所有元素
+            drawBoat();
+            supplies.forEach(drawSupply);
+            obstacles.forEach(drawObstacle);
+            
+            // 游戏状态提示
+            if(!gameRunning) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '36px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('点击开始游戏', canvas.width/2, canvas.height/2);
+            }
+            
+            if(gamePaused && gameRunning) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'yellow';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('游戏暂停', canvas.width/2, canvas.height/2);
+            }
+        }
+        
+        // 游戏循环
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 开始游戏
+        function startGame() {
+            if(!gameRunning) {
+                gameRunning = true;
+                gamePaused = false;
+            } else {
+                gamePaused = false;
+            }
+        }
+        
+        // 暂停游戏
+        function togglePause() {
+            if(gameRunning) gamePaused = !gamePaused;
+        }
+        
+        // 重置游戏
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            boat.x = canvas.width / 2 - 25;
+            supplies.length = 0;
+            obstacles.length = 0;
+            gameRunning = false;
+            gamePaused = false;
+            updateScore();
+            updateLives();
+        }
+        
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+            alert(`游戏结束！你的得分：${score}`);
+            resetGame();
+        }
+        
+        // 更新分数显示
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+        
+        // 更新生命显示
+        function updateLives() {
+            document.getElementById('lives').textContent = lives;
+        }
+        
+        // 启动游戏循环
+        gameLoop();
+    </script>
+</body>
+</html>

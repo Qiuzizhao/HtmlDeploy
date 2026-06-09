@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>原耽猜作者 - 小游戏</title>
+<style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family:"微软雅黑",sans-serif;
+    }
+    body{
+        background:#1e1e2f;
+        color:white;
+        padding:20px;
+    }
+    .game{
+        max-width:550px;
+        margin:50px auto;
+        background:#2a2a41;
+        padding:35px;
+        border-radius:18px;
+        box-shadow:0 5px 25px rgba(0,0,0,0.2);
+    }
+    .title{
+        text-align:center;
+        font-size:26px;
+        color:#ff6b9d;
+        margin-bottom:8px;
+    }
+    .tip{
+        text-align:center;
+        color:#aaa;
+        margin-bottom:35px;
+        font-size:14px;
+    }
+    .quote{
+        font-size:20px;
+        line-height:1.8;
+        text-align:center;
+        margin:40px 0;
+        min-height:100px;
+        color:#f0f0f0;
+    }
+    .btn{
+        display:block;
+        width:100%;
+        padding:16px;
+        margin:12px 0;
+        border:none;
+        border-radius:12px;
+        font-size:17px;
+        background:#3b3b57;
+        color:white;
+        cursor:pointer;
+        transition:0.2s;
+    }
+    .btn:hover{
+        background:#ff6b9d;
+        transform:scale(1.02);
+    }
+    .score{
+        text-align:center;
+        margin-top:25px;
+        font-size:18px;
+        color:#ccc;
+    }
+    .result{
+        text-align:center;
+        margin-top:15px;
+        font-size:16px;
+        height:22px;
+    }
+</style>
+</head>
+<body>
+
+<div class="game">
+    <div class="title">🧸 原耽经典句 · 猜作者</div>
+    <div class="tip">根据句子选择正确的作者，2选1</div>
+
+    <div class="quote" id="quote">加载中...</div>
+
+    <button class="btn" id="a" onclick="choose(0)"></button>
+    <button class="btn" id="b" onclick="choose(1)"></button>
+
+    <div class="result" id="result"></div>
+    <div class="score">当前得分：<span id="score">0</span></div>
+</div>
+
+<script>
+// 题库：句子 + 正确答案 + 干扰项
+const questions = [
+    {
+        quote: "未经允许，擅自特别喜欢你，不好意思了。",
+        answer: "Priest",
+        wrong: "木苏里"
+    },
+    {
+        quote: "我无坚不摧，也无所不能。",
+        answer: "木苏里",
+        wrong: "淮上"
+    },
+    {
+        quote: "地狱太冷，墨燃，我来殉你。",
+        answer: "肉包不吃肉",
+        wrong: "木瓜黄"
+    },
+    {
+        quote: "人间骄阳正好，风过林梢，彼时他们正当年少。",
+        answer: "木苏里",
+        wrong: "Priest"
+    },
+    {
+        quote: "没有谁的生活会一直完美，但无论什么时候，都要看着前方，满怀希望就会所向披靡。",
+        answer: "巫哲",
+        wrong: "淮上"
+    },
+    {
+        quote: "殿下，我永远是你最忠诚的信徒。",
+        answer: "墨香铜臭",
+        wrong: "肉包不吃肉"
+    },
+    {
+        quote: "未知苦处，不信神佛。",
+        answer: "Priest",
+        wrong: "巫哲"
+    },
+    {
+        quote: "我的骨骼说，我还是爱你。",
+        answer: "木苏里",
+        wrong: "墨香铜臭"
+    },
+    {
+        quote: "你是我的文艺复兴。",
+        answer: "稚楚",
+        wrong: "木瓜黄"
+    },
+    {
+        quote: "江添不再是哥哥，也不再是男朋友，兜来转去，又成了盛望不知该怎么称呼的人。",
+        answer: "木苏里",
+        wrong: "巫哲"
+    },
+    {
+        quote: "上元佳节，神武大街，惊鸿一瞥，百世沦陷。",
+        answer: "墨香铜臭",
+        wrong: "Priest"
+    },
+    {
+        quote: "一起去啊，更远的地方。",
+        answer: "木瓜黄",
+        wrong: "淮上"
+    }
+];
+
+let score = 0;
+let current;
+let correctIndex;
+
+// 随机题目
+function nextQuestion(){
+    current = questions[Math.floor(Math.random() * questions.length)];
+    
+    // 随机答案位置（A或B）
+    correctIndex = Math.floor(Math.random() * 2);
+    
+    document.getElementById("quote").innerText = current.quote;
+    document.getElementById("result").innerText = "";
+
+    if(correctIndex === 0){
+        document.getElementById("a").innerText = current.answer;
+        document.getElementById("b").innerText = current.wrong;
+    }else{
+        document.getElementById("a").innerText = current.wrong;
+        document.getElementById("b").innerText = current.answer;
+    }
+}
+
+// 选择答案
+function choose(user){
+    if(user === correctIndex){
+        score++;
+        document.getElementById("result").innerText = "✅ 正确！";
+        document.getElementById("result").style.color = "#4ade80";
+    }else{
+        document.getElementById("result").innerText = "❌ 错误，正确：" + current.answer;
+        document.getElementById("result").style.color = "#f87171";
+    }
+    document.getElementById("score").innerText = score;
+    
+    // 延迟0.5秒下一题
+    setTimeout(nextQuestion, 600);
+}
+
+// 开始游戏
+nextQuestion();
+</script>
+</body>
+</html>

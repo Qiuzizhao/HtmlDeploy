@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>男同小说·2选1剧情小游戏</title>
+<style>
+*{box-sizing:border-box}
+body{background:#1a1a1d; color:#fff; font-family:微软雅黑; padding:20px; margin:0}
+.main{max-width:500px; margin:40px auto; background:#2c2c34; padding:30px; border-radius:16px}
+.title{font-size:24px; color:#f67280; margin-bottom:10px}
+.desc{color:#ccc; margin-bottom:20px}
+.story{font-size:18px; line-height:1.7; margin-bottom:30px; min-height:100px}
+.choice{display:block; width:100%; padding:14px; margin:10px 0; border:none; border-radius:10px; font-size:16px; background:#4a4a5a; color:#fff; cursor:pointer}
+.choice:hover{background:#f67280; color:#fff}
+.end{font-size:20px; color:#ffb6c1; margin-top:20px}
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="title">男同小说·2选1剧情小游戏</div>
+  <div class="desc">选择你的走向，开启甜甜的剧情～</div>
+  <div id="story" class="story">正在加载剧情...</div>
+  <div id="choices"></div>
+</div>
+
+<script>
+// 剧情结构：text 剧情 + 选项A + 分支A + 选项B + 分支B
+const storyData = [
+  {
+    text: "雨天，你在书店躲雨，身边站着一个清瘦、气息干净的男生。他不小心碰掉了你的书。",
+    a: "轻声对他说没关系",
+    aNext: 1,
+    b: "开玩笑说他是不是故意的",
+    bNext: 2
+  },
+  {
+    text: "男生脸颊微红，连忙道歉，还主动帮你把书擦干净。你们开始聊了起来。",
+    a: "主动约他下次一起看书",
+    aNext: 3,
+    b: "害羞低头，不再说话",
+    bNext: 4
+  },
+  {
+    text: "男生愣了一下，忽然笑起来：原来你也看出来啦？气氛瞬间变得暧昧。",
+    a: "顺势靠近他",
+    aNext: 5,
+    b: "假装正经转移话题",
+    bNext: 6
+  },
+  {
+    text: "他眼睛一亮，立刻答应。你们交换联系方式，雨天变成了最温柔的相遇。【结局：温柔相遇】",
+    a: "", aNext: -1,
+    b: "", bNext: -1
+  },
+  {
+    text: "他以为你不想聊天，便礼貌告别。你们在雨天错过，只剩一本被碰落的书。【结局：无声错过】",
+    a: "", aNext: -1,
+    b: "", bNext: -1
+  },
+  {
+    text: "他心跳加速，轻声说：其实我从刚才看见你，就有点紧张了。【结局：暧昧心动】",
+    a: "", aNext: -1,
+    b: "", bNext: -1
+  },
+  {
+    text: "气氛有点尴尬，他笑着说你真可爱，但没有再进一步。【结局：朋友以上】",
+    a: "", aNext: -1,
+    b: "", bNext: -1
+  }
+]
+
+let current = 0
+
+function loadStory(){
+  const s = storyData[current]
+  document.getElementById("story").innerText = s.text
+
+  const choices = document.getElementById("choices")
+  choices.innerHTML = ""
+
+  if(current === -1) return
+
+  if(s.aNext !== -1){
+    const btnA = document.createElement("button")
+    btnA.className = "choice"
+    btnA.innerText = s.a
+    btnA.onclick = ()=>{ current = s.aNext; loadStory() }
+    choices.appendChild(btnA)
+  }
+
+  if(s.bNext !== -1){
+    const btnB = document.createElement("button")
+    btnB.className = "choice"
+    btnB.innerText = s.b
+    btnB.onclick = ()=>{ current = s.bNext; loadStory() }
+    choices.appendChild(btnB)
+  }
+}
+
+loadStory()
+</script>
+</body>
+</html>

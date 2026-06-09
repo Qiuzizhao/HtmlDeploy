@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简易跑酷游戏</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {display: flex; flex-direction: column; align-items: center; background: #f0f0f0;}
+        #gameBox {
+            width: 800px;
+            height: 300px;
+            background: #87CEEB;
+            border: 2px solid #333;
+            overflow: hidden;
+            position: relative;
+            margin-top: 20px;
+        }
+        #ground {
+            width: 100%;
+            height: 60px;
+            background: #6B4226;
+            position: absolute;
+            bottom: 0;
+        }
+        #player {
+            width: 40px;
+            height: 40px;
+            background: #2196F3;
+            position: absolute;
+            bottom: 60px;
+            left: 80px;
+            border-radius: 8px;
+        }
+        .obstacle {
+            width: 30px;
+            height: 40px;
+            background: #f44336;
+            position: absolute;
+            bottom: 60px;
+        }
+        #score {
+            font-size: 24px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        #tip {
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">得分：0</div>
+    <div id="tip">按 空格键 跳跃躲避障碍</div>
+    <div id="gameBox">
+        <div id="ground"></div>
+        <div id="player"></div>
+    </div>
+
+    <script>
+        const gameBox = document.getElementById('gameBox');
+        const player = document.getElementById('player');
+        const scoreDom = document.getElementById('score');
+
+        // 游戏参数
+        let isJump = false;
+        let jumpSpeed = 0;
+        const gravity = 0.8;
+        let playerBottom = 60;
+        let speed = 6;
+        let score = 0;
+        let gameOver = false;
+        let obstacles = [];
+
+        // 跳跃逻辑
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isJump && !gameOver) {
+                isJump = true;
+                jumpSpeed = 15;
+            }
+        });
+
+        // 创建障碍物
+        function createObstacle() {
+            if (gameOver) return;
+            const obs = document.createElement('div');
+            obs.className = 'obstacle';
+            obs.style.left = gameBox.clientWidth + 'px';
+            gameBox.appendChild(obs);
+            obstacles.push(obs);
+        }
+
+        // 碰撞检测
+        function checkCollision(rect1, rect2) {
+            return !(
+                rect1.right < rect2.left ||
+                rect1.left > rect2.right ||
+                rect1.bottom < rect2.top ||
+                rect1.top > rect2.bottom
+            );
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            if (gameOver) return;
+
+            // 玩家跳跃+重力
+            if (isJump) {
+                playerBottom += jumpSpeed;
+                jumpSpeed -= gravity;
+                if (playerBottom <= 60) {
+                    playerBottom = 60;
+                    isJump = false;
+                }
+            }
+            player.style.bottom = playerBottom + 'px';
+
+            // 移动障碍物
+            obstacles.forEach((obs, index) => {
+                let left = parseInt(obs.style.left);
+                left -= speed;
+                obs.style.left = left + 'px';
+
+                // 障碍物移出屏幕，移除并加分
+                if (left < -30) {
+                    gameBox.removeChild(obs);
+                    obstacles.splice(index, 1);
+                    score++;
+                    scoreDom.innerText = `得分：${score}`;
+                    // 逐步提升速度
+                    if (score % 10 === 0) speed += 0.5;
+                }
+
+                // 碰撞判断
+                const pRect = player.getBoundingClientRect();
+                const oRect = obs.getBoundingClientRect();
+                if (checkCollision(pRect, oRect)) {
+                    gameOver = true;
+                    alert(`游戏结束！最终得分：${score}`);
+                    location.reload(); // 刷新重启游戏
+                }
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 定时生成障碍物
+        setInterval(createObstacle, 1200);
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>

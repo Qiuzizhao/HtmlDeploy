@@ -1,6 +1,78 @@
 {
   "logs": [
     {
+      "id": "2901b630",
+      "type": "ai-optimize",
+      "text": "「x'x'x'x」AI 优化完成并已保存（deepseek-v4-flash）。",
+      "status": "success",
+      "time": "12:03:56",
+      "createdAt": "2026-06-09T04:03:57.326Z"
+    },
+    {
+      "id": "7852864f",
+      "type": "ai-optimize",
+      "text": "正在AI 优化「x'x'x'x」",
+      "status": "running",
+      "time": "12:02:31",
+      "createdAt": "2026-06-09T04:02:32.539Z"
+    },
+    {
+      "id": "6e7a28fb",
+      "type": "ai-optimize",
+      "text": "「x'x'x'x」AI 优化任务已创建，后台会继续执行。",
+      "status": "running",
+      "time": "12:02:31",
+      "createdAt": "2026-06-09T04:02:32.377Z"
+    },
+    {
+      "id": "137eee3b",
+      "type": "ai-optimize",
+      "text": "正在提交AI 优化任务「x'x'x'x」...",
+      "status": "running",
+      "time": "12:02:31",
+      "createdAt": "2026-06-09T04:02:32.234Z"
+    },
+    {
+      "id": "65efb598",
+      "type": "ai-optimize",
+      "text": "正在AI 优化「MC」",
+      "status": "running",
+      "time": "11:59:38",
+      "createdAt": "2026-06-09T03:59:39.677Z"
+    },
+    {
+      "id": "8a5aa399",
+      "type": "ai-optimize",
+      "text": "「MC」AI 优化任务已创建，后台会继续执行。",
+      "status": "running",
+      "time": "11:59:38",
+      "createdAt": "2026-06-09T03:59:39.521Z"
+    },
+    {
+      "id": "dbc13b57",
+      "type": "ai-optimize",
+      "text": "正在提交AI 优化任务「MC」...",
+      "status": "running",
+      "time": "11:59:38",
+      "createdAt": "2026-06-09T03:59:39.358Z"
+    },
+    {
+      "id": "2eeffc77",
+      "type": "ai-optimize",
+      "text": "「我的寄8」AI 命名完成：简易枪战（deepseek-v4-flash）。",
+      "status": "success",
+      "time": "11:39:53",
+      "createdAt": "2026-06-09T03:39:53.924Z"
+    },
+    {
+      "id": "5e0b163c",
+      "type": "ai-optimize",
+      "text": "正在 AI 命名「我的寄8」...",
+      "status": "running",
+      "time": "11:39:50",
+      "createdAt": "2026-06-09T03:39:51.303Z"
+    },
+    {
       "id": "61f777ce",
       "type": "ai-optimize",
       "text": "「双人连招格斗」AI 优化完成并已保存（deepseek-v4-flash）。",

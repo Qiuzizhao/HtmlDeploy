@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌿 躲猫猫小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 28px;
+            margin: 20px 0;
+            color: #2d3436;
+        }
+
+        .info {
+            display: flex;
+            gap: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2d3436;
+        }
+
+        .game-box {
+            display: grid;
+            grid-template-columns: repeat(3, 110px);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .grass {
+            width: 110px;
+            height: 110px;
+            background: #228B22;
+            border-radius: 55px 55px 20px 20px;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .grass:hover {
+            transform: scale(1.05);
+        }
+
+        .item {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+        }
+
+        .grass.show .item {
+            display: block;
+        }
+
+        /* 得分飘字 */
+        .score-text {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 22px;
+            font-weight: bold;
+            color: #ff3e3e;
+            text-shadow: 1px 1px 2px #fff;
+            animation: scoreUp 0.6s forwards;
+            pointer-events: none;
+        }
+
+        @keyframes scoreUp {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+        }
+
+        /* 彩带特效容器 */
+        #confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            background: #ff7675;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #ff6b6b;
+        }
+
+        @keyframes fall {
+            100% { top: 100%; opacity: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="title">🌿 躲猫猫 — 找到藏起来的小猫</h1>
+
+    <div class="info">
+        <div>得分：<span id="score">0</span></div>
+        <div>点击草丛寻找小猫</div>
+    </div>
+
+    <div class="game-box" id="gameBox">
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+        <div class="grass" onclick="check(this)"><img class="item" src="https://cdn-icons-png.flaticon.com/512/105/105685.png"></div>
+    </div>
+
+    <div id="confetti"></div>
+    <button class="btn" onclick="resetGame()">重新开始</button>
+
+    <script>
+        let score = 0;
+        const grasses = document.querySelectorAll('.grass');
+        const scoreDom = document.getElementById('score');
+        let targetIndex = 0;
+
+        // 初始随机躲藏，仅一个目标
+        function randomHide() {
+            // 先隐藏所有小猫
+            grasses.forEach(g => g.classList.remove('show'));
+            // 随机选中唯一一个草丛藏小猫
+            targetIndex = Math.floor(Math.random() * grasses.length);
+        }
+
+        // 点击草丛判断
+        function check(grass) {
+            const clickIndex = Array.from(grasses).indexOf(grass);
+            // 展示当前躲藏位置
+            grasses[targetIndex].classList.add('show');
+
+            if (clickIndex === targetIndex) {
+                // 猜中：加分、飘字、彩带
+                score++;
+                scoreDom.innerText = score;
+                showScoreText(grass);
+                startConfetti();
+            }
+
+            // 1秒后重新随机躲藏，始终只有一只
+            setTimeout(() => {
+                randomHide();
+            }, 1000);
+        }
+
+        // 加分飘字
+        function showScoreText(grass) {
+            const text = document.createElement('div');
+            text.className = 'score-text';
+            text.innerText = '+1';
+            grass.appendChild(text);
+            setTimeout(() => text.remove(), 600);
+        }
+
+        // 彩带下落特效
+        function startConfetti() {
+            const confetti = document.getElementById('confetti');
+            const colors = ['#f00','#0f0','#00f','#ff0','#f0f','#0ff','#fff'];
+            
+            for(let i = 0; i < 70; i++) {
+                const p = document.createElement('div');
+                p.style.position = 'absolute';
+                p.style.width = '10px';
+                p.style.height = '10px';
+                p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                p.style.borderRadius = '50%';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = '0px';
+                p.style.animation = `fall ${Math.random() * 1.5 + 0.5}s linear forwards`;
+                confetti.appendChild(p);
+            }
+
+            setTimeout(() => confetti.innerHTML = '', 2000);
+        }
+
+        // 重置游戏
+        function resetGame() {
+            score = 0;
+            scoreDom.innerText = 0;
+            randomHide();
+        }
+
+        // 页面加载完成初始化
+        randomHide();
+    </script>
+</body>
+</html>

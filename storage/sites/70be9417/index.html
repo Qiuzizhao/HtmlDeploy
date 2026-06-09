@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>打地鼠小游戏</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{text-align:center;background:#f0f8ff;padding-top:30px;}
+        h1{color:#222;margin-bottom:20px;}
+        .info{font-size:20px;margin:10px 0;}
+        .box{width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+        .hole{
+            width:120px;height:120px;
+            background:#8b4513;border-radius:50%;
+            margin:10px;cursor:pointer;
+        }
+        .mouse{background:#deb887;}
+    </style>
+</head>
+<body>
+    <h1>趣味打地鼠</h1>
+    <div class="info">得分：<span id="score">0</span> | 时间：<span id="time">30</span>秒</div>
+    <div class="box" id="box"></div>
+
+    <script>
+        const box = document.getElementById('box');
+        const scoreDom = document.getElementById('score');
+        const timeDom = document.getElementById('time');
+        let score = 0, time = 30;
+        let timer, mouseTimer;
+
+        // 生成9个地洞
+        for(let i=0;i<9;i++){
+            let div = document.createElement('div');
+            div.className = 'hole';
+            div.onclick = function(){
+                if(this.classList.contains('mouse')){
+                    score++;
+                    scoreDom.innerText = score;
+                    this.classList.remove('mouse');
+                }
+            }
+            box.appendChild(div);
+        }
+        const holes = document.querySelectorAll('.hole');
+
+        // 随机出现地鼠
+        function showMouse(){
+            // 先清空所有地鼠
+            holes.forEach(h=>h.classList.remove('mouse'));
+            // 随机一个洞
+            let idx = Math.floor(Math.random()*9);
+            holes[idx].classList.add('mouse');
+        }
+
+        // 倒计时
+        timer = setInterval(()=>{
+            time--;
+            timeDom.innerText = time;
+            if(time <= 0){
+                clearInterval(timer);
+                clearInterval(mouseTimer);
+                alert(`游戏结束！你的最终得分：${score}`);
+            }
+        },1000)
+
+        // 地鼠刷新
+        mouseTimer = setInterval(showMouse, 800);
+    </script>
+</body>
+</html>

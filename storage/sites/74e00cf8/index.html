@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>302宿舍 · 诡则（含隐藏结局）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", monospace;
+        }
+
+        body {
+            background-color: #010103;
+            color: #d0d0d0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            overflow-x: hidden;
+            box-shadow: inset 0 0 200px 40px #000;
+            transition: all 0.1s;
+        }
+
+        /* 全屏频闪惊吓 */
+        @keyframes flashHard {
+            0%,100% {background:#010103;}
+            25%,75% {background:#6b0000;}
+            50% {background:#000;}
+        }
+        .flash-hard {
+            animation: flashHard 0.2s ease-in-out 4;
+        }
+
+        /* 画面抖动 */
+        @keyframes shake {
+            0%,100% {transform: translateX(0);}
+            25% {transform: translateX(-3px);}
+            75% {transform: translateX(3px);}
+        }
+        .shake {
+            animation: shake 0.15s infinite;
+        }
+
+        /* 诡异文字扭曲 */
+        @keyframes textTwist {
+            0%,100% {transform: skewX(0deg); opacity:0.9;}
+            50% {transform: skewX(3deg); opacity:0.6;}
+        }
+        .text-twist {
+            animation: textTwist 0.6s infinite;
+            color: #ff4444;
+        }
+
+        /* 血色光晕 */
+        @keyframes bloodGlow {
+            0%,100% {box-shadow: 0 0 25px #330000;}
+            50% {box-shadow: 0 0 50px #770000;}
+        }
+        .game-container {
+            width: 100%;
+            max-width: 750px;
+            background: #08080e;
+            border: 1px solid #401010;
+            padding: 30px;
+            border-radius: 2px;
+            position: relative;
+            animation: bloodGlow 5s infinite;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 28px;
+            color: #ff1a1a;
+            margin-bottom: 25px;
+            letter-spacing: 4px;
+            display: none;
+            text-shadow: 0 0 10px #990000;
+        }
+
+        .rules-box {
+            background: #0a0a14;
+            padding: 24px;
+            border-left: 6px solid #b30000;
+            margin: 25px 0;
+            line-height: 1.9;
+            display: none;
+            border-radius: 2px;
+        }
+
+        .fake-rule {
+            color: #888;
+            text-decoration: line-through;
+        }
+        .blood-text {
+            color: #ff2e2e;
+            font-weight: bold;
+        }
+        .warn-text {
+            color: #ff6666;
+        }
+
+        .story-text {
+            line-height: 2;
+            font-size: 16px;
+            min-height: 130px;
+            white-space: pre-line;
+            margin-bottom: 25px;
+        }
+
+        .choice-btn {
+            background: #141420;
+            color: #e2e2e2;
+            border: 1px solid #441c1c;
+            padding: 13px 18px;
+            margin: 10px 0;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: 0.2s;
+            display: none;
+            font-size: 15px;
+        }
+        .choice-btn:hover {
+            background: #2b1212;
+            border-color: #ff2222;
+        }
+
+        .ending-box {
+            color: #ff2222;
+            font-size: 17px;
+            text-align: center;
+            padding: 30px 20px;
+            border: 2px solid #800000;
+            background: #0d0404;
+            display: none;
+            line-height: 2.1;
+            margin-top: 20px;
+        }
+
+        .start-btn {
+            background: #800000;
+            color: #fff;
+            border: none;
+            padding: 18px 40px;
+            font-size: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 40px auto;
+            display: block;
+            letter-spacing: 3px;
+        }
+        .start-btn:hover {
+            background: #aa0000;
+            box-shadow: 0 0 20px #ff0000;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            background: #1a0f0f;
+            border: 1px solid #660000;
+        }
+
+        .hint {
+            font-size: 14px;
+            color: #777;
+            text-align: center;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="title" id="title">302 宿舍 · 诡则</div>
+    <div class="hint" id="hint">⚠️ 纸条上有被划掉的内容，规则不全为真</div>
+
+    <div class="story-text" id="story"></div>
+
+    <div class="rules-box" id="rules">
+        <strong class="blood-text">【枕边纸条 · 宿舍守则】</strong><br>
+        <span class="warn-text">纸张潮湿，多处被血渍浸透，部分规则被涂改</span><br>
+        1. 23:00后严禁下床，床下之物会拖拽活人。<br>
+        2. 走廊拖地声响起，捂耳静卧，不得张望。<br>
+        3. 深夜敲门者绝非宿管，切勿应答、切勿开门。<br>
+        4. 室友对空床低语，立刻装睡，禁止对视。<br>
+        5. 零点后镜子会映出替身，绝对不能照镜。<br>
+        <span class="fake-rule">6. 感到有人触碰你，可以轻声呼救。（划掉）</span><br>
+        7. <span class="blood-text">若听见有人叫你的名字，假装没有听见。</span><br>
+        8. 天亮前，保持绝对安静。
+    </div>
+
+    <!-- 第一阶段8个选择 -->
+    <button class="choice-btn" id="c1">捂紧耳朵闭眼，全程一动不动（保守遵守规则）</button>
+    <button class="choice-btn" id="c2">凑近猫眼，查看门外究竟是谁</button>
+    <button class="choice-btn" id="c3">侧身偷瞄正在低语的室友</button>
+    <button class="choice-btn" id="c4">打开手机灯光，下意识看向墙面镜子</button>
+    <button class="choice-btn" id="c5">小声开口，试探性回应门外声音</button>
+    <button class="choice-btn" id="c6">悄悄挪到床沿，想听听床下的动静</button>
+    <button class="choice-btn" id="c7">闭眼装睡，但刻意留一条缝隙观察四周</button>
+    <button class="choice-btn" id="c8">屏住呼吸，安静等待，同时默数时间（隐藏路线触发）</button>
+
+    <button class="choice-btn restart-btn" id="restart">重新进入302宿舍</button>
+
+    <!-- 结局区域 -->
+    <div class="ending-box" id="end1">
+        【惨死结局·门外之物】<br>
+        猫眼后的黑发贴紧玻璃，无数指甲疯狂抓挠门板。<br>
+        门板被缓缓推开，黑暗彻底吞噬了你。
+    </div>
+    <div class="ending-box" id="end2">
+        【惨死结局·枕边同行】<br>
+        室友转头，整张脸血肉模糊。<br>
+        冰冷的躯体靠向你，你再也无法离开这间宿舍。
+    </div>
+    <div class="ending-box" id="end3">
+        【惨死结局·镜中傀儡】<br>
+        镜中人走出镜面，替换了你的存在。<br>
+        从此，302宿舍多了一个“新住户”。
+    </div>
+    <div class="ending-box" id="end4">
+        【惨死结局·出声引魂】<br>
+        你的声音成为了诱饵。<br>
+        四面八方的低语全部向你聚拢，你被声音淹没。
+    </div>
+    <div class="ending-box" id="end5">
+        【惨死结局·床下拖拽】<br>
+        你靠近床沿的瞬间，数只冰冷的手抓住你的脚踝。<br>
+        你被拖入黑暗的床底，再无音讯。
+    </div>
+    <div class="ending-box" id="end6">
+        【普通存活·苟活黎明】<br>
+        你严格遵守规则，熬到天光乍现。<br>
+        诡异声响全部消失，你侥幸活了下来。
+    </div>
+    <div class="ending-box" id="end7">
+        【诡异结局·被盯上的观察者】<br>
+        你留缝观察的举动被察觉。<br>
+        它们没有立刻伤害你，但从此记住了你的气息。<br>
+        今夜过后，你再也无法摆脱302的纠缠。
+    </div>
+    <div class="ending-box" id="hideEnd1">
+        🔮【隐藏结局·守夜人】<br>
+        你默数时间，精准熬过所有诡异时段。<br>
+        天亮时你发现，所有规则都是往届守夜人留下的。<br>
+        你通过了考验，成为新一任302宿舍守夜人。
+    </div>
+    <div class="ending-box" id="hideEnd2">
+        🔮【隐藏结局·洞悉虚妄】<br>
+        你看穿了涂改的假规则，心如止水坚守到底。<br>
+        一切幻象消散，宿舍恢复正常。<br>
+        你彻底摆脱了此地的诅咒。
+    </div>
+</div>
+
+<script>
+    // 音效
+    const heart = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horror-heartbeat-602.mp3');
+    const knock = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-door-knock-2018.mp3');
+    const drag = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-bag-dragging-on-floor-2214.mp3');
+    const whisper = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horror-whisper-1262.mp3');
+    const scream = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horror-short-scream-1242.mp3');
+    const rumble = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-horror-low-rumble-1257.mp3');
+    heart.loop = true;
+    rumble.loop = true;
+
+    // DOM
+    const story = document.getElementById('story');
+    const title = document.getElementById('title');
+    const rules = document.getElementById('rules');
+    const hint = document.getElementById('hint');
+    const startBtn = document.getElementById('startBtn');
+    const restart = document.getElementById('restart');
+    const body = document.body;
+    const container = document.querySelector('.game-container');
+
+    // 选项
+    const c1=document.getElementById('c1'),c2=document.getElementById('c2'),c3=document.getElementById('c3');
+    const c4=document.getElementById('c4'),c5=document.getElementById('c5'),c6=document.getElementById('c6');
+    const c7=document.getElementById('c7'),c8=document.getElementById('c8');
+
+    // 结局
+    const end1=document.getElementById('end1'),end2=document.getElementById('end2'),end3=document.getElementById('end3');
+    const end4=document.getElementById('end4'),end5=document.getElementById('end5'),end6=document.getElementById('end6');
+    const end7=document.getElementById('end7'),hide1=document.getElementById('hideEnd1'),hide2=document.getElementById('hideEnd2');
+
+    let run = false;
+
+    // 打字机
+    function typeText(el,text,speed=26){
+        el.innerText='';
+        let i=0;
+        let t=setInterval(()=>{
+            el.innerText+=text[i];
+            i++;
+            if(i>=text.length) clearInterval(t);
+        },speed);
+    }
+
+    // 隐藏全部选项&结局
+    function hideAll(){
+        [c1,c2,c3,c4,c5,c6,c7,c8].forEach(x=>x.style.display='none');
+        [end1,end2,end3,end4,end5,end6,end7,hide1,hide2].forEach(x=>x.style.display='none');
+    }
+
+    // 停止所有音效
+    function stopAllAudio(){
+        heart.pause();rumble.pause();knock.pause();drag.pause();whisper.pause();scream.pause();
+    }
+
+    // 开始游戏
+    startBtn.addEventListener('click',()=>{
+        if(run) return;
+        run=true;
+        startBtn.style.display='none';
+        hideAll();
+        body.classList.remove('flash-hard','shake');
+        story.classList.remove('text-twist');
+
+        rumble.volume=0.2;rumble.play();
+        heart.volume=0.45;heart.play();
+
+        title.style.display='block';
+        hint.style.display='block';
+
+        let openTxt = `你转学入住传闻被诅咒的302宿舍。
+深夜23:00整，整栋楼骤然断电。
+室温急速下降，空气中弥漫着铁锈般的血腥味。
+
+一张反复被人翻阅、沾有暗红液体的纸条落在枕边。
+上面写满生存规则，还有多处被刻意划掉的文字。
+
+黑暗里，危险已经开始靠近……`;
+        typeText(story,openTxt);
+
+        setTimeout(()=>{
+            rules.style.display='block';
+        },4500);
+
+        setTimeout(()=>{
+            let eventTxt = `走廊传来拖沓的拖地声，由远及近，停在你的门外。
+咚——咚——咚——缓慢的敲门声响起。
+
+身旁室友背对床铺，对着空无一人的床位低声呢喃。
+床底下传来细微的摩擦声，像是有东西在爬行。
+黑暗中，似乎还有细碎的呼唤声，在轻轻叫你的名字。`;
+            typeText(story,eventTxt);
+
+            drag.volume=0.38;drag.play();
+            setTimeout(()=>{knock.volume=0.42;knock.play();whisper.volume=0.22;whisper.play();},1800);
+
+            setTimeout(()=>{
+                [c1,c2,c3,c4,c5,c6,c7,c8].forEach(x=>x.style.display='block');
+            },3200);
+        },9500);
+    });
+
+    // 选项1：标准遵守规则 → 普通存活
+    c1.addEventListener('click',()=>{
+        stopAllAudio();hideAll();
+        let txt = `你死死捂住耳朵，紧闭双眼，全身僵硬不动。
+门外敲击、拖地声、低语声逐一远去。
+漫长的黑夜熬到尽头，第一缕阳光照进宿舍。`;
+        typeText(story,txt);
+        setTimeout(()=>{end6.style.display='block';restart.style.display='block';},3800);
+    });
+
+    // 选项2：看猫眼 → 惨死1
+    c2.addEventListener('click',()=>{
+        scream.play();body.classList.add('flash-hard','shake');story.classList.add('text-twist');hideAll();
+        let txt = `你凑近猫眼，浓密黑发直接贴在玻璃上。
+尖锐的抓挠声疯狂响起，门板开始变形。
+它要进来了。`;
+        typeText(story,txt);
+        setTimeout(()=>{
+            body.classList.remove('flash-hard','shake');story.classList.remove('text-twist');
+            end1.style.display='block';restart.style.display='block';
+        },3800);
+    });
+
+    // 选项3：看室友 → 惨死2
+    c3.addEventListener('click',()=>{
+        scream.play();body.classList.add('flash-hard','shake');story.classList.add('text-twist');hideAll();
+        let txt = `你转头看向室友，她缓缓转过来。
+五官溃烂，血水不断滴落。
+腐烂的手伸向你的脖颈。`;
+        typeText(story,txt);
+        setTimeout(()=>{
+            body.classList.remove('flash-hard','shake');story.classList.remove('text-twist');
+            end2.style.display='block';restart.style.display='block';
+        },3800);
+    });
+
+    // 选项4：照镜子 → 惨死3
+    c4.addEventListener('click',()=>{
+        scream.play();body.classList.add('flash-hard','shake');story.classList.add('text-twist');hideAll();
+        let txt = `手机灯光照亮镜面，镜中的你咧嘴狂笑。
+人影一步步走出镜子，现实的你逐渐失去意识。`;
+        typeText(story,txt);
+        setTimeout(()=>{
+            body.classList.remove('flash-hard','shake');story.classList.remove('text-twist');
+            end3.style.display='block';restart.style.display='block';
+        },3800);
+    });
+
+    // 选项5：出声回应 → 惨死4
+    c5.addEventListener('click',()=>{
+        scream.play();body.classList.add('flash-hard','shake');story.classList.add('text-twist');hideAll();
+        let txt = `你发出声音的瞬间，四周所有低语全部涌向你。
+无数黑影从黑暗中浮现，将你彻底包裹。`;
+        typeText(story,txt);
+        setTimeout(()=>{
+            body.classList.remove('flash-hard','shake');story.classList.remove('text-twist');
+            end4.style.display='block';restart.style.display='block';
+        },3800);
+    });
+
+    // 选项6：探床沿听床下 → 惨死5
+    c6.addEventListener('click',()=>{
+        scream.play();body.classList.add('flash-hard','shake');story.classList.add('text-twist');hideAll();
+        let txt = `你刚挪到床沿，数只冰冷湿滑的手猛地攥住你的脚踝。
+巨大的拉力将你向下拖拽，坠入无尽黑暗。`;
+        typeText(story,txt);
+        setTimeout(()=>{
+            body.classList.remove('flash-hard','shake');story.classList.remove('text-twist');
+            end5.style.display='block';restart.style.display='block';
+        },3800);
+    });
+
+    // 选项7：留缝偷看 → 诡异结局（非死亡）
+    c7.addEventListener('click',()=>{
+        stopAllAudio();hideAll();
+        let txt = `你眯眼留缝观察，自以为无人发现。
+黑暗中一双眼睛一直盯着你。
+它们没有动手，但你的气息被牢牢记住。`;
+        typeText(story,txt);
+        setTimeout(()=>{end7.style.display='block';restart.style.display='block';},3800);
+    });
+
+    // 选项8：默数时间 → 触发双隐藏结局（随机切换）
+    c8.addEventListener('click',()=>{
+        stopAllAudio();hideAll();
+        let txt = `你屏住呼吸，平稳默数时间，无视一切异响。
+你留意到纸条上被划掉的假规则，内心全然镇定。
+时间一分一秒流逝，黑夜即将终结……`;
+        typeText(story,txt);
+        // 随机两个隐藏结局
+        let rnd = Math.random();
+        setTimeout(()=>{
+            if(rnd > 0.5){
+                hide1.style.display='block'; // 守夜人
+            }else{
+                hide2.style.display='block'; // 洞悉虚妄
+            }
+            restart.style.display='block';
+        },4000);
+    });
+
+    // 重启
+    restart.addEventListener('click',()=>{
+        stopAllAudio();
+        location.reload();
+    });
+</script>
+</body>
+</html>

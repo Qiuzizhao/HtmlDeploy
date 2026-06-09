@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>趣味涂鸦画板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+
+        body {
+            background: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+        }
+
+        h1 {
+            color: #2d3436;
+            margin-bottom: 20px;
+        }
+
+        /* 工具栏 */
+        .tool-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        button, input[type="color"], input[type="range"] {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button {
+            background: #74b9ff;
+            color: #fff;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #0984e3;
+        }
+
+        .color-box {
+            width: 40px;
+            height: 35px;
+            padding: 0;
+            border: 2px solid #ddd;
+        }
+
+        .range-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 画布容器 */
+        .canvas-wrap {
+            border: 4px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            background: #fff;
+        }
+
+        #drawCanvas {
+            display: block;
+            background: #ffffff;
+            touch-action: none; /* 禁止画布拖拽滑动 */
+        }
+
+        .tip {
+            margin-top: 15px;
+            color: #636e72;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 趣味涂鸦画板</h1>
+
+    <div class="tool-bar">
+        <input type="color" id="colorPicker" class="color-box" value="#000000">
+        <div class="range-wrap">
+            <span>粗细：</span>
+            <input type="range" id="lineWidth" min="2" max="30" value="5">
+        </div>
+        <button id="eraser">橡皮擦</button>
+        <button id="clearAll">清空画布</button>
+        <button id="saveImg">保存画作</button>
+    </div>
+
+    <div class="canvas-wrap">
+        <canvas id="drawCanvas" width="800" height="500"></canvas>
+    </div>
+
+    <div class="tip">鼠标/手指按住拖动即可绘画，切换颜色和画笔粗细自由创作~</div>
+
+    <script>
+        // 获取元素
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const colorPicker = document.getElementById('colorPicker');
+        const lineWidth = document.getElementById('lineWidth');
+        const eraserBtn = document.getElementById('eraser');
+        const clearBtn = document.getElementById('clearAll');
+        const saveBtn = document.getElementById('saveImg');
+
+        // 绘画配置
+        let isDraw = false;
+        let currentColor = "#000000";
+        let currentWidth = 5;
+        let isEraser = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // 初始化画笔样式
+        function initStyle() {
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = currentWidth;
+        }
+        initStyle();
+
+        // 开始绘画
+        function startDraw(e) {
+            isDraw = true;
+            // 兼容鼠标 & 触屏
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        // 绘画过程
+        function drawing(e) {
+            if (!isDraw) return;
+            const pos = getPos(e);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        // 结束绘画
+        function endDraw() {
+            isDraw = false;
+        }
+
+        // 获取坐标（适配鼠标+手机触屏）
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.type.includes('touch')) {
+                return {
+                    x: e.touches[0].clientX - rect.left,
+                    y: e.touches[0].clientY - rect.top
+                }
+            } else {
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                }
+            }
+        }
+
+        // 切换颜色
+        colorPicker.addEventListener('input', () => {
+            isEraser = false;
+            currentColor = colorPicker.value;
+            ctx.strokeStyle = currentColor;
+        });
+
+        // 切换画笔粗细
+        lineWidth.addEventListener('input', () => {
+            currentWidth = lineWidth.value;
+            ctx.lineWidth = currentWidth;
+        });
+
+        // 橡皮擦
+        eraserBtn.addEventListener('click', () => {
+            isEraser = !isEraser;
+            if (isEraser) {
+                ctx.strokeStyle = "#ffffff";
+                eraserBtn.style.background = "#e17055";
+            } else {
+                ctx.strokeStyle = currentColor;
+                eraserBtn.style.background = "#74b9ff";
+            }
+        });
+
+        // 清空画布
+        clearBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // 保存图片
+        saveBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = "我的涂鸦画作.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
+
+        // 鼠标事件
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', drawing);
+        canvas.addEventListener('mouseup', endDraw);
+        canvas.addEventListener('mouseout', endDraw);
+
+        // 触屏事件（手机适配）
+        canvas.addEventListener('touchstart', startDraw);
+        canvas.addEventListener('touchmove', drawing);
+        canvas.addEventListener('touchend', endDraw);
+        canvas.addEventListener('touchcancel', endDraw);
+    </script>
+</body>
+</html>

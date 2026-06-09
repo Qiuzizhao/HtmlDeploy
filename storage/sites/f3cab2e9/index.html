@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>道具跑酷小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 游戏主容器 */
+        .game-container {
+            width: 800px;
+            height: 300px;
+            background-color: #fff;
+            border: 2px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 玩家角色 */
+        .player {
+            width: 50px;
+            height: 50px;
+            background-color: #ff6b6b;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 20px;
+            left: 80px;
+            transition: all 0.1s;
+        }
+        /* 护盾特效 */
+        .player.shield {
+            box-shadow: 0 0 0 4px #ffd700;
+        }
+
+        /* 跳跃动画 */
+        .jump {
+            animation: jump 0.5s linear;
+        }
+        @keyframes jump {
+            0% { bottom: 20px; }
+            50% { bottom: 120px; }
+            100% { bottom: 20px; }
+        }
+
+        /* 障碍物 */
+        .obstacle {
+            width: 30px;
+            height: 40px;
+            background-color: #4ecdc4;
+            position: absolute;
+            bottom: 20px;
+            right: -30px;
+            animation: obstacle-move 1.5s infinite linear;
+        }
+        @keyframes obstacle-move {
+            0% { right: -30px; }
+            100% { right: 800px; }
+        }
+        /* 加速/减速动画 */
+        .speed-fast {
+            animation: obstacle-move 0.8s infinite linear !important;
+        }
+        .speed-slow {
+            animation: obstacle-move 2.2s infinite linear !important;
+        }
+
+        /* 通用道具样式 */
+        .item {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            position: absolute;
+            right: -30px;
+            animation: item-move 1.5s infinite linear;
+        }
+        @keyframes item-move {
+            0% { right: -30px; }
+            100% { right: 800px; }
+        }
+        /* 金币道具 */
+        .coin {
+            background-color: #ffd700;
+            bottom: 80px;
+        }
+        /* 护盾道具 */
+        .shield-item {
+            background-color: #ff9500;
+            bottom: 140px;
+        }
+        /* 加速道具 */
+        .speed-up {
+            background-color: #2ecc71;
+            bottom: 50px;
+        }
+        /* 减速道具 */
+        .speed-down {
+            background-color: #9b59b6;
+            bottom: 110px;
+        }
+
+        /* 分数、状态显示 */
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 18px;
+            color: #e63946;
+        }
+
+        /* 游戏结束 */
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff0000;
+            display: none;
+            text-align: center;
+        }
+        .restart-tip {
+            font-size: 18px;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        /* 操作提示 */
+        .tips {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #666;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameBox">
+        <div class="player" id="player"></div>
+        <div class="obstacle" id="obstacle"></div>
+
+        <!-- 道具容器 -->
+        <div class="item coin" id="coin"></div>
+        <div class="item shield-item" id="shieldItem"></div>
+        <div class="item speed-up" id="speedUpItem"></div>
+        <div class="item speed-down" id="speedDownItem"></div>
+
+        <div class="score" id="score">分数: 0</div>
+        <div class="status" id="status">状态：正常</div>
+        <div class="game-over" id="gameOver">
+            游戏结束!
+            <div class="restart-tip">点击游戏区域重新开始</div>
+        </div>
+    </div>
+
+    <div class="tips">
+        空格键跳跃 | 💰金币+5分 | 🛡️护盾抵挡一次撞击 | ⚡加速 | 🐢减速
+    </div>
+
+    <script>
+        // DOM元素
+        const gameBox = document.getElementById('gameBox');
+        const player = document.getElementById('player');
+        const obstacle = document.getElementById('obstacle');
+        const coin = document.getElementById('coin');
+        const shieldItem = document.getElementById('shieldItem');
+        const speedUpItem = document.getElementById('speedUpItem');
+        const speedDownItem = document.getElementById('speedDownItem');
+        const scoreText = document.getElementById('score');
+        const statusText = document.getElementById('status');
+        const gameOverText = document.getElementById('gameOver');
+
+        // 游戏全局变量
+        let score = 0;
+        let isGameOver = false;
+        let hasShield = false; // 是否拥有护盾
+        let speedTimer = null; // 速度效果计时器
+
+        // 空格键跳跃
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isGameOver && !player.classList.contains('jump')) {
+                player.classList.add('jump');
+                setTimeout(() => player.classList.remove('jump'), 500);
+            }
+        });
+
+        // 碰撞检测通用方法
+        function isCollide(elem1, elem2) {
+            const r1 = elem1.getBoundingClientRect();
+            const r2 = elem2.getBoundingClientRect();
+            return r1.left < r2.right && r1.right > r2.left && r1.bottom > r2.top && r1.top < r2.bottom;
+        }
+
+        // 障碍物碰撞逻辑
+        function obstacleHit() {
+            if (!isGameOver && isCollide(player, obstacle)) {
+                if (hasShield) {
+                    // 有护盾：抵消伤害，移除护盾
+                    hasShield = false;
+                    player.classList.remove('shield');
+                    statusText.innerText = "状态：护盾消失";
+                } else {
+                    // 无护盾：游戏结束
+                    gameOver();
+                }
+            }
+        }
+
+        // 拾取金币
+        function pickCoin() {
+            if (!isGameOver && isCollide(player, coin)) {
+                score += 5;
+                scoreText.innerText = `分数: ${score}`;
+                // 重置道具位置，模拟重新生成
+                coin.style.animation = 'none';
+                setTimeout(() => coin.style.animation = 'item-move 1.5s infinite linear', 100);
+            }
+        }
+
+        // 拾取护盾
+        function pickShield() {
+            if (!isGameOver && isCollide(player, shieldItem) && !hasShield) {
+                hasShield = true;
+                player.classList.add('shield');
+                statusText.innerText = "状态：拥有护盾";
+                shieldItem.style.animation = 'none';
+                setTimeout(() => shieldItem.style.animation = 'item-move 1.5s infinite linear', 100);
+            }
+        }
+
+        // 拾取加速道具
+        function pickSpeedUp() {
+            if (!isGameOver && isCollide(player, speedUpItem)) {
+                obstacle.classList.add('speed-fast');
+                statusText.innerText = "状态：全场加速";
+                clearTimeout(speedTimer);
+                // 5秒后恢复正常
+                speedTimer = setTimeout(() => {
+                    obstacle.classList.remove('speed-fast');
+                    statusText.innerText = "状态：正常";
+                }, 5000);
+                speedUpItem.style.animation = 'none';
+                setTimeout(() => speedUpItem.style.animation = 'item-move 1.5s infinite linear', 100);
+            }
+        }
+
+        // 拾取减速道具
+        function pickSpeedDown() {
+            if (!isGameOver && isCollide(player, speedDownItem)) {
+                obstacle.classList.add('speed-slow');
+                statusText.innerText = "状态：全场减速";
+                clearTimeout(speedTimer);
+                // 5秒后恢复正常
+                speedTimer = setTimeout(() => {
+                    obstacle.classList.remove('speed-slow');
+                    statusText.innerText = "状态：正常";
+                }, 5000);
+                speedDownItem.style.animation = 'none';
+                setTimeout(() => speedDownItem.style.animation = 'item-move 1.5s infinite linear', 100);
+            }
+        }
+
+        // 游戏结束
+        function gameOver() {
+            isGameOver = true;
+            gameOverText.style.display = 'block';
+            obstacle.style.animation = 'none';
+            [coin, shieldItem, speedUpItem, speedDownItem].forEach(item => {
+                item.style.animation = 'none';
+            });
+        }
+
+        // 重新开始游戏
+        gameBox.addEventListener('click', () => {
+            if (isGameOver) restartGame();
+        });
+
+        // 重置游戏
+        function restartGame() {
+            isGameOver = false;
+            score = 0;
+            hasShield = false;
+            clearTimeout(speedTimer);
+
+            scoreText.innerText = `分数: ${score}`;
+            statusText.innerText = "状态：正常";
+            gameOverText.style.display = 'none';
+            player.classList.remove('shield');
+            obstacle.className = 'obstacle';
+
+            // 恢复所有动画
+            obstacle.style.animation = 'obstacle-move 1.5s infinite linear';
+            [coin, shieldItem, speedUpItem, speedDownItem].forEach(item => {
+                item.style.animation = 'item-move 1.5s infinite linear';
+            });
+        }
+
+        // 基础计分
+        setInterval(() => {
+            if (!isGameOver) {
+                score += 1;
+                scoreText.innerText = `分数: ${score}`;
+            }
+        }, 1500);
+
+        // 游戏主循环
+        function gameLoop() {
+            obstacleHit();
+            pickCoin();
+            pickShield();
+            pickSpeedUp();
+            pickSpeedDown();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>

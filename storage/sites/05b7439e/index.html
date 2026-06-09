@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=2.0">
+    <title>小学生都能做懂的题</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(145deg, #0f1724 0%, #1e2837 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, sans-serif;
+            padding: 1.5rem;
+            margin: 0;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 2.8rem;
+            padding: 2.2rem 2rem;
+            box-shadow: 0 35px 55px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255,255,255,0.15);
+            color: #e8edf5;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 450;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-bottom: 2.2rem;
+            color: #dce3f0;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            word-break: break-word;
+        }
+        .progress-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(8, 10, 18, 0.6);
+            border-radius: 4rem;
+            padding: 0.7rem 1.6rem;
+            margin-bottom: 2rem;
+            font-weight: 500;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .question-card {
+            background: rgba(18, 22, 35, 0.7);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 2.2rem;
+            padding: 2rem 1.8rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 18px 30px rgba(0,0,0,0.55);
+        }
+        .question-text {
+            font-size: 1.5rem;
+            font-weight: 500;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            color: #f4f8ff;
+            text-shadow: 0 2px 6px black;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        @media (min-width: 500px) {
+            .input-group {
+                flex-direction: row;
+                align-items: center;
+            }
+        }
+        .answer-input {
+            flex: 1;
+            background: #090c14;
+            border: 1px solid #3d4762;
+            border-radius: 3rem;
+            padding: 1rem 1.6rem;
+            font-size: 1.15rem;
+            color: #ffffff;
+            outline: none;
+            transition: 0.25s;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(6px);
+        }
+        .answer-input:focus {
+            border-color: #b7c9ff;
+            box-shadow: 0 0 18px rgba(170, 190, 255, 0.55);
+        }
+        .answer-input::placeholder {
+            color: #6e7899;
+            font-style: italic;
+            font-weight: 400;
+        }
+        .btn {
+            background: #26314a;
+            border: none;
+            border-radius: 3rem;
+            padding: 1rem 2.2rem;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 1.2px;
+            color: #eef3ff;
+            background: linear-gradient(135deg, #32405e, #171e30);
+            border: 1px solid rgba(255,255,255,0.22);
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.25s;
+            box-shadow: 0 10px 18px rgba(0,0,0,0.45);
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: linear-gradient(135deg, #42557c, #1f2840);
+            border-color: rgba(255,255,255,0.45);
+            color: white;
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .message {
+            margin-top: 1.4rem;
+            font-weight: 500;
+            min-height: 2rem;
+            color: #cbd5f0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .success-msg {
+            color: #b0f0b0;
+            font-weight: 600;
+            text-shadow: 0 0 10px #1e4a2a;
+        }
+        .error-msg {
+            color: #ffb4a2;
+        }
+        .completed-box {
+            text-align: center;
+            background: rgba(55, 80, 65, 0.3);
+            border-radius: 2rem;
+            padding: 2.2rem;
+            margin-top: 1.5rem;
+            border: 1px solid #6b8f76;
+        }
+        .hidden {
+            display: none;
+        }
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: grayscale(0.4);
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="appContainer">
+    <h1>小学生都能做懂的题</h1>
+
+    <div class="progress-area">
+        <span id="progressText">第 1 / 10 题</span>
+    </div>
+
+    <div class="question-card" id="questionCard">
+        <div class="question-text" id="questionDisplay">加载中...</div>
+        <div class="input-group">
+            <input type="text" class="answer-input" id="answerInput" placeholder="输入答案..." autocomplete="off" autofocus>
+            <button class="btn" id="submitBtn">提交</button>
+        </div>
+        <div class="message" id="messageBox"></div>
+    </div>
+
+    <div id="completionArea" class="completed-box hidden">
+        <h2 style="font-size: 2.2rem; margin-bottom: 0.8rem;">十题全对</h2>
+        <p style="font-size:1.2rem; margin-bottom:2rem;" id="completionMessage">你再也不是小学生了</p>
+        <button class="btn" id="playAgainBtn">再来一组</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- 伪随机数生成器 ----------
+        function mulberry32(a) {
+            return function() {
+                a |= 0; a = a + 0x6D2B79F5 | 0;
+                var t = Math.imul(a ^ a >>> 15, 1 | a);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        // ---------- 题目生成器：基于ID(0~99999) ----------
+        function generateQuestion(id) {
+            const seed = id + 1;
+            const rand = mulberry32(seed);
+            const type = Math.floor(rand() * 10);
+            switch(type) {
+                case 0: return generateSetQuestion(rand);
+                case 1: return generateComplexQuestion(rand);
+                case 2: return generateTrigQuestion(rand);
+                case 3: return generateArithmeticQuestion(rand);
+                case 4: return generateHyperbolaQuestion(rand);
+                case 5: return generateProbabilityQuestion(rand);
+                case 6: return generateFunctionQuestion(rand);
+                case 7: return generateVectorQuestion(rand);
+                case 8: return generateTriangleQuestion(rand);
+                case 9: return generateLineCircleQuestion(rand);
+                default: return generateSetQuestion(rand);
+            }
+        }
+
+        function generateSetQuestion(rand) {
+            const roots = new Set();
+            while(roots.size < 2) roots.add(Math.floor(rand() * 5) + 1);
+            const [r1, r2] = [...roots];
+            const m = Math.floor(rand() * 4) + 3;
+            const answerNum = Math.pow(2, 2);
+            const text = `已知集合A={x|x²-${r1+r2}x+${r1*r2}=0}，B={x|0<x<${m}, x∈N}，则A∪B的子集个数为`;
+            return { text, answers: [String(answerNum), numberToChinese(answerNum)] };
+        }
+
+        function generateComplexQuestion(rand) {
+            const realA=1, realB=1, realC=0, realD=2;
+            const text = `复数z满足 (${realA}+${realB}i)z = ${realC}+${realD}i，则 |z| =`;
+            return { text, answers: ['√2', 'sqrt(2)', '1.4142', '1.414'] };
+        }
+
+        function generateTrigQuestion(rand) {
+            const num=3, den=5;
+            const text = `若 sinα = ${num}/${den}，α∈(π/2, π)，则 tan(α+π/4) =`;
+            return { text, answers: ['1/7', '0.142857', '七分之一'] };
+        }
+
+        function generateArithmeticQuestion(rand) {
+            const m = Math.floor(rand() * 4) + 3;
+            const n = 10 - m;
+            const sum = (Math.floor(rand() * 5) + 2) * 2;
+            const answer = sum / 2 * 9;
+            const text = `等差数列{an}中，a${m}+a${n}=${sum}，则前9项和S9 =`;
+            return { text, answers: [String(answer), numberToChinese(answer)] };
+        }
+
+        function generateHyperbolaQuestion(rand) {
+            const k = 2;
+            const e = Math.sqrt(5);
+            const text = `双曲线 x²/a² - y²/b² =1 的一条渐近线为 y=${k}x，则离心率 e =`;
+            return { text, answers: ['√5', 'sqrt(5)', '2.23607', '2.236'] };
+        }
+
+        function generateProbabilityQuestion(rand) {
+            const n = 5;
+            const text = `从1,2,...,${n}中随机取两个不同数字，和为偶数的概率是`;
+            return { text, answers: ['2/5', '0.4', '0.40', '五分之二'] };
+        }
+
+        function generateFunctionQuestion(rand) {
+            const a = 2;
+            const diff = 4;
+            const text = `函数f(x)=x³-3x在区间[-${a},${a}]上的最大值与最小值之差为`;
+            return { text, answers: ['4', '四'] };
+        }
+
+        function generateVectorQuestion(rand) {
+            const aLen=2, bLen=1, angle=60, k=2;
+            const result = '2√3';
+            const text = `向量a,b夹角${angle}°，|a|=${aLen}，|b|=${bLen}，则 |a+${k}b| =`;
+            return { text, answers: ['2√3', 'sqrt(12)', '3.4641', '3.464'] };
+        }
+
+        function generateTriangleQuestion(rand) {
+            const text = `△ABC中，内角A,B,C对边a,b,c，a=2，b=√2，A=45°，则角B = (用度数或弧度)`;
+            return { text, answers: ['30°', '30', 'π/6', 'pi/6', '六分之π', '30度'] };
+        }
+
+        function generateLineCircleQuestion(rand) {
+            const R = 1;
+            const text = `直线 y=x+b 与曲线 y=√(${R*R}-x²) 有两个公共点，则b的取值范围是`;
+            return { text, answers: ['[1, √2)', '[1,1.414)', '1≤b<√2', '[1,sqrt(2))'] };
+        }
+
+        function numberToChinese(num) {
+            const chn = ['零','一','二','三','四','五','六','七','八','九','十'];
+            if (num <= 10) return chn[num];
+            if (num < 20) return '十' + chn[num%10];
+            if (num < 100) {
+                const tens = Math.floor(num/10);
+                const ones = num%10;
+                return chn[tens] + '十' + (ones ? chn[ones] : '');
+            }
+            return String(num);
+        }
+
+        // ---------- 状态与存档 ----------
+        const TOTAL_QUESTIONS = 100000;
+        const STORAGE_PROGRESS = 'math_fill_progress';
+        const STORAGE_SOLVED = 'math_fill_solved_ids';
+
+        let solvedIds = new Set();
+        let questionIds = [];
+        let currentIndex = 0;
+        let allCompleted = false;
+
+        // DOM
+        const questionDisplay = document.getElementById('questionDisplay');
+        const answerInput = document.getElementById('answerInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageBox = document.getElementById('messageBox');
+        const progressText = document.getElementById('progressText');
+        const questionCard = document.getElementById('questionCard');
+        const completionArea = document.getElementById('completionArea');
+        const completionMessage = document.getElementById('completionMessage');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+
+        function saveSolvedIds() {
+            try {
+                localStorage.setItem(STORAGE_SOLVED, JSON.stringify(Array.from(solvedIds)));
+            } catch(e) {}
+        }
+
+        function loadSolvedIds() {
+            try {
+                const stored = localStorage.getItem(STORAGE_SOLVED);
+                if (stored) {
+                    const arr = JSON.parse(stored);
+                    solvedIds = new Set(arr);
+                    return;
+                }
+            } catch(e) {}
+            solvedIds = new Set();
+        }
+
+        function saveProgress() {
+            try {
+                localStorage.setItem(STORAGE_PROGRESS, JSON.stringify({
+                    questionIds,
+                    currentIndex,
+                    allCompleted,
+                    timestamp: Date.now()
+                }));
+            } catch(e) {}
+        }
+
+        function loadProgress() {
+            try {
+                const stored = localStorage.getItem(STORAGE_PROGRESS);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (Array.isArray(data.questionIds) && data.questionIds.length === 10 &&
+                        typeof data.currentIndex === 'number' && data.currentIndex >= 0 && data.currentIndex < 10 &&
+                        typeof data.allCompleted === 'boolean') {
+                        questionIds = data.questionIds;
+                        currentIndex = data.currentIndex;
+                        allCompleted = data.allCompleted;
+                        return true;
+                    }
+                }
+            } catch(e) {}
+            return false;
+        }
+
+        function getAvailableIds() {
+            const allIds = [];
+            for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+                if (!solvedIds.has(i)) allIds.push(i);
+            }
+            return allIds;
+        }
+
+        function generateTenUniqueIds() {
+            const available = getAvailableIds();
+            if (available.length < 10) {
+                alert('你太厉害了，已经完成了几乎所有题目！题库已重置。');
+                solvedIds.clear();
+                saveSolvedIds();
+                return generateTenUniqueIds();
+            }
+            const shuffled = [...available];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, 10);
+        }
+
+        function resetToNewSet() {
+            questionIds = generateTenUniqueIds();
+            currentIndex = 0;
+            allCompleted = false;
+            saveProgress();
+            updateUI();
+        }
+
+        function markCurrentAsSolved() {
+            const qId = questionIds[currentIndex];
+            if (qId !== undefined && !solvedIds.has(qId)) {
+                solvedIds.add(qId);
+                saveSolvedIds();
+            }
+        }
+
+        function markAllCompleted() {
+            allCompleted = true;
+            saveProgress();
+            updateUI();
+        }
+
+        function moveToNext() {
+            if (currentIndex < 9) {
+                currentIndex++;
+                saveProgress();
+                updateUI();
+            } else {
+                markAllCompleted();
+            }
+        }
+
+        function isAnswerCorrect(inputText, questionObj) {
+            if (!inputText || typeof inputText !== 'string') return false;
+            const trimmed = inputText.trim();
+            if (trimmed === '') return false;
+            const normalized = trimmed.replace(/[！!。.]/g, '').toLowerCase();
+            if (normalized === '正确') return true;
+            const cleanInput = trimmed.replace(/\s+/g, '').toLowerCase();
+            return questionObj.answers.some(ans => ans.replace(/\s+/g, '').toLowerCase() === cleanInput);
+        }
+
+        function handleSubmit() {
+            if (allCompleted) {
+                messageBox.innerHTML = '<span class="success-msg">已完成全部，换一组题吧。</span>';
+                return;
+            }
+            const userAnswer = answerInput.value;
+            const qId = questionIds[currentIndex];
+            const q = generateQuestion(qId);
+            if (isAnswerCorrect(userAnswer, q)) {
+                markCurrentAsSolved();
+                messageBox.innerHTML = '<span class="success-msg">回答正确！该题已从题库中移除。</span>';
+                answerInput.value = '';
+                submitBtn.disabled = true;
+                answerInput.disabled = true;
+                setTimeout(() => {
+                    moveToNext();
+                    submitBtn.disabled = false;
+                    answerInput.disabled = false;
+                    if (!allCompleted) answerInput.focus();
+                }, 600);
+            } else {
+                messageBox.innerHTML = '<span class="error-msg">答案错误，再想想。</span>';
+                answerInput.select();
+            }
+        }
+
+        function updateUI() {
+            if (allCompleted) {
+                questionCard.classList.add('hidden');
+                completionArea.classList.remove('hidden');
+                progressText.textContent = '全部完成';
+                if (solvedIds.size >= TOTAL_QUESTIONS) {
+                    completionMessage.textContent = '你已经做完了所有题目，太强了！';
+                } else {
+                    completionMessage.textContent = '十题全对，继续挑战下一组吧。';
+                }
+                messageBox.innerHTML = '';
+            } else {
+                questionCard.classList.remove('hidden');
+                completionArea.classList.add('hidden');
+                const qId = questionIds[currentIndex];
+                const q = generateQuestion(qId);
+                questionDisplay.textContent = q.text + '\n（回答正确即可进入下一题）';
+                progressText.textContent = `第 ${currentIndex + 1} / 10 题`;
+                messageBox.innerHTML = '';
+                answerInput.value = '';
+                answerInput.focus();
+            }
+            submitBtn.disabled = false;
+            answerInput.disabled = false;
+        }
+
+        // 事件绑定
+        submitBtn.addEventListener('click', handleSubmit);
+        answerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit();
+            }
+        });
+        playAgainBtn.addEventListener('click', resetToNewSet);
+
+        // 初始化
+        loadSolvedIds();
+        if (!loadProgress()) {
+            resetToNewSet();
+        } else {
+            updateUI();
+        }
+    })();
+</script>
+</body>
+</html>

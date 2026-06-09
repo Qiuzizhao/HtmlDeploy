@@ -1,6 +1,6 @@
 {
   "allPassword": "652980",
-  "allPasswordEnabled": false,
+  "allPasswordEnabled": true,
   "forbiddenWords": [
     "福音会",
     "中国教徒",
@@ -44400,7 +44400,6 @@
     "大陆放肆",
     "6489",
     "2262784081",
-    "89",
     "邓六四",
     "局长孙宝东是帮凶关系",
     "舌尖粉饰档",
@@ -51101,6 +51100,6 @@
     "77",
     "导管"
   ],
-  "lastUsedSiteNumber": 329,
-  "updatedAt": "2026-06-08T16:57:30.417Z"
+  "lastUsedSiteNumber": 383,
+  "updatedAt": "2026-06-09T04:00:42.475Z"
 }

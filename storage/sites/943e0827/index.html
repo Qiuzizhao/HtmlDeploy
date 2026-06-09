@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>矛盾化解小达人</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .game-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .game-desc {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .characters {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .character {
+            width: 150px;
+            height: 200px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .character-boy {
+            background: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .character-girl {
+            background: linear-gradient(180deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .char-name {
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .char-icon {
+            font-size: 50px;
+            margin: 10px 0;
+        }
+
+        .speech-bubble {
+            position: absolute;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            padding: 15px;
+            width: 180px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            font-size: 14px;
+            color: #333;
+        }
+
+        .bubble-left {
+            left: 50px;
+            top: -20px;
+        }
+
+        .bubble-right {
+            right: 50px;
+            top: -20px;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 10px solid transparent;
+        }
+
+        .bubble-left::after {
+            border-top-color: white;
+            bottom: -20px;
+            left: 20px;
+        }
+
+        .bubble-right::after {
+            border-top-color: white;
+            bottom: -20px;
+            right: 20px;
+        }
+
+        .fight-line {
+            width: 80%;
+            height: 3px;
+            background: #ff6b6b;
+            margin: 20px auto;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .options {
+            margin: 30px 0;
+        }
+
+        .option-btn {
+            background: #4dabf7;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            width: 220px;
+        }
+
+        .option-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(77,171,247,0.3);
+        }
+
+        .option-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result-area {
+            margin: 30px 0;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .restart-btn {
+            background: #51cf66;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+            margin: 0 auto;
+        }
+
+        .restart-btn:hover {
+            background: #40c057;
+        }
+
+        .peace-animation {
+            display: none;
+            font-size: 60px;
+            margin: 20px 0;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .score {
+            font-size: 22px;
+            color: #ff922b;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">🧑‍🤝‍🧑 矛盾化解小达人</h1>
+        <p class="game-desc">小明和小红发生了争吵，请你选择合适的方式化解他们的矛盾！</p>
+        
+        <div class="peace-animation">🎉</div>
+        
+        <div class="characters">
+            <div class="speech-bubble bubble-left">
+                这是我的位置！你凭什么占了？
+            </div>
+            <div class="character character-boy">
+                <div class="char-name">小明</div>
+                <div class="char-icon">🙎‍♂️</div>
+            </div>
+            
+            <div class="fight-line"></div>
+            
+            <div class="character character-girl">
+                <div class="char-name">小红</div>
+                <div class="char-icon">🙎‍♀️</div>
+            </div>
+            <div class="speech-bubble bubble-right">
+                我先来的！明明是你抢我的！
+            </div>
+        </div>
+        
+        <div class="options">
+            <h3>选择化解方式：</h3>
+            <button class="option-btn" onclick="resolveConflict(1)">劝说双方互相道歉</button>
+            <button class="option-btn" onclick="resolveConflict(2)">提议一起分享使用</button>
+            <button class="option-btn" onclick="resolveConflict(3)">帮助分清先后顺序</button>
+        </div>
+        
+        <div class="result-area" id="result"></div>
+        <div class="score" id="score"></div>
+        
+        <button class="restart-btn" id="restart" onclick="restartGame()">重新开始</button>
+    </div>
+
+    <script>
+        // 游戏状态
+        let gameScore = 0;
+        const resultEl = document.getElementById('result');
+        const scoreEl = document.getElementById('score');
+        const restartBtn = document.getElementById('restart');
+        const optionBtns = document.querySelectorAll('.option-btn');
+        const peaceAnim = document.querySelector('.peace-animation');
+        const fightLine = document.querySelector('.fight-line');
+        
+        // 化解矛盾函数
+        function resolveConflict(type) {
+            // 禁用所有按钮
+            optionBtns.forEach(btn => btn.disabled = true);
+            
+            // 隐藏争吵线条
+            fightLine.style.display = 'none';
+            
+            // 显示和解动画
+            peaceAnim.style.display = 'block';
+            
+            let resultText, score;
+            
+            // 根据选择类型给出不同结果
+            switch(type) {
+                case 1:
+                    resultText = "👍 双方互相道歉，矛盾化解！";
+                    score = 80;
+                    break;
+                case 2:
+                    resultText = "🎉 太棒了！分享是最好的解决方式！";
+                    score = 100;
+                    break;
+                case 3:
+                    resultText = "✅ 分清先后，矛盾顺利解决！";
+                    score = 90;
+                    break;
+            }
+            
+            // 显示结果
+            resultEl.textContent = resultText;
+            scoreEl.textContent = `化解评分：${score}分`;
+            gameScore = score;
+            
+            // 显示重新开始按钮
+            restartBtn.style.display = 'block';
+        }
+        
+        // 重新开始游戏
+        function restartGame() {
+            // 重置所有状态
+            optionBtns.forEach(btn => btn.disabled = false);
+            fightLine.style.display = 'block';
+            peaceAnim.style.display = 'none';
+            resultEl.textContent = '';
+            scoreEl.textContent = '';
+            restartBtn.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
