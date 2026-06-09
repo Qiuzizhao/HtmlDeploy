@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kards 二战卡牌对战 - 指挥点完整版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #121826, #101933);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 页面通用 */
+        .page {
+            width: 100%;
+            min-height: 100vh;
+            padding: 20px;
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .title {
+            font-size: 38px;
+            text-align: center;
+            margin: 30px 0;
+            color: #4cd964;
+            text-shadow: 0 0 8px #000;
+        }
+        .sub-title {
+            font-size: 20px;
+            color: #ccc;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .tip-text {
+            color: #ffd700;
+            text-align: center;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 10px 26px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 6px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-primary { background: #2196f3; color: #fff; }
+        .btn-success { background: #2ecc71; color: #fff; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .btn-warning { background: #f39c12; color: #fff; }
+        .btn-info { background: #00bcd4; color: #fff; }
+        .btn-gold { background: #d4ac0d; color: #fff; }
+
+        /* 首页 */
+        #home {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .home-desc {
+            font-size: 18px;
+            color: #bbbbbb;
+            text-align: center;
+            margin-bottom: 40px;
+            line-height: 2;
+            max-width: 700px;
+        }
+        .home-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 总部页面 */
+        #headquarters {
+            padding-top: 30px;
+        }
+        .hq-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            margin: 40px 0;
+        }
+        .hq-card {
+            width: 300px;
+            padding: 25px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .hq-card h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+        .pack-area {
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+        }
+        .card-packs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .pack-box {
+            width: 180px;
+            height: 220px;
+            background: linear-gradient(45deg, #34495e, #2c3e50);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #4fc3f7;
+            transition: 0.3s;
+        }
+        .pack-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #4fc3f7;
+        }
+        .own-card-lib {
+            margin-top: 40px;
+        }
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            min-height: 200px;
+        }
+
+        /* 阵营选择 */
+        #faction { padding-top: 40px; }
+        .faction-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            margin: 40px 0;
+        }
+        .faction-card {
+            width: 260px;
+            padding: 20px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .faction-card:hover {
+            border-color: #4cd964;
+            background: rgba(255,255,255,0.12);
+        }
+        .faction-card.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px #ffd70055;
+        }
+        .faction-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        .faction-desc {
+            color: #ddd;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        /* 规则页 */
+        #rule { line-height: 2; }
+        .rule-box {
+            background: rgba(255,255,255,0.06);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .rule-box h3 {
+            color: #4fc3f7;
+            margin-bottom: 12px;
+            font-size: 20px;
+        }
+
+        /* 卡组编辑(40张上限) */
+        #deck { padding-top: 20px; }
+        .deck-tip {
+            text-align: center;
+            font-size: 17px;
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+        .card-select-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin: 25px 0;
+            min-height: 240px;
+            padding: 20px;
+            background: rgba255,255,255,0.04);
+            border-radius: 10px;
+        }
+        .my-deck { margin: 30px 0; }
+        .deck-card-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+            min-height: 200px;
+        }
+
+        /* 对战界面 */
+        #game { padding-top: 15px; }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 10px;
+        }
+        .turn-info {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4cd964;
+        }
+        .command-info {
+            font-size: 18px;
+            color: #ffd700;
+        }
+        .battlefield {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        .player-field, .ai-field {
+            display: flex;
+            gap: 12px;
+            min-height: 180px;
+            padding: 15px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        .field-title {
+            width: 100%;
+            font-size: 16px;
+            color: #bdbdbd;
+            margin-bottom: 8px;
+        }
+        .hand-area {
+            padding: 20px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .hand-cards {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            min-height: 200px;
+        }
+        .graveyard {
+            padding: 15px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        .grave-cards {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .game-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.92);
+            padding: 40px 70px;
+            border-radius: 12px;
+            font-size: 30px;
+            color: #4cd964;
+            text-align: center;
+            z-index: 9999;
+            display: none;
+        }
+        .game-message.show { display: block; }
+
+        /* 卡牌样式 */
+        .card {
+            width: 120px;
+            height: 170px;
+            background: linear-gradient(160deg, #232c3b, #303d4f);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border: 2px solid #555;
+            position: relative;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .card.selected { border-color: #ffd700; }
+        .card-name {
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .card-faction {
+            font-size: 11px;
+            text-align: center;
+            color: #aaa;
+        }
+        .card-type {
+            font-size: 10px;
+            text-align: center;
+            color: #888;
+        }
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .attack { color: #e74c3c; }
+        .health { color: #4cd964; }
+        .cost {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: #ffd700;
+            color: #000;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- 1. 首页 -->
+    <div class="page active" id="home">
+        <div class="container">
+            <h1 class="title">Kards 二战卡牌对战</h1>
+            <p class="home-desc">
+                进入总部抽取卡牌、组建强力卡组，选择阵营开启策略对战！<br>
+                依靠指挥点部署部队，卡组上限40张，回合制攻防对决
+            </p>
+            <div class="home-buttons">
+                <button class="btn btn-gold" onclick="switchPage('headquarters')">总部（抽卡&图鉴）</button>
+                <button class="btn btn-warning" onclick="switchPage('faction')">选择阵营</button>
+                <button class="btn btn-info" onclick="switchPage('rule')">游戏规则</button>
+                <button class="btn btn-success" onclick="quickStart()">快速开局</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 总部页面（抽卡+卡库+图鉴） -->
+    <div class="page" id="headquarters">
+        <div class="container">
+            <h1 class="title">作战总部</h1>
+            <p class="sub-title">抽取卡包获取新卡牌，查看你拥有的全部卡牌</p>
+
+            <div class="hq-panel">
+                <div class="hq-card">
+                    <h3>卡包抽卡</h3>
+                    <p>消耗机会抽取随机卡牌</p>
+                    <p class="tip-text">剩余抽卡次数：<span id="drawCount">10</span> 次</p>
+                    <button class="btn btn-primary" onclick="tenDraw()">十连抽（消耗1次）</button>
+                </div>
+                <div class="hq-card">
+                    <h3>卡组管理</h3>
+                    <p>编辑你的对战卡组</p>
+                    <button class="btn btn-success" onclick="switchPage('faction')">前往组卡</button>
+                </div>
+                <div class="hq-card">
+                    <h3>返回大厅</h3>
+                    <p>回到游戏主界面</p>
+                    <button class="btn btn-danger" onclick="switchPage('home')">返回首页</button>
+                </div>
+            </div>
+
+            <div class="pack-area">
+                <h3>基础作战卡包</h3>
+                <div class="card-packs">
+                    <div class="pack-box" onclick="tenDraw()">
+                        <h3>基础卡包</h3>
+                        <p>内含10张随机卡牌</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="own-card-lib">
+                <h3>我的卡牌库（已拥有）</h3>
+                <div class="card-grid" id="ownCardLib"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 阵营选择页 -->
+    <div class="page" id="faction">
+        <div class="container">
+            <h1 class="title">选择你的主国阵营</h1>
+            <p class="sub-title">不同阵营拥有专属特色卡牌，选择后进入卡组编辑</p>
+            <div class="faction-list">
+                <div class="faction-card" data-faction="同盟国" onclick="selectFaction('同盟国', this)">
+                    <div class="faction-name">同盟国</div>
+                    <div class="faction-desc">均衡型阵营，步兵、机动部队丰富，攻防稳定，新手首选。</div>
+                </div>
+                <div class="faction-card" data-faction="轴心国" onclick="selectFaction('轴心国', this)">
+                    <div class="faction-name">轴心国</div>
+                    <div class="faction-desc">强攻型阵营，坦克、突击单位攻击力极高，擅长快速压制。</div>
+                </div>
+                <div class="faction-card" data-faction="苏联" onclick="selectFaction('苏联', this)">
+                    <div class="faction-name">苏联</div>
+                    <div class="faction-desc">耐久型阵营，单位血量普遍偏高，人海战术，擅长消耗对战。</div>
+                </div>
+                <div class="faction-card" data-faction="法国" onclick="selectFaction('法国', this)">
+                    <div class="faction-name">法国</div>
+                    <div class="faction-desc">防御型阵营，重甲单位居多，防守能力极强，稳中求胜。</div>
+                </div>
+            </div>
+            <div style="text-align:center;">
+                <button class="btn btn-danger" onclick="switchPage('home')">返回首页</button>
+                <button class="btn btn-primary" id="toDeckBtn" disabled onclick="switchPage('deck')">进入卡组编辑</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 游戏规则页 -->
+    <div class="page" id="rule">
+        <div class="container">
+            <h1 class="title">游戏规则 & 操作指令</h1>
+            <div class="rule-box">
+                <h3>📜 基础对战规则</h3>
+                <p>1. 双方初始生命值：30点，血量归0直接落败。</p>
+                <p>2. <b>指挥点</b>：每回合自动+1，上限10点，部署部队必须消耗对应指挥点。</p>
+                <p>3. 卡组规则：单套卡组最多容纳 <b>40张</b> 卡牌。</p>
+                <p>4. 战场卡牌互相攻击，攻防双方同时受伤，血量≤0进入墓地。</p>
+                <p>5. 敌方无场上单位时，可直接攻击敌方英雄。</p>
+            </div>
+            <div class="rule-box">
+                <h3>🎴 总部&抽卡规则</h3>
+                <p>1. 进入总部可使用卡包进行十连抽，获取全新卡牌。</p>
+                <p>2. 抽到的卡牌会存入「我的卡牌库」，组卡时可自由选用。</p>
+                <p>3. 初始拥有10次免费抽卡机会，次数用完后无法继续抽取。</p>
+            </div>
+            <div class="rule-box">
+                <h3>🖱️ 操作指令</h3>
+                <p>1. 选阵营：先选择所属主国，再编辑专属卡组。</p>
+                <p>2. 组卡组：点击卡牌加入卡组，点击卡组内卡牌移除。</p>
+                <p>3. 部署部队：点击手牌，消耗指挥点放置到战场。</p>
+                <p>4. 发起攻击：点击我方战场单位自动发起进攻。</p>
+                <p>5. 结束回合：切换至AI对手回合。</p>
+            </div>
+            <div class="rule-box">
+                <h3>🃏 卡牌标识</h3>
+                <p>左上角=所需指挥点 | 左下角=攻击力 | 右下角=生命值 | 底部=阵营&兵种类型</p>
+            </div>
+            <button class="btn btn-danger back-btn" onclick="switchPage('home')">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 5. 卡组编辑页 -->
+    <div class="page" id="deck">
+        <div class="container">
+            <h1 class="title">卡组编辑 <span id="nowFaction"></span></h1>
+            <p class="deck-tip">点击卡牌加入卡组，卡组上限：<b>40张</b> | 当前：<span id="deckCount">0</span>/40</p>
+            <h3>我的可用卡牌库</h3>
+            <div class="card-select-area" id="cardLibArea"></div>
+
+            <div class="my-deck">
+                <h3>我的卡组</h3>
+                <div class="deck-card-list" id="myDeckArea"></div>
+            </div>
+
+            <div style="text-align:center; margin-top:20px;">
+                <button class="btn btn-danger" onclick="switchPage('faction')">重新选择阵营</button>
+                <button class="btn btn-success" onclick="startGame()">使用卡组 开始对战</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 对战游戏页 -->
+    <div class="page" id="game">
+        <div class="container">
+            <div class="game-header">
+                <div class="turn-info" id="turnInfo">当前回合：玩家</div>
+                <div class="command-info" id="commandInfo">指挥点：3 / 10</div>
+                <button class="btn btn-danger" id="endTurnBtn">结束回合</button>
+            </div>
+
+            <div class="battlefield">
+                <div class="ai-field">
+                    <div class="field-title">敌方战场</div>
+                </div>
+                <div class="player-field">
+                    <div class="field-title">我方战场</div>
+                </div>
+            </div>
+
+            <div class="hand-area">
+                <h3>我的手牌</h3>
+                <div class="hand-cards" id="playerHand"></div>
+            </div>
+
+            <div class="graveyard">
+                <h3>墓地</h3>
+                <div class="grave-cards" id="graveyard"></div>
+            </div>
+
+            <div class="game-message" id="gameMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // 全局配置
+        let currentFaction = "";
+        const MAX_DECK = 40;
+        let playerDeck = [];
+        let drawRemain = 10;       // 剩余抽卡次数
+        let ownCardList = [];      // 玩家已拥有卡牌
+
+        // ========== 全卡牌库（56张，完整兵种/阵营划分） ==========
+        const allCardLibrary = [
+            // 同盟国 - 步兵
+            {name:"列兵",cost:1,attack:1,health:2,faction:"同盟国",type:"步兵"},
+            {name:"侦察兵",cost:1,attack:2,health:1,faction:"同盟国",type:"步兵"},
+            {name:"步枪手",cost:2,attack:2,health:2,faction:"同盟国",type:"步兵"},
+            {name:"机枪班",cost:3,attack:3,health:2,faction:"同盟国",type:"步兵"},
+            {name:"伞兵",cost:2,attack:3,health:1,faction:"同盟国",type:"步兵"},
+            // 同盟国 - 装甲
+            {name:"轻型坦克",cost:3,attack:3,health:3,faction:"同盟国",type:"装甲"},
+            {name:"中型坦克",cost:4,attack:4,health:3,faction:"同盟国",type:"装甲"},
+            {name:"丘吉尔坦克",cost:5,attack:3,health:6,faction:"同盟国",type:"装甲"},
+            // 同盟国 - 火炮/空军/指挥
+            {name:"野战炮",cost:4,attack:5,health:1,faction:"同盟国",type:"火炮"},
+            {name:"喷火战机",cost:4,attack:4,health:2,faction:"同盟国",type:"空军"},
+            {name:"前线指挥官",cost:5,attack:2,health:5,faction:"同盟国",type:"指挥"},
+
+            // 轴心国 - 步兵
+            {name:"掷弹兵",cost:1,attack:2,health:1,faction:"轴心国",type:"步兵"},
+            {name:"突击步兵",cost:2,attack:3,health:1,faction:"轴心国",type:"步兵"},
+            {name:"反坦克兵",cost:2,attack:4,health:1,faction:"轴心国",type:"步兵"},
+            {name:"风暴突击队",cost:3,attack:4,health:2,faction:"轴心国",type:"步兵"},
+            // 轴心国 - 装甲
+            {name:"四号坦克",cost:4,attack:5,health:2,faction:"轴心国",type:"装甲"},
+            {name:"虎式坦克",cost:6,attack:6,health:4,faction:"轴心国",type:"装甲"},
+            {name:"豹式坦克",cost:5,attack:5,health:3,faction:"轴心国",type:"装甲"},
+            // 轴心国 - 火炮/空军/指挥
+            {name:"88mm高射炮",cost:5,attack:6,health:1,faction:"轴心国",type:"火炮"},
+            {name:"俯冲轰炸机",cost:3,attack:4,health:1,faction:"轴心国",type:"空军"},
+            {name:"装甲元帅",cost:6,attack:3,health:5,faction:"轴心国",type:"指挥"},
+
+            // 苏联 - 步兵
+            {name:"动员兵",cost:1,attack:1,health:3,faction:"苏联",type:"步兵"},
+            {name:"近卫步兵",cost:2,attack:2,health:3,faction:"苏联",type:"步兵"},
+            {name:"重机枪手",cost:3,attack:2,health:4,faction:"苏联",type:"步兵"},
+            {name:"敢死队",cost:2,attack:4,health:1,faction:"苏联",type:"步兵"},
+            // 苏联 - 装甲
+            {name:"T-34坦克",cost:4,attack:3,health:5,faction:"苏联",type:"装甲"},
+            {name:"KV重甲坦克",cost:6,attack:4,health:7,faction:"苏联",type:"装甲"},
+            {name:"IS重型坦克",cost:7,attack:5,health:6,faction:"苏联",type:"装甲"},
+            // 苏联 - 火炮/空军/指挥
+            {name:"喀秋莎火箭炮",cost:5,attack:4,health:2,faction:"苏联",type:"火炮"},
+            {name:"伊尔攻击机",cost:4,attack:3,health:3,faction:"苏联",type:"空军"},
+            {name:"政委",cost:4,attack:2,health:6,faction:"苏联",type:"指挥"},
+
+            // 法国 - 步兵
+            {name:"边防步兵",cost:1,attack:1,health:2,faction:"法国",type:"步兵"},
+            {name:"堑壕守卫",cost:2,attack:1,health:4,faction:"法国",type:"步兵"},
+            {name:"重装步兵",cost:3,attack:2,health:5,faction:"法国",type:"步兵"},
+            {name:"宪兵队",cost:2,attack:2,health:3,faction:"法国",type:"步兵"},
+            // 法国 - 装甲
+            {name:"夏尔坦克",cost:5,attack:3,health:6,faction:"法国",type:"装甲"},
+            {name:"索玛坦克",cost:4,attack:2,health:5,faction:"法国",type:"装甲"},
+            // 法国 - 防御/火炮/空军
+            {name:"防御炮台",cost:4,attack:2,health:6,faction:"法国",type:"防御"},
+            {name:"岸防炮",cost:5,attack:5,health:2,faction:"法国",type:"火炮"},
+            {name:"老式侦察机",cost:3,attack:2,health:2,faction:"法国",type:"空军"},
+
+            // 中立通用卡（全阵营可用）
+            {name:"战地医护",cost:2,attack:1,health:3,faction:"通用",type:"支援"},
+            {name:"运输车队",cost:3,attack:2,health:4,faction:"通用",type:"支援"},
+            {name:"工程兵",cost:2,attack:1,health:3,faction:"通用",type:"支援"},
+            {name:"侦察机",cost:3,attack:3,health:2,faction:"通用",type:"空军"},
+            {name:"通讯兵",cost:1,attack:1,health:2,faction:"通用",type:"支援"},
+            {name:"战地卡车",cost:2,attack:2,health:2,faction:"通用",type:"支援"},
+            {name:"野战工事",cost:3,attack:1,health:5,faction:"通用",type:"防御"},
+            {name:"补给队",cost:4,attack:2,health:4,faction:"通用",type:"支援"}
+        ];
+
+        // 页面切换
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            if(pageId === 'deck') initDeckPage();
+            if(pageId === 'headquarters') renderOwnCardLib();
+        }
+
+        // 选择阵营
+        function selectFaction(faction, dom) {
+            currentFaction = faction;
+            document.querySelectorAll('.faction-card').forEach(c => c.classList.remove('selected'));
+            dom.classList.add('selected');
+            document.getElementById('toDeckBtn').disabled = false;
+        }
+
+        // 快速开局
+        function quickStart() {
+            const factions = ["同盟国","轴心国","苏联","法国"];
+            currentFaction = factions[Math.floor(Math.random()*factions.length)];
+            playerDeck = [];
+            for(let i=0; i<MAX_DECK; i++){
+                let rnd = allCardLibrary[Math.floor(Math.random()*allCardLibrary.length)];
+                playerDeck.push({...rnd});
+            }
+            startGame();
+        }
+
+        // ========== 抽卡系统 ==========
+        function tenDraw() {
+            if(drawRemain <= 0) {
+                alert("抽卡次数已用完！");
+                return;
+            }
+            drawRemain --;
+            document.getElementById('drawCount').innerText = drawRemain;
+            let newCards = [];
+            // 十连抽：获取10张随机卡
+            for(let i=0; i<10; i++){
+                let card = {...allCardLibrary[Math.floor(Math.random() * allCardLibrary.length)]};
+                newCards.push(card);
+                ownCardList.push(card);
+            }
+            alert(`十连抽成功！获得10张新卡牌！`);
+            renderOwnCardLib();
+        }
+
+        // 渲染玩家拥有的卡牌库
+        function renderOwnCardLib() {
+            const lib = document.getElementById('ownCardLib');
+            lib.innerHTML = "";
+            ownCardList.forEach(card => {
+                lib.appendChild(createCardElement(card));
+            });
+        }
+
+        // ========== 卡组编辑 ==========
+        function initDeckPage() {
+            document.getElementById('nowFaction').innerText = `【${currentFaction}】`;
+            const libArea = document.getElementById('cardLibArea');
+            libArea.innerHTML = "";
+            // 优先展示玩家抽到的卡牌，没有则展示全卡库
+            let useLib = ownCardList.length > 0 ? ownCardList : allCardLibrary;
+            useLib.forEach(card => {
+                const cardEl = createCardElement(card);
+                cardEl.onclick = () => addToDeck(card);
+                libArea.appendChild(cardEl);
+            });
+            renderMyDeck();
+        }
+
+        function addToDeck(card) {
+            if(playerDeck.length >= MAX_DECK) {
+                alert(`卡组已满！最多容纳${MAX_DECK}张卡牌`);
+                return;
+            }
+            playerDeck.push({...card});
+            renderMyDeck();
+        }
+
+        function renderMyDeck() {
+            const deckArea = document.getElementById('myDeckArea');
+            const countText = document.getElementById('deckCount');
+            deckArea.innerHTML = "";
+            countText.innerText = playerDeck.length;
+            playerDeck.forEach((card, idx) => {
+                const cardEl = createCardElement(card);
+                cardEl.onclick = () => {
+                    playerDeck.splice(idx,1);
+                    renderMyDeck();
+                };
+                deckArea.appendChild(cardEl);
+            });
+        }
+
+        // 创建卡牌DOM
+        function createCardElement(card) {
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.innerHTML = `
+                <div class="cost">${card.cost}</div>
+                <div class="card-name">${card.name}</div>
+                <div class="card-faction">${card.faction}</div>
+                <div class="card-type">${card.type}</div>
+                <div class="card-stats">
+                    <span class="attack">${card.attack}</span>
+                    <span class="health">${card.health}</span>
+                </div>
+            `;
+            return el;
+        }
+
+        // ========== 对战核心逻辑 - 指挥点系统 ==========
+        const game = {
+            commandPoint: 3,    // 当前指挥点（原法力值）
+            maxCommand: 10,    // 指挥点上限
+            playerHealth: 30,
+            aiHealth: 30,
+            isPlayerTurn: true,
+            playerHand: [],
+            aiHand: [],
+            playerField: [],
+            aiField: [],
+            graveyard: []
+        };
+
+        const playerHandEl = document.getElementById('playerHand');
+        const playerFieldEl = document.querySelector('.player-field');
+        const aiFieldEl = document.querySelector('.ai-field');
+        const graveyardEl = document.getElementById('graveyard');
+        const turnInfoEl = document.getElementById('turnInfo');
+        const commandInfoEl = document.getElementById('commandInfo');
+        const endTurnBtn = document.getElementById('endTurnBtn');
+        const gameMessageEl = document.getElementById('gameMessage');
+
+        // 开始游戏
+        function startGame() {
+            // 重置对局数据
+            game.commandPoint = 3;
+            game.playerHealth = 30;
+            game.aiHealth = 30;
+            game.isPlayerTurn = true;
+            game.playerHand = [];
+            game.aiHand = [];
+            game.playerField = [];
+            game.aiField = [];
+            game.graveyard = [];
+            gameMessageEl.classList.remove('show');
+            endTurnBtn.disabled = false;
+
+            const pDeck = playerDeck.length > 0 ? playerDeck : allCardLibrary;
+            const aDeck = allCardLibrary;
+
+            // 双方初始抽5张手牌
+            for(let i=0; i<5; i++) drawCard('player', pDeck);
+            for(let i=0; i<5; i++) drawCard('ai', aDeck);
+
+            switchPage('game');
+            updateUI();
+        }
+
+        // 抽卡
+        function drawCard(owner, deck) {
+            const rndCard = {...deck[Math.floor(Math.random() * deck.length)]};
+            if(owner === 'player') game.playerHand.push(rndCard);
+            else game.aiHand.push(rndCard);
+        }
+
+        // 部署部队（消耗指挥点）
+        function playCard(card) {
+            if(!game.isPlayerTurn || game.commandPoint < card.cost) {
+                return;
+            }
+            const idx = game.playerHand.findIndex(c => c === card);
+            game.playerHand.splice(idx, 1);
+            game.playerField.push(card);
+            game.commandPoint -= card.cost;
+            updateUI();
+        }
+
+        // 单位攻击
+        function attackWithCard(attacker) {
+            if(!game.isPlayerTurn) return;
+            if(game.aiField.length === 0) {
+                game.aiHealth -= attacker.attack;
+            } else {
+                const defender = game.aiField[0];
+                defender.health -= attacker.attack;
+                attacker.health -= defender.attack;
+
+                if(defender.health <= 0) {
+                    game.aiField.shift();
+                    game.graveyard.push(defender);
+                }
+            }
+            if(attacker.health <= 0) {
+                const idx = game.playerField.findIndex(c => c === attacker);
+                game.playerField.splice(idx, 1);
+                game.graveyard.push(attacker);
+            }
+            checkGameOver();
+            updateUI();
+        }
+
+        // AI回合
+        function aiTurn() {
+            turnInfoEl.textContent = "当前回合：敌方";
+            setTimeout(() => {
+                // AI部署卡牌
+                if(game.aiHand.length > 0) {
+                    const c = game.aiHand.shift();
+                    game.aiField.push(c);
+                }
+                // AI发起攻击
+                if(game.aiField.length > 0) {
+                    const atk = game.aiField[0];
+                    if(game.playerField.length > 0) {
+                        const def = game.playerField[0];
+                        def.health -= atk.attack;
+                        atk.health -= def.attack;
+                        if(def.health <= 0) {
+                            game.playerField.shift();
+                            game.graveyard.push(def);
+                        }
+                        if(atk.health <= 0) {
+                            game.aiField.shift();
+                            game.graveyard.push(atk);
+                        }
+                    } else {
+                        game.playerHealth -= atk.attack;
+                    }
+                }
+                checkGameOver();
+                // 回合结束，指挥点+1
+                game.isPlayerTurn = true;
+                game.commandPoint = Math.min(game.commandPoint + 1, game.maxCommand);
+                turnInfoEl.textContent = "当前回合：玩家";
+                updateUI();
+            }, 1600);
+        }
+
+        // 胜负判定
+        function checkGameOver() {
+            if(game.playerHealth <= 0) {
+                showMsg("对战失败！");
+                endTurnBtn.disabled = true;
+            }
+            if(game.aiHealth <= 0) {
+                showMsg("对战胜利！");
+                endTurnBtn.disabled = true;
+            }
+        }
+
+        // 弹窗提示
+        function showMsg(text) {
+            gameMessageEl.innerText = text;
+            gameMessageEl.classList.add('show');
+        }
+
+        // 刷新界面 & 同步指挥点显示
+        function updateUI() {
+            playerHandEl.innerHTML = '';
+            playerFieldEl.innerHTML = '<div class="field-title">我方战场</div>';
+            aiFieldEl.innerHTML = '<div class="field-title">敌方战场</div>';
+            graveyardEl.innerHTML = '';
+
+            // 渲染手牌
+            game.playerHand.forEach(card => {
+                const el = createCardElement(card);
+                el.onclick = () => playCard(card);
+                playerHandEl.appendChild(el);
+            });
+            // 渲染我方战场
+            game.playerField.forEach(card => {
+                const el = createCardElement(card);
+                el.onclick = () => attackWithCard(card);
+                playerFieldEl.appendChild(el);
+            });
+            // 渲染敌方战场
+            game.aiField.forEach(card => aiFieldEl.appendChild(createCardElement(card)));
+            // 渲染墓地
+            game.graveyard.forEach(card => graveyardEl.appendChild(createCardElement(card)));
+
+            // 更新指挥点文字
+            commandInfoEl.textContent = `指挥点：${game.commandPoint} / ${game.maxCommand}`;
+        }
+
+        // 结束回合绑定
+        endTurnBtn.onclick = () => {
+            if(!game.isPlayerTurn) return;
+            game.isPlayerTurn = false;
+            aiTurn();
+        };
+
+        // 页面加载初始化
+        window.onload = function(){
+            // 初始解锁全部卡牌
+            ownCardList = JSON.parse(JSON.stringify(allCardLibrary));
+            renderOwnCardLib();
+        };
+    </script>
+</body>
+</html>
