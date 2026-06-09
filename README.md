@@ -235,7 +235,7 @@ export LLM_THINKING_TYPE="disabled"
 APP_DIR=/home/ubuntu/HtmlDeploy BACKUP_DIR=/home/ubuntu/backups/htmldeploy ./scripts/backup-runtime-data.sh
 ```
 
-该脚本会使用 SQLite `.backup` 生成数据库一致性备份，并把 `storage/` 打包。默认保留 14 天。
+该脚本会使用 SQLite `.backup` 生成数据库一致性备份，并把 `storage/` 打包。服务器没有 `sqlite3` 命令时，会自动使用项目依赖里的 `better-sqlite3` 执行备份。默认保留 14 天。
 
 ## 11. 注意事项
 
