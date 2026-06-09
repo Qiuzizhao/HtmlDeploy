@@ -10,7 +10,10 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-09T03:19:06.702Z",
     "storageBytes": 20014,
-    "storageUpdatedAt": "2026-06-09T03:19:06.702Z"
+    "storageUpdatedAt": "2026-06-09T03:19:06.702Z",
+    "usagePreviewCount": 1,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-09T03:35:14.233Z"
   },
   {
     "id": "2f4f2ebd",
@@ -25,8 +28,8 @@
     "storageBytes": 37032,
     "storageUpdatedAt": "2026-06-09T03:18:41.552Z",
     "usagePreviewCount": 1,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:18:45.532Z"
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-09T03:35:05.541Z"
   },
   {
     "id": "ac2e9b4c",
@@ -39,7 +42,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-09T03:18:27.016Z",
     "storageBytes": 11976,
-    "storageUpdatedAt": "2026-06-09T03:18:27.017Z"
+    "storageUpdatedAt": "2026-06-09T03:18:27.017Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "f0f5eef7",
@@ -52,7 +57,10 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-09T03:17:43.476Z",
     "storageBytes": 14232,
-    "storageUpdatedAt": "2026-06-09T03:17:43.477Z"
+    "storageUpdatedAt": "2026-06-09T03:17:43.477Z",
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-09T03:34:45.548Z"
   },
   {
     "id": "67aacac3",
@@ -66,9 +74,9 @@
     "createdAt": "2026-06-09T03:16:58.742Z",
     "storageBytes": 37343,
     "storageUpdatedAt": "2026-06-09T03:16:58.742Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 5,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-09T03:19:01.952Z"
+    "usageLastUsedAt": "2026-06-09T03:34:44.997Z"
   },
   {
     "id": "f17c07c8",
@@ -82,9 +90,9 @@
     "createdAt": "2026-06-09T03:16:17.612Z",
     "storageBytes": 11010,
     "storageUpdatedAt": "2026-06-09T03:16:17.612Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 10,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-09T03:16:25.746Z"
+    "usageLastUsedAt": "2026-06-09T03:35:22.745Z"
   },
   {
     "id": "4316e1ec",
@@ -114,9 +122,9 @@
     "createdAt": "2026-06-09T03:15:24.481Z",
     "storageBytes": 10119,
     "storageUpdatedAt": "2026-06-09T03:15:24.481Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:15:38.389Z"
+    "usageLastUsedAt": "2026-06-09T03:34:50.593Z"
   },
   {
     "id": "6e359395",
@@ -130,9 +138,9 @@
     "createdAt": "2026-06-09T03:15:21.717Z",
     "storageBytes": 16677,
     "storageUpdatedAt": "2026-06-09T03:15:21.718Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:15:43.233Z"
+    "usageLastUsedAt": "2026-06-09T03:34:46.922Z"
   },
   {
     "id": "3e27e55c",
@@ -162,9 +170,9 @@
     "createdAt": "2026-06-09T03:13:46.818Z",
     "storageBytes": 16829,
     "storageUpdatedAt": "2026-06-09T03:13:46.819Z",
-    "usagePreviewCount": 8,
+    "usagePreviewCount": 15,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:16:09.604Z"
+    "usageLastUsedAt": "2026-06-09T03:35:27.493Z"
   },
   {
     "id": "2a933700",
@@ -178,9 +186,9 @@
     "createdAt": "2026-06-09T03:13:30.629Z",
     "storageBytes": 5091,
     "storageUpdatedAt": "2026-06-09T03:13:30.629Z",
-    "usagePreviewCount": 3,
+    "usagePreviewCount": 4,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:17:01.693Z"
+    "usageLastUsedAt": "2026-06-09T03:32:05.275Z"
   },
   {
     "id": "fb840e0d",
@@ -194,9 +202,9 @@
     "createdAt": "2026-06-09T03:13:21.781Z",
     "storageBytes": 14936,
     "storageUpdatedAt": "2026-06-09T03:13:21.782Z",
-    "usagePreviewCount": 5,
+    "usagePreviewCount": 8,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:17:51.345Z"
+    "usageLastUsedAt": "2026-06-09T03:35:15.536Z"
   },
   {
     "id": "1739d1ff",
@@ -210,9 +218,9 @@
     "createdAt": "2026-06-09T03:09:27.838Z",
     "storageBytes": 13640,
     "storageUpdatedAt": "2026-06-09T03:09:27.838Z",
-    "usagePreviewCount": 19,
-    "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-09T03:18:45.027Z"
+    "usagePreviewCount": 24,
+    "usageCodeCount": 2,
+    "usageLastUsedAt": "2026-06-09T03:35:28.049Z"
   },
   {
     "id": "bd1d6cb4",
@@ -226,9 +234,9 @@
     "createdAt": "2026-06-09T03:08:47.977Z",
     "storageBytes": 3472,
     "storageUpdatedAt": "2026-06-09T03:08:47.977Z",
-    "usagePreviewCount": 5,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:16:56.400Z"
+    "usageLastUsedAt": "2026-06-09T03:35:16.860Z"
   },
   {
     "id": "9a6275b9",
@@ -274,9 +282,9 @@
     "createdAt": "2026-06-09T03:05:16.690Z",
     "storageBytes": 8856,
     "storageUpdatedAt": "2026-06-09T03:05:16.690Z",
-    "usagePreviewCount": 5,
-    "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:16:16.869Z"
+    "usagePreviewCount": 9,
+    "usageCodeCount": 1,
+    "usageLastUsedAt": "2026-06-09T03:35:25.640Z"
   },
   {
     "id": "8dc7ff62",
@@ -306,9 +314,9 @@
     "createdAt": "2026-06-09T03:04:54.528Z",
     "storageBytes": 12915,
     "storageUpdatedAt": "2026-06-09T03:04:54.529Z",
-    "usagePreviewCount": 5,
+    "usagePreviewCount": 6,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:16:26.388Z"
+    "usageLastUsedAt": "2026-06-09T03:35:13.453Z"
   },
   {
     "id": "f34cc998",
@@ -322,9 +330,9 @@
     "createdAt": "2026-06-09T03:04:54.435Z",
     "storageBytes": 7361,
     "storageUpdatedAt": "2026-06-09T03:04:54.435Z",
-    "usagePreviewCount": 6,
+    "usagePreviewCount": 7,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-09T03:17:41.868Z"
+    "usageLastUsedAt": "2026-06-09T03:32:59.183Z"
   },
   {
     "id": "f9c5adcc",
@@ -338,9 +346,9 @@
     "createdAt": "2026-06-09T03:04:17.237Z",
     "storageBytes": 8057,
     "storageUpdatedAt": "2026-06-09T03:04:17.237Z",
-    "usagePreviewCount": 8,
+    "usagePreviewCount": 9,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:15:38.325Z"
+    "usageLastUsedAt": "2026-06-09T03:35:20.177Z"
   },
   {
     "id": "4116dff6",
@@ -386,9 +394,9 @@
     "createdAt": "2026-06-09T03:03:13.127Z",
     "storageBytes": 5493,
     "storageUpdatedAt": "2026-06-09T03:03:13.127Z",
-    "usagePreviewCount": 10,
+    "usagePreviewCount": 11,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:10:33.004Z"
+    "usageLastUsedAt": "2026-06-09T03:35:28.731Z"
   },
   {
     "id": "6565ea0f",
@@ -434,9 +442,9 @@
     "createdAt": "2026-06-09T03:01:22.313Z",
     "storageBytes": 16184,
     "storageUpdatedAt": "2026-06-09T03:01:22.313Z",
-    "usagePreviewCount": 62,
+    "usagePreviewCount": 65,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:18:54.655Z"
+    "usageLastUsedAt": "2026-06-09T03:35:40.894Z"
   },
   {
     "id": "71164be9",
@@ -466,9 +474,9 @@
     "createdAt": "2026-06-09T03:01:07.322Z",
     "storageBytes": 11093,
     "storageUpdatedAt": "2026-06-09T03:01:07.322Z",
-    "usagePreviewCount": 7,
+    "usagePreviewCount": 8,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:16:26.259Z"
+    "usageLastUsedAt": "2026-06-09T03:35:15.478Z"
   },
   {
     "id": "4912c987",
@@ -587,7 +595,7 @@
     "number": "00290",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -597,14 +605,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.763Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.643Z"
   },
   {
     "id": "2352e3ed",
     "number": "00289",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -614,14 +623,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.745Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "afc7d172",
     "number": "00288",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -631,14 +641,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.739Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "1e428b2b",
     "number": "00287",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -648,14 +659,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.731Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "7ccc8b4c",
     "number": "00286",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -665,14 +677,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.730Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "623192db",
     "number": "00285",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -682,14 +695,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.598Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "346e1865",
     "number": "00284",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -699,14 +713,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.573Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "e8d07b46",
     "number": "00283",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -716,14 +731,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.567Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "00925aba",
     "number": "00282",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -733,14 +749,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.440Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "a40d9b94",
     "number": "00281",
     "title": "企鹅兄弟",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -750,14 +767,15 @@
     "storageBytes": 8602,
     "storageUpdatedAt": "2026-06-09T03:00:04.290Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "7d639a4b",
     "number": "00280",
     "title": "迷你KARDS网页卡牌",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -767,14 +785,15 @@
     "storageBytes": 11976,
     "storageUpdatedAt": "2026-06-09T02:59:56.427Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "beb0cdac",
     "number": "00279",
     "title": "原神祈愿模拟器｜无限纠缠之缘",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -784,14 +803,15 @@
     "storageBytes": 11027,
     "storageUpdatedAt": "2026-06-09T02:59:45.665Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "d2e4fe42",
     "number": "00278",
     "title": "心动攻略手册",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -801,14 +821,15 @@
     "storageBytes": 15863,
     "storageUpdatedAt": "2026-06-09T02:59:42.800Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "9a6f685b",
     "number": "00277",
     "title": "暗区突围 · 战术小游戏",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -817,15 +838,17 @@
     "createdAt": "2026-06-09T02:59:32.089Z",
     "storageBytes": 19421,
     "storageUpdatedAt": "2026-06-09T02:59:32.089Z",
-    "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usagePreviewCount": 2,
+    "usageCodeCount": 0,
+    "usageLastUsedAt": "2026-06-09T03:35:23.160Z",
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "cedc6e74",
     "number": "00276",
     "title": "吴金骏 - 舞蹈视频",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -835,14 +858,15 @@
     "storageBytes": 2766,
     "storageUpdatedAt": "2026-06-09T02:59:08.352Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "05ac3b83",
     "number": "00275",
     "title": "原神祈愿模拟器｜无限纠缠之缘",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -852,14 +876,15 @@
     "storageBytes": 7245,
     "storageUpdatedAt": "2026-06-09T02:58:59.555Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "0f46a210",
     "number": "00274",
     "title": "经典俄罗斯方块",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -869,14 +894,15 @@
     "storageBytes": 16254,
     "storageUpdatedAt": "2026-06-09T02:57:12.796Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "c49202cd",
     "number": "00273",
     "title": "双人打斗小游戏",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -886,14 +912,15 @@
     "storageBytes": 9332,
     "storageUpdatedAt": "2026-06-09T02:57:03.055Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "0c539781",
     "number": "00272",
     "title": "心动攻略手册",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -903,14 +930,15 @@
     "storageBytes": 15839,
     "storageUpdatedAt": "2026-06-09T02:56:55.582Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "933330b3",
     "number": "00271",
     "title": "原神祈愿模拟器｜无限纠缠之缘",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -920,14 +948,15 @@
     "storageBytes": 7245,
     "storageUpdatedAt": "2026-06-09T02:55:24.066Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "dc6a3fbe",
     "number": "00270",
     "title": "仿地铁跑酷 - 完整版",
     "author": "未知",
-    "classId": "",
+    "classId": "392f3c64",
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
@@ -937,7 +966,8 @@
     "storageBytes": 13297,
     "storageUpdatedAt": "2026-06-09T02:51:42.085Z",
     "usagePreviewCount": 0,
-    "usageCodeCount": 0
+    "usageCodeCount": 0,
+    "updatedAt": "2026-06-09T03:35:42.644Z"
   },
   {
     "id": "f2730308",
@@ -982,7 +1012,9 @@
     "starred": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T07:00:00.679Z",
-    "updatedAt": "2026-06-08T16:34:56.210Z"
+    "updatedAt": "2026-06-08T16:34:56.210Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "74701ee6",
@@ -1093,7 +1125,9 @@
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-08T06:58:14.347Z"
+    "createdAt": "2026-06-08T06:58:14.347Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "1dca2219",
@@ -1104,7 +1138,9 @@
     "enabled": true,
     "starred": false,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-08T06:57:55.967Z"
+    "createdAt": "2026-06-08T06:57:55.967Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "1af40f15",
@@ -1349,9 +1385,9 @@
     "starred": false,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T06:54:50.474Z",
-    "usagePreviewCount": 9,
+    "usagePreviewCount": 10,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:56:14.885Z"
+    "usageLastUsedAt": "2026-06-09T03:35:31.936Z"
   },
   {
     "id": "6a892a39",
@@ -1621,9 +1657,9 @@
     "starred": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-08T02:05:15.546Z",
-    "usagePreviewCount": 12,
+    "usagePreviewCount": 14,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:37:36.989Z",
+    "usageLastUsedAt": "2026-06-09T03:34:47.044Z",
     "updatedAt": "2026-06-08T06:33:35.660Z"
   },
   {
@@ -1637,9 +1673,9 @@
     "createdAt": "2026-06-05T07:35:47.791Z",
     "updatedAt": "2026-06-05T15:26:36.452Z",
     "starred": true,
-    "usagePreviewCount": 66,
+    "usagePreviewCount": 72,
     "usageCodeCount": 2,
-    "usageLastUsedAt": "2026-06-08T09:28:06.412Z"
+    "usageLastUsedAt": "2026-06-09T03:35:15.861Z"
   },
   {
     "id": "69131173",
@@ -1652,9 +1688,9 @@
     "createdAt": "2026-06-05T02:28:25.153Z",
     "updatedAt": "2026-06-05T15:15:25.217Z",
     "starred": true,
-    "usagePreviewCount": 33,
+    "usagePreviewCount": 34,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T06:41:04.466Z"
+    "usageLastUsedAt": "2026-06-09T03:33:27.332Z"
   },
   {
     "id": "40afa53e",
@@ -1992,7 +2028,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:17:37.331Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "98ae9b63",
@@ -2123,7 +2161,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:13:42.662Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "82af0bd0",
@@ -2133,7 +2173,9 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:13:37.570Z"
+    "createdAt": "2026-06-05T02:13:37.570Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "031997c6",
@@ -2223,7 +2265,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:11:50.263Z",
-    "updatedAt": "2026-06-05T15:09:44.673Z"
+    "updatedAt": "2026-06-05T15:09:44.673Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "17ae3311",
@@ -2286,7 +2330,9 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:10:42.994Z"
+    "createdAt": "2026-06-05T02:10:42.994Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "5cfac411",
@@ -2309,7 +2355,9 @@
     "classId": "f438ed26",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-05T02:09:21.578Z"
+    "createdAt": "2026-06-05T02:09:21.578Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "c0f2aeb4",
@@ -2320,7 +2368,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-05T02:08:32.916Z",
-    "updatedAt": "2026-06-06T06:31:53.922Z"
+    "updatedAt": "2026-06-06T06:31:53.922Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "309f7506",
@@ -2426,7 +2476,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:58:04.195Z",
-    "updatedAt": "2026-06-04T08:01:20.926Z"
+    "updatedAt": "2026-06-04T08:01:20.926Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "83025d69",
@@ -2436,7 +2488,9 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:48.445Z"
+    "createdAt": "2026-06-04T06:57:48.445Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "4973d0e1",
@@ -2513,7 +2567,9 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:16.173Z"
+    "createdAt": "2026-06-04T06:57:16.173Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "081562d2",
@@ -2523,7 +2579,9 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:57:10.769Z"
+    "createdAt": "2026-06-04T06:57:10.769Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "13171f6d",
@@ -2602,7 +2660,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:31.196Z",
-    "updatedAt": "2026-06-04T08:01:47.468Z"
+    "updatedAt": "2026-06-04T08:01:47.468Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "202bbc30",
@@ -2613,7 +2673,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:29.981Z",
-    "updatedAt": "2026-06-04T06:58:05.866Z"
+    "updatedAt": "2026-06-04T06:58:05.866Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "a6a51842",
@@ -2625,9 +2687,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:56:25.208Z",
     "updatedAt": "2026-06-04T08:01:44.004Z",
-    "usagePreviewCount": 21,
+    "usagePreviewCount": 22,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-09T03:15:28.589Z"
+    "usageLastUsedAt": "2026-06-09T03:35:40.229Z"
   },
   {
     "id": "d896586f",
@@ -2745,7 +2807,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:49.643Z",
-    "updatedAt": "2026-06-05T15:07:22.767Z"
+    "updatedAt": "2026-06-05T15:07:22.767Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "bf84bc88",
@@ -2755,7 +2819,9 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:47.477Z"
+    "createdAt": "2026-06-04T06:54:47.477Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "773f5061",
@@ -2765,7 +2831,9 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:54:43.893Z"
+    "createdAt": "2026-06-04T06:54:43.893Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "96f6a05c",
@@ -2790,7 +2858,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:54:35.643Z",
-    "updatedAt": "2026-06-04T06:58:03.712Z"
+    "updatedAt": "2026-06-04T06:58:03.712Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "c62c37aa",
@@ -2867,7 +2937,9 @@
     "classId": "392f3c64",
     "enabled": true,
     "forbiddenWhitelist": false,
-    "createdAt": "2026-06-04T06:53:29.954Z"
+    "createdAt": "2026-06-04T06:53:29.954Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "ad1ccc24",
@@ -2892,7 +2964,9 @@
     "enabled": true,
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:52:53.913Z",
-    "updatedAt": "2026-06-04T08:02:54.875Z"
+    "updatedAt": "2026-06-04T08:02:54.875Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "db6e28b5",
@@ -2904,9 +2978,9 @@
     "forbiddenWhitelist": false,
     "createdAt": "2026-06-04T06:52:53.251Z",
     "updatedAt": "2026-06-04T08:02:39.886Z",
-    "usagePreviewCount": 2,
+    "usagePreviewCount": 3,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:34:10.045Z"
+    "usageLastUsedAt": "2026-06-09T03:35:20.761Z"
   },
   {
     "id": "4cdb21b6",
@@ -2982,7 +3056,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:44.968Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:30:57.598Z"
+    "updatedAt": "2026-06-03T15:30:57.598Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "b10fa9ee",
@@ -2991,7 +3067,9 @@
     "author": "二淘汰一人有一天",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:56:16.841Z",
-    "updatedAt": "2026-06-03T14:45:48.851Z"
+    "updatedAt": "2026-06-03T14:45:48.851Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "51095b1a",
@@ -3000,7 +3078,9 @@
     "author": "LTE",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:59.511Z",
-    "updatedAt": "2026-06-03T15:13:41.513Z"
+    "updatedAt": "2026-06-03T15:13:41.513Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "694b05b6",
@@ -3033,7 +3113,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:26.928Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:22:03.478Z"
+    "updatedAt": "2026-06-03T15:22:03.478Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "bb484934",
@@ -3066,7 +3148,9 @@
     "author": "哈哈",
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:55:16.848Z",
-    "updatedAt": "2026-06-03T15:14:04.034Z"
+    "updatedAt": "2026-06-03T15:14:04.034Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "a022bf39",
@@ -3088,7 +3172,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:54:52.161Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:31:44.228Z"
+    "updatedAt": "2026-06-03T15:31:44.228Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "9f36bfa5",
@@ -3131,7 +3217,9 @@
     "title": "跑酷",
     "author": "水水水",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:53:42.818Z"
+    "createdAt": "2026-06-03T06:53:42.818Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "c5458428",
@@ -3154,7 +3242,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:18.932Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:31:55.038Z"
+    "updatedAt": "2026-06-03T15:31:55.038Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "93c7d3ae",
@@ -3177,7 +3267,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:53:07.255Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:33:08.997Z"
+    "updatedAt": "2026-06-03T15:33:08.997Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "d2368459",
@@ -3244,7 +3336,9 @@
     "title": "不知",
     "author": "不知",
     "classId": "b3f7dd30",
-    "createdAt": "2026-06-03T06:52:12.388Z"
+    "createdAt": "2026-06-03T06:52:12.388Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "1fb9f987",
@@ -3254,7 +3348,9 @@
     "classId": "b3f7dd30",
     "createdAt": "2026-06-03T06:52:00.238Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:33:18.240Z"
+    "updatedAt": "2026-06-03T15:33:18.240Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "a7f50335",
@@ -3310,7 +3406,9 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-03T06:49:32.800Z",
-    "updatedAt": "2026-06-05T09:34:30.092Z"
+    "updatedAt": "2026-06-05T09:34:30.092Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "0f86bb47",
@@ -3342,7 +3440,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:16:00.620Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:33:55.531Z"
+    "updatedAt": "2026-06-03T15:33:55.531Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "33e43c09",
@@ -3388,7 +3488,9 @@
     "title": "跑酷小游戏",
     "author": "乐瑶",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:14:24.017Z"
+    "createdAt": "2026-06-03T03:14:24.017Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "3fe1bdc9",
@@ -3430,7 +3532,9 @@
     "title": "跑酷",
     "author": "嫣",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:13:13.500Z"
+    "createdAt": "2026-06-03T03:13:13.500Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "fb022f2b",
@@ -3440,7 +3544,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:13:07.526Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:44:31.882Z"
+    "updatedAt": "2026-06-03T15:44:31.882Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "7709ded1",
@@ -3459,7 +3565,9 @@
     "title": "城市",
     "author": "林宸骏",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:12:29.510Z"
+    "createdAt": "2026-06-03T03:12:29.510Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "bb717eb7",
@@ -3469,7 +3577,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:12:28.879Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:35:11.732Z"
+    "updatedAt": "2026-06-03T15:35:11.732Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "df0a5e52",
@@ -3490,7 +3600,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:12:19.381Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T15:34:24.741Z"
+    "updatedAt": "2026-06-03T15:34:24.741Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "2ae45c45",
@@ -3513,7 +3625,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:11:48.198Z",
     "enabled": true,
-    "updatedAt": "2026-06-03T16:09:54.932Z"
+    "updatedAt": "2026-06-03T16:09:54.932Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "244f3456",
@@ -3584,7 +3698,9 @@
     "author": "唐澜嫣",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:31.270Z",
-    "updatedAt": "2026-06-03T15:55:18.871Z"
+    "updatedAt": "2026-06-03T15:55:18.871Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "f74be178",
@@ -3616,7 +3732,9 @@
     "author": "罗芯芮",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:05.261Z",
-    "updatedAt": "2026-06-03T13:48:57.850Z"
+    "updatedAt": "2026-06-03T13:48:57.850Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "1c5aefcf",
@@ -3624,7 +3742,9 @@
     "title": "牢羊练习图",
     "author": "陈伟峰",
     "classId": "b4f9025a",
-    "createdAt": "2026-06-03T03:10:04.439Z"
+    "createdAt": "2026-06-03T03:10:04.439Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "69b91edf",
@@ -3633,7 +3753,9 @@
     "author": "李雨彤",
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:10:02.374Z",
-    "updatedAt": "2026-06-03T15:52:20.672Z"
+    "updatedAt": "2026-06-03T15:52:20.672Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "dd5524e8",
@@ -3665,9 +3787,9 @@
     "classId": "b4f9025a",
     "createdAt": "2026-06-03T03:09:47.545Z",
     "updatedAt": "2026-06-08T06:37:52.914Z",
-    "usagePreviewCount": 1,
+    "usagePreviewCount": 2,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T06:37:46.132Z",
+    "usageLastUsedAt": "2026-06-09T03:33:43.773Z",
     "starred": true
   },
   {
@@ -3690,9 +3812,9 @@
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T17:05:25.794Z",
     "updatedAt": "2026-06-06T10:01:51.490Z",
-    "usagePreviewCount": 10,
+    "usagePreviewCount": 11,
     "usageCodeCount": 1,
-    "usageLastUsedAt": "2026-06-08T06:40:27.518Z",
+    "usageLastUsedAt": "2026-06-09T03:35:10.447Z",
     "starred": true
   },
   {
@@ -3715,7 +3837,9 @@
     "title": "引力微星",
     "author": "邱老师",
     "classId": "db3ff2b2",
-    "createdAt": "2026-06-02T16:43:14.609Z"
+    "createdAt": "2026-06-02T16:43:14.609Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "39b9c825",
@@ -3749,7 +3873,9 @@
     "author": "邱老师",
     "classId": "db3ff2b2",
     "createdAt": "2026-06-02T16:15:04.870Z",
-    "updatedAt": "2026-06-03T01:42:26.560Z"
+    "updatedAt": "2026-06-03T01:42:26.560Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "634e5fc8",
@@ -3757,7 +3883,9 @@
     "title": "接金币",
     "author": "邱老师",
     "classId": "db3ff2b2",
-    "createdAt": "2026-06-02T16:13:28.581Z"
+    "createdAt": "2026-06-02T16:13:28.581Z",
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   },
   {
     "id": "85f0d53d",
@@ -3768,9 +3896,9 @@
     "updatedAt": "2026-06-06T10:01:21.053Z",
     "author": "邱老师",
     "starred": true,
-    "usagePreviewCount": 5,
+    "usagePreviewCount": 7,
     "usageCodeCount": 0,
-    "usageLastUsedAt": "2026-06-08T02:18:00.333Z"
+    "usageLastUsedAt": "2026-06-09T03:34:52.326Z"
   },
   {
     "id": "20d3c066",
@@ -3793,6 +3921,8 @@
     "updatedAt": "2026-06-03T15:16:06.392Z",
     "author": "邱老师",
     "enabled": true,
-    "forbiddenWhitelist": true
+    "forbiddenWhitelist": true,
+    "usagePreviewCount": 0,
+    "usageCodeCount": 0
   }
 ]
