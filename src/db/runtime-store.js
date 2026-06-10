@@ -91,7 +91,8 @@ function normalizeAiSettings(settings = {}) {
     apiKey: String(settings.apiKey || '').trim(),
     baseUrl: String(settings.baseUrl || '').trim(),
     model: String(settings.model || '').trim(),
-    thinkingType: String(settings.thinkingType || '').trim(),
+    thinkingOptimize: String(settings.thinkingOptimize || '').trim(),
+    thinkingName: String(settings.thinkingName || '').trim(),
     temperature: settings.temperature === undefined ? undefined : Number(settings.temperature),
     nameTemperature: settings.nameTemperature === undefined ? undefined : Number(settings.nameTemperature),
     updatedAt: String(settings.updatedAt || '')
@@ -470,7 +471,8 @@ class RuntimeStore {
       apiKey: row.api_key,
       baseUrl: row.base_url,
       model: row.model,
-      thinkingType: row.thinking_type,
+      thinkingOptimize: row.thinking_optimize,
+      thinkingName: row.thinking_name,
       temperature: row.temperature,
       nameTemperature: row.name_temperature,
       updatedAt: row.updated_at
@@ -481,13 +483,14 @@ class RuntimeStore {
     this.ensureReady();
     const normalized = normalizeAiSettings(settings);
     this.db.prepare(`
-      INSERT INTO ai_settings (id, api_key, base_url, model, thinking_type, temperature, name_temperature, updated_at)
-      VALUES (1, @apiKey, @baseUrl, @model, @thinkingType, @temperature, @nameTemperature, @updatedAt)
+      INSERT INTO ai_settings (id, api_key, base_url, model, thinking_optimize, thinking_name, temperature, name_temperature, updated_at)
+      VALUES (1, @apiKey, @baseUrl, @model, @thinkingOptimize, @thinkingName, @temperature, @nameTemperature, @updatedAt)
       ON CONFLICT(id) DO UPDATE SET
         api_key = excluded.api_key,
         base_url = excluded.base_url,
         model = excluded.model,
-        thinking_type = excluded.thinking_type,
+        thinking_optimize = excluded.thinking_optimize,
+        thinking_name = excluded.thinking_name,
         temperature = excluded.temperature,
         name_temperature = excluded.name_temperature,
         updated_at = excluded.updated_at
