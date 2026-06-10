@@ -1989,7 +1989,7 @@
 
     function getSiteLogName(site) {
       if (!site) return '「未命名项目」';
-      return `「${site.title || '未命名项目'}」(编号: ${site.id})`;
+      return `「${site.title || '未命名项目'}」(编号: ${site.number || site.id})`;
     }
 
     function formatAiJobStatus(job, site, isDirected) {
