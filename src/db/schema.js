@@ -126,6 +126,14 @@ function applySchema(db) {
     db.exec('ALTER TABLE sites ADD COLUMN position INTEGER NOT NULL DEFAULT 0');
   }
 
+  const aiSettingsColumns = db.prepare('PRAGMA table_info(ai_settings)').all().map((column) => column.name);
+  if (!aiSettingsColumns.includes('thinking_optimize')) {
+    db.exec('ALTER TABLE ai_settings ADD COLUMN thinking_optimize TEXT');
+  }
+  if (!aiSettingsColumns.includes('thinking_name')) {
+    db.exec('ALTER TABLE ai_settings ADD COLUMN thinking_name TEXT');
+  }
+
   db.prepare(`
     INSERT INTO schema_meta (key, value, updated_at)
     VALUES ('schema_version', @value, @updatedAt)
