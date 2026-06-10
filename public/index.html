@@ -1209,6 +1209,7 @@
     }
 
     function showLoadingState() {
+      siteRenderToken += 1;
       loadingState.hidden = false;
       emptyState.hidden = true;
       emptyState.style.display = 'none';
@@ -1235,6 +1236,7 @@
     }
 
     function showEmptyState(message) {
+      siteRenderToken += 1;
       siteGrid.innerHTML = '';
       emptyState.textContent = message;
       emptyState.hidden = false;
@@ -1576,6 +1578,7 @@
     }
 
     function renderClassPasswordPrompt(message = '请输入班级密码后查看项目。', count = 0) {
+      siteRenderToken += 1;
       loadedSites = [];
       hideLoadingState();
       hideEmptyState();
