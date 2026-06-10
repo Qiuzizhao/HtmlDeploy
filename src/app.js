@@ -1259,6 +1259,10 @@ function filterAdminSites(sites, query) {
       return false;
     }
 
+    if (starred === 'false' && site.starred === true) {
+      return false;
+    }
+
     if (enabled === 'true' && site.enabled === false) {
       return false;
     }

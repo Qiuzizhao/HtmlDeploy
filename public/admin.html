@@ -1337,6 +1337,11 @@
             <div class="toolbar-left">
               <input id="searchInput" type="search" placeholder="搜索项目名称、ID 或序号">
               <select id="filterClassId" class="class-select" aria-label="按班级筛选"></select>
+              <select id="filterStarred" class="class-select" aria-label="按星标筛选">
+                <option value="">全部星标</option>
+                <option value="true">已星标</option>
+                <option value="false">未星标</option>
+              </select>
             </div>
             <div class="toolbar-right">
               <button class="button" id="dedupeSitesButton" type="button">查重</button>
@@ -3171,6 +3176,7 @@
     function renderRows() {
       const keyword = searchInput.value.trim().toLowerCase();
       const selectedClass = filterClassId.value;
+      const selectedStarred = filterStarred.value;
       const filtered = sites.filter((site) => {
         const siteNumber = site.number || '';
         const matchKeyword = site.title.toLowerCase().includes(keyword)
@@ -3179,7 +3185,10 @@
           || (site.author || '').toLowerCase().includes(keyword)
           || siteNumber.includes(keyword);
         const matchClass = selectedClass ? site.classId === selectedClass : true;
-        return matchKeyword && matchClass;
+        let matchStarred = true;
+        if (selectedStarred === 'true') matchStarred = site.starred === true;
+        if (selectedStarred === 'false') matchStarred = site.starred !== true;
+        return matchKeyword && matchClass && matchStarred;
       });
 
       siteRows.innerHTML = '';
@@ -3469,6 +3478,10 @@
 
       if (filterClassId.value) {
         params.set('classId', filterClassId.value);
+      }
+
+      if (filterStarred.value) {
+        params.set('starred', filterStarred.value);
       }
 
       return params;
@@ -4231,6 +4244,10 @@
 
     searchInput.addEventListener('input', debounceAdminSitesLoad);
     filterClassId.addEventListener('change', () => {
+      adminSitesPage = 1;
+      loadSites();
+    });
+    filterStarred.addEventListener('change', () => {
       adminSitesPage = 1;
       loadSites();
     });
