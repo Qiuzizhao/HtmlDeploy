@@ -1586,11 +1586,19 @@
             </label>
             <label>
               AI 优化思考模式 (Thinking)
-              <input id="aiThinkingOptimizeInput" name="thinkingOptimize" type="text" placeholder="可留空，例如 enabled 或 disabled">
+              <select id="aiThinkingOptimizeInput" name="thinkingOptimize">
+                <option value="">跟随大模型默认</option>
+                <option value="enabled">开启思考 (enabled)</option>
+                <option value="disabled">关闭思考 (disabled)</option>
+              </select>
             </label>
             <label>
               AI 命名思考模式 (Thinking)
-              <input id="aiThinkingNameInput" name="thinkingName" type="text" placeholder="可留空，例如 enabled 或 disabled">
+              <select id="aiThinkingNameInput" name="thinkingName">
+                <option value="">跟随大模型默认</option>
+                <option value="enabled">开启思考 (enabled)</option>
+                <option value="disabled">关闭思考 (disabled)</option>
+              </select>
             </label>
             <div class="settings-actions">
               <button class="primary-button" type="submit">保存AI设置</button>
