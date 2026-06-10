@@ -1587,7 +1587,6 @@
             <label>
               全局思考模式 (Thinking) 默认值
               <select id="aiThinkingDefaultInput" name="thinkingType">
-                <option value="">跟随大模型默认</option>
                 <option value="enabled">开启思考 (enabled)</option>
                 <option value="disabled">关闭思考 (disabled)</option>
               </select>
@@ -2860,7 +2859,7 @@
       aiModelInput.value = aiSettings.model || '';
       aiTemperatureInput.value = aiSettings.temperature ?? 0.2;
       aiNameTemperatureInput.value = aiSettings.nameTemperature ?? 0.3;
-      aiThinkingDefaultInput.value = aiSettings.thinkingType || '';
+      aiThinkingDefaultInput.value = aiSettings.thinkingType || 'enabled';
       aiThinkingOptimizeInput.value = aiSettings.thinkingOptimize || '';
       aiThinkingNameInput.value = aiSettings.thinkingName || '';
     }

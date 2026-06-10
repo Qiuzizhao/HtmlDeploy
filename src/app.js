@@ -232,7 +232,7 @@ function mergeLlmConfig(options = {}, aiSettings = {}) {
     apiKey: normalized.apiKey || environment.apiKey,
     baseUrl: normalized.baseUrl || environment.baseUrl,
     model: normalized.model || environment.model,
-    thinkingType: normalized.thinkingType || environment.thinkingType,
+    thinkingType: normalized.thinkingType || environment.thinkingType || 'enabled',
     thinkingOptimize: normalized.thinkingOptimize || environment.thinkingOptimize,
     thinkingName: normalized.thinkingName || environment.thinkingName,
     temperature: normalized.temperature ?? environment.temperature,
