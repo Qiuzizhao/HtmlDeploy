@@ -1585,8 +1585,12 @@
               <input id="aiNameTemperatureInput" name="nameTemperature" type="number" min="0" max="2" step="0.1">
             </label>
             <label>
-              Thinking Type
-              <input id="aiThinkingTypeInput" name="thinkingType" type="text" placeholder="可留空，例如 disabled">
+              AI 优化思考模式 (Thinking)
+              <input id="aiThinkingOptimizeInput" name="thinkingOptimize" type="text" placeholder="可留空，例如 enabled 或 disabled">
+            </label>
+            <label>
+              AI 命名思考模式 (Thinking)
+              <input id="aiThinkingNameInput" name="thinkingName" type="text" placeholder="可留空，例如 enabled 或 disabled">
             </label>
             <div class="settings-actions">
               <button class="primary-button" type="submit">保存AI设置</button>
@@ -1682,7 +1686,8 @@
     const aiModelInput = document.getElementById('aiModelInput');
     const aiTemperatureInput = document.getElementById('aiTemperatureInput');
     const aiNameTemperatureInput = document.getElementById('aiNameTemperatureInput');
-    const aiThinkingTypeInput = document.getElementById('aiThinkingTypeInput');
+    const aiThinkingOptimizeInput = document.getElementById('aiThinkingOptimizeInput');
+    const aiThinkingNameInput = document.getElementById('aiThinkingNameInput');
     const clearAiApiKeyButton = document.getElementById('clearAiApiKey');
     const classNameInput = document.getElementById('classNameInput');
     const classPasswordInput = document.getElementById('classPasswordInput');
@@ -2838,7 +2843,8 @@
       aiModelInput.value = aiSettings.model || '';
       aiTemperatureInput.value = aiSettings.temperature ?? 0.2;
       aiNameTemperatureInput.value = aiSettings.nameTemperature ?? 0.3;
-      aiThinkingTypeInput.value = aiSettings.thinkingType || '';
+      aiThinkingOptimizeInput.value = aiSettings.thinkingOptimize || '';
+      aiThinkingNameInput.value = aiSettings.thinkingName || '';
     }
 
     async function loadAiSettings() {
@@ -2864,7 +2870,8 @@
         model: aiModelInput.value.trim(),
         temperature: Number(aiTemperatureInput.value),
         nameTemperature: Number(aiNameTemperatureInput.value),
-        thinkingType: aiThinkingTypeInput.value.trim()
+        thinkingOptimize: aiThinkingOptimizeInput.value.trim(),
+        thinkingName: aiThinkingNameInput.value.trim()
       };
 
       setButtonLoading(submitButton, true, '保存中...');

@@ -204,7 +204,8 @@ function getEnvironmentLlmConfig(options = {}) {
     apiKey: options.llmApiKey || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || '',
     baseUrl: options.llmApiBaseUrl || process.env.LLM_API_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     model: options.llmModel || process.env.LLM_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    thinkingType: options.llmThinkingType || process.env.LLM_THINKING_TYPE || '',
+    thinkingOptimize: options.llmThinkingOptimize || process.env.LLM_THINKING_OPTIMIZE || '',
+    thinkingName: options.llmThinkingName || process.env.LLM_THINKING_NAME || '',
     temperature: normalizeTemperature(options.llmTemperature ?? process.env.LLM_TEMPERATURE, 0.2),
     nameTemperature: normalizeTemperature(options.llmNameTemperature ?? process.env.LLM_NAME_TEMPERATURE, 0.3),
     timeoutMs: normalizeTimeoutMs(options.llmTimeoutMs ?? process.env.LLM_TIMEOUT_MS, 45000)
@@ -216,7 +217,8 @@ function normalizeAiSettings(settings = {}) {
     apiKey: String(settings.apiKey || '').trim(),
     baseUrl: String(settings.baseUrl || '').trim(),
     model: String(settings.model || '').trim(),
-    thinkingType: String(settings.thinkingType || '').trim(),
+    thinkingOptimize: String(settings.thinkingOptimize || '').trim(),
+    thinkingName: String(settings.thinkingName || '').trim(),
     temperature: normalizeTemperature(settings.temperature, undefined),
     nameTemperature: normalizeTemperature(settings.nameTemperature, undefined)
   };
@@ -230,7 +232,8 @@ function mergeLlmConfig(options = {}, aiSettings = {}) {
     apiKey: normalized.apiKey || environment.apiKey,
     baseUrl: normalized.baseUrl || environment.baseUrl,
     model: normalized.model || environment.model,
-    thinkingType: normalized.thinkingType || environment.thinkingType,
+    thinkingOptimize: normalized.thinkingOptimize || environment.thinkingOptimize,
+    thinkingName: normalized.thinkingName || environment.thinkingName,
     temperature: normalized.temperature ?? environment.temperature,
     nameTemperature: normalized.nameTemperature ?? environment.nameTemperature,
     timeoutMs: environment.timeoutMs
@@ -260,7 +263,8 @@ function toPublicAiSettings({ aiSettings, llmConfig }) {
     model: llmConfig.model,
     temperature: llmConfig.temperature,
     nameTemperature: llmConfig.nameTemperature,
-    thinkingType: llmConfig.thinkingType
+    thinkingOptimize: llmConfig.thinkingOptimize,
+    thinkingName: llmConfig.thinkingName
   };
 }
 
@@ -330,8 +334,8 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
     ]
   };
 
-  if (llmConfig.thinkingType) {
-    requestBody.thinking = { type: llmConfig.thinkingType };
+  if (llmConfig.thinkingOptimize) {
+    requestBody.thinking = { type: llmConfig.thinkingOptimize };
   }
 
   const { response, result } = await fetchJsonWithTimeout(
@@ -391,8 +395,8 @@ async function nameSiteWithLlm({ codeSnapshot, currentTitle, author, llmConfig }
     ]
   };
 
-  if (llmConfig.thinkingType) {
-    requestBody.thinking = { type: llmConfig.thinkingType };
+  if (llmConfig.thinkingName) {
+    requestBody.thinking = { type: llmConfig.thinkingName };
   }
 
   const { response, result } = await fetchJsonWithTimeout(
@@ -2303,8 +2307,12 @@ function createApp(options = {}) {
         nextSettings.nameTemperature = normalizeTemperature(req.body.nameTemperature, previousSettings.nameTemperature);
       }
 
-      if (req.body.thinkingType !== undefined) {
-        nextSettings.thinkingType = String(req.body.thinkingType || '').trim();
+      if (req.body.thinkingOptimize !== undefined) {
+        nextSettings.thinkingOptimize = String(req.body.thinkingOptimize || '').trim();
+      }
+
+      if (req.body.thinkingName !== undefined) {
+        nextSettings.thinkingName = String(req.body.thinkingName || '').trim();
       }
 
       const savedSettings = await writeAiSettings(aiSettingsFile, nextSettings);
