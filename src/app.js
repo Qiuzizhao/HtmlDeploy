@@ -232,6 +232,7 @@ function mergeLlmConfig(options = {}, aiSettings = {}) {
     apiKey: normalized.apiKey || environment.apiKey,
     baseUrl: normalized.baseUrl || environment.baseUrl,
     model: normalized.model || environment.model,
+    thinkingType: normalized.thinkingType || environment.thinkingType,
     thinkingOptimize: normalized.thinkingOptimize || environment.thinkingOptimize,
     thinkingName: normalized.thinkingName || environment.thinkingName,
     temperature: normalized.temperature ?? environment.temperature,
@@ -263,6 +264,7 @@ function toPublicAiSettings({ aiSettings, llmConfig }) {
     model: llmConfig.model,
     temperature: llmConfig.temperature,
     nameTemperature: llmConfig.nameTemperature,
+    thinkingType: llmConfig.thinkingType,
     thinkingOptimize: llmConfig.thinkingOptimize,
     thinkingName: llmConfig.thinkingName
   };
@@ -334,8 +336,9 @@ async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmCon
     ]
   };
 
-  if (llmConfig.thinkingOptimize) {
-    requestBody.thinking = { type: llmConfig.thinkingOptimize };
+  const thinkingType = llmConfig.thinkingOptimize || llmConfig.thinkingType;
+  if (thinkingType) {
+    requestBody.thinking = { type: thinkingType };
   }
 
   const { response, result } = await fetchJsonWithTimeout(
@@ -395,8 +398,9 @@ async function nameSiteWithLlm({ codeSnapshot, currentTitle, author, llmConfig }
     ]
   };
 
-  if (llmConfig.thinkingName) {
-    requestBody.thinking = { type: llmConfig.thinkingName };
+  const thinkingType = llmConfig.thinkingName || llmConfig.thinkingType;
+  if (thinkingType) {
+    requestBody.thinking = { type: thinkingType };
   }
 
   const { response, result } = await fetchJsonWithTimeout(
@@ -2305,6 +2309,10 @@ function createApp(options = {}) {
 
       if (req.body.nameTemperature !== undefined) {
         nextSettings.nameTemperature = normalizeTemperature(req.body.nameTemperature, previousSettings.nameTemperature);
+      }
+
+      if (req.body.thinkingType !== undefined) {
+        nextSettings.thinkingType = String(req.body.thinkingType || '').trim();
       }
 
       if (req.body.thinkingOptimize !== undefined) {
