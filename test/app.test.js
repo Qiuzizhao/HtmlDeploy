@@ -265,8 +265,10 @@ test('public index can search projects and filter starred projects', async () =>
   assert.match(html, /if \(starredOnly && site\.starred !== true\)/);
   assert.match(html, /function resetRandomSiteOrder/);
   assert.match(html, /function sortSitesForDisplay/);
-  assert.match(html, /projectOrderMode === 'sequential'/);
+  assert.match(html, /projectOrderMode === 'ascending'/);
+  assert.match(html, /projectOrderMode === 'descending'/);
   assert.match(html, /getSiteNumberValue\(a\) - getSiteNumberValue\(b\)/);
+  assert.match(html, /projectOrderMode === 'descending' \? -numberDiff : numberDiff/);
   assert.match(html, /function renderFilteredSites/);
   assert.match(html, /projectSearchInput\.addEventListener\('input'/);
   assert.match(html, /projectOrderButton\.addEventListener\('click'/);

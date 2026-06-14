@@ -316,7 +316,8 @@
       color: var(--brand-dark);
     }
 
-    .order-toggle-button.is-sequential {
+    .order-toggle-button.is-ascending,
+    .order-toggle-button.is-descending {
       border-color: #9ca3af;
       background: #f3f4f6;
       color: var(--text);
@@ -1311,11 +1312,22 @@
 
     function updateProjectFilterControls() {
       const isRandom = projectOrderMode === 'random';
+      const isAscending = projectOrderMode === 'ascending';
+      const orderLabels = {
+        random: '随机',
+        ascending: '升序',
+        descending: '降序'
+      };
       projectOrderButton.classList.toggle('is-random', isRandom);
-      projectOrderButton.classList.toggle('is-sequential', !isRandom);
-      projectOrderButton.textContent = isRandom ? '随机' : '顺序';
+      projectOrderButton.classList.toggle('is-ascending', isAscending);
+      projectOrderButton.classList.toggle('is-descending', projectOrderMode === 'descending');
+      projectOrderButton.textContent = orderLabels[projectOrderMode] || orderLabels.random;
       projectOrderButton.setAttribute('aria-pressed', isRandom ? 'true' : 'false');
-      projectOrderButton.title = isRandom ? '当前随机排列，点击切换为顺序排列' : '当前按编号顺序排列，点击切换为随机排列';
+      projectOrderButton.title = isRandom
+        ? '当前随机排列，点击切换为编号升序'
+        : isAscending
+          ? '当前按编号升序排列，点击切换为编号降序'
+          : '当前按编号降序排列，点击切换为随机排列';
       starredFilterButton.classList.toggle('is-active', starredOnly);
       starredFilterButton.setAttribute('aria-pressed', starredOnly ? 'true' : 'false');
       starredFilterButton.title = starredOnly ? '点击显示全部项目' : '点击只看星标项目';
@@ -1704,13 +1716,14 @@
 
     function sortSitesForDisplay(sites) {
       const sortedSites = [...sites];
-      if (projectOrderMode === 'sequential') {
+      if (projectOrderMode === 'ascending' || projectOrderMode === 'descending') {
         sortedSites.sort((a, b) => {
           const numberDiff = getSiteNumberValue(a) - getSiteNumberValue(b);
           if (numberDiff !== 0) {
-            return numberDiff;
+            return projectOrderMode === 'descending' ? -numberDiff : numberDiff;
           }
-          return String(a.id || '').localeCompare(String(b.id || ''));
+          const idDiff = String(a.id || '').localeCompare(String(b.id || ''));
+          return projectOrderMode === 'descending' ? -idDiff : idDiff;
         });
         return sortedSites;
       }
@@ -2206,7 +2219,9 @@
     projectSearchInput.addEventListener('input', debounceProjectSearchRender);
     projectOrderButton.addEventListener('click', () => {
       if (projectOrderMode === 'random') {
-        projectOrderMode = 'sequential';
+        projectOrderMode = 'ascending';
+      } else if (projectOrderMode === 'ascending') {
+        projectOrderMode = 'descending';
       } else {
         projectOrderMode = 'random';
         resetRandomSiteOrder();
