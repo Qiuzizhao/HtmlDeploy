@@ -26,13 +26,13 @@ test('pages expose a shared favicon', async () => {
   const adminHtml = await fsp.readFile(path.join(publicDir, 'admin.html'), 'utf8');
   const { app } = await makeTestApp({ publicDir });
 
-  assert.match(indexHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
-  assert.match(adminHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+  assert.match(indexHtml, /<link rel="icon" href="\/favicon-site-mark\.svg" type="image\/svg\+xml">/);
+  assert.match(adminHtml, /<link rel="icon" href="\/favicon-site-mark\.svg" type="image\/svg\+xml">/);
 
   const loginPage = await request(app).get('/admin.html').expect(200);
-  assert.match(loginPage.text, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml">/);
+  assert.match(loginPage.text, /<link rel="icon" href="\/favicon-site-mark\.svg" type="image\/svg\+xml">/);
 
-  const favicon = await request(app).get('/favicon.svg').expect(200);
+  const favicon = await request(app).get('/favicon-site-mark.svg').expect(200);
   assert.match(favicon.text || favicon.body.toString('utf8'), /<svg[^>]+viewBox="0 0 64 64"/);
 });
 

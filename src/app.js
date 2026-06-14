@@ -503,7 +503,7 @@ function renderAdminLoginPage(errorMessage = '') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>后台登录 - 项目站</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-site-mark.svg" type="image/svg+xml">
   <style>
     :root { color-scheme: light; --bg: #f4f6f2; --panel: #fff; --text: #1f2726; --muted: #68736f; --line: #dce3dd; --brand: #24715b; --danger: #b42318; }
     * { box-sizing: border-box; }
@@ -1470,7 +1470,7 @@ async function renderFileList({ id, title, projectDir }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title || id)} - 文件列表</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-site-mark.svg" type="image/svg+xml">
   <style>
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 32px; color: #172033; }
     h1 { font-size: 22px; margin: 0 0 16px; }
@@ -1496,7 +1496,7 @@ function renderPreviewPage({ id, title }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(pageTitle)}</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-site-mark.svg" type="image/svg+xml">
   <style>
     :root { color-scheme: dark; --bar: #101418; --line: rgba(255, 255, 255, 0.12); --text: #f4f7f8; --muted: #aeb9bd; --button: rgba(255, 255, 255, 0.1); --button-hover: rgba(255, 255, 255, 0.18); }
     * { box-sizing: border-box; }
