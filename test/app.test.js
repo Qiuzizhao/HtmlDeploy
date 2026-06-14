@@ -252,17 +252,26 @@ test('public index can search projects and filter starred projects', async () =>
 
   assert.match(html, /id="projectSearchInput"/);
   assert.match(html, /placeholder="搜索项目名称、作者、编号"/);
+  assert.match(html, /id="projectOrderButton"[^>]*>随机<\/button>/);
   assert.match(html, /id="starredFilterButton"[^>]*>星标<\/button>/);
   assert.ok(html.indexOf('id="classTabs"') < html.indexOf('id="projectSearchInput"'));
+  assert.ok(html.indexOf('id="projectOrderButton"') < html.indexOf('id="starredFilterButton"'));
   assert.ok(html.indexOf('id="projectSearchInput"') < html.indexOf('id="siteGrid"'));
   assert.match(html, /let loadedSites = \[\]/);
   assert.match(html, /let siteSearchQuery = ''/);
   assert.match(html, /let starredOnly = false/);
+  assert.match(html, /let projectOrderMode = 'random'/);
   assert.match(html, /function getFilteredSites/);
   assert.match(html, /if \(starredOnly && site\.starred !== true\)/);
+  assert.match(html, /function resetRandomSiteOrder/);
+  assert.match(html, /function sortSitesForDisplay/);
+  assert.match(html, /projectOrderMode === 'sequential'/);
+  assert.match(html, /getSiteNumberValue\(a\) - getSiteNumberValue\(b\)/);
   assert.match(html, /function renderFilteredSites/);
   assert.match(html, /projectSearchInput\.addEventListener\('input'/);
+  assert.match(html, /projectOrderButton\.addEventListener\('click'/);
   assert.match(html, /starredFilterButton\.addEventListener\('click'/);
+  assert.match(html, /projectOrderButton\.setAttribute\('aria-pressed'/);
   assert.match(html, /starredFilterButton\.setAttribute\('aria-pressed'/);
 });
 

@@ -303,6 +303,25 @@
       color: var(--warning);
     }
 
+    .order-toggle-button {
+      flex: 0 0 auto;
+      min-width: 96px;
+      min-height: 42px;
+      font-weight: 800;
+    }
+
+    .order-toggle-button.is-random {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      color: var(--brand-dark);
+    }
+
+    .order-toggle-button.is-sequential {
+      border-color: #9ca3af;
+      background: #f3f4f6;
+      color: var(--text);
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -906,6 +925,10 @@
         width: 100%;
       }
 
+      .order-toggle-button {
+        width: 100%;
+      }
+
       .class-filter-bar {
         margin-bottom: 16px;
         padding: 10px;
@@ -1004,6 +1027,7 @@
       </div>
       <div class="project-filter-row">
         <input class="project-search" id="projectSearchInput" type="search" placeholder="搜索项目名称、作者、编号" aria-label="搜索项目">
+        <button class="secondary-button order-toggle-button is-random" id="projectOrderButton" type="button" aria-pressed="true">随机</button>
         <button class="secondary-button star-filter-button" id="starredFilterButton" type="button" aria-pressed="false">星标</button>
       </div>
       <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
@@ -1125,6 +1149,7 @@
     const openUploadButton = document.getElementById('openUpload');
     const refreshClassSitesButton = document.getElementById('refreshClassSites');
     const projectSearchInput = document.getElementById('projectSearchInput');
+    const projectOrderButton = document.getElementById('projectOrderButton');
     const starredFilterButton = document.getElementById('starredFilterButton');
     const classProjectCount = document.getElementById('classProjectCount');
     const currentClassLabel = document.getElementById('currentClassLabel');
@@ -1164,6 +1189,8 @@
     let loadedSites = [];
     let siteSearchQuery = '';
     let starredOnly = false;
+    let projectOrderMode = 'random';
+    let randomSiteOrder = new Map();
     let uploadRules = { forbiddenWords: [] };
     let uploadRulesLoaded = false;
     let uploadRulesPromise = null;
@@ -1283,6 +1310,12 @@
     }
 
     function updateProjectFilterControls() {
+      const isRandom = projectOrderMode === 'random';
+      projectOrderButton.classList.toggle('is-random', isRandom);
+      projectOrderButton.classList.toggle('is-sequential', !isRandom);
+      projectOrderButton.textContent = isRandom ? '随机' : '顺序';
+      projectOrderButton.setAttribute('aria-pressed', isRandom ? 'true' : 'false');
+      projectOrderButton.title = isRandom ? '当前随机排列，点击切换为顺序排列' : '当前按编号顺序排列，点击切换为随机排列';
       starredFilterButton.classList.toggle('is-active', starredOnly);
       starredFilterButton.setAttribute('aria-pressed', starredOnly ? 'true' : 'false');
       starredFilterButton.title = starredOnly ? '点击显示全部项目' : '点击只看星标项目';
@@ -1626,7 +1659,7 @@
 
     function getFilteredSites() {
       const keyword = siteSearchQuery.trim().toLowerCase();
-      return loadedSites.filter((site) => {
+      const filteredSites = loadedSites.filter((site) => {
         if (starredOnly && site.starred !== true) {
           return false;
         }
@@ -1644,6 +1677,46 @@
           site.url
         ].some((value) => String(value || '').toLowerCase().includes(keyword));
       });
+
+      return sortSitesForDisplay(filteredSites);
+    }
+
+    function getSiteNumberValue(site) {
+      const number = Number(site.number);
+      return Number.isFinite(number) ? number : Number.MAX_SAFE_INTEGER;
+    }
+
+    function resetRandomSiteOrder(sites = loadedSites) {
+      const ids = sites.map((site) => site.id);
+      for (let index = ids.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
+      }
+      randomSiteOrder = new Map(ids.map((id, index) => [id, index]));
+    }
+
+    function getRandomSiteRank(site) {
+      if (!randomSiteOrder.has(site.id)) {
+        randomSiteOrder.set(site.id, randomSiteOrder.size);
+      }
+      return randomSiteOrder.get(site.id);
+    }
+
+    function sortSitesForDisplay(sites) {
+      const sortedSites = [...sites];
+      if (projectOrderMode === 'sequential') {
+        sortedSites.sort((a, b) => {
+          const numberDiff = getSiteNumberValue(a) - getSiteNumberValue(b);
+          if (numberDiff !== 0) {
+            return numberDiff;
+          }
+          return String(a.id || '').localeCompare(String(b.id || ''));
+        });
+        return sortedSites;
+      }
+
+      sortedSites.sort((a, b) => getRandomSiteRank(a) - getRandomSiteRank(b));
+      return sortedSites;
     }
 
     function renderFilteredSites() {
@@ -1922,6 +1995,7 @@
           if (cached) {
             const parsed = JSON.parse(cached);
             loadedSites = parsed;
+            resetRandomSiteOrder(parsed);
             if (currentClassId) {
               unlockedClassIds.add(currentClassId);
               saveUnlockedClasses();
@@ -1970,6 +2044,7 @@
           
           if (!hasCachedData || JSON.stringify(loadedSites) !== JSON.stringify(sites)) {
             loadedSites = sites;
+            resetRandomSiteOrder(sites);
             if (currentClassId) {
               unlockedClassIds.add(currentClassId);
               saveUnlockedClasses();
@@ -2129,6 +2204,16 @@
     openUploadButton.addEventListener('click', openUpload);
     refreshClassSitesButton.addEventListener('click', refreshCurrentClassSites);
     projectSearchInput.addEventListener('input', debounceProjectSearchRender);
+    projectOrderButton.addEventListener('click', () => {
+      if (projectOrderMode === 'random') {
+        projectOrderMode = 'sequential';
+      } else {
+        projectOrderMode = 'random';
+        resetRandomSiteOrder();
+      }
+      updateProjectFilterControls();
+      renderFilteredSites();
+    });
     starredFilterButton.addEventListener('click', () => {
       starredOnly = !starredOnly;
       updateProjectFilterControls();
