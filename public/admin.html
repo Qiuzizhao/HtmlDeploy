@@ -260,50 +260,56 @@
 
     .workspace-top {
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      gap: 16px;
+      min-height: 52px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
       margin-bottom: 8px;
     }
 
     .eyebrow {
-      margin: 0 0 6px;
+      margin: 0 0 2px;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 750;
     }
 
     .page-title {
       margin: 0;
-      font-size: 28px;
+      font-size: 20px;
       line-height: 1.2;
     }
 
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(110px, 1fr));
-      gap: 10px;
+    .summary-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0;
+      min-width: 0;
+      border-left: 1px solid var(--line);
     }
 
-    .summary-card {
+    .summary-item {
       min-width: 118px;
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #fff;
+      padding: 0 16px;
+      border-right: 1px solid var(--line);
     }
 
     .summary-value {
       display: block;
       color: var(--brand);
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 800;
       line-height: 1;
     }
 
     .summary-label {
       display: block;
-      margin-top: 6px;
+      margin-top: 3px;
       color: var(--muted);
       font-size: 12px;
       font-weight: 700;
@@ -1216,6 +1222,24 @@
         flex-direction: column;
       }
 
+      .summary-bar {
+        justify-content: flex-start;
+        overflow-x: auto;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+
+      .summary-item {
+        flex: 0 0 auto;
+        min-width: 108px;
+        padding: 0 12px;
+      }
+
+      .summary-item:first-child {
+        padding-left: 0;
+      }
+
       .panel-head,
       .toolbar {
         align-items: flex-start;
@@ -1313,16 +1337,16 @@
           <p class="eyebrow">项目站后台</p>
           <h1 class="page-title" id="activeViewTitle">项目管理</h1>
         </div>
-        <div class="summary-grid" aria-label="后台统计">
-          <div class="summary-card">
+        <div class="summary-bar" aria-label="后台统计">
+          <div class="summary-item">
             <span class="summary-value" id="projectCount">0</span>
             <span class="summary-label">项目</span>
           </div>
-          <div class="summary-card">
+          <div class="summary-item">
             <span class="summary-value" id="classCount">0</span>
             <span class="summary-label">班级</span>
           </div>
-          <div class="summary-card">
+          <div class="summary-item">
             <span class="summary-value" id="storageUsage">0 B</span>
             <span class="summary-label">总存储占用</span>
           </div>
