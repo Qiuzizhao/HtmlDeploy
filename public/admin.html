@@ -8,6 +8,8 @@
   <style>
     :root {
       color-scheme: light;
+      --admin-sidebar-width: 156px;
+      --admin-page-gutter: 8px;
       --bg: #f0f9ff;
       --panel: #ffffff;
       --panel-soft: #f0f9ff;
@@ -85,14 +87,14 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 11px;
-      font-size: 20px;
+      gap: 8px;
+      font-size: 18px;
       font-weight: 750;
     }
 
     .brand-mark {
-      width: 38px;
-      height: 38px;
+      width: 32px;
+      height: 32px;
       display: grid;
       place-items: center;
       border-radius: 8px;
@@ -187,7 +189,7 @@
     .admin-shell {
       min-height: 100vh;
       display: grid;
-      grid-template-columns: 232px minmax(0, 1fr);
+      grid-template-columns: var(--admin-sidebar-width) minmax(0, 1fr);
     }
 
     .admin-sidebar {
@@ -196,8 +198,8 @@
       height: 100vh;
       display: grid;
       grid-template-rows: auto 1fr auto;
-      gap: 24px;
-      padding: 22px 16px;
+      gap: 16px;
+      padding: 14px 10px;
       border-right: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.92);
       box-shadow: 10px 0 30px rgba(23, 32, 51, 0.05);
@@ -207,16 +209,16 @@
     .side-nav {
       display: grid;
       align-content: start;
-      gap: 8px;
+      gap: 6px;
     }
 
     .nav-button {
-      min-height: 44px;
+      min-height: 38px;
       width: 100%;
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      padding: 0 13px;
+      padding: 0 10px;
       border-radius: 8px;
       background: transparent;
       color: var(--muted);
@@ -237,7 +239,7 @@
 
     .sidebar-footer {
       display: grid;
-      gap: 10px;
+      gap: 8px;
     }
 
     .sidebar-footer .button {
@@ -246,7 +248,7 @@
 
     .admin-main {
       min-width: 0;
-      padding: 24px clamp(10px, 2vw, 20px) 48px;
+      padding: var(--admin-page-gutter) var(--admin-page-gutter) 28px;
     }
 
     .workspace-top {
@@ -254,7 +256,7 @@
       align-items: flex-end;
       justify-content: space-between;
       gap: 20px;
-      margin-bottom: 18px;
+      margin-bottom: 8px;
     }
 
     .eyebrow {
