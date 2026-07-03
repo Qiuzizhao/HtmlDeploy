@@ -736,9 +736,11 @@ async function makeTestApp(options = {}) {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-'));
   const dataDir = path.join(root, 'data');
   const storageDir = path.join(root, 'storage', 'sites');
+  const thumbnailDir = options.thumbnailDir || path.join(root, 'storage', 'thumbnails');
   const publicDir = path.join(root, 'public');
   await fsp.mkdir(dataDir, { recursive: true });
   await fsp.mkdir(storageDir, { recursive: true });
+  await fsp.mkdir(thumbnailDir, { recursive: true });
   await fsp.mkdir(publicDir, { recursive: true });
   await fsp.writeFile(path.join(publicDir, 'index.html'), '<!doctype html><title>Test Shell</title>');
   await fsp.writeFile(path.join(publicDir, 'admin.html'), '<!doctype html><title>Admin Shell</title><form id="createForm"></form>');
@@ -749,11 +751,12 @@ async function makeTestApp(options = {}) {
     settingsFile: path.join(dataDir, 'settings.json'),
     aiSettingsFile: path.join(dataDir, 'private-ai-settings.json'),
     storageDir,
+    thumbnailDir,
     publicDir,
     ...options
   });
 
-  return { app, root, dataDir, storageDir, publicDir };
+  return { app, root, dataDir, storageDir, thumbnailDir, publicDir };
 }
 
 async function waitForAiOptimizeJob(agent, jobId, { status = 'success', attempts = 80 } = {}) {
@@ -984,6 +987,27 @@ test('GET /api/admin/sites uses cached storage usage for each project', async ()
       ['missing-files', 0]
     ]
   );
+});
+
+test('site APIs expose and serve compressed JPEG thumbnails', async () => {
+  const { app, dataDir, thumbnailDir } = await makeTestApp();
+  const agent = request.agent(app);
+  await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await fsp.writeFile(
+    path.join(dataDir, 'sites.json'),
+    JSON.stringify([
+      { id: 'good-site', title: '好项目', author: '作者', classId: 'class-a', createdAt: '2026-01-01T00:00:00.000Z' }
+    ], null, 2)
+  );
+  await fsp.writeFile(path.join(thumbnailDir, 'good-site.jpg'), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+
+  const sites = await agent.get('/api/admin/sites').expect(200);
+  assert.match(sites.body[0].thumbnailUrl, /^\/thumbnails\/good-site\.jpg\?v=\d+$/);
+
+  const thumbnail = await agent.get('/thumbnails/good-site.jpg').expect(200);
+  assert.match(thumbnail.headers['content-type'], /^image\/jpeg\b/);
+  assert.deepEqual(thumbnail.body, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
 });
 
 test('thumbnail generation runs as background jobs with progress', async () => {

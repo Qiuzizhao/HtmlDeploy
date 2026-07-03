@@ -15,6 +15,10 @@ const CLASS_COOKIE_PREFIX = 'html_deploy_class_';
 const ALL_COOKIE_NAME = 'html_deploy_all';
 const MAX_FORBIDDEN_WORDS = 100000;
 const THUMBNAIL_URL_CACHE_TTL_MS = 30000;
+const THUMBNAIL_EXTENSION = 'jpg';
+const THUMBNAIL_SCREENSHOT_TYPE = 'jpeg';
+const THUMBNAIL_JPEG_QUALITY = 76;
+const LEGACY_THUMBNAIL_EXTENSION = 'png';
 
 const thumbnailUrlCache = new Map();
 
@@ -1140,36 +1144,54 @@ function toPublicClass(classItem) {
   };
 }
 
-function getThumbnailPath(thumbnailDir, id) {
-  return path.join(thumbnailDir, `${id}.png`);
+function getThumbnailPath(thumbnailDir, id, extension = THUMBNAIL_EXTENSION) {
+  return path.join(thumbnailDir, `${id}.${extension}`);
 }
 
 function getThumbnailCacheKey(thumbnailDir, id) {
-  return path.resolve(getThumbnailPath(thumbnailDir, id));
+  return path.resolve(thumbnailDir, id);
 }
 
 function invalidateThumbnailUrlCache(thumbnailDir, id) {
   thumbnailUrlCache.delete(getThumbnailCacheKey(thumbnailDir, id));
 }
 
+function getExistingThumbnail(thumbnailDir, id) {
+  const candidates = [
+    THUMBNAIL_EXTENSION,
+    LEGACY_THUMBNAIL_EXTENSION
+  ];
+
+  for (const extension of candidates) {
+    const thumbnailPath = getThumbnailPath(thumbnailDir, id, extension);
+    try {
+      const stat = fs.statSync(thumbnailPath);
+      return { extension, path: thumbnailPath, stat };
+    } catch {
+      // Keep looking for a supported thumbnail format.
+    }
+  }
+
+  return null;
+}
+
 function getThumbnailUrl(thumbnailDir, id) {
-  const thumbnailPath = getThumbnailPath(thumbnailDir, id);
-  const cacheKey = path.resolve(thumbnailPath);
+  const cacheKey = getThumbnailCacheKey(thumbnailDir, id);
   const cached = thumbnailUrlCache.get(cacheKey);
   const now = Date.now();
   if (cached && now - cached.checkedAt < THUMBNAIL_URL_CACHE_TTL_MS) {
     return cached.url;
   }
 
-  try {
-    const stat = fs.statSync(thumbnailPath);
-    const url = `/thumbnails/${encodeURIComponent(id)}.png?v=${Math.round(stat.mtimeMs)}`;
+  const thumbnail = getExistingThumbnail(thumbnailDir, id);
+  if (thumbnail) {
+    const url = `/thumbnails/${encodeURIComponent(id)}.${thumbnail.extension}?v=${Math.round(thumbnail.stat.mtimeMs)}`;
     thumbnailUrlCache.set(cacheKey, { checkedAt: now, url });
     return url;
-  } catch {
-    thumbnailUrlCache.set(cacheKey, { checkedAt: now, url: '' });
-    return '';
   }
+
+  thumbnailUrlCache.set(cacheKey, { checkedAt: now, url: '' });
+  return '';
 }
 
 async function getDirectorySize(directory) {
@@ -1347,7 +1369,8 @@ async function generateSiteThumbnail({ id, origin, thumbnailDir, adminToken }) {
     const thumbnailPath = getThumbnailPath(thumbnailDir, id);
     await page.screenshot({
       path: thumbnailPath,
-      type: 'png',
+      type: THUMBNAIL_SCREENSHOT_TYPE,
+      quality: THUMBNAIL_JPEG_QUALITY,
       fullPage: false
     });
     await context.close();
@@ -2558,15 +2581,20 @@ function createApp(options = {}) {
     }
   });
 
-  app.get('/thumbnails/:id.png', async (req, res, next) => {
+  app.get('/thumbnails/:id.:extension', async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const { id, extension } = req.params;
+      const normalizedExtension = String(extension || '').toLowerCase();
+      if (![THUMBNAIL_EXTENSION, LEGACY_THUMBNAIL_EXTENSION].includes(normalizedExtension)) {
+        return res.status(404).send('Not found');
+      }
+
       const site = await readSite(dataFile, id);
       if (!(await canReadSite(req, id, site))) {
         return res.status(401).send('请输入班级密码');
       }
 
-      const thumbnailPath = getThumbnailPath(thumbnailDir, id);
+      const thumbnailPath = getThumbnailPath(thumbnailDir, id, normalizedExtension);
       if (!fs.existsSync(thumbnailPath)) {
         return res.status(404).send('Not found');
       }
