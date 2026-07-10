@@ -1028,7 +1028,7 @@
       </div>
       <div class="project-filter-row">
         <input class="project-search" id="projectSearchInput" type="search" placeholder="搜索项目名称、作者、编号" aria-label="搜索项目">
-        <button class="secondary-button order-toggle-button is-random" id="projectOrderButton" type="button" aria-pressed="true">随机</button>
+        <button class="secondary-button order-toggle-button is-descending" id="projectOrderButton" type="button" aria-pressed="false">降序</button>
         <button class="secondary-button star-filter-button" id="starredFilterButton" type="button" aria-pressed="false">星标</button>
       </div>
       <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
@@ -1190,7 +1190,7 @@
     let loadedSites = [];
     let siteSearchQuery = '';
     let starredOnly = false;
-    let projectOrderMode = 'random';
+    let projectOrderMode = 'descending';
     let randomSiteOrder = new Map();
     let uploadRules = { forbiddenWords: [] };
     let uploadRulesLoaded = false;
