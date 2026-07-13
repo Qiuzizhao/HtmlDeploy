@@ -551,6 +551,9 @@ test('public admin exposes class bulk controls for uploads and passwords', async
 test('public admin can edit the all-projects password in class management', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
+  assert.match(html, /<h2 class="panel-title">全部作品页访问设置<\/h2>/);
+  assert.match(html, /id="allPasswordMessage"/);
+  assert.match(html, /全部作品页访问设置[\s\S]*?id="allPasswordForm"[\s\S]*?<\/div>\s*<div class="panel">[\s\S]*?<h2 class="panel-title">班级管理<\/h2>/);
   assert.match(html, /全部作品页密码/);
   assert.match(html, /id="allPasswordInput"[^>]+type="password"/);
   assert.match(html, /id="toggleAllPassword"[^>]*>显示<\/button>/);
