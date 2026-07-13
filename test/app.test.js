@@ -1264,6 +1264,27 @@ test('admin can create classes and public APIs expose class buttons', async () =
   assert.equal(adminResponse.body[0].password, '123456');
 });
 
+test('admin class order persists and is reflected by public class buttons', async () => {
+  const ids = ['class-a', 'class-b', 'class-c'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await admin.post('/api/classes').send({ name: '二班', password: '222222' }).expect(201);
+  await admin.post('/api/classes').send({ name: '三班', password: '333333' }).expect(201);
+
+  await admin
+    .put('/api/classes/order')
+    .send({ classIds: ['class-c', 'class-a', 'class-b'] })
+    .expect(200);
+
+  const publicClasses = await request(app).get('/api/classes').expect(200);
+  assert.deepEqual(publicClasses.body.map((item) => item.id), ['class-c', 'class-a', 'class-b']);
+
+  const adminClasses = await admin.get('/api/admin/classes').expect(200);
+  assert.deepEqual(adminClasses.body.map((item) => item.id), ['class-c', 'class-a', 'class-b']);
+});
+
 test('POST /api/sites requires title and files', async () => {
   const { app } = await makeTestApp();
 

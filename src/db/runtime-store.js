@@ -164,6 +164,7 @@ function rowToClass(row = {}) {
     password: row.password,
     uploadEnabled: row.upload_enabled !== 0,
     passwordEnabled: row.password_enabled !== 0,
+    position: Math.max(0, Number(row.position) || 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at || ''
   };
@@ -176,6 +177,7 @@ function normalizeClass(classItem = {}) {
     password: String(classItem.password || '').trim(),
     uploadEnabled: classItem.uploadEnabled !== false,
     passwordEnabled: classItem.passwordEnabled !== false,
+    position: Math.max(0, Number(classItem.position) || 0),
     createdAt: String(classItem.createdAt || nowIso()),
     updatedAt: String(classItem.updatedAt || '')
   };
@@ -357,15 +359,16 @@ class RuntimeStore {
       return;
     }
     this.db.prepare(`
-      INSERT INTO classes (id, name, password, upload_enabled, password_enabled, created_at, updated_at)
-      VALUES (@id, @name, @password, @uploadEnabled, @passwordEnabled, @createdAt, @updatedAt)
+      INSERT INTO classes (id, name, password, upload_enabled, password_enabled, created_at, updated_at, position)
+      VALUES (@id, @name, @password, @uploadEnabled, @passwordEnabled, @createdAt, @updatedAt, @position)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         password = excluded.password,
         upload_enabled = excluded.upload_enabled,
         password_enabled = excluded.password_enabled,
         created_at = COALESCE(classes.created_at, excluded.created_at),
-        updated_at = excluded.updated_at
+        updated_at = excluded.updated_at,
+        position = excluded.position
     `).run({
       id: item.id,
       name: item.name || item.id,
@@ -373,15 +376,16 @@ class RuntimeStore {
       uploadEnabled: item.uploadEnabled ? 1 : 0,
       passwordEnabled: item.passwordEnabled ? 1 : 0,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
+      position: item.position
     });
   }
 
   replaceClasses(classes) {
     const tx = this.db.transaction((items) => {
       this.db.prepare('DELETE FROM classes WHERE id NOT IN (SELECT DISTINCT class_id FROM sites)').run();
-      for (const item of items) {
-        this.upsertClass(item);
+      for (const [position, item] of items.entries()) {
+        this.upsertClass({ ...item, position });
       }
     });
     tx(Array.isArray(classes) ? classes : []);
@@ -389,7 +393,7 @@ class RuntimeStore {
 
   listClasses() {
     this.ensureReady();
-    return this.db.prepare('SELECT * FROM classes ORDER BY created_at ASC, name ASC').all().map(rowToClass);
+    return this.db.prepare('SELECT * FROM classes ORDER BY position ASC, created_at ASC, name ASC').all().map(rowToClass);
   }
 
   getSettings({ includeForbiddenWords = true, includeForbiddenWordsCount = true } = {}) {
@@ -787,8 +791,8 @@ function migrateJsonToSqlite({ store, dataDir }) {
     const jobsRaw = readJsonFile(path.join(dataDir, 'jobs.json'), []);
     const jobLogs = Array.isArray(jobsRaw) ? jobsRaw : Array.isArray(jobsRaw.logs) ? jobsRaw.logs : [];
 
-    for (const classItem of Array.isArray(classes) ? classes : []) {
-      store.upsertClass(classItem);
+    for (const [position, classItem] of (Array.isArray(classes) ? classes : []).entries()) {
+      store.upsertClass({ ...classItem, position });
     }
 
     store.writeSettings(settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {});

@@ -15,7 +15,8 @@ function applySchema(db) {
       upload_enabled INTEGER NOT NULL DEFAULT 1,
       password_enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
-      updated_at TEXT
+      updated_at TEXT,
+      position INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE INDEX IF NOT EXISTS idx_classes_created_at ON classes(created_at);
@@ -115,6 +116,12 @@ function applySchema(db) {
 
     CREATE INDEX IF NOT EXISTS idx_job_logs_created_at ON job_logs(created_at);
   `);
+
+  const classColumns = db.prepare('PRAGMA table_info(classes)').all().map((column) => column.name);
+  if (!classColumns.includes('position')) {
+    db.exec('ALTER TABLE classes ADD COLUMN position INTEGER NOT NULL DEFAULT 0');
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_classes_position ON classes(position)');
 
   const forbiddenColumns = db.prepare('PRAGMA table_info(forbidden_words)').all().map((column) => column.name);
   if (!forbiddenColumns.includes('position')) {
