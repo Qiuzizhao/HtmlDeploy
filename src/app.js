@@ -2388,6 +2388,44 @@ function createApp(options = {}) {
     }
   });
 
+  app.patch('/api/classes/upload-enabled', requireAdmin, async (req, res, next) => {
+    try {
+      if (typeof req.body.uploadEnabled !== 'boolean') {
+        return res.status(400).json({ error: '上传状态必须是布尔值' });
+      }
+
+      const updatedAt = new Date().toISOString();
+      const classes = (await readClasses(classesFile)).map((classItem) => ({
+        ...classItem,
+        uploadEnabled: req.body.uploadEnabled,
+        updatedAt
+      }));
+      await writeClasses(classesFile, classes);
+      return res.json(classes);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.patch('/api/classes/password-enabled', requireAdmin, async (req, res, next) => {
+    try {
+      if (typeof req.body.passwordEnabled !== 'boolean') {
+        return res.status(400).json({ error: '密码状态必须是布尔值' });
+      }
+
+      const updatedAt = new Date().toISOString();
+      const classes = (await readClasses(classesFile)).map((classItem) => ({
+        ...classItem,
+        passwordEnabled: req.body.passwordEnabled,
+        updatedAt
+      }));
+      await writeClasses(classesFile, classes);
+      return res.json(classes);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.put('/api/classes/order', requireAdmin, async (req, res, next) => {
     try {
       const { classIds } = req.body;

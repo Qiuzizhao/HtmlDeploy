@@ -597,6 +597,20 @@
       padding: 0 20px 20px;
     }
 
+    .class-bulk-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 20px 16px;
+    }
+
+    .class-bulk-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
     .class-row {
       display: grid;
       grid-template-columns: 24px minmax(180px, 1fr) minmax(130px, 0.5fr) minmax(110px, auto) minmax(110px, auto) auto;
@@ -1519,6 +1533,13 @@
             <button class="button" id="generateClassPassword" type="button">随机生成</button>
             <button class="primary-button" type="submit">新增班级</button>
           </form>
+          <div class="class-bulk-actions" aria-label="全部班级快捷操作">
+            <span class="class-bulk-label">批量操作</span>
+            <button class="primary-button" id="enableAllClassUploads" type="button">启用全部上传</button>
+            <button class="danger-button" id="disableAllClassUploads" type="button">关闭全部上传</button>
+            <button class="primary-button" id="enableAllClassPasswords" type="button">启用全部密码</button>
+            <button class="danger-button" id="disableAllClassPasswords" type="button">解除全部密码</button>
+          </div>
           <div class="class-list" id="classList"></div>
         </div>
       </section>
@@ -1735,6 +1756,16 @@
     const classPasswordInput = document.getElementById('classPasswordInput');
     const classList = document.getElementById('classList');
     const classMessage = document.getElementById('classMessage');
+    const enableAllClassUploads = document.getElementById('enableAllClassUploads');
+    const disableAllClassUploads = document.getElementById('disableAllClassUploads');
+    const enableAllClassPasswords = document.getElementById('enableAllClassPasswords');
+    const disableAllClassPasswords = document.getElementById('disableAllClassPasswords');
+    const classBulkButtons = [
+      enableAllClassUploads,
+      disableAllClassUploads,
+      enableAllClassPasswords,
+      disableAllClassPasswords
+    ];
     const forbiddenWordsMessage = document.getElementById('forbiddenWordsMessage');
     const createMessage = document.getElementById('createMessage');
     const listMessage = document.getElementById('listMessage');
@@ -1786,6 +1817,7 @@
     let sites = [];
     let rankingSites = [];
     let classes = [];
+    let classBulkOperationRunning = false;
     let settings = {};
     let adminSitesPage = 1;
     let adminSitesPageSize = 50;
@@ -2604,6 +2636,9 @@
 
     function renderClassList() {
       classList.innerHTML = '';
+      classBulkButtons.forEach((button) => {
+        button.disabled = classes.length === 0 || classBulkOperationRunning;
+      });
       fillClassSelect(createClassId, createClassId.value);
       fillClassSelect(filterClassId, filterClassId.value, '全部班级');
 
@@ -4095,6 +4130,45 @@
       setMessage(classMessage, passwordEnabled ? '已启用该班级密码' : '已解除该班级密码');
     }
 
+    async function setAllClassesState(kind, enabled, button) {
+      const actionText = kind === 'upload'
+        ? (enabled ? '启用全部上传' : '关闭全部上传')
+        : (enabled ? '启用全部密码' : '解除全部密码');
+      if (!confirm(`确定要${actionText}吗？此操作将影响所有班级。`)) {
+        return;
+      }
+
+      classBulkOperationRunning = true;
+      classBulkButtons.forEach((item) => { item.disabled = true; });
+      setButtonLoading(button, true, '处理中...');
+
+      try {
+        const response = await fetch(`/api/classes/${kind}-enabled`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [`${kind}Enabled`]: enabled })
+        });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({ error: `${actionText}失败` }));
+          setMessage(classMessage, result.error || `${actionText}失败`, true);
+          return;
+        }
+
+        classes = await response.json();
+        renderClassList();
+        setMessage(classMessage, `${actionText}成功`);
+      } catch (error) {
+        setMessage(classMessage, error.message || `${actionText}失败`, true);
+      } finally {
+        classBulkOperationRunning = false;
+        setButtonLoading(button, false);
+        classBulkButtons.forEach((item) => {
+          item.disabled = classes.length === 0 || classBulkOperationRunning;
+        });
+      }
+    }
+
     async function updateClass(classItem, input, passwordInput, row, button) {
       const name = input.value.trim();
       const password = passwordInput.value.trim();
@@ -4274,6 +4348,10 @@
       allPasswordInput.value = generatePassword();
     });
     classForm.addEventListener('submit', createClass);
+    enableAllClassUploads.addEventListener('click', () => setAllClassesState('upload', true, enableAllClassUploads));
+    disableAllClassUploads.addEventListener('click', () => setAllClassesState('upload', false, disableAllClassUploads));
+    enableAllClassPasswords.addEventListener('click', () => setAllClassesState('password', true, enableAllClassPasswords));
+    disableAllClassPasswords.addEventListener('click', () => setAllClassesState('password', false, disableAllClassPasswords));
     const toggleClassPassword = document.getElementById('toggleClassPassword');
     toggleClassPassword.addEventListener('click', () => {
       togglePasswordVisibility(classPasswordInput, toggleClassPassword);

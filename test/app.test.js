@@ -533,6 +533,21 @@ test('public admin class passwords are hidden by default with one show-hide togg
   assert.ok(html.indexOf('actions.append(toggleButton, generateButton') !== -1);
 });
 
+test('public admin exposes class bulk controls for uploads and passwords', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /id="enableAllClassUploads"[^>]*>启用全部上传<\/button>/);
+  assert.match(html, /id="disableAllClassUploads"[^>]*>关闭全部上传<\/button>/);
+  assert.match(html, /id="enableAllClassPasswords"[^>]*>启用全部密码<\/button>/);
+  assert.match(html, /id="disableAllClassPasswords"[^>]*>解除全部密码<\/button>/);
+  assert.match(html, /async function setAllClassesState\(kind, enabled, button\)/);
+  assert.match(html, /confirm\(`确定要\$\{actionText\}吗？此操作将影响所有班级。`\)/);
+  assert.match(html, /`\/api\/classes\/\$\{kind\}-enabled`/);
+  assert.match(html, /enableAllClassUploads\.addEventListener\('click'/);
+  assert.match(html, /disableAllClassPasswords\.addEventListener\('click'/);
+  assert.match(html, /button\.disabled = classes\.length === 0 \|\| classBulkOperationRunning/);
+});
+
 test('public admin can edit the all-projects password in class management', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
@@ -1467,6 +1482,65 @@ test('admin can disable a class password so visitors can read it without unlocki
   const response = await visitor.get('/api/sites?classId=class-a').expect(200);
   assert.deepEqual(response.body.map((site) => site.title), ['免密码项目']);
   await visitor.get('/site/site-a').expect(200);
+});
+
+test('admin can bulk update every class upload state', async () => {
+  const ids = ['class-a', 'class-b'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await admin.post('/api/classes').send({ name: '二班', password: '222222' }).expect(201);
+
+  await request(app)
+    .patch('/api/classes/upload-enabled')
+    .send({ uploadEnabled: false })
+    .expect(401);
+  await admin.patch('/api/classes/upload-enabled').send({ uploadEnabled: 'false' }).expect(400);
+
+  const disabled = await admin
+    .patch('/api/classes/upload-enabled')
+    .send({ uploadEnabled: false })
+    .expect(200);
+  assert.equal(disabled.body.length, 2);
+  assert.ok(disabled.body.every((item) => item.uploadEnabled === false));
+
+  const enabled = await admin
+    .patch('/api/classes/upload-enabled')
+    .send({ uploadEnabled: true })
+    .expect(200);
+  assert.ok(enabled.body.every((item) => item.uploadEnabled === true));
+});
+
+test('admin can bulk update every class password state including an empty list', async () => {
+  const ids = ['class-a', 'class-b'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  const empty = await admin
+    .patch('/api/classes/password-enabled')
+    .send({ passwordEnabled: false })
+    .expect(200);
+  assert.deepEqual(empty.body, []);
+
+  await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+  await admin.post('/api/classes').send({ name: '二班', password: '222222' }).expect(201);
+
+  const disabled = await admin
+    .patch('/api/classes/password-enabled')
+    .send({ passwordEnabled: false })
+    .expect(200);
+  assert.ok(disabled.body.every((item) => item.passwordEnabled === false));
+
+  const listed = await request(app).get('/api/classes').expect(200);
+  assert.ok(listed.body.every((item) => item.passwordEnabled === false));
+
+  const enabled = await admin
+    .patch('/api/classes/password-enabled')
+    .send({ passwordEnabled: true })
+    .expect(200);
+  assert.ok(enabled.body.every((item) => item.passwordEnabled === true));
 });
 
 test('admin can disable a project so public lists and pages hide it', async () => {
