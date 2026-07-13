@@ -1512,13 +1512,13 @@
           </div>
           <form class="all-password-form" id="allPasswordForm">
             <label>
-              全部密码
+              全部作品页密码
               <input id="allPasswordInput" name="allPassword" type="password" inputmode="numeric" maxlength="6" placeholder="6位数字" required>
             </label>
             <button class="button" id="toggleAllPassword" type="button">显示</button>
             <button class="button" id="generateAllPassword" type="button">随机生成</button>
-            <button class="primary-button" id="saveAllPassword" type="submit">保存全部密码</button>
-            <button class="button password-toggle-button" id="toggleAllPasswordEnabled" type="button">密码已启用</button>
+            <button class="primary-button" id="saveAllPassword" type="submit">保存作品页密码</button>
+            <button class="button password-toggle-button" id="toggleAllPasswordEnabled" type="button">访问密码已启用</button>
           </form>
           <form class="class-form" id="classForm">
             <label>
@@ -1853,8 +1853,8 @@
     function renderAllPasswordEnabledButton() {
       const enabled = settings.allPasswordEnabled !== false;
       toggleAllPasswordEnabled.classList.toggle('is-disabled', !enabled);
-      toggleAllPasswordEnabled.textContent = enabled ? '密码已启用' : '密码已解除';
-      toggleAllPasswordEnabled.title = enabled ? '点击解除全部项目查看密码' : '点击启用全部项目查看密码';
+      toggleAllPasswordEnabled.textContent = enabled ? '访问密码已启用' : '访问密码已解除';
+      toggleAllPasswordEnabled.title = enabled ? '点击解除全部作品页访问密码' : '点击启用全部作品页访问密码';
     }
 
     function setMessage(element, text, isError = false, options = {}) {
@@ -2837,7 +2837,7 @@
           const response = await fetch('/api/admin/settings?includeForbiddenWords=false');
           if (!response.ok) {
             if (!hasCachedData) {
-              setMessage(classMessage, '加载全部密码失败', true);
+              setMessage(classMessage, '加载全部作品页密码失败', true);
               setMessage(forbiddenWordsMessage, '加载违禁词失败', true);
             }
             return;
@@ -3002,7 +3002,7 @@
       const allPassword = allPasswordInput.value.trim();
 
       if (!/^\d{6}$/.test(allPassword)) {
-        setMessage(classMessage, '全部密码必须是 6 位数字', true);
+        setMessage(classMessage, '全部作品页密码必须是 6 位数字', true);
         return;
       }
 
@@ -3015,15 +3015,15 @@
       setButtonLoading(submitButton, false);
 
       if (!response.ok) {
-        const result = await response.json().catch(() => ({ error: '保存全部密码失败' }));
-        setMessage(classMessage, result.error || '保存全部密码失败', true);
+        const result = await response.json().catch(() => ({ error: '保存作品页密码失败' }));
+        setMessage(classMessage, result.error || '保存作品页密码失败', true);
         return;
       }
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
       renderAllPasswordEnabledButton();
-      setMessage(classMessage, '保存全部密码成功');
+      setMessage(classMessage, '保存作品页密码成功');
     }
 
     async function toggleAllProjectsPasswordEnabled() {
@@ -3039,15 +3039,15 @@
       setButtonLoading(toggleAllPasswordEnabled, false);
 
       if (!response.ok) {
-        const result = await response.json().catch(() => ({ error: '保存全部密码状态失败' }));
-        setMessage(classMessage, result.error || '保存全部密码状态失败', true);
+        const result = await response.json().catch(() => ({ error: '保存作品页访问密码状态失败' }));
+        setMessage(classMessage, result.error || '保存作品页访问密码状态失败', true);
         return;
       }
 
       settings = await response.json();
       allPasswordInput.value = settings.allPassword || '';
       renderAllPasswordEnabledButton();
-      setMessage(classMessage, settings.allPasswordEnabled === false ? '已解除全部密码' : '已启用全部密码');
+      setMessage(classMessage, settings.allPasswordEnabled === false ? '已解除全部作品页访问密码' : '已启用全部作品页访问密码');
     }
 
     async function saveForbiddenWords(event) {

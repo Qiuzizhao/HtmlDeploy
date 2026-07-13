@@ -2042,7 +2042,7 @@ function createApp(options = {}) {
           return res.status(401).json({ error: '请输入班级密码', count });
         }
       } else if (!hasAllAccess(req, settings)) {
-        return res.status(401).json({ error: '请输入全部密码', count: sites.filter((site) => site.enabled !== false).length });
+        return res.status(401).json({ error: '请输入全部作品页密码', count: sites.filter((site) => site.enabled !== false).length });
       }
 
       const filteredSites = classId
@@ -2261,7 +2261,7 @@ function createApp(options = {}) {
         ? previousSettings.adminPassword
         : String(req.body.adminPassword || '').trim();
       if (!isValidClassPassword(allPassword)) {
-        return res.status(400).json({ error: '全部密码必须是 6 位数字' });
+        return res.status(400).json({ error: '全部作品页密码必须是 6 位数字' });
       }
       if (req.body.adminPassword !== undefined && !isValidAdminPassword(adminPassword)) {
         return res.status(400).json({ error: '后台密码必须是 4 到 40 位，且不能包含空格' });
@@ -2584,7 +2584,7 @@ function createApp(options = {}) {
       }
 
       if (password !== settings.allPassword) {
-        return res.status(401).json({ error: '全部密码不正确' });
+        return res.status(401).json({ error: '全部作品页密码不正确' });
       }
 
       res.cookie(ALL_COOKIE_NAME, createAllToken(settings), {

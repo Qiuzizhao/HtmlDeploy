@@ -233,7 +233,7 @@ test('public index shows a success dialog after upload completes', async () => {
 test('public index renders an all tab before class buttons', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
-  assert.match(html, /allButton\.textContent = '全部'/);
+  assert.match(html, /allButton\.textContent = '全部作品'/);
   assert.match(html, /allButton\.addEventListener\('click', \(\) => selectClass\(''\)\)/);
   assert.ok(html.indexOf('classTabs.append(allButton)') < html.indexOf('classes.forEach'));
 });
@@ -551,12 +551,14 @@ test('public admin exposes class bulk controls for uploads and passwords', async
 test('public admin can edit the all-projects password in class management', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
-  assert.match(html, /全部密码/);
+  assert.match(html, /全部作品页密码/);
   assert.match(html, /id="allPasswordInput"[^>]+type="password"/);
   assert.match(html, /id="toggleAllPassword"[^>]*>显示<\/button>/);
   assert.match(html, /id="generateAllPassword"[^>]*>随机生成<\/button>/);
-  assert.match(html, /id="saveAllPassword"[^>]*>保存全部密码<\/button>/);
-  assert.match(html, /id="toggleAllPasswordEnabled"[^>]*>密码已启用<\/button>/);
+  assert.match(html, /id="saveAllPassword"[^>]*>保存作品页密码<\/button>/);
+  assert.match(html, /id="toggleAllPasswordEnabled"[^>]*>访问密码已启用<\/button>/);
+  assert.match(html, /访问密码已启用/);
+  assert.match(html, /访问密码已解除/);
   assert.match(html, /function toggleAllProjectsPasswordEnabled/);
   assert.match(html, /fetch\('\/api\/admin\/settings\?includeForbiddenWords=false'\)/);
   assert.match(html, /\/api\/admin\/forbidden-words\?\$\{params\.toString\(\)\}/);

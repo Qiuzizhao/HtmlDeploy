@@ -1606,7 +1606,7 @@
       hideLoadingState();
       hideEmptyState();
 
-      const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
+      const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部作品';
       const countText = count === '...' ? '...' : count;
       classProjectCount.textContent = `${currentClassName}共有 ${countText} 个项目`;
 
@@ -1634,7 +1634,7 @@
       actions.className = 'unlock-actions';
 
       const label = document.createElement('label');
-      label.textContent = currentClassId ? '班级密码' : '全部密码';
+      label.textContent = currentClassId ? '班级密码' : '全部作品页密码';
 
       const input = document.createElement('input');
       input.type = 'password';
@@ -1862,7 +1862,7 @@
       siteGrid.innerHTML = '';
       const renderToken = ++siteRenderToken;
 
-      const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部';
+      const currentClassName = currentClassId ? (classes.find(c => c.id === currentClassId)?.name || '当前班级') : '全部作品';
       const hasFilter = Boolean(siteSearchQuery.trim()) || starredOnly;
       classProjectCount.textContent = hasFilter
         ? `${currentClassName}当前显示 ${sites.length} 个 / 共 ${loadedSites.length} 个项目`
@@ -1890,7 +1890,7 @@
       const allButton = document.createElement('button');
       allButton.className = `class-tab${currentClassId ? '' : ' is-active'}`;
       allButton.type = 'button';
-      allButton.textContent = '全部';
+      allButton.textContent = '全部作品';
       allButton.addEventListener('click', () => selectClass(''));
       classTabs.append(allButton);
 
