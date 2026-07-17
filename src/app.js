@@ -754,6 +754,14 @@ async function readClass(classesFile, id) {
   }
 }
 
+async function readClassGroups(classesFile) {
+  try {
+    return getRuntimeStoreForFile(classesFile).listClassGroups();
+  } catch (error) {
+    throw createJsonDataError(classesFile, error.message);
+  }
+}
+
 async function readSettings(settingsFile, { includeForbiddenWords = false, includeForbiddenWordsCount = true } = {}) {
   const store = getRuntimeStoreForFile(settingsFile);
   let settings = store.getSettings({ includeForbiddenWords, includeForbiddenWordsCount });
@@ -894,6 +902,10 @@ async function writeSites(dataFile, sites, { sync = true, allowSiteRemoval = fal
 
 async function writeClasses(classesFile, classes) {
   await withJsonWriteQueue(classesFile, () => getRuntimeStoreForFile(classesFile).replaceClasses(classes));
+}
+
+async function writeClassGroups(classesFile, groups) {
+  await withJsonWriteQueue(classesFile, () => getRuntimeStoreForFile(classesFile).replaceClassGroups(groups));
 }
 
 async function writeSettings(settingsFile, settings) {
@@ -1139,6 +1151,7 @@ function toPublicClass(classItem) {
     name: classItem.name,
     uploadEnabled: classItem.uploadEnabled !== false,
     passwordEnabled: classItem.passwordEnabled !== false,
+    groupId: classItem.groupId || '',
     createdAt: classItem.createdAt,
     updatedAt: classItem.updatedAt
   };
@@ -2063,6 +2076,14 @@ function createApp(options = {}) {
     }
   });
 
+  app.get('/api/class-groups', async (req, res, next) => {
+    try {
+      res.json(await readClassGroups(classesFile));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get('/api/admin/classes', requireAdmin, async (req, res, next) => {
     try {
       const classes = await readClasses(classesFile);
@@ -2354,16 +2375,105 @@ function createApp(options = {}) {
     }
   });
 
+  app.post('/api/class-groups', requireAdmin, async (req, res, next) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      if (!name) {
+        return res.status(400).json({ error: '分组名称不能为空' });
+      }
+      if (name === '未分组') {
+        return res.status(400).json({ error: '“未分组”是系统保留名称' });
+      }
+
+      const groups = await readClassGroups(classesFile);
+      if (groups.some((group) => group.name === name)) {
+        return res.status(400).json({ error: '分组名称已存在' });
+      }
+      const group = {
+        id: idGenerator(),
+        name,
+        position: groups.length,
+        createdAt: new Date().toISOString()
+      };
+      groups.push(group);
+      await writeClassGroups(classesFile, groups);
+      return res.status(201).json(group);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/class-groups/order', requireAdmin, async (req, res, next) => {
+    try {
+      const { groupIds } = req.body;
+      if (!Array.isArray(groupIds)) {
+        return res.status(400).json({ error: '无效的分组排序数据' });
+      }
+      const groups = await readClassGroups(classesFile);
+      const byId = new Map(groups.map((group) => [group.id, group]));
+      const ordered = groupIds.map((id) => byId.get(String(id || ''))).filter(Boolean);
+      for (const group of groups) {
+        if (!ordered.some((item) => item.id === group.id)) {
+          ordered.push(group);
+        }
+      }
+      await writeClassGroups(classesFile, ordered);
+      return res.json(await readClassGroups(classesFile));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put('/api/class-groups/:id', requireAdmin, async (req, res, next) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      const groups = await readClassGroups(classesFile);
+      const index = groups.findIndex((group) => group.id === req.params.id);
+      if (index === -1) {
+        return res.status(404).json({ error: '分组不存在' });
+      }
+      if (!name) {
+        return res.status(400).json({ error: '分组名称不能为空' });
+      }
+      if (name === '未分组' || groups.some((group) => group.id !== req.params.id && group.name === name)) {
+        return res.status(400).json({ error: '分组名称已存在或不可使用' });
+      }
+      groups[index] = { ...groups[index], name, updatedAt: new Date().toISOString() };
+      await writeClassGroups(classesFile, groups);
+      return res.json(groups[index]);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/class-groups/:id', requireAdmin, async (req, res, next) => {
+    try {
+      const groups = await readClassGroups(classesFile);
+      if (!groups.some((group) => group.id === req.params.id)) {
+        return res.status(404).json({ error: '分组不存在' });
+      }
+      await withJsonWriteQueue(classesFile, () => getRuntimeStoreForFile(classesFile).deleteClassGroup(req.params.id));
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post('/api/classes', requireAdmin, async (req, res, next) => {
     try {
       const name = String(req.body.name || '').trim();
       const password = String(req.body.password || createClassPassword()).trim();
+      const groupId = String(req.body.groupId || '').trim();
       if (!name) {
         return res.status(400).json({ error: '班级名称不能为空' });
       }
 
       if (!isValidClassPassword(password)) {
         return res.status(400).json({ error: '班级密码必须是 6 位数字' });
+      }
+
+      if (groupId && !(await readClassGroups(classesFile)).some((group) => group.id === groupId)) {
+        return res.status(400).json({ error: '所属分组不存在' });
       }
 
       const classes = await readClasses(classesFile);
@@ -2377,6 +2487,7 @@ function createApp(options = {}) {
         password,
         uploadEnabled: true,
         passwordEnabled: true,
+        groupId,
         createdAt: new Date().toISOString()
       };
       classes.push(classItem);
@@ -2428,23 +2539,40 @@ function createApp(options = {}) {
 
   app.put('/api/classes/order', requireAdmin, async (req, res, next) => {
     try {
-      const { classIds } = req.body;
-      if (!Array.isArray(classIds)) {
+      const { classIds, items } = req.body;
+      if (!Array.isArray(classIds) && !Array.isArray(items)) {
         return res.status(400).json({ error: '无效的排序数据' });
       }
 
       const classes = await readClasses(classesFile);
       const newClasses = [];
+      const validGroupIds = new Set((await readClassGroups(classesFile)).map((group) => group.id));
 
-      for (const id of classIds) {
-        const classItem = classes.find(c => c.id === id);
-        if (classItem) {
-          newClasses.push(classItem);
+      if (Array.isArray(items)) {
+        const seen = new Set();
+        for (const entry of items) {
+          const id = String(entry?.id || '').trim();
+          const groupId = String(entry?.groupId || '').trim();
+          if (!id || seen.has(id) || (groupId && !validGroupIds.has(groupId))) {
+            return res.status(400).json({ error: '班级排序或分组数据无效' });
+          }
+          const classItem = classes.find((item) => item.id === id);
+          if (classItem) {
+            newClasses.push({ ...classItem, groupId });
+            seen.add(id);
+          }
+        }
+      } else {
+        for (const id of classIds) {
+          const classItem = classes.find(c => c.id === id);
+          if (classItem) {
+            newClasses.push(classItem);
+          }
         }
       }
 
       for (const classItem of classes) {
-        if (!classIds.includes(classItem.id)) {
+        if (!newClasses.some((item) => item.id === classItem.id)) {
           newClasses.push(classItem);
         }
       }
@@ -2461,6 +2589,7 @@ function createApp(options = {}) {
       const { id } = req.params;
       const name = String(req.body.name || '').trim();
       const password = String(req.body.password || '').trim();
+      const requestedGroupId = req.body.groupId === undefined ? undefined : String(req.body.groupId || '').trim();
       const classes = await readClasses(classesFile);
       const classIndex = classes.findIndex((item) => item.id === id);
 
@@ -2480,12 +2609,17 @@ function createApp(options = {}) {
         return res.status(400).json({ error: '班级密码必须是 6 位数字' });
       }
 
+      if (requestedGroupId && !(await readClassGroups(classesFile)).some((group) => group.id === requestedGroupId)) {
+        return res.status(400).json({ error: '所属分组不存在' });
+      }
+
       classes[classIndex] = {
         ...classes[classIndex],
         name,
         password: password || classes[classIndex].password || createClassPassword(),
         uploadEnabled: classes[classIndex].uploadEnabled !== false,
         passwordEnabled: classes[classIndex].passwordEnabled !== false,
+        groupId: requestedGroupId === undefined ? (classes[classIndex].groupId || '') : requestedGroupId,
         updatedAt: new Date().toISOString()
       };
       await writeClasses(classesFile, classes);

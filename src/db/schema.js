@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = '1';
+const SCHEMA_VERSION = '2';
 
 function applySchema(db) {
   db.exec(`
@@ -8,12 +8,23 @@ function applySchema(db) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS class_groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_class_groups_position ON class_groups(position);
+
     CREATE TABLE IF NOT EXISTS classes (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       password TEXT NOT NULL,
       upload_enabled INTEGER NOT NULL DEFAULT 1,
       password_enabled INTEGER NOT NULL DEFAULT 1,
+      group_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT,
       position INTEGER NOT NULL DEFAULT 0
@@ -118,9 +129,13 @@ function applySchema(db) {
   `);
 
   const classColumns = db.prepare('PRAGMA table_info(classes)').all().map((column) => column.name);
+  if (!classColumns.includes('group_id')) {
+    db.exec("ALTER TABLE classes ADD COLUMN group_id TEXT NOT NULL DEFAULT ''");
+  }
   if (!classColumns.includes('position')) {
     db.exec('ALTER TABLE classes ADD COLUMN position INTEGER NOT NULL DEFAULT 0');
   }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_classes_group_id ON classes(group_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_classes_position ON classes(position)');
 
   const forbiddenColumns = db.prepare('PRAGMA table_info(forbidden_words)').all().map((column) => column.name);

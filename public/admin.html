@@ -406,9 +406,17 @@
 
     .class-form {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.6fr) auto auto auto;
+      grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.65fr) minmax(150px, 0.55fr) auto auto auto;
       gap: 12px;
       padding: 20px;
+      align-items: end;
+    }
+
+    .class-group-form {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 12px;
+      padding: 20px 20px 0;
       align-items: end;
     }
 
@@ -593,8 +601,59 @@
 
     .class-list {
       display: grid;
-      gap: 10px;
+      gap: 14px;
       padding: 0 20px 20px;
+    }
+
+    .class-group-section {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+
+    .class-group-section.is-dragging {
+      opacity: 0.55;
+    }
+
+    .class-group-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #eef2f7;
+    }
+
+    .class-group-head .drag-handle {
+      flex: 0 0 24px;
+    }
+
+    .class-group-title-input {
+      flex: 1 1 auto;
+      min-width: 120px;
+      font-weight: 750;
+    }
+
+    .class-group-system-title {
+      flex: 1 1 auto;
+      font-weight: 800;
+    }
+
+    .class-group-classes {
+      min-height: 66px;
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .class-group-empty {
+      padding: 14px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 5px;
+      background: #fff;
     }
 
     .class-bulk-actions {
@@ -1269,8 +1328,17 @@
       .forbidden-search-form,
       .forbidden-words-form,
       .settings-form,
+      .class-group-form,
       .class-form {
         grid-template-columns: 1fr;
+      }
+
+      .class-group-head {
+        flex-wrap: wrap;
+      }
+
+      .class-group-title-input {
+        flex-basis: calc(100% - 40px);
       }
 
       .settings-form .settings-actions,
@@ -1526,6 +1594,13 @@
             <h2 class="panel-title">班级管理</h2>
             <div class="message" id="classMessage"></div>
           </div>
+          <form class="class-group-form" id="classGroupForm">
+            <label>
+              新建分组
+              <input id="classGroupNameInput" type="text" maxlength="40" placeholder="例如：五年级" required>
+            </label>
+            <button class="primary-button" type="submit">新增分组</button>
+          </form>
           <form class="class-form" id="classForm">
             <label>
               班级名称
@@ -1534,6 +1609,12 @@
             <label>
               班级密码
               <input id="classPasswordInput" name="password" type="password" inputmode="numeric" maxlength="6" placeholder="6位数字" required>
+            </label>
+            <label>
+              所属分组
+              <select id="classGroupSelect" name="groupId">
+                <option value="">未分组</option>
+              </select>
             </label>
             <button class="button" id="toggleClassPassword" type="button">显示</button>
             <button class="button" id="generateClassPassword" type="button">随机生成</button>
@@ -1730,6 +1811,9 @@
     const createFile = document.getElementById('createFile');
     const createHtmlContent = document.getElementById('createHtmlContent');
     const classForm = document.getElementById('classForm');
+    const classGroupForm = document.getElementById('classGroupForm');
+    const classGroupNameInput = document.getElementById('classGroupNameInput');
+    const classGroupSelect = document.getElementById('classGroupSelect');
     const allPasswordForm = document.getElementById('allPasswordForm');
     const allPasswordInput = document.getElementById('allPasswordInput');
     const toggleAllPasswordEnabled = document.getElementById('toggleAllPasswordEnabled');
@@ -1824,6 +1908,7 @@
     let sites = [];
     let rankingSites = [];
     let classes = [];
+    let classGroups = [];
     let classBulkOperationRunning = false;
     let settings = {};
     let adminSitesPage = 1;
@@ -2649,6 +2734,67 @@
       fillClassSelect(createClassId, createClassId.value);
       fillClassSelect(filterClassId, filterClassId.value, '全部班级');
 
+      classGroupSelect.innerHTML = '<option value="">未分组</option>';
+      classGroups.forEach((group) => {
+        const option = document.createElement('option');
+        option.value = group.id;
+        option.textContent = group.name;
+        classGroupSelect.append(option);
+      });
+
+      const groupContainers = new Map();
+      const groupsToRender = [...classGroups, { id: '', name: '未分组', system: true }];
+      groupsToRender.forEach((group) => {
+        const section = document.createElement('section');
+        section.className = 'class-group-section';
+        section.dataset.groupId = group.id;
+        section.draggable = false;
+
+        const head = document.createElement('div');
+        head.className = 'class-group-head';
+        if (group.system) {
+          const title = document.createElement('span');
+          title.className = 'class-group-system-title';
+          title.textContent = '未分组';
+          head.append(title);
+        } else {
+          const handle = document.createElement('div');
+          handle.className = 'drag-handle class-group-drag-handle';
+          handle.title = '拖拽调整分组顺序';
+          handle.textContent = '☰';
+          handle.addEventListener('mousedown', () => { section.draggable = true; });
+          handle.addEventListener('mouseup', () => { section.draggable = false; });
+          handle.addEventListener('mouseleave', () => { section.draggable = false; });
+
+          const titleInput = document.createElement('input');
+          titleInput.className = 'class-group-title-input';
+          titleInput.type = 'text';
+          titleInput.maxLength = 40;
+          titleInput.value = group.name;
+          titleInput.setAttribute('aria-label', `${group.name}的分组名称`);
+
+          const saveButton = document.createElement('button');
+          saveButton.className = 'primary-button';
+          saveButton.type = 'button';
+          saveButton.textContent = '保存分组';
+          saveButton.addEventListener('click', () => updateClassGroup(group, titleInput, saveButton));
+
+          const deleteButton = document.createElement('button');
+          deleteButton.className = 'danger-button';
+          deleteButton.type = 'button';
+          deleteButton.textContent = '删除分组';
+          deleteButton.addEventListener('click', () => deleteClassGroup(group, deleteButton));
+          head.append(handle, titleInput, saveButton, deleteButton);
+        }
+
+        const container = document.createElement('div');
+        container.className = 'class-group-classes';
+        container.dataset.groupId = group.id;
+        section.append(head, container);
+        classList.append(section);
+        groupContainers.set(group.id, container);
+      });
+
       classes.forEach((classItem) => {
         const uploadEnabled = classItem.uploadEnabled !== false;
         const passwordEnabled = classItem.passwordEnabled !== false;
@@ -2742,7 +2888,17 @@
 
         actions.append(toggleButton, generateButton, saveButton, deleteButton);
         row.append(dragHandle, input, passwordInput, uploadToggleButton, passwordToggleButton, actions);
-        classList.append(row);
+        const container = groupContainers.get(classItem.groupId || '') || groupContainers.get('');
+        container.append(row);
+      });
+
+      groupContainers.forEach((container) => {
+        if (!container.querySelector('.class-row')) {
+          const empty = document.createElement('div');
+          empty.className = 'class-group-empty';
+          empty.textContent = '暂无班级，可将班级拖到这里';
+          container.append(empty);
+        }
       });
     }
 
@@ -3127,7 +3283,9 @@
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
-          classes = JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          classes = Array.isArray(parsed) ? parsed : (parsed.classes || []);
+          classGroups = Array.isArray(parsed) ? [] : (parsed.classGroups || []);
           renderClassList();
           fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
           updateSummary();
@@ -3138,21 +3296,30 @@
 
       const fetchPromise = (async () => {
         try {
-          const response = await fetch('/api/admin/classes');
-          if (!response.ok) {
+          const [classesResponse, groupsResponse] = await Promise.all([
+            fetch('/api/admin/classes'),
+            fetch('/api/class-groups')
+          ]);
+          if (!classesResponse.ok || !groupsResponse.ok) {
             if (!hasCachedData) setMessage(classMessage, '加载班级失败', true);
             return;
           }
 
-          const newClasses = await response.json();
-          if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
+          const [newClasses, newClassGroups] = await Promise.all([
+            classesResponse.json(),
+            groupsResponse.json()
+          ]);
+          const changed = JSON.stringify(classes) !== JSON.stringify(newClasses)
+            || JSON.stringify(classGroups) !== JSON.stringify(newClassGroups);
+          if (!hasCachedData || changed) {
             classes = newClasses;
+            classGroups = newClassGroups;
             renderClassList();
             fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
             updateSummary();
             setMessage(classMessage, `${classes.length} 个班级`);
             try {
-              sessionStorage.setItem(cacheKey, JSON.stringify(classes));
+              sessionStorage.setItem(cacheKey, JSON.stringify({ classes, classGroups }));
             } catch (e) {}
           }
         } catch(e) {}
@@ -4036,11 +4203,73 @@
       setMessage(listMessage, updatedSite.forbiddenWhitelist === true ? '项目已加入违禁词审查白名单' : '项目已移出违禁词审查白名单');
     }
 
+    async function createClassGroup(event) {
+      event.preventDefault();
+      const name = classGroupNameInput.value.trim();
+      if (!name) {
+        setMessage(classMessage, '分组名称不能为空', true);
+        return;
+      }
+      const button = event.submitter;
+      setButtonLoading(button, true, '新增中...');
+      const response = await fetch('/api/class-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      setButtonLoading(button, false);
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '新增分组失败' }));
+        setMessage(classMessage, result.error || '新增分组失败', true);
+        return;
+      }
+      classGroupForm.reset();
+      setMessage(classMessage, '新增分组成功');
+      await loadClasses();
+    }
+
+    async function updateClassGroup(group, input, button) {
+      const name = input.value.trim();
+      if (!name) {
+        setMessage(classMessage, '分组名称不能为空', true);
+        return;
+      }
+      setButtonLoading(button, true, '保存中...');
+      const response = await fetch(`/api/class-groups/${encodeURIComponent(group.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      setButtonLoading(button, false);
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '保存分组失败' }));
+        setMessage(classMessage, result.error || '保存分组失败', true);
+        return;
+      }
+      setMessage(classMessage, '分组名称已保存');
+      await loadClasses();
+    }
+
+    async function deleteClassGroup(group, button) {
+      if (!confirm(`确定删除分组“${group.name}”吗？组内班级将移到“未分组”。`)) return;
+      setButtonLoading(button, true, '删除中...');
+      const response = await fetch(`/api/class-groups/${encodeURIComponent(group.id)}`, { method: 'DELETE' });
+      setButtonLoading(button, false);
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: '删除分组失败' }));
+        setMessage(classMessage, result.error || '删除分组失败', true);
+        return;
+      }
+      setMessage(classMessage, '分组已删除，组内班级已移到未分组');
+      await loadClasses();
+    }
+
     async function createClass(event) {
       event.preventDefault();
       const submitButton = event.submitter;
       const name = classNameInput.value.trim();
       const password = classPasswordInput.value.trim();
+      const groupId = classGroupSelect.value;
 
       if (!name) {
         setMessage(classMessage, '班级名称不能为空', true);
@@ -4056,7 +4285,7 @@
       const response = await fetch('/api/classes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password })
+        body: JSON.stringify({ name, password, groupId })
       });
       setButtonLoading(submitButton, false);
 
@@ -4067,6 +4296,7 @@
       }
 
       classForm.reset();
+      classGroupSelect.value = groupId;
       setMessage(classMessage, '新增班级成功');
       await loadClasses();
       await loadSites();
@@ -4193,7 +4423,7 @@
       const response = await fetch(`/api/classes/${encodeURIComponent(classItem.id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password })
+        body: JSON.stringify({ name, password, groupId: classItem.groupId || '' })
       });
       setButtonLoading(button, false);
 
@@ -4265,21 +4495,37 @@
     }
 
     let draggedRow = null;
+    let draggedGroup = null;
 
     classList.addEventListener('dragstart', (e) => {
+      const groupSection = e.target.closest('.class-group-section');
       const row = e.target.closest('.class-row');
       if (row) {
         draggedRow = row;
         row.classList.add('is-dragging');
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', row.dataset.id);
+      } else if (groupSection && groupSection.dataset.groupId) {
+        draggedGroup = groupSection;
+        groupSection.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', groupSection.dataset.groupId);
       }
     });
 
     classList.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      
+
+      if (draggedGroup) {
+        const section = e.target.closest('.class-group-section');
+        if (section && section !== draggedGroup && section.dataset.groupId) {
+          const rect = section.getBoundingClientRect();
+          classList.insertBefore(draggedGroup, e.clientY < rect.top + rect.height / 2 ? section : section.nextSibling);
+        }
+        return;
+      }
+
       const row = e.target.closest('.class-row');
       if (row && row !== draggedRow) {
         const rect = row.getBoundingClientRect();
@@ -4289,10 +4535,39 @@
         } else {
           row.parentNode.insertBefore(draggedRow, row.nextSibling);
         }
+      } else if (draggedRow) {
+        const container = e.target.closest('.class-group-classes');
+        if (container) {
+          container.querySelector('.class-group-empty')?.remove();
+          container.append(draggedRow);
+        }
       }
     });
 
     classList.addEventListener('dragend', async (e) => {
+      if (draggedGroup) {
+        draggedGroup.classList.remove('is-dragging');
+        draggedGroup.draggable = false;
+        draggedGroup = null;
+        const groupIds = Array.from(classList.querySelectorAll('.class-group-section[data-group-id]'))
+          .map((section) => section.dataset.groupId)
+          .filter(Boolean);
+        try {
+          const response = await fetch('/api/class-groups/order', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupIds })
+          });
+          if (!response.ok) throw new Error('保存分组排序失败');
+          setMessage(classMessage, '分组排序已保存');
+          await loadClasses();
+        } catch (error) {
+          setMessage(classMessage, error.message, true);
+          await loadClasses();
+        }
+        return;
+      }
+
       const row = e.target.closest('.class-row');
       if (row) {
         row.classList.remove('is-dragging');
@@ -4301,21 +4576,25 @@
       if (!draggedRow) return;
       draggedRow = null;
       
-      const classIds = Array.from(classList.querySelectorAll('.class-row')).map(r => r.dataset.id);
-      classes.sort((a, b) => classIds.indexOf(a.id) - classIds.indexOf(b.id));
+      const items = Array.from(classList.querySelectorAll('.class-group-classes')).flatMap((container) =>
+        Array.from(container.querySelectorAll('.class-row')).map((itemRow) => ({
+          id: itemRow.dataset.id,
+          groupId: container.dataset.groupId
+        }))
+      );
       
       try {
         const response = await fetch('/api/classes/order', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ classIds })
+          body: JSON.stringify({ items })
         });
         
         if (!response.ok) {
           throw new Error('保存排序失败');
         }
         setMessage(classMessage, '班级排序已保存');
-        fillClassSelect(createClassId, createClassId.value);
+        await loadClasses();
       } catch (error) {
         setMessage(classMessage, error.message, true);
         await loadClasses();
@@ -4354,6 +4633,7 @@
     document.getElementById('generateAllPassword').addEventListener('click', () => {
       allPasswordInput.value = generatePassword();
     });
+    classGroupForm.addEventListener('submit', createClassGroup);
     classForm.addEventListener('submit', createClass);
     enableAllClassUploads.addEventListener('click', () => setAllClassesState('upload', true, enableAllClassUploads));
     disableAllClassUploads.addEventListener('click', () => setAllClassesState('upload', false, disableAllClassUploads));

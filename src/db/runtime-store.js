@@ -164,6 +164,7 @@ function rowToClass(row = {}) {
     password: row.password,
     uploadEnabled: row.upload_enabled !== 0,
     passwordEnabled: row.password_enabled !== 0,
+    groupId: row.group_id || '',
     position: Math.max(0, Number(row.position) || 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at || ''
@@ -177,9 +178,30 @@ function normalizeClass(classItem = {}) {
     password: String(classItem.password || '').trim(),
     uploadEnabled: classItem.uploadEnabled !== false,
     passwordEnabled: classItem.passwordEnabled !== false,
+    groupId: String(classItem.groupId || '').trim(),
     position: Math.max(0, Number(classItem.position) || 0),
     createdAt: String(classItem.createdAt || nowIso()),
     updatedAt: String(classItem.updatedAt || '')
+  };
+}
+
+function rowToClassGroup(row = {}) {
+  return {
+    id: row.id,
+    name: row.name,
+    position: Math.max(0, Number(row.position) || 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at || ''
+  };
+}
+
+function normalizeClassGroup(group = {}) {
+  return {
+    id: String(group.id || '').trim(),
+    name: String(group.name || '').trim(),
+    position: Math.max(0, Number(group.position) || 0),
+    createdAt: String(group.createdAt || nowIso()),
+    updatedAt: String(group.updatedAt || '')
   };
 }
 
@@ -359,13 +381,14 @@ class RuntimeStore {
       return;
     }
     this.db.prepare(`
-      INSERT INTO classes (id, name, password, upload_enabled, password_enabled, created_at, updated_at, position)
-      VALUES (@id, @name, @password, @uploadEnabled, @passwordEnabled, @createdAt, @updatedAt, @position)
+      INSERT INTO classes (id, name, password, upload_enabled, password_enabled, group_id, created_at, updated_at, position)
+      VALUES (@id, @name, @password, @uploadEnabled, @passwordEnabled, @groupId, @createdAt, @updatedAt, @position)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         password = excluded.password,
         upload_enabled = excluded.upload_enabled,
         password_enabled = excluded.password_enabled,
+        group_id = excluded.group_id,
         created_at = COALESCE(classes.created_at, excluded.created_at),
         updated_at = excluded.updated_at,
         position = excluded.position
@@ -375,6 +398,7 @@ class RuntimeStore {
       password: item.password || '000000',
       uploadEnabled: item.uploadEnabled ? 1 : 0,
       passwordEnabled: item.passwordEnabled ? 1 : 0,
+      groupId: item.groupId,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       position: item.position
@@ -393,7 +417,56 @@ class RuntimeStore {
 
   listClasses() {
     this.ensureReady();
-    return this.db.prepare('SELECT * FROM classes ORDER BY position ASC, created_at ASC, name ASC').all().map(rowToClass);
+    return this.db.prepare(`
+      SELECT c.*
+      FROM classes c
+      LEFT JOIN class_groups g ON g.id = c.group_id
+      ORDER BY
+        CASE WHEN c.group_id = '' OR g.id IS NULL THEN 1 ELSE 0 END ASC,
+        g.position ASC,
+        c.position ASC,
+        c.created_at ASC,
+        c.name ASC
+    `).all().map(rowToClass);
+  }
+
+  upsertClassGroup(group) {
+    this.ensureReady();
+    const item = normalizeClassGroup(group);
+    if (!item.id || !item.name) {
+      return;
+    }
+    this.db.prepare(`
+      INSERT INTO class_groups (id, name, position, created_at, updated_at)
+      VALUES (@id, @name, @position, @createdAt, @updatedAt)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        position = excluded.position,
+        updated_at = excluded.updated_at
+    `).run(item);
+  }
+
+  replaceClassGroups(groups) {
+    const tx = this.db.transaction((items) => {
+      for (const [position, group] of items.entries()) {
+        this.upsertClassGroup({ ...group, position });
+      }
+    });
+    tx(Array.isArray(groups) ? groups : []);
+  }
+
+  listClassGroups() {
+    this.ensureReady();
+    return this.db.prepare('SELECT * FROM class_groups ORDER BY position ASC, created_at ASC, name ASC').all().map(rowToClassGroup);
+  }
+
+  deleteClassGroup(groupId) {
+    this.ensureReady();
+    const tx = this.db.transaction((id) => {
+      this.db.prepare("UPDATE classes SET group_id = '' WHERE group_id = ?").run(id);
+      return this.db.prepare('DELETE FROM class_groups WHERE id = ?').run(id).changes;
+    });
+    return tx(String(groupId || '').trim());
   }
 
   getSettings({ includeForbiddenWords = true, includeForbiddenWordsCount = true } = {}) {

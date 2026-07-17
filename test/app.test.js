@@ -1264,6 +1264,31 @@ test('admin can create classes and public APIs expose class buttons', async () =
   assert.equal(adminResponse.body[0].password, '123456');
 });
 
+test('public index groups class buttons while keeping all projects first', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /fetch\('\/api\/class-groups'\)/);
+  assert.match(html, /classGroups/);
+  assert.match(html, /public-class-group/);
+  assert.match(html, /未分组/);
+  assert.ok(html.indexOf("classTabs.append(allButton)") < html.indexOf("classGroups.forEach"));
+});
+
+test('public admin manages class groups and persists cross-group dragging', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /id="classGroupForm"/);
+  assert.match(html, /id="classGroupNameInput"/);
+  assert.match(html, /id="classGroupSelect"/);
+  assert.match(html, /class-group-section/);
+  assert.match(html, /async function createClassGroup/);
+  assert.match(html, /async function updateClassGroup/);
+  assert.match(html, /async function deleteClassGroup/);
+  assert.match(html, /\/api\/class-groups\/order/);
+  assert.match(html, /body: JSON\.stringify\(\{ items \}\)/);
+  assert.match(html, /groupId: container\.dataset\.groupId/);
+});
+
 test('admin class order persists and is reflected by public class buttons', async () => {
   const ids = ['class-a', 'class-b', 'class-c'];
   const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
@@ -1283,6 +1308,55 @@ test('admin class order persists and is reflected by public class buttons', asyn
 
   const adminClasses = await admin.get('/api/admin/classes').expect(200);
   assert.deepEqual(adminClasses.body.map((item) => item.id), ['class-c', 'class-a', 'class-b']);
+});
+
+test('admin manages ordered class groups and persists cross-group class moves', async () => {
+  const ids = ['group-a', 'group-b', 'class-a', 'class-b', 'class-c'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+
+  await request(app).post('/api/class-groups').send({ name: '未授权' }).expect(401);
+  const gradeFive = await admin.post('/api/class-groups').send({ name: '五年级' }).expect(201);
+  const gradeSix = await admin.post('/api/class-groups').send({ name: '六年级' }).expect(201);
+  assert.equal(gradeFive.body.id, 'group-a');
+  assert.equal(gradeSix.body.id, 'group-b');
+
+  await admin
+    .put('/api/class-groups/order')
+    .send({ groupIds: ['group-b', 'group-a'] })
+    .expect(200);
+  const groups = await request(app).get('/api/class-groups').expect(200);
+  assert.deepEqual(groups.body.map((item) => item.id), ['group-b', 'group-a']);
+
+  await admin.post('/api/classes').send({ name: '五1', password: '111111', groupId: 'group-a' }).expect(201);
+  await admin.post('/api/classes').send({ name: '五2', password: '222222', groupId: 'group-a' }).expect(201);
+  await admin.post('/api/classes').send({ name: '六1', password: '333333', groupId: 'group-b' }).expect(201);
+
+  await admin
+    .put('/api/classes/order')
+    .send({
+      items: [
+        { id: 'class-c', groupId: 'group-b' },
+        { id: 'class-b', groupId: 'group-b' },
+        { id: 'class-a', groupId: 'group-a' }
+      ]
+    })
+    .expect(200);
+  const movedClasses = await request(app).get('/api/classes').expect(200);
+  assert.deepEqual(movedClasses.body.map((item) => [item.id, item.groupId]), [
+    ['class-c', 'group-b'],
+    ['class-b', 'group-b'],
+    ['class-a', 'group-a']
+  ]);
+
+  const renamed = await admin.put('/api/class-groups/group-b').send({ name: '六年级新' }).expect(200);
+  assert.equal(renamed.body.name, '六年级新');
+
+  await admin.delete('/api/class-groups/group-b').expect(200);
+  const afterDelete = await request(app).get('/api/classes').expect(200);
+  assert.equal(afterDelete.body.find((item) => item.id === 'class-c').groupId, '');
+  assert.equal(afterDelete.body.find((item) => item.id === 'class-b').groupId, '');
 });
 
 test('POST /api/sites requires title and files', async () => {

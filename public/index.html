@@ -212,9 +212,32 @@
       flex: 1 1 auto;
       min-width: 0;
       display: flex;
-      gap: 10px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
       padding: 2px;
-      overflow-x: auto;
+    }
+
+    .public-class-group {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .public-class-group-title {
+      flex: 0 0 82px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .public-class-group-buttons {
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .class-refresh-button {
@@ -917,6 +940,17 @@
         gap: 8px;
       }
 
+      .public-class-group {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .public-class-group-title {
+        flex-basis: auto;
+        text-align: left;
+      }
+
       .project-filter-row {
         align-items: stretch;
         flex-direction: column;
@@ -1187,6 +1221,7 @@
     let currentPreviewObjectUrl = '';
     let currentCodeText = '';
     let classes = [];
+    let classGroups = [];
     let loadedSites = [];
     let siteSearchQuery = '';
     let starredOnly = false;
@@ -1894,14 +1929,33 @@
       allButton.addEventListener('click', () => selectClass(''));
       classTabs.append(allButton);
 
-      classes.forEach((classItem) => {
-        const button = document.createElement('button');
-        button.className = `class-tab${classItem.id === currentClassId ? ' is-active' : ''}`;
-        button.type = 'button';
-        button.textContent = classItem.name;
-        button.addEventListener('click', () => selectClass(classItem.id));
-        classTabs.append(button);
+      const appendGroup = (name, matchesGroup) => {
+        const groupClasses = classes.filter(matchesGroup);
+        if (!groupClasses.length) return;
+        const group = document.createElement('section');
+        group.className = 'public-class-group';
+        const title = document.createElement('div');
+        title.className = 'public-class-group-title';
+        title.textContent = name;
+        const buttons = document.createElement('div');
+        buttons.className = 'public-class-group-buttons';
+        classes.forEach((classItem) => {
+          if (!matchesGroup(classItem)) return;
+          const button = document.createElement('button');
+          button.className = `class-tab${classItem.id === currentClassId ? ' is-active' : ''}`;
+          button.type = 'button';
+          button.textContent = classItem.name;
+          button.addEventListener('click', () => selectClass(classItem.id));
+          buttons.append(button);
+        });
+        group.append(title, buttons);
+        classTabs.append(group);
+      };
+
+      classGroups.forEach((group) => {
+        appendGroup(group.name, (classItem) => classItem.groupId === group.id);
       });
+      appendGroup('未分组', (classItem) => !classItem.groupId);
     }
 
     async function loadClasses() {
@@ -1910,7 +1964,9 @@
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
-          classes = JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          classes = Array.isArray(parsed) ? parsed : (parsed.classes || []);
+          classGroups = Array.isArray(parsed) ? [] : (parsed.classGroups || []);
           if (!classes.some((item) => item.id === currentClassId)) {
             currentClassId = '';
             rememberSelectedClassId('');
@@ -1922,18 +1978,27 @@
 
       const fetchPromise = (async () => {
         try {
-          const response = await fetch('/api/classes');
-          const newClasses = await response.json();
+          const [classesResponse, groupsResponse] = await Promise.all([
+            fetch('/api/classes'),
+            fetch('/api/class-groups')
+          ]);
+          const [newClasses, newClassGroups] = await Promise.all([
+            classesResponse.json(),
+            groupsResponse.json()
+          ]);
 
-          if (!hasCachedData || JSON.stringify(classes) !== JSON.stringify(newClasses)) {
+          const changed = JSON.stringify(classes) !== JSON.stringify(newClasses)
+            || JSON.stringify(classGroups) !== JSON.stringify(newClassGroups);
+          if (!hasCachedData || changed) {
             classes = newClasses;
+            classGroups = newClassGroups;
             if (!classes.some((item) => item.id === currentClassId)) {
               currentClassId = '';
               rememberSelectedClassId('');
             }
             renderClasses();
             try {
-              sessionStorage.setItem(cacheKey, JSON.stringify(classes));
+              sessionStorage.setItem(cacheKey, JSON.stringify({ classes, classGroups }));
             } catch (e) {}
           }
         } catch(e) {}
