@@ -247,6 +247,13 @@ test('public index separates class tabs from the project grid', async () => {
   assert.doesNotMatch(html, /<main>\s*<nav class="class-tabs"/);
 });
 
+test('public refresh button aligns with the all projects tab', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /\.class-filter-row\s*\{[^}]*align-items:\s*flex-start;/s);
+  assert.match(html, /class="secondary-button class-refresh-button" id="refreshClassSites"/);
+});
+
 test('public index can search projects and filter starred projects', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
