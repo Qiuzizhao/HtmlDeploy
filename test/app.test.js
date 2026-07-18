@@ -221,6 +221,7 @@ test('public upload modal exposes AI naming without submitting the draft', async
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
   assert.match(html, /class="upload-title-row"[\s\S]*id="titleInput"[\s\S]*id="uploadAiNameButton"/);
+  assert.match(html, /\.upload-title-row button \{[^}]*width: 120px;/);
   assert.match(html, /const uploadAiNameButton = document\.getElementById\('uploadAiNameButton'\)/);
   assert.match(html, /uploadAiNameButton\.addEventListener\('click', async \(\) => \{/);
   assert.match(html, /const htmlContent = await getUploadPreviewHtml\(\)/);
