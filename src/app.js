@@ -451,6 +451,33 @@ function parseLlmJsonObject(value) {
   }
 }
 
+function reviewReasonClearlySaysUnrelated(reason) {
+  const content = String(reason || '').replace(/\s+/g, '');
+  if (!content) {
+    return false;
+  }
+  if (/(?:无法|不能|难以)(?:准确)?(?:判断|确定).{0,12}(?:关联|相关)/.test(content)) {
+    return false;
+  }
+  return [
+    '无明显关联',
+    '没有明显关联',
+    '无关联',
+    '没有关联',
+    '无直接关联',
+    '没有直接关联',
+    '毫无关联',
+    '明显无关',
+    '完全无关',
+    '不相关',
+    '与代码无关',
+    '与项目无关',
+    '与内容无关',
+    '标题是乱取',
+    '名称是乱取'
+  ].some((signal) => content.includes(signal));
+}
+
 async function reviewSiteNameWithLlm({ codeSnapshot, currentTitle, author, llmConfig }) {
   if (!llmConfig.apiKey) {
     throw new Error('请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY');
@@ -465,10 +492,13 @@ async function reviewSiteNameWithLlm({ codeSnapshot, currentTitle, author, llmCo
         role: 'system',
         content: [
           '你是网页项目名称审核员。请快速阅读项目代码，判断当前名称是否真实描述或关联项目内容。',
-          '采用保守标准：只有名称明确是乱取、与代码主题明显无关时，related 才为 false 且 confidence 才为 high。',
+          '只有代码中存在可指出的具体内容、功能或可见文案证据时，才能判定名称相关。',
+          '猜测作者可能使用缩写、代号或个人意图，不属于相关证据；没有具体证据就应判定无关。',
+          '单个无含义字母、随机字符或明显乱取的名称，如果代码没有明确赋予其含义，应判定 related 为 false 且 confidence 为 high。',
+          'reason 与 related 必须一致；reason 中出现“无明显关联”“无关”“不相关”时，related 必须为 false。',
           '名称虽然宽泛但仍有关联，或证据不足、无法确定时，应保留名称。',
           '只返回一个 JSON 对象，不要 Markdown，不要额外说明。',
-          '格式：{"related":true或false,"confidence":"high或medium或low","reason":"简短中文理由","suggestedTitle":"仅在明确无关时填写的新名称，否则为空字符串"}。',
+          '格式：{"related":true或false,"confidence":"high或medium或low","reason":"简短中文理由","suggestedTitle":"无论结论如何，都填写一个根据代码生成的最佳名称"}。',
           '建议名称应简短具体，最好 2 到 12 个中文字符，最长不超过 20 个中文字符。'
         ].join('\n')
       },
@@ -3627,7 +3657,17 @@ function createApp(options = {}) {
         author: sites[siteIndex].author,
         llmConfig
       });
-      let renamed = review.related === false && review.confidence === 'high';
+      const contradictedByReason = review.related === true && reviewReasonClearlySaysUnrelated(review.reason);
+      const effectiveRelated = contradictedByReason ? false : review.related;
+      if (contradictedByReason && !review.suggestedTitle) {
+        review.suggestedTitle = await nameSiteWithLlm({
+          codeSnapshot: combinedText,
+          currentTitle: originalTitle,
+          author: sites[siteIndex].author,
+          llmConfig
+        });
+      }
+      let renamed = effectiveRelated === false && (review.confidence === 'high' || contradictedByReason);
       if (renamed && !review.suggestedTitle) {
         throw new Error('AI 判定名称无关，但没有返回可用的新名称');
       }
@@ -3638,7 +3678,9 @@ function createApp(options = {}) {
         return res.status(404).json({ error: '项目不存在' });
       }
 
-      let reason = review.reason;
+      let reason = contradictedByReason
+        ? `审核结论与理由矛盾，理由已明确表示名称无关：${review.reason}`
+        : review.reason;
       let site = latestSites[latestSiteIndex];
       if (site.title !== originalTitle) {
         renamed = false;
@@ -3666,7 +3708,7 @@ function createApp(options = {}) {
       const classes = await readClasses(classesFile);
       return res.json({
         renamed,
-        related: review.related,
+        related: effectiveRelated,
         confidence: review.confidence,
         reason,
         originalTitle,

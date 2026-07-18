@@ -2549,6 +2549,57 @@ test('AI name review preserves related titles and renames only clear mismatches'
   }
 });
 
+test('AI name review corrects a keep verdict whose reason says the title is unrelated', async () => {
+  const responses = [
+    JSON.stringify({
+      related: true,
+      confidence: 'high',
+      reason: "名称'p'过于简短，项目内容为AWM绝地求生SVG动画，两者无明显关联，但无法完全排除作者意图缩写，故保留。",
+      suggestedTitle: ''
+    }),
+    'AWM绝地求生动画'
+  ];
+  const llmServer = http.createServer(async (req, res) => {
+    for await (const _chunk of req) {
+      // Drain request body.
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({ choices: [{ message: { content: responses.shift() } }] }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'short-title-site'];
+    const { app } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+    await agent
+      .post('/api/sites')
+      .field('title', 'p')
+      .field('author', '测试作者')
+      .field('classId', 'class-a')
+      .field('htmlContent', '<!doctype html><svg><text>AWM 绝地求生</text></svg><script>animateRifle()</script>')
+      .expect(201);
+
+    const response = await agent.post('/api/sites/short-title-site/ai-name-review').send({}).expect(200);
+    assert.equal(response.body.renamed, true);
+    assert.equal(response.body.related, false);
+    assert.equal(response.body.originalTitle, 'p');
+    assert.equal(response.body.title, 'AWM绝地求生动画');
+    assert.equal(response.body.site.title, 'AWM绝地求生动画');
+    assert.equal(responses.length, 0);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
 test('POST /api/sites/:id/ai-name rejects forbidden AI titles', async () => {
   const llmServer = http.createServer(async (req, res) => {
     for await (const _chunk of req) {
