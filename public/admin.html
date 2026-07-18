@@ -1924,6 +1924,7 @@
     let taskStatusTimer = null;
     const runningAiOptimizations = new Set();
     const runningAiNaming = new Set();
+    const runningAiNameReviews = new Set();
     const AI_REQUEST_TIMEOUT_MS = 60000;
     const loadedAdminViews = new Set();
     let forbiddenWordsState = {
@@ -2682,7 +2683,7 @@
     }
 
     async function nameSiteWithAi(site, button) {
-      if (runningAiNaming.has(site.id)) {
+      if (runningAiNaming.has(site.id) || runningAiNameReviews.has(site.id)) {
         addAiOptimizeLog(`${getSiteLogName(site)}已经在 AI 命名中，请等待完成。`, 'running');
         return;
       }
@@ -2719,6 +2720,63 @@
       } finally {
         const wasRunning = runningAiNaming.delete(site.id);
         button.dataset.idleText = 'AI命名';
+        setButtonLoading(button, false);
+        if (wasRunning) {
+          refreshVisibleRows();
+        }
+      }
+    }
+
+    async function reviewSiteNameWithAi(site, button) {
+      if (runningAiNameReviews.has(site.id) || runningAiNaming.has(site.id)) {
+        addAiOptimizeLog(`${getSiteLogName(site)}已经在 AI 命名或审核中，请等待完成。`, 'running');
+        return;
+      }
+
+      runningAiNameReviews.add(site.id);
+      setButtonLoading(button, true, '审核中...');
+      addAiOptimizeLog(`正在 AI 命名审核${getSiteLogName(site)}...`, 'running');
+      setMessage(listMessage, `正在 AI 快速阅读代码并审核名称${getSiteLogName(site)}...`);
+
+      try {
+        const response = await fetchWithTimeout(`/api/sites/${encodeURIComponent(site.id)}/ai-name-review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+
+        if (!response.ok) {
+          const errorMessage = await readResponseError(response, 'AI 命名审核失败');
+          addAiOptimizeLog(`${getSiteLogName(site)}AI 命名审核失败：${errorMessage}`, 'error');
+          setMessage(listMessage, errorMessage, true);
+          return;
+        }
+
+        const result = await response.json();
+        const modelText = result.model ? `（${result.model}）` : '';
+        if (result.renamed) {
+          replaceSiteInState(result.site);
+          addAiOptimizeLog(
+            `${getSiteLogName(site)}AI 命名审核：名称与代码无关（${result.reason}），已自动命名为「${result.title}」${modelText}。`,
+            'success'
+          );
+          setMessage(listMessage, `AI 命名审核完成，已自动命名为${getSiteLogName(result.site)}`);
+        } else {
+          const conclusion = result.related
+            ? '名称与代码相关，保留原名'
+            : '关联性不确定，保留原名';
+          addAiOptimizeLog(
+            `${getSiteLogName(site)}AI 命名审核：${conclusion}（${result.reason}）${modelText}。`,
+            'success'
+          );
+          setMessage(listMessage, `${getSiteLogName(site)}AI 命名审核完成，已保留原名`);
+        }
+      } catch (error) {
+        addAiOptimizeLog(`${getSiteLogName(site)}AI 命名审核失败：${error.message || '网络错误'}`, 'error');
+        setMessage(listMessage, error.message || 'AI 命名审核失败', true);
+      } finally {
+        const wasRunning = runningAiNameReviews.delete(site.id);
+        button.dataset.idleText = 'AI命名审核';
         setButtonLoading(button, false);
         if (wasRunning) {
           refreshVisibleRows();
@@ -3611,9 +3669,17 @@
         const aiNameButton = document.createElement('button');
         aiNameButton.className = 'button';
         aiNameButton.type = 'button';
-        aiNameButton.disabled = runningAiNaming.has(site.id);
+        aiNameButton.disabled = runningAiNaming.has(site.id) || runningAiNameReviews.has(site.id);
         aiNameButton.textContent = aiNameButton.disabled ? '命名中...' : 'AI命名';
         aiNameButton.addEventListener('click', () => nameSiteWithAi(site, aiNameButton));
+
+        const aiNameReviewButton = document.createElement('button');
+        aiNameReviewButton.className = 'button';
+        aiNameReviewButton.type = 'button';
+        aiNameReviewButton.disabled = runningAiNameReviews.has(site.id) || runningAiNaming.has(site.id);
+        aiNameReviewButton.textContent = aiNameReviewButton.disabled ? '审核中...' : 'AI命名审核';
+        aiNameReviewButton.title = 'AI 阅读代码，名称明确乱取时自动改名';
+        aiNameReviewButton.addEventListener('click', () => reviewSiteNameWithAi(site, aiNameReviewButton));
 
         const aiOptimizeButton = document.createElement('button');
         aiOptimizeButton.className = 'button';
@@ -3648,7 +3714,7 @@
         deleteButton.textContent = '删除';
         deleteButton.addEventListener('click', () => deleteSite(site));
 
-        actions.append(saveButton, starButton, enabledButton, whitelistButton, previewLink, codeButton, aiNameButton, aiOptimizeButton, directedAiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
+        actions.append(saveButton, starButton, enabledButton, whitelistButton, previewLink, codeButton, aiNameButton, aiNameReviewButton, aiOptimizeButton, directedAiOptimizeButton, downloadLink, thumbnailButton, deleteButton);
         actionCell.append(actions);
 
         row.append(indexCell, titleCell, authorCell, classCell, urlCell, createdCell, storageCell, thumbnailCell, actionCell);

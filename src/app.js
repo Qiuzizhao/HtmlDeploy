@@ -433,6 +433,93 @@ async function nameSiteWithLlm({ codeSnapshot, currentTitle, author, llmConfig }
   return title;
 }
 
+function parseLlmJsonObject(value) {
+  const content = String(value || '').trim();
+  const unfenced = content
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+  const start = unfenced.indexOf('{');
+  const end = unfenced.lastIndexOf('}');
+  if (start === -1 || end < start) {
+    throw new Error('AI 命名审核没有返回有效 JSON');
+  }
+  try {
+    return JSON.parse(unfenced.slice(start, end + 1));
+  } catch {
+    throw new Error('AI 命名审核返回的 JSON 无法解析');
+  }
+}
+
+async function reviewSiteNameWithLlm({ codeSnapshot, currentTitle, author, llmConfig }) {
+  if (!llmConfig.apiKey) {
+    throw new Error('请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY');
+  }
+
+  const requestBody = {
+    model: llmConfig.model,
+    temperature: llmConfig.nameTemperature,
+    stream: false,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          '你是网页项目名称审核员。请快速阅读项目代码，判断当前名称是否真实描述或关联项目内容。',
+          '采用保守标准：只有名称明确是乱取、与代码主题明显无关时，related 才为 false 且 confidence 才为 high。',
+          '名称虽然宽泛但仍有关联，或证据不足、无法确定时，应保留名称。',
+          '只返回一个 JSON 对象，不要 Markdown，不要额外说明。',
+          '格式：{"related":true或false,"confidence":"high或medium或low","reason":"简短中文理由","suggestedTitle":"仅在明确无关时填写的新名称，否则为空字符串"}。',
+          '建议名称应简短具体，最好 2 到 12 个中文字符，最长不超过 20 个中文字符。'
+        ].join('\n')
+      },
+      {
+        role: 'user',
+        content: [
+          `当前名称：${currentTitle || '未命名项目'}`,
+          author ? `作者：${author}` : '',
+          '请审核当前名称与下面项目代码的关联性：',
+          String(codeSnapshot || '').slice(0, 60000)
+        ].filter(Boolean).join('\n\n')
+      }
+    ]
+  };
+
+  const thinkingType = llmConfig.thinkingName || llmConfig.thinkingType;
+  if (thinkingType) {
+    requestBody.thinking = { type: thinkingType };
+  }
+
+  const { response, result } = await fetchJsonWithTimeout(
+    getChatCompletionsUrl(llmConfig.baseUrl),
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${llmConfig.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    },
+    llmConfig.timeoutMs,
+    `AI 命名审核服务响应超时（超过 ${Math.round(llmConfig.timeoutMs / 1000)} 秒），请稍后重试`
+  );
+
+  if (!response.ok) {
+    throw new Error(result.error?.message || result.rawText || `AI 命名审核接口调用失败：${response.status}`);
+  }
+
+  const parsed = parseLlmJsonObject(result.choices?.[0]?.message?.content || '');
+  if (typeof parsed.related !== 'boolean') {
+    throw new Error('AI 命名审核结果缺少有效的 related 字段');
+  }
+  const confidence = ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low';
+  return {
+    related: parsed.related,
+    confidence,
+    reason: String(parsed.reason || '').trim().slice(0, 300) || 'AI 未提供具体理由',
+    suggestedTitle: normalizeSiteTitle(parsed.suggestedTitle || '')
+  };
+}
+
 function getClassCookieName(classId) {
   const digest = crypto.createHash('sha256').update(String(classId)).digest('hex').slice(0, 16);
   return `${CLASS_COOKIE_PREFIX}${digest}`;
@@ -3507,6 +3594,84 @@ function createApp(options = {}) {
       return res.json({
         site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
         title,
+        model: llmConfig.model
+      });
+    } catch (error) {
+      return res.status(error.message.includes('配置') ? 400 : 502).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/sites/:id/ai-name-review', requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const sites = await readSites(dataFile);
+      const siteIndex = sites.findIndex((item) => item.id === id);
+      if (siteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      const projectDir = path.join(storageDir, id);
+      if (!fs.existsSync(projectDir)) {
+        return res.status(404).json({ error: '项目文件不存在' });
+      }
+      const { combinedText } = await readProjectCodeSnapshot(projectDir);
+      if (!combinedText.trim()) {
+        return res.status(400).json({ error: '项目代码为空' });
+      }
+
+      const originalTitle = sites[siteIndex].title;
+      const llmConfig = await getLlmConfig();
+      const review = await reviewSiteNameWithLlm({
+        codeSnapshot: combinedText,
+        currentTitle: originalTitle,
+        author: sites[siteIndex].author,
+        llmConfig
+      });
+      let renamed = review.related === false && review.confidence === 'high';
+      if (renamed && !review.suggestedTitle) {
+        throw new Error('AI 判定名称无关，但没有返回可用的新名称');
+      }
+
+      const latestSites = await readSites(dataFile);
+      const latestSiteIndex = latestSites.findIndex((item) => item.id === id);
+      if (latestSiteIndex === -1) {
+        return res.status(404).json({ error: '项目不存在' });
+      }
+
+      let reason = review.reason;
+      let site = latestSites[latestSiteIndex];
+      if (site.title !== originalTitle) {
+        renamed = false;
+        reason = '审核期间项目名称已被更新，为避免覆盖人工修改，已保留最新名称';
+      } else if (renamed) {
+        if (site.forbiddenWhitelist !== true) {
+          const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
+          const forbiddenMatch = findForbiddenWordMatch(
+            { title: review.suggestedTitle, author: site.author || '' },
+            settings.forbiddenWords
+          );
+          if (forbiddenMatch) {
+            return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+          }
+        }
+        site = clearForbiddenAudit({
+          ...site,
+          title: review.suggestedTitle,
+          updatedAt: new Date().toISOString()
+        });
+        latestSites[latestSiteIndex] = site;
+        await writeSites(dataFile, latestSites);
+      }
+
+      const classes = await readClasses(classesFile);
+      return res.json({
+        renamed,
+        related: review.related,
+        confidence: review.confidence,
+        reason,
+        originalTitle,
+        title: site.title,
+        site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
         model: llmConfig.model
       });
     } catch (error) {

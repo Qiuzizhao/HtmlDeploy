@@ -459,6 +459,20 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /formData\.append\('htmlContent'/);
 });
 
+test('admin provides AI name review action and logs review decisions', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /const runningAiNameReviews = new Set\(\)/);
+  assert.match(html, /async function reviewSiteNameWithAi/);
+  assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-name-review/);
+  assert.match(html, /textContent = aiNameReviewButton\.disabled \? '审核中\.\.\.' : 'AI命名审核'/);
+  assert.match(html, /正在 AI 命名审核/);
+  assert.match(html, /名称与代码相关，保留原名/);
+  assert.match(html, /名称与代码无关/);
+  assert.match(html, /已自动命名为/);
+  assert.match(html, /AI 命名审核失败/);
+});
+
 test('public admin shows loading feedback for tables and actions', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
@@ -2465,6 +2479,70 @@ test('POST /api/sites/:id/ai-name names and saves a project title', async () => 
     const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
     assert.equal(sites[0].title, '霓虹星跃');
     assert.ok(sites[0].updatedAt);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('AI name review preserves related titles and renames only clear mismatches', async () => {
+  const reviews = [
+    { related: true, confidence: 'high', reason: '标题准确描述了代码中的贪吃蛇游戏', suggestedTitle: '' },
+    { related: false, confidence: 'high', reason: '原标题与代码中的星空跳跃游戏无关', suggestedTitle: '霓虹星跃' },
+    { related: false, confidence: 'medium', reason: '代码信息不足，无法确定标题是否相关', suggestedTitle: '画布作品' }
+  ];
+  const llmServer = http.createServer(async (req, res) => {
+    for await (const _chunk of req) {
+      // Drain request body.
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(reviews.shift()) } }] }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'related-site', 'mismatch-site', 'uncertain-site'];
+    const { app, dataDir } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmThinkingType: 'disabled'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+    for (const title of ['贪吃蛇挑战', '随便起的名字', '模糊标题']) {
+      await agent
+        .post('/api/sites')
+        .field('title', title)
+        .field('author', '测试作者')
+        .field('classId', 'class-a')
+        .field('htmlContent', `<!doctype html><title>${title}</title><canvas id="game"></canvas><script>let score=${title.length};</script>`)
+        .expect(201);
+    }
+
+    const related = await agent.post('/api/sites/related-site/ai-name-review').send({}).expect(200);
+    assert.equal(related.body.renamed, false);
+    assert.equal(related.body.site.title, '贪吃蛇挑战');
+    assert.match(related.body.reason, /准确描述/);
+
+    const mismatch = await agent.post('/api/sites/mismatch-site/ai-name-review').send({}).expect(200);
+    assert.equal(mismatch.body.renamed, true);
+    assert.equal(mismatch.body.originalTitle, '随便起的名字');
+    assert.equal(mismatch.body.title, '霓虹星跃');
+    assert.equal(mismatch.body.site.title, '霓虹星跃');
+    assert.equal(mismatch.body.model, 'fake-model');
+
+    const uncertain = await agent.post('/api/sites/uncertain-site/ai-name-review').send({}).expect(200);
+    assert.equal(uncertain.body.renamed, false);
+    assert.equal(uncertain.body.site.title, '模糊标题');
+
+    const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
+    assert.equal(sites.find((site) => site.id === 'related-site').title, '贪吃蛇挑战');
+    assert.equal(sites.find((site) => site.id === 'mismatch-site').title, '霓虹星跃');
+    assert.equal(sites.find((site) => site.id === 'uncertain-site').title, '模糊标题');
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));
