@@ -406,7 +406,8 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /textContent = directedAiOptimizeButton\.disabled \? '优化中\.\.\.' : '定向AI优化'/);
   assert.match(html, /id="directedAiOverlay"/);
   assert.match(html, /function openDirectedAiWindow/);
-  assert.match(html, /textContent = aiNameButton\.disabled \? '命名中\.\.\.' : 'AI命名'/);
+  assert.match(html, /const aiNameBusy = runningAiNaming\.has\(site\.id\) \|\| runningAiNameReviews\.has\(site\.id\)/);
+  assert.match(html, /textContent = aiNameBusy \? '命名中\.\.\.' : 'AI命名'/);
   assert.match(html, /function nameSiteWithAi/);
   assert.match(html, /textContent = enabled \? '禁用' : '启用'/);
   assert.match(html, /textContent = forbiddenWhitelisted \? '移出白名单' : '白名单'/);
@@ -465,12 +466,32 @@ test('admin provides AI name review action and logs review decisions', async () 
   assert.match(html, /const runningAiNameReviews = new Set\(\)/);
   assert.match(html, /async function reviewSiteNameWithAi/);
   assert.match(html, /\/api\/sites\/\$\{encodeURIComponent\(site\.id\)\}\/ai-name-review/);
-  assert.match(html, /textContent = aiNameReviewButton\.disabled \? '审核中\.\.\.' : 'AI命名审核'/);
+  assert.match(html, /const aiNameReviewBusy = runningAiNameReviews\.has\(site\.id\) \|\| runningAiNaming\.has\(site\.id\)/);
+  assert.match(html, /textContent = aiNameReviewBusy \? '审核中\.\.\.' : 'AI命名审核'/);
   assert.match(html, /正在 AI 命名审核/);
   assert.match(html, /名称与代码相关，保留原名/);
   assert.match(html, /名称与代码无关/);
   assert.match(html, /已自动命名为/);
   assert.match(html, /AI 命名审核失败/);
+});
+
+test('admin can run and resume all-project AI name reviews', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /id="reviewAllSiteNamesButton"[^>]*>全部命名审核<\/button>/);
+  assert.match(html, /#reviewAllSiteNamesButton \{\s+min-width: 152px;/);
+  assert.match(html, /const AI_NAME_REVIEW_JOB_STORAGE_KEY = 'project-site-ai-name-review-job'/);
+  assert.match(html, /async function startAllSiteNameReviews/);
+  assert.match(html, /async function pollAllSiteNameReviewJob/);
+  assert.match(html, /async function resumeAllSiteNameReviewJob/);
+  assert.match(html, /\/api\/admin\/sites\/ai-name-review-all/);
+  assert.match(html, /\/api\/admin\/ai-name-review-jobs\/\$\{encodeURIComponent\(jobId\)\}/);
+  assert.match(html, /`审核 \$\{job\.finished\}\/\$\{job\.total\}`/);
+  assert.match(html, /lastEventIndex/);
+  assert.match(html, /existingState\?\.jobId === job\.jobId \? existingState\.lastEventIndex : 0/);
+  assert.match(html, /已改名 \$\{job\.renamed\} 个，已保留 \$\{job\.preserved\} 个，失败 \$\{job\.failed\} 个/);
+  assert.match(html, /reviewAllSiteNamesButton\.addEventListener\('click', startAllSiteNameReviews\)/);
+  assert.match(html, /await resumeAllSiteNameReviewJob\(\)/);
 });
 
 test('public admin shows loading feedback for tables and actions', async () => {

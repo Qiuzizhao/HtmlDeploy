@@ -1031,6 +1031,10 @@
       flex-wrap: wrap;
     }
 
+    #reviewAllSiteNamesButton {
+      min-width: 152px;
+    }
+
     .site-pagination {
       display: flex;
       align-items: center;
@@ -1453,6 +1457,7 @@
             </div>
             <div class="toolbar-right">
               <button class="button" id="dedupeSitesButton" type="button">查重</button>
+              <button class="button" id="reviewAllSiteNamesButton" type="button">全部命名审核</button>
               <button class="warning-button" id="auditForbiddenSitesButton" type="button">违禁词审查</button>
               <button class="button" id="enableAllSitesButton" type="button">全部解禁</button>
               <button class="button" id="generateThumbnailsButton" type="button">刷新全部封面</button>
@@ -1874,6 +1879,7 @@
     const rankingRows = document.getElementById('rankingRows');
     const rankingEmptyState = document.getElementById('rankingEmptyState');
     const dedupeSitesButton = document.getElementById('dedupeSitesButton');
+    const reviewAllSiteNamesButton = document.getElementById('reviewAllSiteNamesButton');
     const auditForbiddenSitesButton = document.getElementById('auditForbiddenSitesButton');
     const enableAllSitesButton = document.getElementById('enableAllSitesButton');
     const generateThumbnailsButton = document.getElementById('generateThumbnailsButton');
@@ -1903,6 +1909,7 @@
     const directedAiMessage = document.getElementById('directedAiMessage');
     const startDirectedAi = document.getElementById('startDirectedAi');
     const AI_OPTIMIZE_LOG_STORAGE_KEY = 'project-site-ai-optimize-log';
+    const AI_NAME_REVIEW_JOB_STORAGE_KEY = 'project-site-ai-name-review-job';
     const THUMBNAIL_TASK_STORAGE_KEY = 'project-site-thumbnail-task-ids';
 
     let sites = [];
@@ -1922,6 +1929,7 @@
     let aiOptimizeLogItems = loadAiOptimizeLog();
     let thumbnailTaskIds = loadThumbnailTaskIds();
     let taskStatusTimer = null;
+    let allSiteNameReviewPolling = false;
     const runningAiOptimizations = new Set();
     const runningAiNaming = new Set();
     const runningAiNameReviews = new Set();
@@ -2166,6 +2174,157 @@
       saveAiOptimizeLog();
       renderAiOptimizeLog();
       savePersistentAiOptimizeLog(item);
+    }
+
+    function loadAllSiteNameReviewJobState() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(AI_NAME_REVIEW_JOB_STORAGE_KEY) || 'null');
+        if (!parsed || !parsed.jobId) {
+          return null;
+        }
+        return {
+          jobId: String(parsed.jobId),
+          lastEventIndex: Math.max(0, Number(parsed.lastEventIndex) || 0)
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    function saveAllSiteNameReviewJobState(state) {
+      try {
+        localStorage.setItem(AI_NAME_REVIEW_JOB_STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        // The server task continues even if this browser cannot persist its ID.
+      }
+    }
+
+    function clearAllSiteNameReviewJobState() {
+      try {
+        localStorage.removeItem(AI_NAME_REVIEW_JOB_STORAGE_KEY);
+      } catch {
+        // No persisted state needs clearing in restricted browser contexts.
+      }
+    }
+
+    function consumeAllSiteNameReviewEvents(jobId, events) {
+      const state = loadAllSiteNameReviewJobState() || { jobId, lastEventIndex: 0 };
+      let lastEventIndex = state.jobId === jobId ? state.lastEventIndex : 0;
+      const pendingEvents = (Array.isArray(events) ? events : [])
+        .filter((event) => Number(event.index) > lastEventIndex)
+        .sort((left, right) => Number(left.index) - Number(right.index));
+
+      pendingEvents.forEach((event) => {
+        addAiOptimizeLog(event.text, event.status);
+        lastEventIndex = Math.max(lastEventIndex, Number(event.index) || 0);
+      });
+      saveAllSiteNameReviewJobState({ jobId, lastEventIndex });
+    }
+
+    async function pollAllSiteNameReviewJob(jobId) {
+      if (allSiteNameReviewPolling) {
+        return;
+      }
+
+      allSiteNameReviewPolling = true;
+      refreshVisibleRows();
+      try {
+        while (true) {
+          const response = await fetch(`/api/admin/ai-name-review-jobs/${encodeURIComponent(jobId)}`);
+          if (response.status === 404) {
+            clearAllSiteNameReviewJobState();
+            setButtonLoading(reviewAllSiteNamesButton, false);
+            setMessage(listMessage, 'AI 命名审核任务已过期，可重新发起', true);
+            return;
+          }
+          if (!response.ok) {
+            throw new Error(await readResponseError(response, '查询全部命名审核进度失败'));
+          }
+
+          const job = await response.json();
+          setButtonLoading(reviewAllSiteNamesButton, true, `审核 ${job.finished}/${job.total}`);
+          consumeAllSiteNameReviewEvents(jobId, job.events);
+
+          if (job.status === 'success') {
+            clearAllSiteNameReviewJobState();
+            setButtonLoading(reviewAllSiteNamesButton, false);
+            await loadSites();
+            setMessage(
+              listMessage,
+              `全部命名审核完成：已改名 ${job.renamed} 个，已保留 ${job.preserved} 个，失败 ${job.failed} 个`,
+              job.failed > 0
+            );
+            return;
+          }
+
+          if (job.status === 'error') {
+            clearAllSiteNameReviewJobState();
+            setButtonLoading(reviewAllSiteNamesButton, false);
+            setMessage(listMessage, '全部命名审核任务失败，请查看日志', true);
+            return;
+          }
+
+          setMessage(
+            listMessage,
+            `正在全部命名审核：${job.finished}/${job.total}${job.current ? `，当前 ${job.current}` : ''}`,
+            false,
+            { loading: true }
+          );
+          await sleep(1500);
+        }
+      } catch (error) {
+        setButtonLoading(reviewAllSiteNamesButton, false);
+        addAiOptimizeLog(`全部命名审核进度查询失败：${error.message || '网络错误'}`, 'error');
+        setMessage(listMessage, `${error.message || '查询进度失败'}，刷新页面可继续连接任务`, true);
+      } finally {
+        allSiteNameReviewPolling = false;
+        refreshVisibleRows();
+      }
+    }
+
+    async function startAllSiteNameReviews() {
+      if (allSiteNameReviewPolling) {
+        return;
+      }
+      if (runningAiNaming.size || runningAiNameReviews.size) {
+        setMessage(listMessage, '请先等待当前单项 AI 命名或审核完成', true);
+        return;
+      }
+
+      setButtonLoading(reviewAllSiteNamesButton, true, '创建中...');
+      setMessage(listMessage, '正在创建全部命名审核任务...', false, { loading: true });
+      try {
+        const response = await fetch('/api/admin/sites/ai-name-review-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '创建全部命名审核任务失败'));
+        }
+
+        const job = await response.json();
+        const existingState = loadAllSiteNameReviewJobState();
+        saveAllSiteNameReviewJobState({
+          jobId: job.jobId,
+          lastEventIndex: existingState?.jobId === job.jobId ? existingState.lastEventIndex : 0
+        });
+        addAiOptimizeLog(`全部命名审核任务已创建，共 ${job.total} 个项目。`, 'running');
+        await pollAllSiteNameReviewJob(job.jobId);
+      } catch (error) {
+        setButtonLoading(reviewAllSiteNamesButton, false);
+        addAiOptimizeLog(`全部命名审核启动失败：${error.message || '网络错误'}`, 'error');
+        setMessage(listMessage, error.message || '全部命名审核启动失败', true);
+      }
+    }
+
+    async function resumeAllSiteNameReviewJob() {
+      const state = loadAllSiteNameReviewJobState();
+      if (!state) {
+        return;
+      }
+      setButtonLoading(reviewAllSiteNamesButton, true, '恢复中...');
+      pollAllSiteNameReviewJob(state.jobId);
     }
 
     function getRunningAiText() {
@@ -2696,7 +2855,7 @@
     }
 
     async function nameSiteWithAi(site, button) {
-      if (runningAiNaming.has(site.id) || runningAiNameReviews.has(site.id)) {
+      if (allSiteNameReviewPolling || runningAiNaming.has(site.id) || runningAiNameReviews.has(site.id)) {
         addAiOptimizeLog(`${getSiteLogName(site)}已经在 AI 命名中，请等待完成。`, 'running');
         return;
       }
@@ -2741,7 +2900,7 @@
     }
 
     async function reviewSiteNameWithAi(site, button) {
-      if (runningAiNameReviews.has(site.id) || runningAiNaming.has(site.id)) {
+      if (allSiteNameReviewPolling || runningAiNameReviews.has(site.id) || runningAiNaming.has(site.id)) {
         addAiOptimizeLog(`${getSiteLogName(site)}已经在 AI 命名或审核中，请等待完成。`, 'running');
         return;
       }
@@ -3682,15 +3841,17 @@
         const aiNameButton = document.createElement('button');
         aiNameButton.className = 'button';
         aiNameButton.type = 'button';
-        aiNameButton.disabled = runningAiNaming.has(site.id) || runningAiNameReviews.has(site.id);
-        aiNameButton.textContent = aiNameButton.disabled ? '命名中...' : 'AI命名';
+        const aiNameBusy = runningAiNaming.has(site.id) || runningAiNameReviews.has(site.id);
+        aiNameButton.disabled = allSiteNameReviewPolling || aiNameBusy;
+        aiNameButton.textContent = aiNameBusy ? '命名中...' : 'AI命名';
         aiNameButton.addEventListener('click', () => nameSiteWithAi(site, aiNameButton));
 
         const aiNameReviewButton = document.createElement('button');
         aiNameReviewButton.className = 'button';
         aiNameReviewButton.type = 'button';
-        aiNameReviewButton.disabled = runningAiNameReviews.has(site.id) || runningAiNaming.has(site.id);
-        aiNameReviewButton.textContent = aiNameReviewButton.disabled ? '审核中...' : 'AI命名审核';
+        const aiNameReviewBusy = runningAiNameReviews.has(site.id) || runningAiNaming.has(site.id);
+        aiNameReviewButton.disabled = allSiteNameReviewPolling || aiNameReviewBusy;
+        aiNameReviewButton.textContent = aiNameReviewBusy ? '审核中...' : 'AI命名审核';
         aiNameReviewButton.title = 'AI 阅读代码，名称明确乱取时自动改名';
         aiNameReviewButton.addEventListener('click', () => reviewSiteNameWithAi(site, aiNameReviewButton));
 
@@ -4792,6 +4953,7 @@
     });
     auditForbiddenSitesButton.addEventListener('click', auditForbiddenSites);
     dedupeSitesButton.addEventListener('click', dedupeSites);
+    reviewAllSiteNamesButton.addEventListener('click', startAllSiteNameReviews);
     enableAllSitesButton.addEventListener('click', enableAllSites);
     generateThumbnailsButton.addEventListener('click', generateAllThumbnails);
     refreshTaskStatus.addEventListener('click', async () => {
@@ -4876,6 +5038,7 @@
       ]);
       loadedAdminViews.add('classes');
       await loadCurrentViewData('projects');
+      await resumeAllSiteNameReviewJob();
     }
 
     boot().catch((error) => {
