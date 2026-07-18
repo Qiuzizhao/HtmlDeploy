@@ -70,7 +70,9 @@ test('public index shows a loading spinner before project cards resolve', async 
 test('public index shows loading feedback on interactive buttons', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
+  assert.match(html, /button\.is-loading \{[^}]*display: inline-flex;[^}]*align-items: center;[^}]*justify-content: center;/);
   assert.match(html, /button\.is-loading::before/);
+  assert.match(html, /button\.is-loading::before \{[^}]*display: inline-block;[^}]*flex: 0 0 auto;/);
   assert.match(html, /function setButtonLoading/);
   assert.match(html, /setButtonLoading\(refreshClassSitesButton, true, '刷新中\.\.\.'\)/);
   assert.match(html, /setButtonLoading\(previewUploadButton, true, '预览中\.\.\.'\)/);

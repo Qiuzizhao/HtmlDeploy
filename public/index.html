@@ -145,11 +145,16 @@
     }
 
     button.is-loading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       pointer-events: none;
     }
 
     button.is-loading::before {
       content: "";
+      display: inline-block;
+      flex: 0 0 auto;
       width: 14px;
       height: 14px;
       margin-right: 8px;
