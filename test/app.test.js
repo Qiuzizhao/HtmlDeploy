@@ -502,6 +502,8 @@ test('admin can run and resume all-project AI name reviews', async () => {
   assert.match(html, /async function pollAllSiteNameReviewJob/);
   assert.match(html, /async function resumeAllSiteNameReviewJob/);
   assert.match(html, /\/api\/admin\/sites\/ai-name-review-all/);
+  assert.match(html, /fetch\('\/api\/admin\/ai-name-review-jobs\/current'\)/);
+  assert.match(html, /saveAllSiteNameReviewJobState\(state\)/);
   assert.match(html, /\/api\/admin\/ai-name-review-jobs\/\$\{encodeURIComponent\(jobId\)\}/);
   assert.match(html, /`审核 \$\{job\.finished\}\/\$\{job\.total\}`/);
   assert.match(html, /lastEventIndex/);
@@ -2805,6 +2807,8 @@ test('all-project AI name review processes serially and continues after failures
     }
 
     const created = await agent.post('/api/admin/sites/ai-name-review-all').send({}).expect(202);
+    const resumed = await agent.get('/api/admin/ai-name-review-jobs/current').expect(200);
+    assert.equal(resumed.body.jobId, created.body.jobId);
     const duplicate = await agent.post('/api/admin/sites/ai-name-review-all').send({}).expect(202);
     assert.equal(duplicate.body.jobId, created.body.jobId);
 
@@ -2825,6 +2829,7 @@ test('all-project AI name review processes serially and continues after failures
     assert.ok(job.events.some((event) => event.status === 'error'));
     assert.ok(job.events.some((event) => event.text.includes('已自动命名为')));
     assert.match(job.events.at(-1).text, /全部命名审核完成/);
+    await agent.get('/api/admin/ai-name-review-jobs/current').expect(404);
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));

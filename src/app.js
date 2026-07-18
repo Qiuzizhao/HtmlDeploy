@@ -3780,6 +3780,17 @@ function createApp(options = {}) {
     }
   });
 
+  app.get('/api/admin/ai-name-review-jobs/current', requireAdmin, (req, res) => {
+    cleanupAiNameReviewJobs();
+    const job = aiNameReviewJobs.get(activeAiNameReviewJobId)
+      || Array.from(aiNameReviewJobs.values()).find((item) => ['queued', 'running'].includes(item.status));
+    if (!job || !['queued', 'running'].includes(job.status)) {
+      return res.status(404).json({ error: '当前没有正在执行的 AI 命名审核任务' });
+    }
+    activeAiNameReviewJobId = job.id;
+    return res.json(toAiNameReviewJobResponse(job));
+  });
+
   app.get('/api/admin/ai-name-review-jobs/:jobId', requireAdmin, (req, res) => {
     cleanupAiNameReviewJobs();
     const job = aiNameReviewJobs.get(String(req.params.jobId));

@@ -2319,9 +2319,18 @@
     }
 
     async function resumeAllSiteNameReviewJob() {
-      const state = loadAllSiteNameReviewJobState();
+      let state = loadAllSiteNameReviewJobState();
       if (!state) {
-        return;
+        const response = await fetch('/api/admin/ai-name-review-jobs/current');
+        if (response.status === 404) {
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '查询当前全部命名审核任务失败'));
+        }
+        const job = await response.json();
+        state = { jobId: job.jobId, lastEventIndex: 0 };
+        saveAllSiteNameReviewJobState(state);
       }
       setButtonLoading(reviewAllSiteNamesButton, true, '恢复中...');
       pollAllSiteNameReviewJob(state.jobId);
