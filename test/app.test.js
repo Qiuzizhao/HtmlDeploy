@@ -825,6 +825,19 @@ async function waitForAiOptimizeJob(agent, jobId, { status = 'success', attempts
   throw new Error(`AI optimize job did not reach ${status}; latest status: ${latest?.body?.status}`);
 }
 
+async function waitForAiNameReviewJob(agent, jobId, { attempts = 120 } = {}) {
+  let latest;
+  for (let index = 0; index < attempts; index += 1) {
+    latest = await agent.get(`/api/admin/ai-name-review-jobs/${jobId}`).expect(200);
+    if (['success', 'error'].includes(latest.body.status)) {
+      return latest.body;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error(`AI name review job did not finish; latest status: ${latest?.body?.status}`);
+}
+
 async function waitForThumbnailJob(agent, jobId, { attempts = 80 } = {}) {
   let latest;
   for (let index = 0; index < attempts; index += 1) {
@@ -2612,6 +2625,99 @@ test('AI name review corrects a keep verdict whose reason says the title is unre
     assert.equal(response.body.title, 'AWM绝地求生动画');
     assert.equal(response.body.site.title, 'AWM绝地求生动画');
     assert.equal(responses.length, 0);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('all-project AI name review processes serially and continues after failures', async () => {
+  const responses = [
+    {
+      status: 200,
+      content: JSON.stringify({
+        related: true,
+        confidence: 'high',
+        reason: '名称准确描述了代码中的贪吃蛇游戏',
+        suggestedTitle: '贪吃蛇游戏'
+      })
+    },
+    {
+      status: 200,
+      content: JSON.stringify({
+        related: false,
+        confidence: 'high',
+        reason: '原名与代码中的星空跳跃游戏无关',
+        suggestedTitle: '霓虹星跃'
+      })
+    },
+    { status: 500, content: '模拟 AI 服务失败' }
+  ];
+  let activeRequests = 0;
+  let maxActiveRequests = 0;
+  const llmServer = http.createServer(async (req, res) => {
+    activeRequests += 1;
+    maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+    for await (const _chunk of req) {
+      // Drain request body.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    const response = responses.shift();
+    activeRequests -= 1;
+    if (response.status !== 200) {
+      res.writeHead(response.status, { 'Content-Type': 'text/plain', Connection: 'close' });
+      res.end(response.content);
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({ choices: [{ message: { content: response.content } }] }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'related-site', 'mismatch-site', 'failed-site'];
+    const { app } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmThinkingType: 'disabled'
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+    for (const title of ['贪吃蛇挑战', '乱取的名字', '失败项目']) {
+      await agent
+        .post('/api/sites')
+        .field('title', title)
+        .field('author', '测试作者')
+        .field('classId', 'class-a')
+        .field('htmlContent', `<!doctype html><title>${title}</title><canvas></canvas><script>let score=${title.length};</script>`)
+        .expect(201);
+    }
+
+    const created = await agent.post('/api/admin/sites/ai-name-review-all').send({}).expect(202);
+    const duplicate = await agent.post('/api/admin/sites/ai-name-review-all').send({}).expect(202);
+    assert.equal(duplicate.body.jobId, created.body.jobId);
+
+    const job = await waitForAiNameReviewJob(agent, created.body.jobId);
+    assert.equal(job.status, 'success');
+    assert.deepEqual(
+      {
+        total: job.total,
+        finished: job.finished,
+        renamed: job.renamed,
+        preserved: job.preserved,
+        failed: job.failed
+      },
+      { total: 3, finished: 3, renamed: 1, preserved: 1, failed: 1 }
+    );
+    assert.equal(maxActiveRequests, 1);
+    assert.equal(responses.length, 0);
+    assert.ok(job.events.some((event) => event.status === 'error'));
+    assert.ok(job.events.some((event) => event.text.includes('已自动命名为')));
+    assert.match(job.events.at(-1).text, /全部命名审核完成/);
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));

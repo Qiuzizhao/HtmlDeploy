@@ -1746,8 +1746,10 @@ function createApp(options = {}) {
   ) || 1));
   const aiOptimizeJobs = new Map();
   const aiOptimizeQueue = [];
+  const aiNameReviewJobs = new Map();
   const thumbnailJobs = new Map();
   const thumbnailQueue = [];
+  let activeAiNameReviewJobId = '';
   let runningAiOptimizeJobs = 0;
   let runningThumbnailJobs = 0;
 
@@ -2109,6 +2111,120 @@ function createApp(options = {}) {
       });
     } finally {
       job.htmlContent = '';
+    }
+  }
+
+  function cleanupAiNameReviewJobs() {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    for (const [jobId, job] of aiNameReviewJobs.entries()) {
+      const completedAt = Date.parse(job.finishedAt || job.updatedAt || job.createdAt);
+      if (['success', 'error'].includes(job.status) && completedAt < cutoff) {
+        aiNameReviewJobs.delete(jobId);
+      }
+    }
+  }
+
+  function toAiNameReviewJobResponse(job) {
+    return {
+      jobId: job.id,
+      status: job.status,
+      total: job.total,
+      finished: job.finished,
+      renamed: job.renamed,
+      preserved: job.preserved,
+      failed: job.failed,
+      current: job.current,
+      events: job.events,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      finishedAt: job.finishedAt || ''
+    };
+  }
+
+  function updateAiNameReviewJob(job, patch = {}) {
+    Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+  }
+
+  function addAiNameReviewJobEvent(job, text, status = 'running') {
+    job.nextEventIndex += 1;
+    job.events.push({
+      index: job.nextEventIndex,
+      text,
+      status,
+      createdAt: new Date().toISOString()
+    });
+    job.events = job.events.slice(-200);
+    job.updatedAt = new Date().toISOString();
+  }
+
+  function getAiNameReviewJobSiteName(site) {
+    return `「${site.title || site.id}」(编号: ${site.number || site.id})`;
+  }
+
+  async function runAiNameReviewJob(job) {
+    updateAiNameReviewJob(job, { status: 'running' });
+    try {
+      for (const siteSnapshot of job.sites) {
+        const siteName = getAiNameReviewJobSiteName(siteSnapshot);
+        updateAiNameReviewJob(job, { current: siteName });
+        addAiNameReviewJobEvent(job, `正在 AI 命名审核${siteName}...`, 'running');
+
+        try {
+          const result = await reviewAndMaybeRenameSite(siteSnapshot.id, job.llmConfig);
+          const modelText = result.model ? `（${result.model}）` : '';
+          if (result.renamed) {
+            job.renamed += 1;
+            addAiNameReviewJobEvent(
+              job,
+              `${siteName}AI 命名审核：名称与代码无关（${result.reason}），已自动命名为「${result.title}」${modelText}。`,
+              'success'
+            );
+          } else {
+            job.preserved += 1;
+            const conclusion = result.related
+              ? '名称与代码相关，保留原名'
+              : '关联性不确定，保留原名';
+            addAiNameReviewJobEvent(
+              job,
+              `${siteName}AI 命名审核：${conclusion}（${result.reason}）${modelText}。`,
+              'success'
+            );
+          }
+        } catch (error) {
+          job.failed += 1;
+          addAiNameReviewJobEvent(
+            job,
+            `${siteName}AI 命名审核失败：${error.message || '未知错误'}`,
+            'error'
+          );
+        } finally {
+          job.finished += 1;
+          job.updatedAt = new Date().toISOString();
+        }
+      }
+
+      updateAiNameReviewJob(job, {
+        status: 'success',
+        current: '',
+        finishedAt: new Date().toISOString()
+      });
+      addAiNameReviewJobEvent(
+        job,
+        `全部命名审核完成：共 ${job.total} 个，已改名 ${job.renamed} 个，已保留 ${job.preserved} 个，失败 ${job.failed} 个。`,
+        job.failed > 0 ? 'error' : 'success'
+      );
+    } catch (error) {
+      updateAiNameReviewJob(job, {
+        status: 'error',
+        current: '',
+        finishedAt: new Date().toISOString()
+      });
+      addAiNameReviewJobEvent(job, `全部命名审核任务失败：${error.message || '未知错误'}`, 'error');
+    } finally {
+      job.llmConfig = null;
+      if (activeAiNameReviewJobId === job.id) {
+        activeAiNameReviewJobId = '';
+      }
     }
   }
 
@@ -3565,6 +3681,65 @@ function createApp(options = {}) {
     }
 
     return res.json(toAiOptimizeJobResponse(job));
+  });
+
+  app.post('/api/admin/sites/ai-name-review-all', requireAdmin, async (req, res) => {
+    try {
+      cleanupAiNameReviewJobs();
+      const activeJob = aiNameReviewJobs.get(activeAiNameReviewJobId);
+      if (activeJob && ['queued', 'running'].includes(activeJob.status)) {
+        return res.status(202).json(toAiNameReviewJobResponse(activeJob));
+      }
+
+      const llmConfig = await getLlmConfig();
+      if (!llmConfig.apiKey) {
+        return res.status(400).json({
+          error: '请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY'
+        });
+      }
+
+      const sites = (await readSites(dataFile))
+        .filter((site) => !isSiteDeleted(site))
+        .map((site) => ({
+          id: site.id,
+          title: site.title || site.id,
+          number: site.number || ''
+        }));
+      const now = new Date().toISOString();
+      const job = {
+        id: createDefaultId(),
+        status: 'queued',
+        sites,
+        total: sites.length,
+        finished: 0,
+        renamed: 0,
+        preserved: 0,
+        failed: 0,
+        current: '',
+        events: [],
+        nextEventIndex: 0,
+        llmConfig,
+        createdAt: now,
+        updatedAt: now,
+        finishedAt: ''
+      };
+      aiNameReviewJobs.set(job.id, job);
+      activeAiNameReviewJobId = job.id;
+      const timer = setTimeout(() => runAiNameReviewJob(job), 0);
+      timer.unref?.();
+      return res.status(202).json(toAiNameReviewJobResponse(job));
+    } catch (error) {
+      return res.status(error.message.includes('配置') ? 400 : 500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/admin/ai-name-review-jobs/:jobId', requireAdmin, (req, res) => {
+    cleanupAiNameReviewJobs();
+    const job = aiNameReviewJobs.get(String(req.params.jobId));
+    if (!job) {
+      return res.status(404).json({ error: 'AI 命名审核任务不存在或已过期' });
+    }
+    return res.json(toAiNameReviewJobResponse(job));
   });
 
   app.post('/api/sites/:id/ai-name', requireAdmin, async (req, res, next) => {
