@@ -2542,6 +2542,16 @@ test('AI name review preserves related titles and renames only clear mismatches'
     assert.equal(mismatch.body.title, '霓虹星跃');
     assert.equal(mismatch.body.site.title, '霓虹星跃');
     assert.equal(mismatch.body.model, 'fake-model');
+    assert.deepEqual(Object.keys(mismatch.body).sort(), [
+      'confidence',
+      'model',
+      'originalTitle',
+      'reason',
+      'related',
+      'renamed',
+      'site',
+      'title'
+    ].sort());
 
     const uncertain = await agent.post('/api/sites/uncertain-site/ai-name-review').send({}).expect(200);
     assert.equal(uncertain.body.renamed, false);

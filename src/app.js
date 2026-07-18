@@ -3631,93 +3631,101 @@ function createApp(options = {}) {
     }
   });
 
-  app.post('/api/sites/:id/ai-name-review', requireAdmin, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const sites = await readSites(dataFile);
-      const siteIndex = sites.findIndex((item) => item.id === id);
-      if (siteIndex === -1) {
-        return res.status(404).json({ error: '项目不存在' });
-      }
+  function createStatusError(statusCode, message) {
+    return Object.assign(new Error(message), { statusCode });
+  }
 
-      const projectDir = path.join(storageDir, id);
-      if (!fs.existsSync(projectDir)) {
-        return res.status(404).json({ error: '项目文件不存在' });
-      }
-      const { combinedText } = await readProjectCodeSnapshot(projectDir);
-      if (!combinedText.trim()) {
-        return res.status(400).json({ error: '项目代码为空' });
-      }
+  async function reviewAndMaybeRenameSite(id, llmConfigOverride = null) {
+    const sites = await readSites(dataFile);
+    const siteIndex = sites.findIndex((item) => item.id === id);
+    if (siteIndex === -1) {
+      throw createStatusError(404, '项目不存在');
+    }
 
-      const originalTitle = sites[siteIndex].title;
-      const llmConfig = await getLlmConfig();
-      const review = await reviewSiteNameWithLlm({
+    const projectDir = path.join(storageDir, id);
+    if (!fs.existsSync(projectDir)) {
+      throw createStatusError(404, '项目文件不存在');
+    }
+    const { combinedText } = await readProjectCodeSnapshot(projectDir);
+    if (!combinedText.trim()) {
+      throw createStatusError(400, '项目代码为空');
+    }
+
+    const originalTitle = sites[siteIndex].title;
+    const llmConfig = llmConfigOverride || await getLlmConfig();
+    const review = await reviewSiteNameWithLlm({
+      codeSnapshot: combinedText,
+      currentTitle: originalTitle,
+      author: sites[siteIndex].author,
+      llmConfig
+    });
+    const contradictedByReason = review.related === true && reviewReasonClearlySaysUnrelated(review.reason);
+    const effectiveRelated = contradictedByReason ? false : review.related;
+    if (contradictedByReason && !review.suggestedTitle) {
+      review.suggestedTitle = await nameSiteWithLlm({
         codeSnapshot: combinedText,
         currentTitle: originalTitle,
         author: sites[siteIndex].author,
         llmConfig
       });
-      const contradictedByReason = review.related === true && reviewReasonClearlySaysUnrelated(review.reason);
-      const effectiveRelated = contradictedByReason ? false : review.related;
-      if (contradictedByReason && !review.suggestedTitle) {
-        review.suggestedTitle = await nameSiteWithLlm({
-          codeSnapshot: combinedText,
-          currentTitle: originalTitle,
-          author: sites[siteIndex].author,
-          llmConfig
-        });
-      }
-      let renamed = effectiveRelated === false && (review.confidence === 'high' || contradictedByReason);
-      if (renamed && !review.suggestedTitle) {
-        throw new Error('AI 判定名称无关，但没有返回可用的新名称');
-      }
+    }
+    let renamed = effectiveRelated === false && (review.confidence === 'high' || contradictedByReason);
+    if (renamed && !review.suggestedTitle) {
+      throw new Error('AI 判定名称无关，但没有返回可用的新名称');
+    }
 
-      const latestSites = await readSites(dataFile);
-      const latestSiteIndex = latestSites.findIndex((item) => item.id === id);
-      if (latestSiteIndex === -1) {
-        return res.status(404).json({ error: '项目不存在' });
-      }
+    const latestSites = await readSites(dataFile);
+    const latestSiteIndex = latestSites.findIndex((item) => item.id === id);
+    if (latestSiteIndex === -1) {
+      throw createStatusError(404, '项目不存在');
+    }
 
-      let reason = contradictedByReason
-        ? `审核结论与理由矛盾，理由已明确表示名称无关：${review.reason}`
-        : review.reason;
-      let site = latestSites[latestSiteIndex];
-      if (site.title !== originalTitle) {
-        renamed = false;
-        reason = '审核期间项目名称已被更新，为避免覆盖人工修改，已保留最新名称';
-      } else if (renamed) {
-        if (site.forbiddenWhitelist !== true) {
-          const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
-          const forbiddenMatch = findForbiddenWordMatch(
-            { title: review.suggestedTitle, author: site.author || '' },
-            settings.forbiddenWords
-          );
-          if (forbiddenMatch) {
-            return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
-          }
+    let reason = contradictedByReason
+      ? `审核结论与理由矛盾，理由已明确表示名称无关：${review.reason}`
+      : review.reason;
+    let site = latestSites[latestSiteIndex];
+    if (site.title !== originalTitle) {
+      renamed = false;
+      reason = '审核期间项目名称已被更新，为避免覆盖人工修改，已保留最新名称';
+    } else if (renamed) {
+      if (site.forbiddenWhitelist !== true) {
+        const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
+        const forbiddenMatch = findForbiddenWordMatch(
+          { title: review.suggestedTitle, author: site.author || '' },
+          settings.forbiddenWords
+        );
+        if (forbiddenMatch) {
+          throw createStatusError(400, createForbiddenWordError(forbiddenMatch));
         }
-        site = clearForbiddenAudit({
-          ...site,
-          title: review.suggestedTitle,
-          updatedAt: new Date().toISOString()
-        });
-        latestSites[latestSiteIndex] = site;
-        await writeSites(dataFile, latestSites);
       }
-
-      const classes = await readClasses(classesFile);
-      return res.json({
-        renamed,
-        related: effectiveRelated,
-        confidence: review.confidence,
-        reason,
-        originalTitle,
-        title: site.title,
-        site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
-        model: llmConfig.model
+      site = clearForbiddenAudit({
+        ...site,
+        title: review.suggestedTitle,
+        updatedAt: new Date().toISOString()
       });
+      latestSites[latestSiteIndex] = site;
+      await writeSites(dataFile, latestSites);
+    }
+
+    const classes = await readClasses(classesFile);
+    return {
+      renamed,
+      related: effectiveRelated,
+      confidence: review.confidence,
+      reason,
+      originalTitle,
+      title: site.title,
+      site: await toPublicSiteWithStorage(site, classes, thumbnailDir, storageDir),
+      model: llmConfig.model
+    };
+  }
+
+  app.post('/api/sites/:id/ai-name-review', requireAdmin, async (req, res) => {
+    try {
+      return res.json(await reviewAndMaybeRenameSite(req.params.id));
     } catch (error) {
-      return res.status(error.message.includes('配置') ? 400 : 502).json({ error: error.message });
+      const statusCode = error.statusCode || (error.message.includes('配置') ? 400 : 502);
+      return res.status(statusCode).json({ error: error.message });
     }
   });
 
