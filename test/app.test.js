@@ -215,6 +215,20 @@ test('public index can preview upload draft before submitting', async () => {
   assert.match(html, /previewUploadButton\.addEventListener\('click', previewUploadDraft\)/);
 });
 
+test('public upload modal exposes AI naming without submitting the draft', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(html, /class="upload-title-row"[\s\S]*id="titleInput"[\s\S]*id="uploadAiNameButton"/);
+  assert.match(html, /const uploadAiNameButton = document\.getElementById\('uploadAiNameButton'\)/);
+  assert.match(html, /uploadAiNameButton\.addEventListener\('click', async \(\) => \{/);
+  assert.match(html, /const htmlContent = await getUploadPreviewHtml\(\)/);
+  assert.match(html, /validateBasicHtmlDocument\(htmlContent\)/);
+  assert.match(html, /fetch\('\/api\/upload-ai-name'/);
+  assert.match(html, /JSON\.stringify\(\{ classId: currentClassId, htmlContent \}\)/);
+  assert.match(html, /titleInput\.value = result\.title/);
+  assert.doesNotMatch(html, /uploadAiNameButton[\s\S]{0,600}requestSubmit\(/);
+});
+
 test('public index shows a success dialog after upload completes', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -2521,6 +2535,75 @@ test('POST /api/sites/:id/ai-name names and saves a project title', async () => 
     const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
     assert.equal(sites[0].title, '霓虹星跃');
     assert.ok(sites[0].updatedAt);
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('POST /api/upload-ai-name names an unlocked upload draft without creating a project', async () => {
+  let requestPayload = null;
+  let requestCount = 0;
+  let generatedTitle = '霓虹星跃';
+  const llmServer = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    requestCount += 1;
+    requestPayload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({ choices: [{ message: { content: generatedTitle } }] }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const { app, dataDir } = await makeTestApp({
+      idGenerator: () => 'class-a',
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmThinkingType: 'disabled'
+    });
+    const admin = request.agent(app);
+    await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await admin.post('/api/classes').send({ name: '一班', password: '111111' }).expect(201);
+
+    const htmlContent = '<!doctype html><html><body><canvas id="game"></canvas></body></html>';
+    await request(app).post('/api/upload-ai-name').send({ classId: 'class-a', htmlContent }).expect(401);
+
+    const visitor = request.agent(app);
+    await visitor.post('/api/classes/class-a/unlock').send({ password: '111111' }).expect(200);
+    const response = await visitor
+      .post('/api/upload-ai-name')
+      .send({ classId: 'class-a', htmlContent })
+      .expect(200);
+
+    assert.deepEqual(response.body, { title: '霓虹星跃', model: 'fake-model' });
+    assert.equal(requestCount, 1);
+    assert.equal(requestPayload.model, 'fake-model');
+    assert.match(requestPayload.messages[1].content, /canvas/);
+    assert.deepEqual(await __test.readSites(path.join(dataDir, 'sites.json')), []);
+
+    await visitor
+      .post('/api/upload-ai-name')
+      .send({ classId: 'class-a', htmlContent: '这不是 HTML' })
+      .expect(400);
+    assert.equal(requestCount, 1);
+
+    await admin.patch('/api/classes/class-a/upload-enabled').send({ uploadEnabled: false }).expect(200);
+    await visitor.post('/api/upload-ai-name').send({ classId: 'class-a', htmlContent }).expect(403);
+    assert.equal(requestCount, 1);
+
+    await admin.patch('/api/classes/class-a/upload-enabled').send({ uploadEnabled: true }).expect(200);
+    await admin.put('/api/admin/settings').send({ allPassword: '111111', forbiddenWords: ['坏词'] }).expect(200);
+    generatedTitle = '坏词作品';
+    const forbidden = await visitor
+      .post('/api/upload-ai-name')
+      .send({ classId: 'class-a', htmlContent })
+      .expect(400);
+    assert.match(forbidden.body.error, /违禁词/);
+    assert.equal(requestCount, 2);
   } finally {
     llmServer.closeAllConnections?.();
     await new Promise((resolve) => llmServer.close(resolve));

@@ -752,6 +752,17 @@
       border-color: var(--brand);
     }
 
+    .upload-title-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .upload-title-row button {
+      min-width: 104px;
+    }
+
     .modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -763,6 +774,10 @@
       min-height: 20px;
       color: var(--danger);
       font-size: 13px;
+    }
+
+    .message.is-success {
+      color: var(--accent);
     }
 
     .preview {
@@ -1002,6 +1017,10 @@
         padding: 12px;
       }
 
+      .upload-title-row {
+        grid-template-columns: 1fr;
+      }
+
       .preview {
         width: calc(100vw - 24px);
         height: calc(100vh - 24px);
@@ -1086,7 +1105,10 @@
         <div class="current-class" id="currentClassLabel"></div>
         <label>
           网页名字
-          <input id="titleInput" name="title" type="text" maxlength="80" placeholder="例如：我的小游戏" required>
+          <div class="upload-title-row">
+            <input id="titleInput" name="title" type="text" maxlength="80" placeholder="例如：我的小游戏" required>
+            <button class="secondary-button" id="uploadAiNameButton" type="button">AI命名</button>
+          </div>
         </label>
         <label>
           作者署名
@@ -1172,6 +1194,7 @@
     const uploadSuccessOverlay = document.getElementById('uploadSuccessOverlay');
     const uploadForm = document.getElementById('uploadForm');
     const titleInput = document.getElementById('titleInput');
+    const uploadAiNameButton = document.getElementById('uploadAiNameButton');
     const authorInput = document.getElementById('authorInput');
     const fileInput = document.getElementById('fileInput');
     const uploadHtmlContent = document.getElementById('uploadHtmlContent');
@@ -2165,13 +2188,51 @@
       if (file) {
         const fileName = file.name.toLowerCase();
         if (!fileName.endsWith('.html') && !fileName.endsWith('.htm')) {
-          throw new Error('当前版本只支持预览 HTML 文件。');
+          throw new Error('当前版本只支持 HTML 文件。');
         }
         return await file.text();
       }
 
       return uploadHtmlContent.value.trim();
     }
+
+    uploadAiNameButton.addEventListener('click', async () => {
+      uploadMessage.textContent = '';
+      uploadMessage.classList.remove('is-success');
+      setButtonLoading(uploadAiNameButton, true, '命名中...');
+
+      try {
+        const htmlContent = await getUploadPreviewHtml();
+        if (!htmlContent) {
+          throw new Error('请上传 HTML 文件或填写 HTML 代码后再进行 AI 命名。');
+        }
+
+        const htmlStructureMessage = validateBasicHtmlDocument(htmlContent);
+        if (htmlStructureMessage) {
+          throw new Error(htmlStructureMessage);
+        }
+
+        const response = await fetch('/api/upload-ai-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ classId: currentClassId, htmlContent })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'AI 命名失败，请稍后重试');
+        }
+
+        titleInput.value = result.title;
+        uploadMessage.textContent = 'AI 已生成网页名字，可继续修改后上传。';
+        uploadMessage.classList.add('is-success');
+        titleInput.focus();
+        titleInput.select();
+      } catch (error) {
+        uploadMessage.textContent = error.message || 'AI 命名失败，请稍后重试';
+      } finally {
+        setButtonLoading(uploadAiNameButton, false);
+      }
+    });
 
     async function previewUploadDraft() {
       uploadMessage.textContent = '';
@@ -2201,6 +2262,7 @@
     uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       uploadMessage.textContent = '';
+      uploadMessage.classList.remove('is-success');
       const uploadSubmitButton = uploadForm.querySelector('button[type="submit"]');
       setButtonLoading(uploadSubmitButton, true, '上传中...');
 
@@ -2278,6 +2340,8 @@
     uploadForm.addEventListener('reset', () => {
       const uploadSubmitButton = uploadForm.querySelector('button[type="submit"]');
       setButtonLoading(uploadSubmitButton, false);
+      setButtonLoading(uploadAiNameButton, false);
+      uploadMessage.classList.remove('is-success');
     });
 
     openUploadButton.addEventListener('click', openUpload);

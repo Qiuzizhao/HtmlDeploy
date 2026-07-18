@@ -3011,6 +3011,53 @@ function createApp(options = {}) {
     }
   });
 
+  app.post('/api/upload-ai-name', async (req, res) => {
+    try {
+      const classId = String(req.body.classId || '').trim();
+      const htmlContent = String(req.body.htmlContent || '').trim();
+      const classes = await readClasses(classesFile);
+      const classItem = classes.find((item) => item.id === classId);
+
+      if (!classItem) {
+        return res.status(400).json({ error: '请选择有效班级' });
+      }
+      if (!hasClassAccess(req, classItem)) {
+        return res.status(401).json({ error: '请先输入班级访问密码' });
+      }
+      if (classItem.uploadEnabled === false) {
+        return res.status(403).json({ error: '当前班级已禁用上传网页功能' });
+      }
+      if (!htmlContent) {
+        return res.status(400).json({ error: '请上传 HTML 文件或填写 HTML 代码' });
+      }
+
+      const htmlStructureError = validateBasicHtmlDocument(htmlContent);
+      if (htmlStructureError) {
+        return res.status(400).json({ error: htmlStructureError });
+      }
+
+      const llmConfig = await getLlmConfig();
+      const title = await nameSiteWithLlm({
+        codeSnapshot: htmlContent,
+        currentTitle: '',
+        author: '',
+        llmConfig
+      });
+      const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
+      const forbiddenMatch = findForbiddenWordMatch({ title, author: '' }, settings.forbiddenWords);
+      if (forbiddenMatch) {
+        return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
+      }
+
+      return res.json({ title, model: llmConfig.model });
+    } catch (error) {
+      if (/API Key|配置/.test(error.message)) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(502).json({ error: error.message || 'AI 命名失败，请稍后重试' });
+    }
+  });
+
   app.post('/api/sites', upload.single('file'), async (req, res, next) => {
       try {
         const title = String(req.body.title || '').trim();
