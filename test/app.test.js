@@ -490,6 +490,14 @@ test('public admin shows loading feedback for tables and actions', async () => {
   assert.match(html, /setButtonLoading\(generateThumbnailsButton, true, '加入中\.\.\.'\)/);
 });
 
+test('public admin keeps action button width stable while loading', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /const currentWidth = button\.getBoundingClientRect\(\)\.width/);
+  assert.match(html, /button\.style\.width = `\$\{Math\.ceil\(currentWidth\)\}px`/);
+  assert.match(html, /button\.style\.removeProperty\('width'\)/);
+});
+
 test('public admin uses compact horizontal page padding', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 

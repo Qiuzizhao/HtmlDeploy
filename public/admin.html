@@ -1965,9 +1965,22 @@
         button.dataset.idleText = button.textContent;
       }
 
+      if (isLoading && !button.dataset.loadingWidthLocked) {
+        const currentWidth = button.getBoundingClientRect().width;
+        if (currentWidth > 0) {
+          button.style.width = `${Math.ceil(currentWidth)}px`;
+          button.dataset.loadingWidthLocked = 'true';
+        }
+      }
+
       button.disabled = isLoading;
       button.classList.toggle('is-loading', isLoading);
       button.textContent = isLoading ? text : button.dataset.idleText;
+
+      if (!isLoading && button.dataset.loadingWidthLocked) {
+        button.style.removeProperty('width');
+        delete button.dataset.loadingWidthLocked;
+      }
     }
 
     function renderTableLoading(tbody, colSpan, text) {
