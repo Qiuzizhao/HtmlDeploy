@@ -153,7 +153,7 @@ Expected: one commit containing only the shared admin spinner behavior and its r
 
 **Interfaces:**
 - Consumes: Task 1's shared admin CSS and unchanged `setButtonLoading` signature.
-- Produces: evidence that all 76 admin call sites inherit the fix, public loading CSS remains protected, and no new test failure is introduced.
+- Produces: evidence that all 75 admin loading-state transition calls inherit the fix (76 textual matches including the helper definition), public loading CSS remains protected, and no new test failure is introduced.
 
 - [ ] **Step 1: Verify every admin loading action uses the shared helper**
 

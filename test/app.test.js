@@ -530,6 +530,11 @@ test('public admin shows loading feedback for tables and actions', async () => {
     html,
     /button\.is-loading::before \{[^}]*box-sizing: content-box;/
   );
+  assert.match(html, /button\.is-loading::before \{[^}]*width: 14px;/);
+  assert.match(html, /button\.is-loading::before \{[^}]*height: 14px;/);
+  assert.match(html, /button\.is-loading::before \{[^}]*margin-right: 8px;/);
+  assert.match(html, /button\.is-loading::before \{[^}]*border: 2px solid currentColor;/);
+  assert.match(html, /button\.is-loading::before \{[^}]*animation: loading-spin 0\.72s linear infinite;/);
   assert.match(html, /\.message\.is-loading::before/);
   assert.match(html, /className = 'table-loading-cell'/);
   assert.match(html, /function setButtonLoading/);
@@ -548,7 +553,15 @@ test('public admin keeps action button width stable while loading', async () => 
 
   assert.match(html, /const currentWidth = button\.getBoundingClientRect\(\)\.width/);
   assert.match(html, /button\.style\.minWidth = `\$\{Math\.ceil\(currentWidth\)\}px`/);
+  assert.match(
+    html,
+    /if \(isLoading && !button\.dataset\.loadingMinWidthLocked\) \{[\s\S]*?button\.dataset\.loadingMinWidthLocked = 'true';/
+  );
   assert.match(html, /button\.style\.removeProperty\('min-width'\)/);
+  assert.match(
+    html,
+    /if \(!isLoading && button\.dataset\.loadingMinWidthLocked\) \{[\s\S]*?delete button\.dataset\.loadingMinWidthLocked;/
+  );
   assert.doesNotMatch(html, /button\.style\.width =/);
 });
 

@@ -6,8 +6,9 @@ Admin buttons use a shared `button.is-loading::before` spinner and a shared
 `setButtonLoading` helper. The helper locks each button to its idle width while
 loading, but the spinner is allowed to shrink as a flex item. When the loading
 label is wider than the idle label, the nominally circular spinner is compressed
-into a crescent. This affects all 76 admin calls to `setButtonLoading`, including
-batch name review and forbidden-word deletion.
+into a crescent. This affects 75 admin loading-state transition calls to
+`setButtonLoading` (76 textual matches when the helper definition is included),
+including batch name review and forbidden-word deletion.
 
 The public upload page already protects its spinner with an inline-block display
 and `flex: 0 0 auto`, so it does not need a functional change.
