@@ -64,11 +64,16 @@
     }
 
     button.is-loading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       pointer-events: none;
     }
 
     button.is-loading::before {
       content: "";
+      display: inline-block;
+      flex: 0 0 auto;
       width: 14px;
       height: 14px;
       margin-right: 8px;
@@ -1973,11 +1978,11 @@
         button.dataset.idleText = button.textContent;
       }
 
-      if (isLoading && !button.dataset.loadingWidthLocked) {
+      if (isLoading && !button.dataset.loadingMinWidthLocked) {
         const currentWidth = button.getBoundingClientRect().width;
         if (currentWidth > 0) {
-          button.style.width = `${Math.ceil(currentWidth)}px`;
-          button.dataset.loadingWidthLocked = 'true';
+          button.style.minWidth = `${Math.ceil(currentWidth)}px`;
+          button.dataset.loadingMinWidthLocked = 'true';
         }
       }
 
@@ -1985,9 +1990,9 @@
       button.classList.toggle('is-loading', isLoading);
       button.textContent = isLoading ? text : button.dataset.idleText;
 
-      if (!isLoading && button.dataset.loadingWidthLocked) {
-        button.style.removeProperty('width');
-        delete button.dataset.loadingWidthLocked;
+      if (!isLoading && button.dataset.loadingMinWidthLocked) {
+        button.style.removeProperty('min-width');
+        delete button.dataset.loadingMinWidthLocked;
       }
     }
 
