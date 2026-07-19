@@ -309,6 +309,16 @@ async function fetchJsonWithTimeout(url, options, timeoutMs, timeoutMessage) {
   }
 }
 
+function withTimeout(promise, timeoutMs, createError) {
+  let timeout;
+  const deadline = new Promise((resolve, reject) => {
+    timeout = setTimeout(() => reject(createError()), timeoutMs);
+    timeout.unref?.();
+  });
+
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timeout));
+}
+
 async function optimizeHtmlWithLlm({ htmlContent, siteTitle, instruction, llmConfig }) {
   if (!llmConfig.apiKey) {
     throw new Error('请先在后台设置中配置 API Key，或在服务器环境变量中配置 LLM_API_KEY / OPENAI_API_KEY');
@@ -1744,6 +1754,11 @@ function createApp(options = {}) {
     options.aiOptimizeConcurrency ?? process.env.AI_OPTIMIZE_CONCURRENCY ?? '1',
     10
   ) || 1));
+  const aiNameReviewSiteTimeoutMs = normalizeTimeoutMs(
+    options.aiNameReviewSiteTimeoutMs ?? process.env.AI_NAME_REVIEW_SITE_TIMEOUT_MS,
+    60000,
+    300000
+  );
   const aiOptimizeJobs = new Map();
   const aiOptimizeQueue = [];
   const aiNameReviewJobs = new Map();
@@ -2166,11 +2181,26 @@ function createApp(options = {}) {
     try {
       for (const siteSnapshot of job.sites) {
         const siteName = getAiNameReviewJobSiteName(siteSnapshot);
+        const attempt = { active: true };
+        job.activeAttempt = attempt;
         updateAiNameReviewJob(job, { current: siteName });
         addAiNameReviewJobEvent(job, `正在 AI 命名审核${siteName}...`, 'running');
 
         try {
-          const result = await reviewAndMaybeRenameSite(siteSnapshot.id, job.llmConfig);
+          const result = await withTimeout(
+            reviewAndMaybeRenameSite(siteSnapshot.id, job.llmConfig, {
+              isActive: () => attempt.active
+                && job.activeAttempt === attempt
+                && job.status === 'running'
+            }),
+            aiNameReviewSiteTimeoutMs,
+            () => {
+              attempt.active = false;
+              return new Error(
+                `AI 命名审核完整流程超时（超过 ${Math.round(aiNameReviewSiteTimeoutMs / 1000)} 秒）`
+              );
+            }
+          );
           const modelText = result.model ? `（${result.model}）` : '';
           if (result.renamed) {
             job.renamed += 1;
@@ -2198,6 +2228,10 @@ function createApp(options = {}) {
             'error'
           );
         } finally {
+          attempt.active = false;
+          if (job.activeAttempt === attempt) {
+            job.activeAttempt = null;
+          }
           job.finished += 1;
           job.updatedAt = new Date().toISOString();
         }
@@ -3868,7 +3902,16 @@ function createApp(options = {}) {
     return Object.assign(new Error(message), { statusCode });
   }
 
-  async function reviewAndMaybeRenameSite(id, llmConfigOverride = null) {
+  async function reviewAndMaybeRenameSite(
+    id,
+    llmConfigOverride = null,
+    { isActive = () => true } = {}
+  ) {
+    const ensureActive = () => {
+      if (!isActive()) {
+        throw createStatusError(409, 'AI 命名审核尝试已过期，已忽略迟到结果');
+      }
+    };
     const sites = await readSites(dataFile);
     const siteIndex = sites.findIndex((item) => item.id === id);
     if (siteIndex === -1) {
@@ -3883,6 +3926,7 @@ function createApp(options = {}) {
     if (!combinedText.trim()) {
       throw createStatusError(400, '项目代码为空');
     }
+    ensureActive();
 
     const originalTitle = sites[siteIndex].title;
     const llmConfig = llmConfigOverride || await getLlmConfig();
@@ -3892,6 +3936,7 @@ function createApp(options = {}) {
       author: sites[siteIndex].author,
       llmConfig
     });
+    ensureActive();
     const contradictedByReason = review.related === true && reviewReasonClearlySaysUnrelated(review.reason);
     const effectiveRelated = contradictedByReason ? false : review.related;
     if (contradictedByReason && !review.suggestedTitle) {
@@ -3901,6 +3946,7 @@ function createApp(options = {}) {
         author: sites[siteIndex].author,
         llmConfig
       });
+      ensureActive();
     }
     let renamed = effectiveRelated === false && (review.confidence === 'high' || contradictedByReason);
     if (renamed && !review.suggestedTitle) {
@@ -3937,6 +3983,7 @@ function createApp(options = {}) {
         updatedAt: new Date().toISOString()
       });
       latestSites[latestSiteIndex] = site;
+      ensureActive();
       await writeSites(dataFile, latestSites);
     }
 

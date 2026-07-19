@@ -2740,6 +2740,150 @@ test('AI name review corrects a keep verdict whose reason says the title is unre
   }
 });
 
+test('all-project AI name review continues after a site review watchdog timeout', async () => {
+  let requestCount = 0;
+  const llmServer = http.createServer(async (req, res) => {
+    for await (const _chunk of req) {
+      // Drain request body.
+    }
+    requestCount += 1;
+    if (requestCount === 1) {
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            related: true,
+            confidence: 'high',
+            reason: '名称准确描述了第二个项目',
+            suggestedTitle: '第二个项目'
+          })
+        }
+      }]
+    }));
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'next-site', 'slow-site'];
+    const { app } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmThinkingType: 'disabled',
+      llmTimeoutMs: 60000,
+      aiNameReviewSiteTimeoutMs: 1000
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+    for (const title of ['永远不返回的项目', '第二个项目']) {
+      await agent
+        .post('/api/sites')
+        .field('title', title)
+        .field('author', '测试作者')
+        .field('classId', 'class-a')
+        .field('htmlContent', `<!doctype html><title>${title}</title><main>${title}</main>`)
+        .expect(201);
+    }
+
+    const created = await agent.post('/api/admin/sites/ai-name-review-all').send({}).expect(202);
+    const job = await waitForAiNameReviewJob(agent, created.body.jobId, { attempts: 180 });
+    assert.deepEqual(
+      {
+        status: job.status,
+        total: job.total,
+        finished: job.finished,
+        preserved: job.preserved,
+        failed: job.failed
+      },
+      { status: 'success', total: 2, finished: 2, preserved: 1, failed: 1 }
+    );
+    assert.equal(requestCount, 2);
+    assert.ok(job.events.some((event) => event.text.includes('完整流程超时')));
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
+test('all-project AI name review ignores a late AI name review result after timeout', async () => {
+  let requestCount = 0;
+  let slowResponseSent = false;
+  const llmServer = http.createServer(async (req, res) => {
+    for await (const _chunk of req) {
+      // Drain request body.
+    }
+    requestCount += 1;
+    const currentRequest = requestCount;
+    if (currentRequest === 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1300));
+    }
+    const content = currentRequest === 1
+      ? {
+          related: false,
+          confidence: 'high',
+          reason: '迟到结果认为原名无关',
+          suggestedTitle: '不应写入的新名称'
+        }
+      : {
+          related: true,
+          confidence: 'high',
+          reason: '第二个项目名称正确',
+          suggestedTitle: '第二个项目'
+        };
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }));
+    if (currentRequest === 1) {
+      slowResponseSent = true;
+    }
+  });
+
+  await new Promise((resolve) => llmServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const ids = ['class-a', 'next-site', 'slow-site'];
+    const { app, dataDir } = await makeTestApp({
+      idGenerator: () => ids.shift(),
+      llmApiKey: 'test-key',
+      llmApiBaseUrl: `http://127.0.0.1:${llmServer.address().port}`,
+      llmModel: 'fake-model',
+      llmThinkingType: 'disabled',
+      llmTimeoutMs: 60000,
+      aiNameReviewSiteTimeoutMs: 1000
+    });
+    const agent = request.agent(app);
+    await agent.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+    await agent.post('/api/classes').send({ name: '一班' }).expect(201);
+
+    for (const title of ['第二个项目', '慢任务原名']) {
+      await agent
+        .post('/api/sites')
+        .field('title', title)
+        .field('author', '测试作者')
+        .field('classId', 'class-a')
+        .field('htmlContent', `<!doctype html><title>${title}</title><main>${title}</main>`)
+        .expect(201);
+    }
+
+    const created = await agent.post('/api/admin/sites/ai-name-review-all').send({}).expect(202);
+    const job = await waitForAiNameReviewJob(agent, created.body.jobId, { attempts: 180 });
+    assert.equal(job.status, 'success');
+    assert.equal(job.failed, 1);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const sites = await __test.readSites(path.join(dataDir, 'sites.json'));
+    assert.equal(slowResponseSent, true);
+    assert.equal(sites.find((site) => site.id === 'slow-site').title, '慢任务原名');
+  } finally {
+    llmServer.closeAllConnections?.();
+    await new Promise((resolve) => llmServer.close(resolve));
+  }
+});
+
 test('all-project AI name review processes serially and continues after failures', async () => {
   const responses = [
     {
