@@ -1759,6 +1759,12 @@ function createApp(options = {}) {
     60000,
     300000
   );
+  const aiNameReviewStaleTimeoutMs = normalizeTimeoutMs(
+    options.aiNameReviewStaleTimeoutMs ?? process.env.AI_NAME_REVIEW_STALE_TIMEOUT_MS,
+    90000,
+    600000
+  );
+  const aiNameReviewNow = options.aiNameReviewNow || Date.now;
   const aiOptimizeJobs = new Map();
   const aiOptimizeQueue = [];
   const aiNameReviewJobs = new Map();
@@ -2130,7 +2136,19 @@ function createApp(options = {}) {
   }
 
   function cleanupAiNameReviewJobs() {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const nowMs = aiNameReviewNow();
+    for (const job of aiNameReviewJobs.values()) {
+      const updatedAt = Date.parse(job.updatedAt || job.createdAt);
+      if (
+        ['queued', 'running'].includes(job.status)
+        && Number.isFinite(updatedAt)
+        && nowMs - updatedAt > aiNameReviewStaleTimeoutMs
+      ) {
+        finalizeAiNameReviewJobError(job, '全部命名审核任务长时间无进展，已自动结束');
+      }
+    }
+
+    const cutoff = nowMs - 24 * 60 * 60 * 1000;
     for (const [jobId, job] of aiNameReviewJobs.entries()) {
       const completedAt = Date.parse(job.finishedAt || job.updatedAt || job.createdAt);
       if (['success', 'error'].includes(job.status) && completedAt < cutoff) {
@@ -2157,7 +2175,7 @@ function createApp(options = {}) {
   }
 
   function updateAiNameReviewJob(job, patch = {}) {
-    Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+    Object.assign(job, patch, { updatedAt: new Date(aiNameReviewNow()).toISOString() });
   }
 
   function addAiNameReviewJobEvent(job, text, status = 'running') {
@@ -2166,10 +2184,27 @@ function createApp(options = {}) {
       index: job.nextEventIndex,
       text,
       status,
-      createdAt: new Date().toISOString()
+      createdAt: new Date(aiNameReviewNow()).toISOString()
     });
     job.events = job.events.slice(-200);
-    job.updatedAt = new Date().toISOString();
+    job.updatedAt = new Date(aiNameReviewNow()).toISOString();
+  }
+
+  function finalizeAiNameReviewJobError(job, message) {
+    if (!['queued', 'running'].includes(job.status)) {
+      return;
+    }
+    if (job.activeAttempt) {
+      job.activeAttempt.active = false;
+      job.activeAttempt = null;
+    }
+    const finishedAt = new Date(aiNameReviewNow()).toISOString();
+    updateAiNameReviewJob(job, { status: 'error', current: '', finishedAt });
+    addAiNameReviewJobEvent(job, message, 'error');
+    job.llmConfig = null;
+    if (activeAiNameReviewJobId === job.id) {
+      activeAiNameReviewJobId = '';
+    }
   }
 
   function getAiNameReviewJobSiteName(site) {
@@ -2177,6 +2212,9 @@ function createApp(options = {}) {
   }
 
   async function runAiNameReviewJob(job) {
+    if (job.status !== 'queued') {
+      return;
+    }
     updateAiNameReviewJob(job, { status: 'running' });
     try {
       for (const siteSnapshot of job.sites) {
@@ -2221,6 +2259,9 @@ function createApp(options = {}) {
             );
           }
         } catch (error) {
+          if (job.status !== 'running') {
+            return;
+          }
           job.failed += 1;
           addAiNameReviewJobEvent(
             job,
@@ -2232,15 +2273,20 @@ function createApp(options = {}) {
           if (job.activeAttempt === attempt) {
             job.activeAttempt = null;
           }
-          job.finished += 1;
-          job.updatedAt = new Date().toISOString();
+          if (job.status === 'running') {
+            job.finished += 1;
+            job.updatedAt = new Date(aiNameReviewNow()).toISOString();
+          }
         }
       }
 
+      if (job.status !== 'running') {
+        return;
+      }
       updateAiNameReviewJob(job, {
         status: 'success',
         current: '',
-        finishedAt: new Date().toISOString()
+        finishedAt: new Date(aiNameReviewNow()).toISOString()
       });
       addAiNameReviewJobEvent(
         job,
@@ -2251,7 +2297,7 @@ function createApp(options = {}) {
       updateAiNameReviewJob(job, {
         status: 'error',
         current: '',
-        finishedAt: new Date().toISOString()
+        finishedAt: new Date(aiNameReviewNow()).toISOString()
       });
       addAiNameReviewJobEvent(job, `全部命名审核任务失败：${error.message || '未知错误'}`, 'error');
     } finally {
@@ -3779,14 +3825,22 @@ function createApp(options = {}) {
         });
       }
 
-      const sites = (await readSites(dataFile))
+      let sites = (await readSites(dataFile))
         .filter((site) => !isSiteDeleted(site))
         .map((site) => ({
           id: site.id,
           title: site.title || site.id,
           number: site.number || ''
         }));
-      const now = new Date().toISOString();
+      const resumeFromSiteId = String(req.body?.resumeFromSiteId || '').trim();
+      if (resumeFromSiteId) {
+        const resumeIndex = sites.findIndex((site) => site.id === resumeFromSiteId);
+        if (resumeIndex === -1) {
+          return res.status(400).json({ error: '续跑起点项目不存在' });
+        }
+        sites = sites.slice(resumeIndex);
+      }
+      const now = new Date(aiNameReviewNow()).toISOString();
       const job = {
         id: createDefaultId(),
         status: 'queued',
@@ -3806,7 +3860,20 @@ function createApp(options = {}) {
       };
       aiNameReviewJobs.set(job.id, job);
       activeAiNameReviewJobId = job.id;
-      const timer = setTimeout(() => runAiNameReviewJob(job), 0);
+      const workerRunner = options.aiNameReviewWorkerRunner || runAiNameReviewJob;
+      const timer = setTimeout(() => {
+        job.workerPromise = Promise.resolve()
+          .then(() => workerRunner(job))
+          .catch((error) => {
+            finalizeAiNameReviewJobError(
+              job,
+              `全部命名审核任务失败：${error.message || '未知错误'}`
+            );
+          })
+          .finally(() => {
+            job.workerPromise = null;
+          });
+      }, 0);
       timer.unref?.();
       return res.status(202).json(toAiNameReviewJobResponse(job));
     } catch (error) {

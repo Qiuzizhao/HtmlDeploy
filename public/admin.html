@@ -2260,7 +2260,7 @@
           if (job.status === 'error') {
             clearAllSiteNameReviewJobState();
             setButtonLoading(reviewAllSiteNamesButton, false);
-            setMessage(listMessage, '全部命名审核任务失败，请查看日志', true);
+            setMessage(listMessage, '全部命名审核任务已结束，请查看日志后重新发起', true);
             return;
           }
 
