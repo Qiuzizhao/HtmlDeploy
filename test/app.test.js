@@ -526,6 +526,10 @@ test('public admin shows loading feedback for tables and actions', async () => {
     html,
     /button\.is-loading::before \{[^}]*display: inline-block;[^}]*flex: 0 0 auto;/
   );
+  assert.match(
+    html,
+    /button\.is-loading::before \{[^}]*box-sizing: content-box;/
+  );
   assert.match(html, /\.message\.is-loading::before/);
   assert.match(html, /className = 'table-loading-cell'/);
   assert.match(html, /function setButtonLoading/);
