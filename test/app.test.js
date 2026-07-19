@@ -477,6 +477,15 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /formData\.append\('htmlContent'/);
 });
 
+test('public admin keeps the page-size label horizontal', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(
+    html,
+    /\.site-pagination label \{[^}]*display: inline-flex;[^}]*align-items: center;[^}]*gap: 8px;[^}]*white-space: nowrap;/
+  );
+});
+
 test('admin provides AI name review action and logs review decisions', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
