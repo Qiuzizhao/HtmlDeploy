@@ -283,6 +283,8 @@ test('public index can search projects and filter starred projects', async () =>
   assert.match(html, /class="[^"]*is-descending[^"]*" id="projectOrderButton"/);
   assert.match(html, /id="projectOrderButton"[^>]*>降序<\/button>/);
   assert.match(html, /id="starredFilterButton"[^>]*>星标<\/button>/);
+  assert.match(html, /\.star-filter-button \{[^}]*background: transparent;/);
+  assert.match(html, /\.star-filter-button\.is-active \{[^}]*background: #fef3c7;/);
   assert.equal((html.match(/id="starredFilterButton"/g) || []).length, 1);
   assert.ok(html.indexOf('id="classTabs"') < html.indexOf('id="projectSearchInput"'));
   assert.ok(html.indexOf('id="starredFilterButton"') < html.indexOf('id="projectSearchInput"'));
