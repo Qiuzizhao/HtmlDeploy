@@ -223,6 +223,13 @@
       padding: 2px;
     }
 
+    .primary-class-tab-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+
     .public-class-group {
       width: 100%;
       display: flex;
@@ -977,8 +984,8 @@
         flex-direction: column;
       }
 
-      .star-filter-button {
-        width: 100%;
+      .primary-class-tab-row .star-filter-button {
+        width: auto;
       }
 
       .order-toggle-button {
@@ -1082,13 +1089,14 @@
   <main>
     <section class="class-filter-bar">
       <div class="class-filter-row">
-        <nav class="class-tabs" id="classTabs" aria-label="班级"></nav>
+        <nav class="class-tabs" id="classTabs" aria-label="班级">
+          <button class="secondary-button star-filter-button" id="starredFilterButton" type="button" aria-pressed="false">星标</button>
+        </nav>
         <button class="secondary-button class-refresh-button" id="refreshClassSites" type="button">刷新</button>
       </div>
       <div class="project-filter-row">
         <input class="project-search" id="projectSearchInput" type="search" placeholder="搜索项目名称、作者、编号" aria-label="搜索项目">
         <button class="secondary-button order-toggle-button is-descending" id="projectOrderButton" type="button" aria-pressed="false">降序</button>
-        <button class="secondary-button star-filter-button" id="starredFilterButton" type="button" aria-pressed="false">星标</button>
       </div>
       <div id="classProjectCount" style="margin-top: 14px; font-size: 14px; color: var(--muted); font-weight: 600; padding: 0 4px;"></div>
     </section>
@@ -1956,7 +1964,10 @@
       allButton.type = 'button';
       allButton.textContent = '全部作品';
       allButton.addEventListener('click', () => selectClass(''));
-      classTabs.append(allButton);
+      const primaryRow = document.createElement('div');
+      primaryRow.className = 'primary-class-tab-row';
+      primaryRow.append(allButton, starredFilterButton);
+      classTabs.append(primaryRow);
 
       const appendGroup = (name, matchesGroup) => {
         const groupClasses = classes.filter(matchesGroup);

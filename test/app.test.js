@@ -252,7 +252,11 @@ test('public index renders an all tab before class buttons', async () => {
 
   assert.match(html, /allButton\.textContent = '全部作品'/);
   assert.match(html, /allButton\.addEventListener\('click', \(\) => selectClass\(''\)\)/);
-  assert.ok(html.indexOf('classTabs.append(allButton)') < html.indexOf('classes.forEach'));
+  assert.match(html, /const primaryRow = document\.createElement\('div'\)/);
+  assert.match(html, /primaryRow\.className = 'primary-class-tab-row'/);
+  assert.match(html, /primaryRow\.append\(allButton, starredFilterButton\)/);
+  assert.ok(html.indexOf('primaryRow.append(allButton, starredFilterButton)') < html.indexOf('classGroups.forEach'));
+  assert.match(html, /\.primary-class-tab-row \{[^}]*display: flex;[^}]*gap: 8px;[^}]*flex-wrap: nowrap;/);
 });
 
 test('public index separates class tabs from the project grid', async () => {
@@ -279,9 +283,14 @@ test('public index can search projects and filter starred projects', async () =>
   assert.match(html, /class="[^"]*is-descending[^"]*" id="projectOrderButton"/);
   assert.match(html, /id="projectOrderButton"[^>]*>降序<\/button>/);
   assert.match(html, /id="starredFilterButton"[^>]*>星标<\/button>/);
+  assert.equal((html.match(/id="starredFilterButton"/g) || []).length, 1);
   assert.ok(html.indexOf('id="classTabs"') < html.indexOf('id="projectSearchInput"'));
-  assert.ok(html.indexOf('id="projectOrderButton"') < html.indexOf('id="starredFilterButton"'));
+  assert.ok(html.indexOf('id="starredFilterButton"') < html.indexOf('id="projectSearchInput"'));
   assert.ok(html.indexOf('id="projectSearchInput"') < html.indexOf('id="siteGrid"'));
+  assert.doesNotMatch(
+    html,
+    /<div class="project-filter-row">[\s\S]*?id="starredFilterButton"[\s\S]*?<\/div>/
+  );
   assert.match(html, /let loadedSites = \[\]/);
   assert.match(html, /let siteSearchQuery = ''/);
   assert.match(html, /let starredOnly = false/);
