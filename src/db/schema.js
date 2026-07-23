@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = '2';
+const SCHEMA_VERSION = '3';
 
 function applySchema(db) {
   db.exec(`
@@ -31,6 +31,19 @@ function applySchema(db) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_classes_created_at ON classes(created_at);
+
+    CREATE TABLE IF NOT EXISTS students (
+      id TEXT PRIMARY KEY,
+      class_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT,
+      FOREIGN KEY (class_id) REFERENCES classes(id),
+      UNIQUE (class_id, name)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_students_class_name ON students(class_id, name);
+    CREATE INDEX IF NOT EXISTS idx_students_name ON students(name);
 
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,

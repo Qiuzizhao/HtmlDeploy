@@ -171,6 +171,28 @@ function rowToClass(row = {}) {
   };
 }
 
+function normalizeStudentName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function rowToStudent(row = {}) {
+  return {
+    id: row.id,
+    classId: row.class_id,
+    name: row.name,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at || ''
+  };
+}
+
+function assertValidStudentName(name) {
+  if (!name || name.length > 40) {
+    const error = new Error('学生姓名必须为 1 到 40 个字符');
+    error.code = 'STUDENT_NAME_INVALID';
+    throw error;
+  }
+}
+
 function normalizeClass(classItem = {}) {
   return {
     id: String(classItem.id || '').trim(),
@@ -692,6 +714,153 @@ class RuntimeStore {
     return row ? rowToClass(row) : null;
   }
 
+  assertStudentClass(classId) {
+    const id = String(classId || '').trim();
+    const existing = id && this.db.prepare('SELECT id FROM classes WHERE id = ?').get(id);
+    if (!existing) {
+      const error = new Error('班级不存在');
+      error.code = 'CLASS_NOT_FOUND';
+      throw error;
+    }
+    return id;
+  }
+
+  listStudents({ classId, query } = {}) {
+    this.ensureReady();
+    const filters = [];
+    const values = [];
+    const normalizedClassId = String(classId || '').trim();
+    const normalizedQuery = normalizeStudentName(query);
+    if (normalizedClassId) {
+      filters.push('class_id = ?');
+      values.push(normalizedClassId);
+    }
+    if (normalizedQuery) {
+      filters.push('name LIKE ? COLLATE NOCASE');
+      values.push(`%${normalizedQuery}%`);
+    }
+    const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+    return this.db.prepare(`
+      SELECT * FROM students
+      ${where}
+      ORDER BY name COLLATE NOCASE ASC, created_at ASC, id ASC
+    `).all(...values).map(rowToStudent);
+  }
+
+  getStudent(studentId) {
+    this.ensureReady();
+    const id = String(studentId || '').trim();
+    if (!id) {
+      return null;
+    }
+    const row = this.db.prepare('SELECT * FROM students WHERE id = ?').get(id);
+    return row ? rowToStudent(row) : null;
+  }
+
+  createStudent(student = {}) {
+    this.ensureReady();
+    const id = String(student.id || '').trim();
+    const classId = this.assertStudentClass(student.classId);
+    const name = normalizeStudentName(student.name);
+    assertValidStudentName(name);
+    const createdAt = String(student.createdAt || nowIso());
+    const updatedAt = String(student.updatedAt || '');
+    this.db.prepare(`
+      INSERT INTO students (id, class_id, name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, classId, name, createdAt, updatedAt || null);
+    return this.getStudent(id);
+  }
+
+  updateStudent(studentId, changes = {}) {
+    this.ensureReady();
+    const existing = this.getStudent(studentId);
+    if (!existing) {
+      return null;
+    }
+    const classId = Object.prototype.hasOwnProperty.call(changes, 'classId')
+      ? this.assertStudentClass(changes.classId)
+      : existing.classId;
+    const name = Object.prototype.hasOwnProperty.call(changes, 'name')
+      ? normalizeStudentName(changes.name)
+      : existing.name;
+    assertValidStudentName(name);
+    this.db.prepare(`
+      UPDATE students
+      SET class_id = ?, name = ?, updated_at = ?
+      WHERE id = ?
+    `).run(classId, name, nowIso(), existing.id);
+    return this.getStudent(existing.id);
+  }
+
+  importStudents({ classId, names, idGenerator } = {}) {
+    this.ensureReady();
+    const targetClassId = this.assertStudentClass(classId);
+    const result = {
+      added: 0,
+      internalDuplicates: 0,
+      existing: 0,
+      invalid: 0,
+      students: []
+    };
+    const nextId = typeof idGenerator === 'function'
+      ? idGenerator
+      : () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const selectByName = this.db.prepare('SELECT id FROM students WHERE class_id = ? AND name = ?');
+    const insert = this.db.prepare(`
+      INSERT INTO students (id, class_id, name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, NULL)
+    `);
+    const importTransaction = this.db.transaction((items) => {
+      const seen = new Set();
+      for (const value of items) {
+        const name = normalizeStudentName(value);
+        if (!name || name.length > 40) {
+          result.invalid += 1;
+          continue;
+        }
+        if (seen.has(name)) {
+          result.internalDuplicates += 1;
+          continue;
+        }
+        seen.add(name);
+        if (selectByName.get(targetClassId, name)) {
+          result.existing += 1;
+          continue;
+        }
+        const id = String(nextId() || '').trim();
+        const createdAt = nowIso();
+        insert.run(id, targetClassId, name, createdAt);
+        result.added += 1;
+        result.students.push(rowToStudent({
+          id,
+          class_id: targetClassId,
+          name,
+          created_at: createdAt,
+          updated_at: null
+        }));
+      }
+    });
+    importTransaction(Array.isArray(names) ? names : []);
+    return result;
+  }
+
+  deleteStudents(ids) {
+    this.ensureReady();
+    const uniqueIds = [...new Set((Array.isArray(ids) ? ids : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean))];
+    const remove = this.db.prepare('DELETE FROM students WHERE id = ?');
+    const transaction = this.db.transaction((items) => items.reduce((removed, id) => removed + remove.run(id).changes, 0));
+    return transaction(uniqueIds);
+  }
+
+  countStudentsByClass(classId) {
+    this.ensureReady();
+    const id = String(classId || '').trim();
+    return this.db.prepare('SELECT COUNT(*) AS count FROM students WHERE class_id = ?').get(id).count;
+  }
+
   getUsageById() {
     this.ensureReady();
     const rows = this.db.prepare('SELECT * FROM site_usage').all();
@@ -927,5 +1096,6 @@ module.exports = {
   createRuntimeStore,
   migrateJsonToSqlite,
   normalizeForbiddenWords,
+  normalizeStudentName,
   parseUsageFile
 };

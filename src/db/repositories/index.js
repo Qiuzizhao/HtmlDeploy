@@ -5,6 +5,7 @@ const { createForbiddenWordsRepository } = require('./forbidden-words');
 const { createUsageRepository } = require('./usage');
 const { createAuditLogsRepository } = require('./audit-logs');
 const { createJobLogsRepository } = require('./job-logs');
+const { createStudentsRepository } = require('./students');
 
 function createRepositories(store) {
   return {
@@ -14,7 +15,8 @@ function createRepositories(store) {
     forbiddenWords: createForbiddenWordsRepository(store),
     usage: createUsageRepository(store),
     auditLogs: createAuditLogsRepository(store),
-    jobLogs: createJobLogsRepository(store)
+    jobLogs: createJobLogsRepository(store),
+    students: createStudentsRepository(store)
   };
 }
 

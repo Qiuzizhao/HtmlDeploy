@@ -819,6 +819,37 @@ test('sqlite repositories expose runtime store operations', async () => {
   }
 });
 
+test('student repository stores normalized names by class and imports atomically', async () => {
+  const dataDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-students-'));
+  const store = new RuntimeStore({ dbFile: path.join(dataDir, 'app.db'), dataDir });
+  store.upsertClass({ id: 'class-a', name: '一班' });
+  store.upsertClass({ id: 'class-b', name: '二班' });
+
+  const first = store.createStudent({ id: 'student-a', classId: 'class-a', name: '  张   三  ' });
+  assert.equal(first.name, '张 三');
+  store.createStudent({ id: 'student-b', classId: 'class-b', name: '张 三' });
+  assert.throws(
+    () => store.createStudent({ id: 'student-c', classId: 'class-a', name: '张 三' }),
+    (error) => error.code === 'SQLITE_CONSTRAINT_UNIQUE'
+  );
+
+  const imported = store.importStudents({
+    classId: 'class-a',
+    names: ['李四', '李四', '张 三', '', '王'.repeat(41), '王五'],
+    idGenerator: (() => { const ids = ['student-d', 'student-e']; return () => ids.shift(); })()
+  });
+  assert.deepEqual(
+    { added: imported.added, internalDuplicates: imported.internalDuplicates, existing: imported.existing, invalid: imported.invalid },
+    { added: 2, internalDuplicates: 1, existing: 1, invalid: 2 }
+  );
+  assert.deepEqual(store.listStudents({ classId: 'class-a', query: '李' }).map((item) => item.name), ['李四']);
+  assert.equal(store.countStudentsByClass('class-a'), 3);
+
+  const moved = store.updateStudent('student-d', { classId: 'class-b', name: '李四' });
+  assert.equal(moved.classId, 'class-b');
+  assert.equal(store.deleteStudents(['student-a', 'student-e']), 2);
+});
+
 test('site writes preserve records that were added after a stale read', async () => {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-data-guard-'));
   const sitesPath = path.join(root, 'sites.json');
