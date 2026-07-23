@@ -539,11 +539,45 @@
     .student-portal-link {
       min-width: 180px;
       flex: 1 1 240px;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13px;
+      text-decoration: none;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .student-portal-link.is-enabled {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      color: var(--brand-dark);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .student-portal-link.is-enabled::after {
+      content: "↗";
+      flex: 0 0 auto;
+      margin-left: 8px;
+      font-size: 14px;
+    }
+
+    .student-portal-link.is-enabled:hover {
+      border-color: var(--brand);
+      background: #dbeafe;
+      color: #1e40af;
+      text-decoration: underline;
+    }
+
+    .student-portal-link:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.22);
+      outline-offset: 2px;
     }
 
     .student-portal-settings .button.is-active {
@@ -1860,7 +1894,7 @@
             <button class="button" id="toggleStudentPortalAllWorks" type="button">仅本班作品</button>
             <button class="button" id="copyStudentPortalLink" type="button">复制专属链接</button>
             <button class="button" id="resetStudentPortalLink" type="button">重置链接</button>
-            <span class="student-portal-link" id="studentPortalLink">请选择班级</span>
+            <a class="student-portal-link" id="studentPortalLink" target="_blank" rel="noopener noreferrer">请选择班级</a>
           </div>
           <div id="studentList" class="student-list"></div>
         </div>
@@ -2919,6 +2953,12 @@
       toggleStudentPortalAllWorks.classList.toggle('is-active', allWorks);
       studentPortalLink.textContent = enabled && url ? url : (classItem ? '专属页未启用' : '请选择班级');
       studentPortalLink.title = enabled ? url : '';
+      studentPortalLink.classList.toggle('is-enabled', enabled && Boolean(url));
+      if (enabled && url) {
+        studentPortalLink.href = url;
+      } else {
+        studentPortalLink.removeAttribute('href');
+      }
     }
 
     async function updateStudentPortalSettings(changes, button) {

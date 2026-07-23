@@ -4321,6 +4321,16 @@ test('admin copy portal link button shows temporary success feedback', async () 
   assert.match(adminHtml, /await navigator\.clipboard\.writeText\(url\);\s+showStudentPortalCopySuccess\(\);/);
 });
 
+test('admin student portal URL is a prominent clickable link', async () => {
+  const adminHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(adminHtml, /<a class="student-portal-link" id="studentPortalLink" target="_blank" rel="noopener noreferrer">/);
+  assert.match(adminHtml, /studentPortalLink\.href = url/);
+  assert.match(adminHtml, /studentPortalLink\.removeAttribute\('href'\)/);
+  assert.match(adminHtml, /studentPortalLink\.classList\.toggle\('is-enabled', enabled && Boolean\(url\)\)/);
+  assert.match(adminHtml, /\.student-portal-link\.is-enabled:hover/);
+});
+
 test('admin student list requires an existing class scope', async () => {
   const ids = ['class-a', 'class-b', 'student-a', 'student-b'];
   const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
