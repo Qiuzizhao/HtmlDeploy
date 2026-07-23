@@ -521,22 +521,33 @@
     }
 
     .student-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+      gap: 8px;
       min-height: 120px;
-      padding: 20px;
+      max-height: min(52vh, 520px);
+      margin: 16px 20px 20px;
+      padding: 12px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
       overflow-wrap: anywhere;
     }
 
     .student-row {
-      display: grid;
-      grid-template-columns: auto minmax(160px, 1fr) minmax(150px, 220px) minmax(150px, auto) auto auto;
-      gap: 10px;
+      min-height: 34px;
+      display: flex;
       align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .student-row:last-child {
-      border-bottom: 0;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fff;
+      color: #1e293b;
+      font-size: 13px;
+      line-height: 1.35;
     }
 
     .student-row-check {
@@ -545,14 +556,33 @@
       justify-content: center;
     }
 
-    .student-row-created,
-    .student-empty {
-      color: var(--muted);
-      font-size: 13px;
+    .student-row-check input {
+      margin: 0;
+    }
+
+    .student-row-name {
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow-wrap: anywhere;
+    }
+
+    .student-row-delete {
+      flex: 0 0 auto;
+      min-height: 28px;
+      padding: 0 9px;
+      border: 1px solid #fecdd3;
+      border-radius: 4px;
+      background: #fff1f2;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .student-empty {
+      grid-column: 1 / -1;
       padding: 28px 0;
+      color: var(--muted);
+      font-size: 13px;
       text-align: center;
     }
 
@@ -1524,14 +1554,6 @@
       .toolbar-left input,
       .toolbar-left select {
         width: 100%;
-      }
-
-      .student-row {
-        grid-template-columns: auto minmax(0, 1fr);
-      }
-
-      .student-row > :not(.student-row-check) {
-        grid-column: 2;
       }
 
       .code-overlay {
@@ -2871,38 +2893,17 @@
         });
         checkLabel.append(checkbox);
 
-        const nameInput = document.createElement('input');
-        nameInput.value = student.name;
-        nameInput.maxLength = 40;
-        nameInput.setAttribute('aria-label', `${student.name} 的姓名`);
-
-        const classSelect = document.createElement('select');
-        classSelect.setAttribute('aria-label', `${student.name} 的目标班级`);
-        classes.forEach((classItem) => {
-          const option = document.createElement('option');
-          option.value = classItem.id;
-          option.textContent = classItem.name;
-          classSelect.append(option);
-        });
-        classSelect.value = student.classId;
-
-        const created = document.createElement('span');
-        created.className = 'student-row-created';
-        created.textContent = `创建于 ${formatDate(student.createdAt)}`;
-
-        const saveButton = document.createElement('button');
-        saveButton.className = 'button';
-        saveButton.type = 'button';
-        saveButton.textContent = '保存';
-        saveButton.addEventListener('click', () => updateStudent(student, nameInput, classSelect, saveButton));
+        const name = document.createElement('span');
+        name.className = 'student-row-name';
+        name.textContent = student.name;
 
         const deleteButton = document.createElement('button');
-        deleteButton.className = 'danger-button';
+        deleteButton.className = 'student-row-delete';
         deleteButton.type = 'button';
         deleteButton.textContent = '删除';
         deleteButton.addEventListener('click', () => deleteStudent(student, deleteButton));
 
-        row.append(checkLabel, nameInput, classSelect, created, saveButton, deleteButton);
+        row.append(checkLabel, name, deleteButton);
         studentList.append(row);
       });
 

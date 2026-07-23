@@ -605,6 +605,17 @@ test('public admin opens multi-name student import from horizontal toolbar actio
   assert.doesNotMatch(html, /<h2 class="panel-title">批量导入<\/h2>/);
 });
 
+test('public admin renders student roster as compact cards like forbidden words', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const renderer = html.match(/function renderStudents\(\) \{[\s\S]*?\n    \}\n\n    async function loadStudents/)?.[0] || '';
+
+  assert.match(html, /\.student-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(128px, 1fr\)\)/);
+  assert.match(html, /\.student-row \{[^}]*display: flex;[^}]*justify-content: space-between/);
+  assert.match(renderer, /const name = document\.createElement\('span'\)/);
+  assert.match(renderer, /row\.append\(checkLabel, name, deleteButton\)/);
+  assert.doesNotMatch(renderer, /nameInput|classSelect|student-row-created|saveButton/);
+});
+
 test('public admin ignores stale student import parsing after source changes', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
