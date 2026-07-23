@@ -4310,6 +4310,17 @@ test('student class portal and identity controls are exposed in public pages', a
   assert.match(adminHtml, /id="resetStudentPortalLink"/);
 });
 
+test('admin copy portal link button shows temporary success feedback', async () => {
+  const adminHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(adminHtml, /\.student-portal-settings \.button\.is-copy-success/);
+  assert.match(adminHtml, /copyStudentPortalLink\.textContent = '✓ 已复制'/);
+  assert.match(adminHtml, /copyStudentPortalLink\.classList\.add\('is-copy-success'\)/);
+  assert.match(adminHtml, /copyStudentPortalLink\.textContent = '复制专属链接'/);
+  assert.match(adminHtml, /copyStudentPortalLink\.classList\.remove\('is-copy-success'\)/);
+  assert.match(adminHtml, /await navigator\.clipboard\.writeText\(url\);\s+showStudentPortalCopySuccess\(\);/);
+});
+
 test('admin student list requires an existing class scope', async () => {
   const ids = ['class-a', 'class-b', 'student-a', 'student-b'];
   const { app } = await makeTestApp({ idGenerator: () => ids.shift() });

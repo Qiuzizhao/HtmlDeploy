@@ -552,6 +552,13 @@
       color: var(--brand-dark);
     }
 
+    .student-portal-settings .button.is-copy-success,
+    .student-portal-settings .button.is-copy-success:hover {
+      border-color: #16a34a;
+      background: #dcfce7;
+      color: #166534;
+    }
+
     .student-list {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
@@ -2196,6 +2203,7 @@
     let studentImportsInFlight = 0;
     let studentImportDialogOpen = false;
     let studentSearchDebounceTimer = null;
+    let studentPortalCopyFeedbackTimer = null;
     let studentLoadSequence = 0;
     let classBulkOperationRunning = false;
     let settings = {};
@@ -2939,10 +2947,24 @@
       if (!url) return;
       try {
         await navigator.clipboard.writeText(url);
+        showStudentPortalCopySuccess();
         setMessage(studentMessage, '专属班级链接已复制');
       } catch {
         window.prompt('复制专属班级链接', url);
       }
+    }
+
+    function showStudentPortalCopySuccess() {
+      if (studentPortalCopyFeedbackTimer) {
+        window.clearTimeout(studentPortalCopyFeedbackTimer);
+      }
+      copyStudentPortalLink.textContent = '✓ 已复制';
+      copyStudentPortalLink.classList.add('is-copy-success');
+      studentPortalCopyFeedbackTimer = window.setTimeout(() => {
+        copyStudentPortalLink.textContent = '复制专属链接';
+        copyStudentPortalLink.classList.remove('is-copy-success');
+        studentPortalCopyFeedbackTimer = null;
+      }, 1600);
     }
 
     async function resetCurrentStudentPortalLink() {
