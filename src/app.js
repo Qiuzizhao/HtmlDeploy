@@ -6,7 +6,7 @@ const path = require('node:path');
 const compression = require('compression');
 const express = require('express');
 const multer = require('multer');
-const { createRuntimeStore } = require('./db/runtime-store');
+const { createRuntimeStore, normalizeStudentName } = require('./db/runtime-store');
 
 const DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
 const DEFAULT_ADMIN_PASSWORD = 'qqqyyy';
@@ -33,6 +33,18 @@ function escapeHtml(value) {
 
 function createDefaultId() {
   return crypto.randomBytes(4).toString('hex');
+}
+
+function validateStudentName(value) {
+  const name = normalizeStudentName(value);
+  if (!name || name.length > 40) {
+    return { error: '学生姓名必须为 1 到 40 个字符' };
+  }
+  return { name };
+}
+
+function isStudentNameConflict(error) {
+  return error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
 }
 
 function createAdminToken(password) {
@@ -2406,6 +2418,148 @@ function createApp(options = {}) {
     }
   });
 
+  function respondToStudentStoreError(res, error) {
+    if (error && error.code === 'CLASS_NOT_FOUND') {
+      res.status(404).json({ error: '班级不存在' });
+      return true;
+    }
+    if (error && (error.code === 'STUDENT_NAME_INVALID' || error.code === 'STUDENT_IMPORT_LIMIT')) {
+      res.status(400).json({ error: error.message });
+      return true;
+    }
+    if (isStudentNameConflict(error)) {
+      res.status(409).json({ error: '同一班级内学生姓名不能重复' });
+      return true;
+    }
+    return false;
+  }
+
+  app.get('/api/admin/students', requireAdmin, async (req, res, next) => {
+    try {
+      const store = getRuntimeStoreForFile(classesFile);
+      const students = store.listStudents({
+        classId: String(req.query.classId || '').trim(),
+        query: req.query.q
+      });
+      return res.json({ students, total: students.length });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/admin/students', requireAdmin, async (req, res, next) => {
+    const validation = validateStudentName(req.body && req.body.name);
+    if (validation.error) {
+      return res.status(400).json(validation);
+    }
+
+    try {
+      const store = getRuntimeStoreForFile(classesFile);
+      const classId = String(req.body && req.body.classId || '').trim();
+      if (!store.getClass(classId)) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+      if (store.listStudents({ classId, query: validation.name }).some((student) => student.name === validation.name)) {
+        return res.status(409).json({ error: '同一班级内学生姓名不能重复' });
+      }
+      const student = store.createStudent({
+        id: idGenerator(),
+        classId,
+        name: validation.name
+      });
+      return res.status(201).json(student);
+    } catch (error) {
+      if (respondToStudentStoreError(res, error)) {
+        return undefined;
+      }
+      return next(error);
+    }
+  });
+
+  app.post('/api/admin/students/import', requireAdmin, async (req, res, next) => {
+    const names = req.body && req.body.names;
+    if (!Array.isArray(names)) {
+      return res.status(400).json({ error: '学生姓名必须是数组' });
+    }
+    if (names.length > 2000) {
+      return res.status(400).json({ error: '一次最多导入 2,000 名学生' });
+    }
+
+    try {
+      const result = getRuntimeStoreForFile(classesFile).importStudents({
+        classId: req.body.classId,
+        names,
+        idGenerator
+      });
+      return res.status(201).json({
+        added: result.added,
+        internalDuplicates: result.internalDuplicates,
+        existing: result.existing,
+        invalid: result.invalid,
+        students: result.students
+      });
+    } catch (error) {
+      if (respondToStudentStoreError(res, error)) {
+        return undefined;
+      }
+      return next(error);
+    }
+  });
+
+  app.put('/api/admin/students/:id', requireAdmin, async (req, res, next) => {
+    const validation = validateStudentName(req.body && req.body.name);
+    if (validation.error) {
+      return res.status(400).json(validation);
+    }
+
+    try {
+      const student = getRuntimeStoreForFile(classesFile).updateStudent(req.params.id, {
+        classId: req.body && req.body.classId,
+        name: validation.name
+      });
+      if (!student) {
+        return res.status(404).json({ error: '学生不存在' });
+      }
+      return res.json(student);
+    } catch (error) {
+      if (respondToStudentStoreError(res, error)) {
+        return undefined;
+      }
+      return next(error);
+    }
+  });
+
+  app.delete('/api/admin/students/:id', requireAdmin, async (req, res, next) => {
+    try {
+      const store = getRuntimeStoreForFile(classesFile);
+      if (!store.getStudent(req.params.id)) {
+        return res.status(404).json({ error: '学生不存在' });
+      }
+      store.deleteStudents([req.params.id]);
+      return res.status(204).send();
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/admin/students/bulk-delete', requireAdmin, async (req, res, next) => {
+    const ids = req.body && req.body.ids;
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({ error: '学生 ID 必须是数组' });
+    }
+    if (ids.length > 2000) {
+      return res.status(400).json({ error: '一次最多删除 2,000 名学生' });
+    }
+
+    try {
+      const normalizedIds = ids.map((id) => String(id).trim()).filter(Boolean);
+      const removed = getRuntimeStoreForFile(classesFile).deleteStudents(normalizedIds);
+      return res.json({ removed });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.get('/api/admin/sites', requireAdmin, async (req, res, next) => {
     try {
       const sites = activeSitesOnly(await readSites(dataFile));
@@ -3057,6 +3211,10 @@ function createApp(options = {}) {
 
       if (sites.some((site) => !isSiteDeleted(site) && site.classId === id)) {
         return res.status(400).json({ error: '班级下还有项目，不能删除' });
+      }
+
+      if (getRuntimeStoreForFile(classesFile).countStudentsByClass(id) > 0) {
+        return res.status(400).json({ error: '班级下还有学生，不能删除，请先删除或转移学生' });
       }
 
       await writeClasses(classesFile, classes.filter((item) => item.id !== id));

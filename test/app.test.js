@@ -3618,6 +3618,55 @@ test('admin cannot delete a class that still has projects', async () => {
   await agent.delete('/api/classes/class-a').expect(400);
 });
 
+test('student roster APIs require admin access', async () => {
+  const { app } = await makeTestApp();
+  await request(app).get('/api/admin/students?classId=class-a').expect(401);
+  await request(app).post('/api/admin/students').send({ classId: 'class-a', name: '张三' }).expect(401);
+  await request(app).post('/api/admin/students/import').send({ classId: 'class-a', names: ['张三'] }).expect(401);
+  await request(app).put('/api/admin/students/student-a').send({ name: '李四' }).expect(401);
+  await request(app).delete('/api/admin/students/student-a').expect(401);
+  await request(app).post('/api/admin/students/bulk-delete').send({ ids: ['student-a'] }).expect(401);
+});
+
+test('admin can manage and import students while protected classes cannot be deleted', async () => {
+  const ids = ['class-a', 'class-b', 'student-a', 'student-b', 'student-c'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班' }).expect(201);
+  await admin.post('/api/classes').send({ name: '二班' }).expect(201);
+
+  await admin.post('/api/admin/students').send({ classId: 'missing-class', name: '张三' }).expect(404);
+  await admin.put('/api/admin/students/missing-student').send({ name: '张三' }).expect(404);
+  await admin.post('/api/admin/students').send({ classId: 'class-a', name: '' }).expect(400);
+  await admin.post('/api/admin/students').send({ classId: 'class-a', name: 'a'.repeat(41) }).expect(400);
+  await admin.post('/api/admin/students/import').send({ classId: 'class-a', names: '张三' }).expect(400);
+  await admin.post('/api/admin/students/import').send({ classId: 'class-a', names: Array(2001).fill('张三') }).expect(400);
+
+  const created = await admin.post('/api/admin/students').send({ classId: 'class-a', name: ' 张三 ' }).expect(201);
+  assert.equal(created.body.name, '张三');
+  await admin.post('/api/admin/students').send({ classId: 'class-a', name: '张三' }).expect(409);
+
+  const imported = await admin
+    .post('/api/admin/students/import')
+    .send({ classId: 'class-a', names: ['李四', '李四', '张三', '', '王五'] })
+    .expect(201);
+  assert.deepEqual(
+    { added: imported.body.added, internalDuplicates: imported.body.internalDuplicates, existing: imported.body.existing, invalid: imported.body.invalid },
+    { added: 2, internalDuplicates: 1, existing: 1, invalid: 1 }
+  );
+
+  const listed = await admin.get('/api/admin/students?classId=class-a&q=李').expect(200);
+  assert.deepEqual(listed.body.students.map((item) => item.name), ['李四']);
+  assert.equal(listed.body.total, 1);
+  await admin.put(`/api/admin/students/${created.body.id}`).send({ classId: 'class-b', name: '张三' }).expect(200);
+  await admin.put(`/api/admin/students/${imported.body.students[1].id}`).send({ classId: 'class-b', name: '张三' }).expect(409);
+  await admin.delete('/api/classes/class-a').expect(400);
+  await admin.post('/api/admin/students/bulk-delete').send({ ids: ['unknown-student'] }).expect(200).expect({ removed: 0 });
+  await admin.post('/api/admin/students/bulk-delete').send({ ids: imported.body.students.map((item) => item.id) }).expect(200);
+  await admin.delete('/api/classes/class-a').expect(204);
+});
+
 test('GET /site/:id returns index.html when present', async () => {
   const ids = ['class-a', 'withindex'];
   const { app } = await makeTestApp({
