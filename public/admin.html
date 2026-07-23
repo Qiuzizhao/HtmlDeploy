@@ -40,7 +40,8 @@
     }
 
     body.is-code-window-open,
-    body.is-directed-ai-open {
+    body.is-directed-ai-open,
+    body.is-student-import-open {
       overflow: hidden;
     }
 
@@ -494,17 +495,23 @@
 
     .student-toolbar {
       display: grid;
-      grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) auto;
+      grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) auto auto auto;
+      grid-template-areas: "class search add delete count";
       gap: 12px;
       align-items: center;
       padding: 20px;
       border-bottom: 1px solid var(--line);
     }
 
-    .student-toolbar > *,
-    .student-add-form > * {
+    .student-toolbar > * {
       min-width: 0;
     }
+
+    #studentClassFilter { grid-area: class; }
+    #studentSearchInput { grid-area: search; }
+    #addStudentButton { grid-area: add; }
+    #deleteSelectedStudents { grid-area: delete; }
+    #studentCount { grid-area: count; }
 
     #studentCount {
       color: var(--muted);
@@ -513,24 +520,9 @@
       white-space: nowrap;
     }
 
-    .student-add-form {
-      display: grid;
-      grid-template-columns: minmax(220px, 1fr) auto;
-      gap: 12px;
-      align-items: end;
-      padding: 20px 20px 12px;
-    }
-
-    .student-list-actions {
-      display: flex;
-      justify-content: flex-end;
-      padding: 0 20px 20px;
-    }
-
     .student-list {
       min-height: 120px;
       padding: 20px;
-      border-top: 1px solid var(--line);
       overflow-wrap: anywhere;
     }
 
@@ -564,11 +556,35 @@
       text-align: center;
     }
 
+    .student-import-window {
+      width: min(680px, calc(100vw - 32px));
+      max-height: min(88vh, 760px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .student-import-dialog-body {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      overflow-y: auto;
+    }
+
+    .student-import-class {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
     #studentImportFile,
     #studentImportText {
       display: block;
-      width: calc(100% - 40px);
-      margin: 20px 20px 0;
+      width: 100%;
     }
 
     #studentImportText {
@@ -576,13 +592,8 @@
       resize: vertical;
     }
 
-    #parseStudentImport {
-      margin: 12px 20px 0;
-    }
-
     .student-import-preview {
       min-height: 88px;
-      margin: 12px 20px;
       padding: 14px;
       border: 1px solid var(--line);
       border-radius: 4px;
@@ -604,10 +615,6 @@
 
     .student-import-name + .student-import-name {
       margin-top: 4px;
-    }
-
-    #confirmStudentImport {
-      margin: 0 20px 20px;
     }
 
     .settings-form {
@@ -1460,14 +1467,20 @@
 
       .all-password-form,
       .ranking-toolbar,
-      .student-toolbar,
-      .student-add-form,
       .forbidden-search-form,
       .forbidden-words-form,
       .settings-form,
       .class-group-form,
       .class-form {
         grid-template-columns: 1fr;
+      }
+
+      .student-toolbar {
+        grid-template-columns: auto auto minmax(0, 1fr);
+        grid-template-areas:
+          "class class class"
+          "search search search"
+          "add delete count";
       }
 
       .class-group-head {
@@ -1513,27 +1526,12 @@
         width: 100%;
       }
 
-      .student-list-actions,
-      .student-list-actions button {
-        width: 100%;
-      }
-
-      .student-list-actions {
-        padding: 0 20px 20px;
-      }
-
       .student-row {
         grid-template-columns: auto minmax(0, 1fr);
       }
 
       .student-row > :not(.student-row-check) {
         grid-column: 2;
-      }
-
-      #parseStudentImport,
-      #confirmStudentImport {
-        width: calc(100% - 40px);
-        margin-right: 20px;
       }
 
       .code-overlay {
@@ -1802,24 +1800,11 @@
           <div class="student-toolbar">
             <select id="studentClassFilter" aria-label="选择班级"></select>
             <input id="studentSearchInput" type="search" maxlength="40" placeholder="搜索学生姓名">
+            <button class="primary-button" id="addStudentButton" type="button">新增学生</button>
+            <button class="danger-button" id="deleteSelectedStudents" type="button" disabled>删除选中</button>
             <span id="studentCount">0 名学生</span>
           </div>
-          <form id="addStudentForm" class="student-add-form">
-            <input id="studentNameInput" maxlength="40" placeholder="输入学生姓名" required>
-            <button class="primary-button" type="submit">新增学生</button>
-          </form>
-          <div class="student-list-actions">
-            <button class="danger-button" id="deleteSelectedStudents" type="button" disabled>删除选中</button>
-          </div>
           <div id="studentList" class="student-list"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h2 class="panel-title">批量导入</h2></div>
-          <input id="studentImportFile" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-          <textarea id="studentImportText" placeholder="也可以粘贴名单，每行一个姓名"></textarea>
-          <button class="button" id="parseStudentImport" type="button">解析名单</button>
-          <div id="studentImportPreview" class="student-import-preview"></div>
-          <button class="primary-button" id="confirmStudentImport" type="button" disabled>确认导入</button>
         </div>
       </section>
 
@@ -1942,6 +1927,32 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div class="code-overlay" id="studentImportOverlay" aria-hidden="true">
+    <section class="student-import-window" role="dialog" aria-modal="true" aria-labelledby="studentImportDialogTitle">
+      <header class="code-window-head">
+        <div class="code-title-wrap">
+          <h2 class="code-title" id="studentImportDialogTitle">新增学生</h2>
+          <div class="code-meta" id="studentImportClassName"></div>
+        </div>
+        <button class="button" id="closeStudentImportDialog" type="button">关闭</button>
+      </header>
+      <div class="student-import-dialog-body">
+        <p class="student-import-class">上传 Excel、CSV，或直接粘贴名单；可同时使用。</p>
+        <input id="studentImportFile" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <textarea id="studentImportText" placeholder="每行一个学生姓名"></textarea>
+        <button class="button" id="parseStudentImport" type="button">解析名单</button>
+        <div id="studentImportPreview" class="student-import-preview">请添加名单后点击“解析名单”</div>
+      </div>
+      <footer class="code-actions">
+        <div class="code-actions-left"></div>
+        <div class="code-actions-right">
+          <button class="button" id="cancelStudentImport" type="button">取消</button>
+          <button class="primary-button" id="confirmStudentImport" type="button" disabled>确认新增</button>
+        </div>
+      </footer>
+    </section>
   </div>
 
   <div class="code-overlay" id="codeOverlay" aria-hidden="true">
@@ -2068,8 +2079,11 @@
     const rankingEmptyState = document.getElementById('rankingEmptyState');
     const studentClassFilter = document.getElementById('studentClassFilter');
     const studentSearchInput = document.getElementById('studentSearchInput');
-    const studentNameInput = document.getElementById('studentNameInput');
-    const addStudentForm = document.getElementById('addStudentForm');
+    const addStudentButton = document.getElementById('addStudentButton');
+    const studentImportOverlay = document.getElementById('studentImportOverlay');
+    const studentImportClassName = document.getElementById('studentImportClassName');
+    const closeStudentImportDialogButton = document.getElementById('closeStudentImportDialog');
+    const cancelStudentImportButton = document.getElementById('cancelStudentImport');
     const studentImportFile = document.getElementById('studentImportFile');
     const studentImportText = document.getElementById('studentImportText');
     const parseStudentImportButton = document.getElementById('parseStudentImport');
@@ -2123,6 +2137,7 @@
     let pendingStudentImportValidCount = 0;
     let studentImportGeneration = 0;
     let studentImportsInFlight = 0;
+    let studentImportDialogOpen = false;
     let studentSearchDebounceTimer = null;
     let studentLoadSequence = 0;
     let classBulkOperationRunning = false;
@@ -2796,8 +2811,7 @@
     function updateStudentWorkspaceState() {
       const hasClass = Boolean(studentClassFilter.value);
       studentSearchInput.disabled = !hasClass;
-      studentNameInput.disabled = !hasClass;
-      addStudentForm.querySelector('button[type="submit"]').disabled = !hasClass;
+      addStudentButton.disabled = !hasClass;
       deleteSelectedStudentsButton.disabled = !hasClass || selectedStudentIds.size === 0;
       confirmStudentImport.disabled = !hasClass
         || pendingStudentImportValidCount === 0
@@ -2951,41 +2965,6 @@
       }
     }
 
-    async function createStudent(event) {
-      event.preventDefault();
-      const button = event.submitter || addStudentForm.querySelector('button[type="submit"]');
-      const classId = studentClassFilter.value;
-      const name = studentNameInput.value.trim();
-      if (!classId) {
-        setMessage(studentMessage, '请选择班级', true);
-        return;
-      }
-      if (!name) {
-        setMessage(studentMessage, '请输入学生姓名', true);
-        return;
-      }
-
-      setButtonLoading(button, true, '新增中...');
-      try {
-        const response = await fetch('/api/admin/students', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ classId, name })
-        });
-        if (!response.ok) {
-          throw new Error(await readResponseError(response, '新增学生失败'));
-        }
-        studentNameInput.value = '';
-        await loadStudents();
-        setMessage(studentMessage, '新增学生成功');
-      } catch (error) {
-        setMessage(studentMessage, error.message || '新增学生失败', true);
-      } finally {
-        setButtonLoading(button, false);
-        updateStudentWorkspaceState();
-      }
-    }
-
     async function updateStudent(student, nameInput, classSelect, button) {
       setButtonLoading(button, true, '保存中...');
       try {
@@ -3061,6 +3040,43 @@
         setButtonLoading(deleteSelectedStudentsButton, false);
         updateStudentWorkspaceState();
       }
+    }
+
+    function isStudentImportBusy() {
+      return studentImportsInFlight > 0 || parseStudentImportButton.classList.contains('is-loading');
+    }
+
+    function openStudentImportDialog() {
+      const classId = studentClassFilter.value;
+      const classItem = classes.find((item) => item.id === classId);
+      if (!classId || !classItem) {
+        setMessage(studentMessage, '请选择班级', true);
+        return;
+      }
+
+      studentImportDialogOpen = true;
+      studentImportClassName.textContent = `目标班级：${classItem.name}`;
+      studentImportOverlay.classList.add('is-open');
+      studentImportOverlay.setAttribute('aria-hidden', 'false');
+      studentClassFilter.disabled = true;
+      document.body.classList.add('is-student-import-open');
+      studentImportText.focus();
+    }
+
+    function closeStudentImportDialog({ force = false } = {}) {
+      if (!studentImportDialogOpen || (!force && isStudentImportBusy())) {
+        return;
+      }
+
+      studentImportDialogOpen = false;
+      studentImportFile.value = '';
+      studentImportText.value = '';
+      invalidateStudentImportPreview('请添加名单后点击“解析名单”');
+      studentImportOverlay.classList.remove('is-open');
+      studentImportOverlay.setAttribute('aria-hidden', 'true');
+      studentClassFilter.disabled = false;
+      document.body.classList.remove('is-student-import-open');
+      addStudentButton.focus();
     }
 
     function normalizeStudentImportName(value) {
@@ -3173,9 +3189,7 @@
         if (importGeneration !== studentImportGeneration || classId !== studentClassFilter.value) {
           return;
         }
-        studentImportFile.value = '';
-        studentImportText.value = '';
-        invalidateStudentImportPreview();
+        closeStudentImportDialog({ force: true });
         setMessage(
           studentMessage,
           `导入完成：新增 ${result.added} 人，名单内重复 ${result.internalDuplicates} 人，已有 ${result.existing} 人，无效 ${result.invalid} 行`
@@ -5567,7 +5581,9 @@
       classPasswordInput.value = generatePassword();
     });
     createForm.addEventListener('submit', createSite);
-    addStudentForm.addEventListener('submit', createStudent);
+    addStudentButton.addEventListener('click', openStudentImportDialog);
+    closeStudentImportDialogButton.addEventListener('click', () => closeStudentImportDialog());
+    cancelStudentImportButton.addEventListener('click', () => closeStudentImportDialog());
     studentClassFilter.addEventListener('change', () => {
       selectedStudentIds.clear();
       loadStudents();
@@ -5712,6 +5728,11 @@
         closeDirectedAiWindow();
       }
     });
+    studentImportOverlay.addEventListener('click', (event) => {
+      if (event.target === studentImportOverlay) {
+        closeStudentImportDialog();
+      }
+    });
     codeOverlay.addEventListener('wheel', (event) => {
       if (event.target !== codeEditor) {
         event.preventDefault();
@@ -5724,7 +5745,9 @@
     }, { passive: false });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        if (directedAiOverlay.classList.contains('is-open')) {
+        if (studentImportOverlay.classList.contains('is-open')) {
+          closeStudentImportDialog();
+        } else if (directedAiOverlay.classList.contains('is-open')) {
           closeDirectedAiWindow();
         } else if (codeOverlay.classList.contains('is-open')) {
           closeCodeWindow();

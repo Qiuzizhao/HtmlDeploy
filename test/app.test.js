@@ -56,6 +56,11 @@ function createStudentImportHarness(functionSource, dependencies) {
       pendingStudentImportValidCount = 0;
       dependencies.onInvalidate();
     }
+    const closeStudentImportDialog = dependencies.closeStudentImportDialog || (() => {
+      studentImportFile.value = '';
+      studentImportText.value = '';
+      invalidateStudentImportPreview();
+    });
     ${functionSource}
     return {
       importStudents,
@@ -579,6 +584,27 @@ test('public admin exposes student roster management and local file import', asy
   assert.doesNotMatch(html, /https?:\/\/[^"']*xlsx/i);
 });
 
+test('public admin opens multi-name student import from horizontal toolbar actions', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const searchIndex = html.indexOf('id="studentSearchInput"');
+  const addIndex = html.indexOf('id="addStudentButton"');
+  const deleteIndex = html.indexOf('id="deleteSelectedStudents"');
+
+  assert.ok(searchIndex >= 0 && searchIndex < addIndex && addIndex < deleteIndex);
+  assert.match(html, /\.student-toolbar \{[^}]*grid-template-areas:[^}]*"class search add delete count"/);
+  assert.match(html, /id="studentImportOverlay"[^>]+aria-hidden="true"/);
+  assert.match(html, /role="dialog"[^>]+aria-modal="true"[^>]+aria-labelledby="studentImportDialogTitle"/);
+  assert.match(html, /id="studentImportFile"[^>]+accept="\.xlsx,\.csv/);
+  assert.match(html, /id="studentImportText"[^>]+每行一个学生姓名/);
+  assert.match(html, /id="confirmStudentImport"[^>]*>确认新增<\/button>/);
+  assert.match(html, /function openStudentImportDialog/);
+  assert.match(html, /function closeStudentImportDialog/);
+  assert.match(html, /addStudentButton\.addEventListener\('click', openStudentImportDialog\)/);
+  assert.doesNotMatch(html, /id="addStudentForm"/);
+  assert.doesNotMatch(html, /id="studentNameInput"/);
+  assert.doesNotMatch(html, /<h2 class="panel-title">批量导入<\/h2>/);
+});
+
 test('public admin ignores stale student import parsing after source changes', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
@@ -601,7 +627,7 @@ test('public admin ignores stale student import parsing after source changes', a
   );
   assert.match(
     html,
-    /studentImportFile\.value = '';[\s\S]*?studentImportText\.value = '';[\s\S]*?invalidateStudentImportPreview\(\);/
+    /function closeStudentImportDialog[\s\S]*?studentImportFile\.value = '';[\s\S]*?studentImportText\.value = '';[\s\S]*?invalidateStudentImportPreview\(/
   );
 });
 
