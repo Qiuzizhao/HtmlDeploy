@@ -172,7 +172,9 @@ function rowToClass(row = {}) {
 }
 
 function normalizeStudentName(value) {
-  return String(value || '').trim().replace(/\s+/g, ' ');
+  return typeof value === 'string'
+    ? value.trim().replace(/\s+/g, ' ')
+    : '';
 }
 
 function rowToStudent(row = {}) {

@@ -2892,9 +2892,11 @@
       updateStudentWorkspaceState();
     }
 
-    async function loadStudents() {
-      const requestId = ++studentLoadSequence;
-      const classId = studentClassFilter.value;
+    async function loadStudents(classId = studentClassFilter.value) {
+      const updatesCurrentClass = classId === studentClassFilter.value;
+      const requestId = updatesCurrentClass
+        ? ++studentLoadSequence
+        : studentLoadSequence;
       if (!classId) {
         students = [];
         selectedStudentIds.clear();
@@ -2919,7 +2921,7 @@
         }
 
         const result = await response.json();
-        if (requestId !== studentLoadSequence) {
+        if (requestId !== studentLoadSequence || classId !== studentClassFilter.value) {
           return;
         }
         students = Array.isArray(result.students) ? result.students : [];
@@ -2934,7 +2936,7 @@
         renderStudents();
         setMessage(studentMessage, `${total} 名学生`);
       } catch (error) {
-        if (requestId !== studentLoadSequence) {
+        if (requestId !== studentLoadSequence || classId !== studentClassFilter.value) {
           return;
         }
         students = [];
@@ -3143,32 +3145,40 @@
     }
 
     async function importStudents() {
+      const importGeneration = studentImportGeneration;
       const classId = studentClassFilter.value;
       if (!classId || !pendingStudentImportNames.length) {
         setMessage(studentMessage, classId ? '请先解析名单' : '请选择班级', true);
         return;
       }
 
+      const names = [...pendingStudentImportNames];
       setButtonLoading(confirmStudentImport, true, '导入中...');
       try {
         const response = await fetch('/api/admin/students/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ classId, names: pendingStudentImportNames })
+          body: JSON.stringify({ classId, names })
         });
         if (!response.ok) {
           throw new Error(await readResponseError(response, '导入学生失败'));
         }
         const result = await response.json();
+        await loadStudents(classId);
+        if (importGeneration !== studentImportGeneration || classId !== studentClassFilter.value) {
+          return;
+        }
         studentImportFile.value = '';
         studentImportText.value = '';
         invalidateStudentImportPreview();
-        await loadStudents();
         setMessage(
           studentMessage,
           `导入完成：新增 ${result.added} 人，名单内重复 ${result.internalDuplicates} 人，已有 ${result.existing} 人，无效 ${result.invalid} 行`
         );
       } catch (error) {
+        if (importGeneration !== studentImportGeneration || classId !== studentClassFilter.value) {
+          return;
+        }
         setMessage(studentMessage, error.message || '导入学生失败', true);
       } finally {
         setButtonLoading(confirmStudentImport, false);

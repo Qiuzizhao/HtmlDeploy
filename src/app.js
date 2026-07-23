@@ -2437,8 +2437,17 @@ function createApp(options = {}) {
   app.get('/api/admin/students', requireAdmin, async (req, res, next) => {
     try {
       const store = getRuntimeStoreForFile(classesFile);
+      const classId = typeof req.query.classId === 'string'
+        ? req.query.classId.trim()
+        : '';
+      if (!classId) {
+        return res.status(400).json({ error: '请选择班级' });
+      }
+      if (!store.getClass(classId)) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
       const students = store.listStudents({
-        classId: String(req.query.classId || '').trim(),
+        classId,
         query: req.query.q
       });
       return res.json({ students, total: students.length });
@@ -2507,16 +2516,38 @@ function createApp(options = {}) {
   });
 
   app.put('/api/admin/students/:id', requireAdmin, async (req, res, next) => {
-    const validation = validateStudentName(req.body && req.body.name);
-    if (validation.error) {
-      return res.status(400).json(validation);
-    }
-
     try {
-      const student = getRuntimeStoreForFile(classesFile).updateStudent(req.params.id, {
-        classId: req.body && req.body.classId,
-        name: validation.name
-      });
+      const store = getRuntimeStoreForFile(classesFile);
+      const existing = store.getStudent(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: '学生不存在' });
+      }
+
+      const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+        ? req.body
+        : {};
+      const hasName = Object.prototype.hasOwnProperty.call(body, 'name');
+      const hasClassId = Object.prototype.hasOwnProperty.call(body, 'classId');
+      if (!hasName && !hasClassId) {
+        return res.status(400).json({ error: '请提供要更新的学生姓名或班级' });
+      }
+
+      const changes = {};
+      if (hasName) {
+        const validation = validateStudentName(body.name);
+        if (validation.error) {
+          return res.status(400).json(validation);
+        }
+        changes.name = validation.name;
+      }
+      if (hasClassId) {
+        if (typeof body.classId !== 'string' || !body.classId.trim()) {
+          return res.status(400).json({ error: '班级 ID 必须是非空字符串' });
+        }
+        changes.classId = body.classId.trim();
+      }
+
+      const student = store.updateStudent(req.params.id, changes);
       if (!student) {
         return res.status(404).json({ error: '学生不存在' });
       }

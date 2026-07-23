@@ -11,6 +11,70 @@ const { createApp, __test } = require('../src/app');
 const { RuntimeStore } = require('../src/db/runtime-store');
 const { createRepositories } = require('../src/db/repositories');
 
+function extractInlineFunctionSource(html, functionName) {
+  const signature = new RegExp(`(?:async\\s+)?function\\s+${functionName}\\s*\\([^)]*\\)\\s*\\{`);
+  const match = signature.exec(html);
+  assert.ok(match, `missing inline function ${functionName}`);
+
+  const start = match.index;
+  const bodyStart = html.indexOf('{', start);
+  let depth = 0;
+  for (let index = bodyStart; index < html.length; index += 1) {
+    if (html[index] === '{') {
+      depth += 1;
+    } else if (html[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return html.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`unterminated inline function ${functionName}`);
+}
+
+function createStudentImportHarness(functionSource, dependencies) {
+  return new Function('dependencies', `
+    let studentImportGeneration = dependencies.generation;
+    let pendingStudentImportNames = [...dependencies.names];
+    let pendingStudentImportValidCount = pendingStudentImportNames.length;
+    const studentClassFilter = dependencies.studentClassFilter;
+    const studentImportFile = dependencies.studentImportFile;
+    const studentImportText = dependencies.studentImportText;
+    const confirmStudentImport = dependencies.confirmStudentImport;
+    const fetch = dependencies.fetch;
+    const loadStudents = dependencies.loadStudents;
+    const setButtonLoading = dependencies.setButtonLoading;
+    const setMessage = dependencies.setMessage;
+    const studentMessage = dependencies.studentMessage;
+    const readResponseError = dependencies.readResponseError;
+    const updateStudentWorkspaceState = dependencies.updateStudentWorkspaceState;
+    function invalidateStudentImportPreview() {
+      studentImportGeneration += 1;
+      pendingStudentImportNames = [];
+      pendingStudentImportValidCount = 0;
+      dependencies.onInvalidate();
+    }
+    ${functionSource}
+    return {
+      importStudents,
+      setContext({ generation, classId, names }) {
+        studentImportGeneration = generation;
+        studentClassFilter.value = classId;
+        pendingStudentImportNames = [...names];
+        pendingStudentImportValidCount = names.length;
+      },
+      getState() {
+        return {
+          generation: studentImportGeneration,
+          names: [...pendingStudentImportNames],
+          validCount: pendingStudentImportValidCount
+        };
+      }
+    };
+  `)(dependencies);
+}
+
 test('public index uses a single HTML file picker', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
@@ -539,6 +603,193 @@ test('public admin ignores stale student import parsing after source changes', a
   );
 });
 
+test('public admin preserves a newer import draft when an older import succeeds', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const functionSource = extractInlineFunctionSource(html, 'importStudents');
+  const requests = [];
+  const loadCalls = [];
+  const messages = [];
+  const loadingCalls = [];
+  let invalidations = 0;
+  let resolveResponse;
+  const responsePromise = new Promise((resolve) => {
+    resolveResponse = resolve;
+  });
+  const studentImportFile = { value: 'old-source.xlsx' };
+  const studentImportText = { value: '旧名单' };
+  const confirmStudentImport = {};
+  const harness = createStudentImportHarness(functionSource, {
+    generation: 4,
+    names: ['旧名单'],
+    studentClassFilter: { value: 'class-a' },
+    studentImportFile,
+    studentImportText,
+    confirmStudentImport,
+    fetch(url, options) {
+      requests.push({ url, options });
+      return responsePromise;
+    },
+    async loadStudents(classId) {
+      loadCalls.push(classId);
+    },
+    setButtonLoading(button, loading) {
+      loadingCalls.push({ button, loading });
+    },
+    setMessage(_element, message, isError) {
+      messages.push({ message, isError });
+    },
+    studentMessage: {},
+    async readResponseError() {
+      return '导入学生失败';
+    },
+    updateStudentWorkspaceState() {},
+    onInvalidate() {
+      invalidations += 1;
+    }
+  });
+
+  const importPromise = harness.importStudents();
+  assert.equal(requests.length, 1);
+  assert.deepEqual(JSON.parse(requests[0].options.body), {
+    classId: 'class-a',
+    names: ['旧名单']
+  });
+
+  studentImportFile.value = 'new-source.xlsx';
+  studentImportText.value = '新名单';
+  harness.setContext({ generation: 5, classId: 'class-a', names: ['新名单'] });
+  resolveResponse({
+    ok: true,
+    async json() {
+      return { added: 1, internalDuplicates: 0, existing: 0, invalid: 0 };
+    }
+  });
+  await importPromise;
+
+  assert.deepEqual(loadCalls, ['class-a']);
+  assert.equal(studentImportFile.value, 'new-source.xlsx');
+  assert.equal(studentImportText.value, '新名单');
+  assert.deepEqual(harness.getState().names, ['新名单']);
+  assert.equal(invalidations, 0);
+  assert.deepEqual(messages, []);
+  assert.deepEqual(loadingCalls, [
+    { button: confirmStudentImport, loading: true },
+    { button: confirmStudentImport, loading: false }
+  ]);
+});
+
+test('public admin suppresses an older import error after the selected class changes', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const functionSource = extractInlineFunctionSource(html, 'importStudents');
+  const messages = [];
+  const loadingCalls = [];
+  let rejectResponse;
+  const responsePromise = new Promise((_resolve, reject) => {
+    rejectResponse = reject;
+  });
+  const confirmStudentImport = {};
+  const harness = createStudentImportHarness(functionSource, {
+    generation: 7,
+    names: ['张三'],
+    studentClassFilter: { value: 'class-a' },
+    studentImportFile: { value: 'source.xlsx' },
+    studentImportText: { value: '' },
+    confirmStudentImport,
+    fetch() {
+      return responsePromise;
+    },
+    async loadStudents() {
+      assert.fail('a rejected import must not reload students');
+    },
+    setButtonLoading(button, loading) {
+      loadingCalls.push({ button, loading });
+    },
+    setMessage(_element, message, isError) {
+      messages.push({ message, isError });
+    },
+    studentMessage: {},
+    async readResponseError() {
+      return '导入学生失败';
+    },
+    updateStudentWorkspaceState() {},
+    onInvalidate() {
+      assert.fail('a rejected import must not clear the preview');
+    }
+  });
+
+  const importPromise = harness.importStudents();
+  harness.setContext({ generation: 7, classId: 'class-b', names: ['张三'] });
+  rejectResponse(new Error('network failed'));
+  await importPromise;
+
+  assert.deepEqual(messages, []);
+  assert.deepEqual(loadingCalls, [
+    { button: confirmStudentImport, loading: true },
+    { button: confirmStudentImport, loading: false }
+  ]);
+});
+
+test('public admin background roster reload cannot replace a newer selected class view', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const functionSource = extractInlineFunctionSource(html, 'loadStudents');
+  const pendingResponses = [];
+  const studentClassFilter = { value: 'class-b' };
+  const harness = new Function('dependencies', `
+    let studentLoadSequence = 0;
+    let students = [];
+    const studentClassFilter = dependencies.studentClassFilter;
+    const studentSearchInput = { value: '' };
+    const selectedStudentIds = new Set();
+    const studentCount = { textContent: '' };
+    const studentList = {};
+    const studentMessage = {};
+    const classes = [{ id: 'class-a' }, { id: 'class-b' }];
+    const fetch = dependencies.fetch;
+    const renderStudents = dependencies.renderStudents;
+    const renderListLoading = () => {};
+    const setMessage = dependencies.setMessage;
+    const readResponseError = async () => '加载学生名单失败';
+    ${functionSource}
+    return {
+      loadStudents,
+      getStudents: () => students,
+      getCount: () => studentCount.textContent
+    };
+  `)({
+    studentClassFilter,
+    fetch(url) {
+      return new Promise((resolve) => {
+        pendingResponses.push({ url, resolve });
+      });
+    },
+    renderStudents() {},
+    setMessage() {}
+  });
+
+  const currentClassLoad = harness.loadStudents();
+  const completedImportClassLoad = harness.loadStudents('class-a');
+  assert.equal(pendingResponses.length, 2);
+
+  pendingResponses[0].resolve({
+    ok: true,
+    async json() {
+      return { students: [{ id: 'student-b', classId: 'class-b', name: '二班学生' }], total: 1 };
+    }
+  });
+  pendingResponses[1].resolve({
+    ok: true,
+    async json() {
+      return { students: [{ id: 'student-a', classId: 'class-a', name: '一班学生' }], total: 1 };
+    }
+  });
+  await Promise.all([currentClassLoad, completedImportClassLoad]);
+
+  assert.match(pendingResponses[0].url, /classId=class-b/);
+  assert.match(pendingResponses[1].url, /classId=class-a/);
+  assert.deepEqual(harness.getStudents().map((student) => student.id), ['student-b']);
+  assert.equal(harness.getCount(), '1 名学生');
+});
+
 test('public admin reloads an opened student roster whenever class data changes', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
@@ -929,6 +1180,42 @@ test('student repository stores normalized names by class and imports atomically
   const moved = store.updateStudent('student-d', { classId: 'class-b', name: '李四' });
   assert.equal(moved.classId, 'class-b');
   assert.equal(store.deleteStudents(['student-a', 'student-e']), 2);
+});
+
+test('student repository rejects non-string names and counts malformed imports as invalid', async () => {
+  const dataDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-student-types-'));
+  const store = new RuntimeStore({ dbFile: path.join(dataDir, 'app.db'), dataDir });
+  store.upsertClass({ id: 'class-a', name: '一班' });
+
+  const malformedNames = [{ name: '对象' }, ['数组'], 123, null];
+  malformedNames.forEach((name, index) => {
+    assert.throws(
+      () => store.createStudent({ id: `invalid-${index}`, classId: 'class-a', name }),
+      (error) => error.code === 'STUDENT_NAME_INVALID'
+    );
+  });
+
+  const existing = store.createStudent({ id: 'student-a', classId: 'class-a', name: '  张   三  ' });
+  assert.equal(existing.name, '张 三');
+
+  const imported = store.importStudents({
+    classId: 'class-a',
+    names: ['  李   四  ', '李 四', '张 三', { name: '对象' }, ['数组'], 123, null, '', '赵六'],
+    idGenerator: (() => { const ids = ['student-b', 'student-c']; return () => ids.shift(); })()
+  });
+  assert.deepEqual(
+    {
+      added: imported.added,
+      internalDuplicates: imported.internalDuplicates,
+      existing: imported.existing,
+      invalid: imported.invalid
+    },
+    { added: 2, internalDuplicates: 1, existing: 1, invalid: 5 }
+  );
+  assert.deepEqual(
+    store.listStudents({ classId: 'class-a' }).map((student) => student.name),
+    ['张 三', '李 四', '赵六']
+  );
 });
 
 test('student repository class reconciliation preserves classes with students', async () => {
@@ -3707,6 +3994,111 @@ test('student roster APIs require admin access', async () => {
   await request(app).put('/api/admin/students/student-a').send({ name: '李四' }).expect(401);
   await request(app).delete('/api/admin/students/student-a').expect(401);
   await request(app).post('/api/admin/students/bulk-delete').send({ ids: ['student-a'] }).expect(401);
+});
+
+test('admin student list requires an existing class scope', async () => {
+  const ids = ['class-a', 'class-b', 'student-a', 'student-b'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班' }).expect(201);
+  await admin.post('/api/classes').send({ name: '二班' }).expect(201);
+  await admin.post('/api/admin/students').send({ classId: 'class-a', name: '张三' }).expect(201);
+  await admin.post('/api/admin/students').send({ classId: 'class-b', name: '李四' }).expect(201);
+
+  await admin.get('/api/admin/students').expect(400);
+  await admin.get('/api/admin/students?classId=').expect(400);
+  await admin.get('/api/admin/students?classId=%20%20').expect(400);
+  await admin.get('/api/admin/students?classId=missing-class').expect(404);
+
+  const listed = await admin.get('/api/admin/students?classId=class-a').expect(200);
+  assert.deepEqual(listed.body.students.map((student) => student.name), ['张三']);
+  assert.equal(listed.body.total, 1);
+});
+
+test('admin student API rejects malformed name values', async () => {
+  const ids = ['class-a', 'student-a', 'student-import'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班' }).expect(201);
+
+  for (const name of [{ name: '对象' }, ['数组'], 123, null]) {
+    await admin.post('/api/admin/students').send({ classId: 'class-a', name }).expect(400);
+  }
+
+  const created = await admin
+    .post('/api/admin/students')
+    .send({ classId: 'class-a', name: '  张   三  ' })
+    .expect(201);
+  assert.equal(created.body.name, '张 三');
+
+  for (const name of [{ name: '对象' }, ['数组'], 123, null]) {
+    await admin.put(`/api/admin/students/${created.body.id}`).send({ name }).expect(400);
+  }
+
+  const imported = await admin
+    .post('/api/admin/students/import')
+    .send({
+      classId: 'class-a',
+      names: [{ name: '对象' }, ['数组'], 123, null, '  王   五  ']
+    })
+    .expect(201);
+  assert.deepEqual(
+    {
+      added: imported.body.added,
+      internalDuplicates: imported.body.internalDuplicates,
+      existing: imported.body.existing,
+      invalid: imported.body.invalid
+    },
+    { added: 1, internalDuplicates: 0, existing: 0, invalid: 4 }
+  );
+  assert.deepEqual(imported.body.students.map((student) => student.name), ['王 五']);
+});
+
+test('admin student PUT supports partial updates with validation and duplicate transfer protection', async () => {
+  const ids = ['class-a', 'class-b', 'student-a', 'student-b'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '一班' }).expect(201);
+  await admin.post('/api/classes').send({ name: '二班' }).expect(201);
+
+  const created = await admin
+    .post('/api/admin/students')
+    .send({ classId: 'class-a', name: '张三' })
+    .expect(201);
+  const renamed = await admin
+    .put(`/api/admin/students/${created.body.id}`)
+    .send({ name: '  李   四  ' })
+    .expect(200);
+  assert.equal(renamed.body.name, '李 四');
+  assert.equal(renamed.body.classId, 'class-a');
+
+  const moved = await admin
+    .put(`/api/admin/students/${created.body.id}`)
+    .send({ classId: 'class-b' })
+    .expect(200);
+  assert.equal(moved.body.name, '李 四');
+  assert.equal(moved.body.classId, 'class-b');
+
+  await admin.put(`/api/admin/students/${created.body.id}`).send({}).expect(400);
+  for (const classId of [{ id: 'class-a' }, ['class-a'], 123, null]) {
+    await admin.put(`/api/admin/students/${created.body.id}`).send({ classId }).expect(400);
+  }
+  await admin
+    .put(`/api/admin/students/${created.body.id}`)
+    .send({ classId: 'missing-class' })
+    .expect(404);
+
+  const duplicate = await admin
+    .post('/api/admin/students')
+    .send({ classId: 'class-a', name: '李 四' })
+    .expect(201);
+  await admin
+    .put(`/api/admin/students/${duplicate.body.id}`)
+    .send({ classId: 'class-b' })
+    .expect(409);
 });
 
 test('admin can manage and import students while protected classes cannot be deleted', async () => {
