@@ -534,6 +534,36 @@
       overflow-wrap: anywhere;
     }
 
+    .student-row {
+      display: grid;
+      grid-template-columns: auto minmax(160px, 1fr) minmax(150px, 220px) minmax(150px, auto) auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .student-row:last-child {
+      border-bottom: 0;
+    }
+
+    .student-row-check {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .student-row-created,
+    .student-empty {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .student-empty {
+      padding: 28px 0;
+      text-align: center;
+    }
+
     #studentImportFile,
     #studentImportText {
       display: block;
@@ -559,6 +589,21 @@
       background: var(--panel-soft);
       color: var(--muted);
       overflow-wrap: anywhere;
+    }
+
+    .student-import-summary {
+      margin: 0 0 10px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .student-import-names {
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .student-import-name + .student-import-name {
+      margin-top: 4px;
     }
 
     #confirmStudentImport {
@@ -1477,6 +1522,14 @@
         padding: 0 20px 20px;
       }
 
+      .student-row {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+
+      .student-row > :not(.student-row-check) {
+        grid-column: 2;
+      }
+
       #parseStudentImport,
       #confirmStudentImport {
         width: calc(100% - 40px);
@@ -2067,6 +2120,9 @@
     let students = [];
     const selectedStudentIds = new Set();
     let pendingStudentImportNames = [];
+    let pendingStudentImportValidCount = 0;
+    let studentSearchDebounceTimer = null;
+    let studentLoadSequence = 0;
     let classBulkOperationRunning = false;
     let settings = {};
     let adminSitesPage = 1;
@@ -2735,12 +2791,108 @@
       return names;
     }
 
+    function updateStudentWorkspaceState() {
+      const hasClass = Boolean(studentClassFilter.value);
+      studentSearchInput.disabled = !hasClass;
+      studentNameInput.disabled = !hasClass;
+      addStudentForm.querySelector('button[type="submit"]').disabled = !hasClass;
+      deleteSelectedStudentsButton.disabled = !hasClass || selectedStudentIds.size === 0;
+      confirmStudentImport.disabled = !hasClass || pendingStudentImportValidCount === 0;
+    }
+
+    function refreshStudentClassFilter() {
+      const previousClassId = studentClassFilter.value;
+      const nextClassId = classes.some((classItem) => classItem.id === previousClassId)
+        ? previousClassId
+        : (classes[0]?.id || '');
+      fillClassSelect(studentClassFilter, nextClassId, '请选择班级');
+      updateStudentWorkspaceState();
+      return previousClassId !== nextClassId;
+    }
+
+    function renderStudents() {
+      studentList.innerHTML = '';
+      const classId = studentClassFilter.value;
+
+      if (!classId || !students.length) {
+        const empty = document.createElement('div');
+        empty.className = 'student-empty';
+        empty.textContent = classId
+          ? (studentSearchInput.value.trim() ? '没有匹配的学生' : '暂无学生')
+          : (classes.length ? '请选择班级' : '请先新增班级');
+        studentList.append(empty);
+        updateStudentWorkspaceState();
+        return;
+      }
+
+      students.forEach((student) => {
+        const row = document.createElement('div');
+        row.className = 'student-row';
+        row.dataset.id = student.id;
+
+        const checkLabel = document.createElement('label');
+        checkLabel.className = 'student-row-check';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = selectedStudentIds.has(student.id);
+        checkbox.setAttribute('aria-label', `选择学生 ${student.name}`);
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) {
+            selectedStudentIds.add(student.id);
+          } else {
+            selectedStudentIds.delete(student.id);
+          }
+          updateStudentWorkspaceState();
+        });
+        checkLabel.append(checkbox);
+
+        const nameInput = document.createElement('input');
+        nameInput.value = student.name;
+        nameInput.maxLength = 40;
+        nameInput.setAttribute('aria-label', `${student.name} 的姓名`);
+
+        const classSelect = document.createElement('select');
+        classSelect.setAttribute('aria-label', `${student.name} 的目标班级`);
+        classes.forEach((classItem) => {
+          const option = document.createElement('option');
+          option.value = classItem.id;
+          option.textContent = classItem.name;
+          classSelect.append(option);
+        });
+        classSelect.value = student.classId;
+
+        const created = document.createElement('span');
+        created.className = 'student-row-created';
+        created.textContent = `创建于 ${formatDate(student.createdAt)}`;
+
+        const saveButton = document.createElement('button');
+        saveButton.className = 'button';
+        saveButton.type = 'button';
+        saveButton.textContent = '保存';
+        saveButton.addEventListener('click', () => updateStudent(student, nameInput, classSelect, saveButton));
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'danger-button';
+        deleteButton.type = 'button';
+        deleteButton.textContent = '删除';
+        deleteButton.addEventListener('click', () => deleteStudent(student, deleteButton));
+
+        row.append(checkLabel, nameInput, classSelect, created, saveButton, deleteButton);
+        studentList.append(row);
+      });
+
+      updateStudentWorkspaceState();
+    }
+
     async function loadStudents() {
+      const requestId = ++studentLoadSequence;
       const classId = studentClassFilter.value;
       if (!classId) {
         students = [];
         selectedStudentIds.clear();
         studentCount.textContent = '0 名学生';
+        renderStudents();
+        setMessage(studentMessage, classes.length ? '请选择班级' : '请先新增班级');
         return;
       }
 
@@ -2750,15 +2902,250 @@
         params.set('q', query);
       }
 
-      const response = await fetch(`/api/admin/students?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(await readResponseError(response, '加载学生名单失败'));
+      renderListLoading(studentList, '正在加载学生名单...');
+      setMessage(studentMessage, '正在加载学生名单...', false, { loading: true });
+      try {
+        const response = await fetch(`/api/admin/students?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '加载学生名单失败'));
+        }
+
+        const result = await response.json();
+        if (requestId !== studentLoadSequence) {
+          return;
+        }
+        students = Array.isArray(result.students) ? result.students : [];
+        const visibleIds = new Set(students.map((student) => student.id));
+        selectedStudentIds.forEach((id) => {
+          if (!visibleIds.has(id)) {
+            selectedStudentIds.delete(id);
+          }
+        });
+        const total = Number.isFinite(Number(result.total)) ? Number(result.total) : students.length;
+        studentCount.textContent = `${total} 名学生`;
+        renderStudents();
+        setMessage(studentMessage, `${total} 名学生`);
+      } catch (error) {
+        if (requestId !== studentLoadSequence) {
+          return;
+        }
+        students = [];
+        selectedStudentIds.clear();
+        studentCount.textContent = '0 名学生';
+        renderStudents();
+        setMessage(studentMessage, error.message || '加载学生名单失败', true);
+      }
+    }
+
+    async function createStudent(event) {
+      event.preventDefault();
+      const button = event.submitter || addStudentForm.querySelector('button[type="submit"]');
+      const classId = studentClassFilter.value;
+      const name = studentNameInput.value.trim();
+      if (!classId) {
+        setMessage(studentMessage, '请选择班级', true);
+        return;
+      }
+      if (!name) {
+        setMessage(studentMessage, '请输入学生姓名', true);
+        return;
       }
 
-      const result = await response.json();
-      students = Array.isArray(result.students) ? result.students : [];
-      selectedStudentIds.clear();
-      studentCount.textContent = `${Number(result.total) || students.length} 名学生`;
+      setButtonLoading(button, true, '新增中...');
+      try {
+        const response = await fetch('/api/admin/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ classId, name })
+        });
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '新增学生失败'));
+        }
+        studentNameInput.value = '';
+        await loadStudents();
+        setMessage(studentMessage, '新增学生成功');
+      } catch (error) {
+        setMessage(studentMessage, error.message || '新增学生失败', true);
+      } finally {
+        setButtonLoading(button, false);
+        updateStudentWorkspaceState();
+      }
+    }
+
+    async function updateStudent(student, nameInput, classSelect, button) {
+      setButtonLoading(button, true, '保存中...');
+      try {
+        const response = await fetch(`/api/admin/students/${encodeURIComponent(student.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: nameInput.value,
+            classId: classSelect.value
+          })
+        });
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '保存学生失败'));
+        }
+        await loadStudents();
+        setMessage(studentMessage, '学生信息已保存');
+      } catch (error) {
+        setMessage(studentMessage, error.message || '保存学生失败', true);
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    async function deleteStudent(student, button) {
+      if (!confirm(`确定删除学生「${student.name}」吗？`)) {
+        return;
+      }
+
+      setButtonLoading(button, true, '删除中...');
+      try {
+        const response = await fetch(`/api/admin/students/${encodeURIComponent(student.id)}`, {
+          method: 'DELETE'
+        });
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '删除学生失败'));
+        }
+        selectedStudentIds.delete(student.id);
+        await loadStudents();
+        setMessage(studentMessage, '学生已删除');
+      } catch (error) {
+        setMessage(studentMessage, error.message || '删除学生失败', true);
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    async function deleteSelectedStudents() {
+      if (!selectedStudentIds.size) {
+        return;
+      }
+      if (!confirm(`确定删除选中的 ${selectedStudentIds.size} 名学生吗？`)) {
+        return;
+      }
+
+      const ids = Array.from(selectedStudentIds);
+      setButtonLoading(deleteSelectedStudentsButton, true, '删除中...');
+      try {
+        const response = await fetch('/api/admin/students/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids })
+        });
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '批量删除学生失败'));
+        }
+        const result = await response.json();
+        selectedStudentIds.clear();
+        await loadStudents();
+        setMessage(studentMessage, `已删除 ${Number(result.removed) || 0} 名学生`);
+      } catch (error) {
+        setMessage(studentMessage, error.message || '批量删除学生失败', true);
+      } finally {
+        setButtonLoading(deleteSelectedStudentsButton, false);
+        updateStudentWorkspaceState();
+      }
+    }
+
+    function normalizeStudentImportName(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function renderStudentImportPreview(validNames, internalDuplicates, invalid) {
+      studentImportPreview.innerHTML = '';
+      const summary = document.createElement('p');
+      summary.className = 'student-import-summary';
+      summary.textContent = `有效 ${validNames.length} 人，名单内重复 ${internalDuplicates} 人，无效 ${invalid} 行`;
+      studentImportPreview.append(summary);
+
+      const sample = document.createElement('div');
+      sample.className = 'student-import-names';
+      if (!validNames.length) {
+        const empty = document.createElement('div');
+        empty.textContent = '没有可导入的姓名';
+        sample.append(empty);
+      } else {
+        validNames.forEach((name) => {
+          const item = document.createElement('div');
+          item.className = 'student-import-name';
+          item.textContent = name;
+          sample.append(item);
+        });
+      }
+      studentImportPreview.append(sample);
+    }
+
+    async function previewStudentImport() {
+      setButtonLoading(parseStudentImportButton, true, '解析中...');
+      try {
+        const rawNames = await parseStudentImportSource();
+        const validNames = [];
+        const seen = new Set();
+        let internalDuplicates = 0;
+        let invalid = 0;
+        rawNames.forEach((value) => {
+          const name = normalizeStudentImportName(value);
+          if (!name || name.length > 40) {
+            invalid += 1;
+          } else if (seen.has(name)) {
+            internalDuplicates += 1;
+          } else {
+            seen.add(name);
+            validNames.push(name);
+          }
+        });
+
+        pendingStudentImportNames = rawNames;
+        pendingStudentImportValidCount = validNames.length;
+        renderStudentImportPreview(validNames, internalDuplicates, invalid);
+        setMessage(studentMessage, validNames.length ? '名单已解析，请确认后导入' : '名单中没有可导入的姓名', validNames.length === 0);
+      } catch (error) {
+        pendingStudentImportNames = [];
+        pendingStudentImportValidCount = 0;
+        studentImportPreview.textContent = '解析名单失败';
+        setMessage(studentMessage, error.message || '解析名单失败', true);
+      } finally {
+        setButtonLoading(parseStudentImportButton, false);
+        updateStudentWorkspaceState();
+      }
+    }
+
+    async function importStudents() {
+      const classId = studentClassFilter.value;
+      if (!classId || !pendingStudentImportNames.length) {
+        setMessage(studentMessage, classId ? '请先解析名单' : '请选择班级', true);
+        return;
+      }
+
+      setButtonLoading(confirmStudentImport, true, '导入中...');
+      try {
+        const response = await fetch('/api/admin/students/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ classId, names: pendingStudentImportNames })
+        });
+        if (!response.ok) {
+          throw new Error(await readResponseError(response, '导入学生失败'));
+        }
+        const result = await response.json();
+        studentImportFile.value = '';
+        studentImportText.value = '';
+        studentImportPreview.textContent = '';
+        pendingStudentImportNames = [];
+        pendingStudentImportValidCount = 0;
+        await loadStudents();
+        setMessage(
+          studentMessage,
+          `导入完成：新增 ${result.added} 人，名单内重复 ${result.internalDuplicates} 人，已有 ${result.existing} 人，无效 ${result.invalid} 行`
+        );
+      } catch (error) {
+        setMessage(studentMessage, error.message || '导入学生失败', true);
+      } finally {
+        setButtonLoading(confirmStudentImport, false);
+        updateStudentWorkspaceState();
+      }
     }
 
     async function loadCurrentViewData(viewName) {
@@ -2780,10 +3167,7 @@
         if (!classes.length) {
           await loadClasses();
         }
-        const currentClassId = classes.some((classItem) => classItem.id === studentClassFilter.value)
-          ? studentClassFilter.value
-          : (classes[0]?.id || '');
-        fillClassSelect(studentClassFilter, currentClassId, '请选择班级');
+        refreshStudentClassFilter();
         await loadStudents();
       }
 
@@ -3760,6 +4144,7 @@
           classGroups = Array.isArray(parsed) ? [] : (parsed.classGroups || []);
           renderClassList();
           fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
+          refreshStudentClassFilter();
           updateSummary();
           setMessage(classMessage, `${classes.length} 个班级`);
           hasCachedData = true;
@@ -3788,11 +4173,15 @@
             classGroups = newClassGroups;
             renderClassList();
             fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
+            const studentClassChanged = refreshStudentClassFilter();
             updateSummary();
             setMessage(classMessage, `${classes.length} 个班级`);
             try {
               sessionStorage.setItem(cacheKey, JSON.stringify({ classes, classGroups }));
             } catch (e) {}
+            if (studentClassChanged && loadedAdminViews.has('students')) {
+              await loadStudents();
+            }
           }
         } catch(e) {}
       })();
@@ -5129,6 +5518,36 @@
       classPasswordInput.value = generatePassword();
     });
     createForm.addEventListener('submit', createSite);
+    addStudentForm.addEventListener('submit', createStudent);
+    studentClassFilter.addEventListener('change', () => {
+      selectedStudentIds.clear();
+      loadStudents();
+    });
+    studentSearchInput.addEventListener('input', () => {
+      if (studentSearchDebounceTimer) {
+        window.clearTimeout(studentSearchDebounceTimer);
+      }
+      studentSearchDebounceTimer = window.setTimeout(() => {
+        loadStudents();
+      }, 250);
+    });
+    parseStudentImportButton.addEventListener('click', previewStudentImport);
+    confirmStudentImport.addEventListener('click', importStudents);
+    deleteSelectedStudentsButton.addEventListener('click', deleteSelectedStudents);
+    studentImportFile.addEventListener('change', () => {
+      pendingStudentImportNames = [];
+      pendingStudentImportValidCount = 0;
+      studentImportPreview.textContent = studentImportFile.files && studentImportFile.files[0]
+        ? '文件已选择，请点击“解析名单”'
+        : '';
+      updateStudentWorkspaceState();
+    });
+    studentImportText.addEventListener('input', () => {
+      pendingStudentImportNames = [];
+      pendingStudentImportValidCount = 0;
+      studentImportPreview.textContent = studentImportText.value ? '名单已更改，请重新解析' : '';
+      updateStudentWorkspaceState();
+    });
     function debounceAdminSitesLoad() {
       if (adminSearchDebounceTimer) {
         window.clearTimeout(adminSearchDebounceTimer);

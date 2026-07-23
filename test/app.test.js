@@ -500,6 +500,16 @@ test('public admin exposes student roster management and local file import', asy
   assert.match(html, /src="\/vendor\/xlsx\.full\.min\.js"/);
   assert.match(html, /fetch\(`\/api\/admin\/students\?\$\{params\.toString\(\)\}`\)/);
   assert.match(html, /viewName === 'students'/);
+  assert.match(html, /async function loadStudents/);
+  assert.match(html, /method: 'PUT'/);
+  assert.match(html, /method: 'DELETE'/);
+  assert.match(html, /\/api\/admin\/students\/bulk-delete/);
+  assert.match(html, /\/api\/admin\/students\/import/);
+  assert.match(html, /confirm\(`确定删除学生/);
+  assert.match(html, /confirm\(`确定删除选中的 \$\{selectedStudentIds\.size\} 名学生吗/);
+  assert.match(html, /setButtonLoading\(confirmStudentImport/);
+  assert.match(html, /studentClassFilter\.addEventListener\('change'/);
+  assert.match(html, /studentSearchInput\.addEventListener\('input'/);
   assert.doesNotMatch(html, /https?:\/\/[^"']*xlsx/i);
 });
 
