@@ -612,19 +612,19 @@ test('public admin renders student roster as compact cards like forbidden words'
   assert.match(html, /\.student-list \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(auto-fill, minmax\(128px, 1fr\)\)/);
   assert.match(html, /\.student-row \{[^}]*display: flex;[^}]*justify-content: space-between/);
   assert.match(renderer, /const name = document\.createElement\('span'\)/);
-  assert.match(renderer, /row\.append\(checkLabel, name, deleteButton\)/);
+  assert.match(renderer, /row\.append\(checkLabel, name\)/);
   assert.doesNotMatch(renderer, /nameInput|classSelect|student-row-created|saveButton/);
 });
 
-test('public admin reveals a student delete action only after its card is clicked', async () => {
+test('public admin asks for confirmation when a student card is clicked without rendering a delete button', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
   const renderer = html.match(/function renderStudents\(\) \{[\s\S]*?\n    \}\n\n    async function loadStudents/)?.[0] || '';
 
-  assert.match(html, /\.student-row-delete \{[^}]*display: none/);
-  assert.match(html, /\.student-row\.is-actions-open \.student-row-delete \{[^}]*display: inline-flex/);
-  assert.match(renderer, /row\.addEventListener\('click',[\s\S]*?toggleStudentDeleteAction\(row\)/);
-  assert.match(html, /document\.addEventListener\('click', \(\) => closeStudentDeleteActions\(\)\)/);
-  assert.match(html, /event\.key === 'Escape'[\s\S]*?closeStudentDeleteActions\(\)/);
+  assert.match(renderer, /row\.addEventListener\('click',[\s\S]*?deleteStudent\(student\)/);
+  assert.match(renderer, /checkLabel\.addEventListener\('click', \(event\) => event\.stopPropagation\(\)\)/);
+  assert.match(html, /confirm\(`确定删除学生「\$\{student\.name\}」吗？`\)/);
+  assert.doesNotMatch(renderer, /deleteButton|student-row-delete|toggleStudentDeleteAction/);
+  assert.doesNotMatch(html, /\.student-row-delete|is-actions-open/);
 });
 
 test('public admin ignores stale student import parsing after source changes', async () => {

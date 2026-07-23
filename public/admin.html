@@ -536,7 +536,6 @@
     }
 
     .student-row {
-      position: relative;
       min-height: 34px;
       display: flex;
       align-items: center;
@@ -550,11 +549,6 @@
       font-size: 13px;
       line-height: 1.35;
       cursor: pointer;
-    }
-
-    .student-row.is-actions-open {
-      padding-right: 62px;
-      border-color: #fca5a5;
     }
 
     .student-row-check {
@@ -571,29 +565,6 @@
       min-width: 0;
       flex: 1 1 auto;
       overflow-wrap: anywhere;
-    }
-
-    .student-row-delete {
-      position: absolute;
-      top: 50%;
-      right: 7px;
-      z-index: 1;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      min-height: 28px;
-      padding: 0 9px;
-      border: 1px solid #fecdd3;
-      border-radius: 4px;
-      background: #fff1f2;
-      color: var(--danger);
-      font-size: 12px;
-      font-weight: 700;
-      transform: translateY(-50%);
-    }
-
-    .student-row.is-actions-open .student-row-delete {
-      display: inline-flex;
     }
 
     .student-empty {
@@ -2173,6 +2144,7 @@
     let classGroups = [];
     let students = [];
     const selectedStudentIds = new Set();
+    const studentDeletesInFlight = new Set();
     let pendingStudentImportNames = [];
     let pendingStudentImportValidCount = 0;
     let studentImportGeneration = 0;
@@ -2875,22 +2847,6 @@
       }
     }
 
-    function closeStudentDeleteActions(exceptRow = null) {
-      studentList.querySelectorAll('.student-row.is-actions-open').forEach((row) => {
-        if (row !== exceptRow) {
-          row.classList.remove('is-actions-open');
-          row.setAttribute('aria-expanded', 'false');
-        }
-      });
-    }
-
-    function toggleStudentDeleteAction(row) {
-      const shouldOpen = !row.classList.contains('is-actions-open');
-      closeStudentDeleteActions(row);
-      row.classList.toggle('is-actions-open', shouldOpen);
-      row.setAttribute('aria-expanded', String(shouldOpen));
-    }
-
     function renderStudents() {
       studentList.innerHTML = '';
       const classId = studentClassFilter.value;
@@ -2911,17 +2867,16 @@
         row.className = 'student-row';
         row.dataset.id = student.id;
         row.tabIndex = 0;
-        row.setAttribute('aria-expanded', 'false');
-        row.setAttribute('aria-label', `学生 ${student.name}，点击显示删除操作`);
+        row.setAttribute('aria-label', `学生 ${student.name}，点击删除`);
         row.addEventListener('click', (event) => {
           event.stopPropagation();
-          toggleStudentDeleteAction(row);
+          deleteStudent(student);
         });
         row.addEventListener('keydown', (event) => {
           if (event.target === row && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault();
             event.stopPropagation();
-            toggleStudentDeleteAction(row);
+            deleteStudent(student);
           }
         });
 
@@ -2946,16 +2901,7 @@
         name.className = 'student-row-name';
         name.textContent = student.name;
 
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'student-row-delete';
-        deleteButton.type = 'button';
-        deleteButton.textContent = '删除';
-        deleteButton.addEventListener('click', (event) => {
-          event.stopPropagation();
-          deleteStudent(student, deleteButton);
-        });
-
-        row.append(checkLabel, name, deleteButton);
+        row.append(checkLabel, name);
         studentList.append(row);
       });
 
@@ -3041,11 +2987,15 @@
       }
     }
 
-    async function deleteStudent(student, button) {
+    async function deleteStudent(student, button = null) {
+      if (studentDeletesInFlight.has(student.id)) {
+        return;
+      }
       if (!confirm(`确定删除学生「${student.name}」吗？`)) {
         return;
       }
 
+      studentDeletesInFlight.add(student.id);
       setButtonLoading(button, true, '删除中...');
       try {
         const response = await fetch(`/api/admin/students/${encodeURIComponent(student.id)}`, {
@@ -3060,6 +3010,7 @@
       } catch (error) {
         setMessage(studentMessage, error.message || '删除学生失败', true);
       } finally {
+        studentDeletesInFlight.delete(student.id);
         setButtonLoading(button, false);
       }
     }
@@ -5652,7 +5603,6 @@
     parseStudentImportButton.addEventListener('click', previewStudentImport);
     confirmStudentImport.addEventListener('click', importStudents);
     deleteSelectedStudentsButton.addEventListener('click', deleteSelectedStudents);
-    document.addEventListener('click', () => closeStudentDeleteActions());
     studentImportFile.addEventListener('change', () => {
       invalidateStudentImportPreview(studentImportFile.files && studentImportFile.files[0]
         ? '文件已选择，请点击“解析名单”'
@@ -5799,7 +5749,6 @@
     }, { passive: false });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        closeStudentDeleteActions();
         if (studentImportOverlay.classList.contains('is-open')) {
           closeStudentImportDialog();
         } else if (directedAiOverlay.classList.contains('is-open')) {
