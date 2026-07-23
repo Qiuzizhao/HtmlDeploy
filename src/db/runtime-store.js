@@ -429,7 +429,14 @@ class RuntimeStore {
 
   replaceClasses(classes) {
     const tx = this.db.transaction((items) => {
-      this.db.prepare('DELETE FROM classes WHERE id NOT IN (SELECT DISTINCT class_id FROM sites)').run();
+      this.db.prepare(`
+        DELETE FROM classes
+        WHERE id NOT IN (
+          SELECT DISTINCT class_id FROM sites
+          UNION
+          SELECT DISTINCT class_id FROM students
+        )
+      `).run();
       for (const [position, item] of items.entries()) {
         this.upsertClass({ ...item, position });
       }
@@ -795,6 +802,12 @@ class RuntimeStore {
 
   importStudents({ classId, names, idGenerator } = {}) {
     this.ensureReady();
+    const items = Array.isArray(names) ? names : [];
+    if (items.length > 2000) {
+      const error = new Error('一次最多导入 2,000 名学生');
+      error.code = 'STUDENT_IMPORT_LIMIT';
+      throw error;
+    }
     const targetClassId = this.assertStudentClass(classId);
     const result = {
       added: 0,
@@ -841,7 +854,7 @@ class RuntimeStore {
         }));
       }
     });
-    importTransaction(Array.isArray(names) ? names : []);
+    importTransaction(items);
     return result;
   }
 

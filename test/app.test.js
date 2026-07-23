@@ -850,6 +850,40 @@ test('student repository stores normalized names by class and imports atomically
   assert.equal(store.deleteStudents(['student-a', 'student-e']), 2);
 });
 
+test('student repository class reconciliation preserves classes with students', async () => {
+  const dataDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-student-classes-'));
+  const store = new RuntimeStore({ dbFile: path.join(dataDir, 'app.db'), dataDir });
+  store.replaceClasses([
+    { id: 'class-a', name: '一班' },
+    { id: 'class-b', name: '二班' }
+  ]);
+  store.createStudent({ id: 'student-a', classId: 'class-a', name: '张三' });
+
+  assert.doesNotThrow(() => store.replaceClasses([
+    { id: 'class-b', name: '二班' },
+    { id: 'class-a', name: '一班（更新）' }
+  ]));
+  assert.equal(store.getClass('class-a').name, '一班（更新）');
+  assert.equal(store.getStudent('student-a').classId, 'class-a');
+});
+
+test('student repository rejects imports larger than 2,000 entries', async () => {
+  const dataDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-student-import-limit-'));
+  const store = new RuntimeStore({ dbFile: path.join(dataDir, 'app.db'), dataDir });
+  store.upsertClass({ id: 'class-a', name: '一班' });
+  const names = Array.from({ length: 2001 }, (_, index) => `学生${index}`);
+
+  assert.throws(
+    () => store.importStudents({
+      classId: 'class-a',
+      names,
+      idGenerator: (() => { let index = 0; return () => `student-${index++}`; })()
+    }),
+    (error) => error.code === 'STUDENT_IMPORT_LIMIT'
+  );
+  assert.equal(store.countStudentsByClass('class-a'), 0);
+});
+
 test('site writes preserve records that were added after a stale read', async () => {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-data-guard-'));
   const sitesPath = path.join(root, 'sites.json');
