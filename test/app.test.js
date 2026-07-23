@@ -548,7 +548,24 @@ test('public admin reloads an opened student roster whenever class data changes'
   );
   assert.match(
     html,
-    /if \(classesChanged && loadedAdminViews\.has\('students'\)\) \{\s*await loadStudents\(\);\s*\}/
+    /if \(classesChanged\) \{\s*await refreshLoadedStudentRoster\(\);\s*\}/
+  );
+});
+
+test('public admin refreshes loaded student class selectors after a direct class update', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const updateClassStart = html.indexOf('async function updateClass(');
+  const updateClassEnd = html.indexOf('async function deleteClass(', updateClassStart);
+  const updateClassSource = html.slice(updateClassStart, updateClassEnd);
+
+  assert.ok(updateClassStart >= 0 && updateClassEnd > updateClassStart);
+  assert.match(
+    html,
+    /async function refreshLoadedStudentRoster\(\)[\s\S]*?refreshStudentClassFilter\(\);[\s\S]*?if \(loadedAdminViews\.has\('students'\)\) \{\s*await loadStudents\(\);\s*\}/
+  );
+  assert.match(
+    updateClassSource,
+    /classes\[index\] = updatedClass;[\s\S]*?await refreshLoadedStudentRoster\(\);/
   );
 });
 

@@ -2811,6 +2811,13 @@
       return previousClassId !== nextClassId;
     }
 
+    async function refreshLoadedStudentRoster() {
+      refreshStudentClassFilter();
+      if (loadedAdminViews.has('students')) {
+        await loadStudents();
+      }
+    }
+
     function renderStudents() {
       studentList.innerHTML = '';
       const classId = studentClassFilter.value;
@@ -4195,15 +4202,16 @@
             classGroups = newClassGroups;
             renderClassList();
             fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
-            refreshStudentClassFilter();
+            if (classesChanged) {
+              await refreshLoadedStudentRoster();
+            } else {
+              refreshStudentClassFilter();
+            }
             updateSummary();
             setMessage(classMessage, `${classes.length} 个班级`);
             try {
               sessionStorage.setItem(cacheKey, JSON.stringify({ classes, classGroups }));
             } catch (e) {}
-            if (classesChanged && loadedAdminViews.has('students')) {
-              await loadStudents();
-            }
           }
         } catch(e) {}
       })();
@@ -5332,6 +5340,7 @@
       if (index !== -1) {
         classes[index] = updatedClass;
       }
+      await refreshLoadedStudentRoster();
       // 更新项目列表中的班级名称
       sites.forEach(s => {
         if (s.classId === updatedClass.id) {
