@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Do not change the student API or persisted data.
-- Each card contains only checkbox, name, and delete action.
+- Each card shows only checkbox and name by default; clicking it reveals its delete action.
 - Preserve single-delete and bulk-delete behavior.
 
 ---
@@ -38,7 +38,7 @@ Expected: FAIL because the existing renderer still creates name input, class sel
 
 - [ ] **Step 3: Write minimal implementation**
 
-Change `.student-list` to an auto-fill grid matching `.forbidden-results`; change `.student-row` to a compact flex card; render a name span and existing delete button after the checkbox.
+Change `.student-list` to an auto-fill grid matching `.forbidden-results`; change `.student-row` to a compact flex card; hide the delete action until its card is clicked, and close it on outside click or `Escape`.
 
 - [ ] **Step 4: Run test to verify it passes**
 

@@ -536,6 +536,7 @@
     }
 
     .student-row {
+      position: relative;
       min-height: 34px;
       display: flex;
       align-items: center;
@@ -548,6 +549,12 @@
       color: #1e293b;
       font-size: 13px;
       line-height: 1.35;
+      cursor: pointer;
+    }
+
+    .student-row.is-actions-open {
+      padding-right: 62px;
+      border-color: #fca5a5;
     }
 
     .student-row-check {
@@ -567,7 +574,13 @@
     }
 
     .student-row-delete {
-      flex: 0 0 auto;
+      position: absolute;
+      top: 50%;
+      right: 7px;
+      z-index: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
       min-height: 28px;
       padding: 0 9px;
       border: 1px solid #fecdd3;
@@ -576,6 +589,11 @@
       color: var(--danger);
       font-size: 12px;
       font-weight: 700;
+      transform: translateY(-50%);
+    }
+
+    .student-row.is-actions-open .student-row-delete {
+      display: inline-flex;
     }
 
     .student-empty {
@@ -2857,6 +2875,22 @@
       }
     }
 
+    function closeStudentDeleteActions(exceptRow = null) {
+      studentList.querySelectorAll('.student-row.is-actions-open').forEach((row) => {
+        if (row !== exceptRow) {
+          row.classList.remove('is-actions-open');
+          row.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    function toggleStudentDeleteAction(row) {
+      const shouldOpen = !row.classList.contains('is-actions-open');
+      closeStudentDeleteActions(row);
+      row.classList.toggle('is-actions-open', shouldOpen);
+      row.setAttribute('aria-expanded', String(shouldOpen));
+    }
+
     function renderStudents() {
       studentList.innerHTML = '';
       const classId = studentClassFilter.value;
@@ -2876,9 +2910,24 @@
         const row = document.createElement('div');
         row.className = 'student-row';
         row.dataset.id = student.id;
+        row.tabIndex = 0;
+        row.setAttribute('aria-expanded', 'false');
+        row.setAttribute('aria-label', `学生 ${student.name}，点击显示删除操作`);
+        row.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleStudentDeleteAction(row);
+        });
+        row.addEventListener('keydown', (event) => {
+          if (event.target === row && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleStudentDeleteAction(row);
+          }
+        });
 
         const checkLabel = document.createElement('label');
         checkLabel.className = 'student-row-check';
+        checkLabel.addEventListener('click', (event) => event.stopPropagation());
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = selectedStudentIds.has(student.id);
@@ -2901,7 +2950,10 @@
         deleteButton.className = 'student-row-delete';
         deleteButton.type = 'button';
         deleteButton.textContent = '删除';
-        deleteButton.addEventListener('click', () => deleteStudent(student, deleteButton));
+        deleteButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          deleteStudent(student, deleteButton);
+        });
 
         row.append(checkLabel, name, deleteButton);
         studentList.append(row);
@@ -5600,6 +5652,7 @@
     parseStudentImportButton.addEventListener('click', previewStudentImport);
     confirmStudentImport.addEventListener('click', importStudents);
     deleteSelectedStudentsButton.addEventListener('click', deleteSelectedStudents);
+    document.addEventListener('click', () => closeStudentDeleteActions());
     studentImportFile.addEventListener('change', () => {
       invalidateStudentImportPreview(studentImportFile.files && studentImportFile.files[0]
         ? '文件已选择，请点击“解析名单”'
@@ -5746,6 +5799,7 @@
     }, { passive: false });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
+        closeStudentDeleteActions();
         if (studentImportOverlay.classList.contains('is-open')) {
           closeStudentImportDialog();
         } else if (directedAiOverlay.classList.contains('is-open')) {

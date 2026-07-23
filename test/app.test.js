@@ -616,6 +616,17 @@ test('public admin renders student roster as compact cards like forbidden words'
   assert.doesNotMatch(renderer, /nameInput|classSelect|student-row-created|saveButton/);
 });
 
+test('public admin reveals a student delete action only after its card is clicked', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const renderer = html.match(/function renderStudents\(\) \{[\s\S]*?\n    \}\n\n    async function loadStudents/)?.[0] || '';
+
+  assert.match(html, /\.student-row-delete \{[^}]*display: none/);
+  assert.match(html, /\.student-row\.is-actions-open \.student-row-delete \{[^}]*display: inline-flex/);
+  assert.match(renderer, /row\.addEventListener\('click',[\s\S]*?toggleStudentDeleteAction\(row\)/);
+  assert.match(html, /document\.addEventListener\('click', \(\) => closeStudentDeleteActions\(\)\)/);
+  assert.match(html, /event\.key === 'Escape'[\s\S]*?closeStudentDeleteActions\(\)/);
+});
+
 test('public admin ignores stale student import parsing after source changes', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 
