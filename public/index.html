@@ -100,6 +100,40 @@
       gap: 10px;
     }
 
+    .student-identity {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 6px 0 12px;
+      border: 1px solid #64748b;
+      border-radius: 999px;
+      background: #475569;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .student-identity.is-visible { display: inline-flex; }
+
+    .student-logout {
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #fff;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    #authorInput[readonly] {
+      background: #f3f4f6;
+      color: #475569;
+      cursor: not-allowed;
+    }
+
+    body.is-student-mode .admin-link { display: none; }
+
     .admin-link {
       min-height: 40px;
       padding: 0 14px;
@@ -954,6 +988,9 @@
         gap: 8px;
       }
 
+      .student-identity { max-width: 150px; padding-left: 10px; }
+      .student-identity-name { overflow: hidden; text-overflow: ellipsis; }
+
       .admin-link {
         min-height: 38px;
         padding: 0 11px;
@@ -1081,6 +1118,10 @@
       <span>项目站</span>
     </div>
     <div class="top-actions">
+      <div class="student-identity" id="studentIdentity">
+        <span class="student-identity-name" id="studentIdentityName"></span>
+        <button class="student-logout" id="studentLogout" type="button">退出</button>
+      </div>
       <a class="admin-link" href="/admin.html">后台管理</a>
       <button class="upload-button" id="openUpload" type="button">＋ 上传网页</button>
     </div>
@@ -1224,6 +1265,9 @@
     const projectOrderButton = document.getElementById('projectOrderButton');
     const starredFilterButton = document.getElementById('starredFilterButton');
     const classProjectCount = document.getElementById('classProjectCount');
+    const studentIdentity = document.getElementById('studentIdentity');
+    const studentIdentityName = document.getElementById('studentIdentityName');
+    const studentLogout = document.getElementById('studentLogout');
     const currentClassLabel = document.getElementById('currentClassLabel');
     const codeTitle = document.getElementById('codeTitle');
     const codeMeta = document.getElementById('codeMeta');
@@ -1268,6 +1312,7 @@
     let uploadRulesLoaded = false;
     let uploadRulesPromise = null;
     let currentClassId = getStoredClassId();
+    let studentSession = null;
     let siteSearchDebounceTimer = null;
     let siteRenderToken = 0;
     let siteLoadToken = 0;
@@ -1330,14 +1375,50 @@
       return classes.find((item) => item.id === currentClassId);
     }
 
+    function getUploadClassId() {
+      return studentSession?.classItem?.id || currentClassId;
+    }
+
+    function getUploadClass() {
+      const classId = getUploadClassId();
+      return classes.find((item) => item.id === classId);
+    }
+
     function hasCurrentClassAccess() {
       const currentClass = getCurrentClass();
+      if (studentSession && currentClass) {
+        return studentSession.allWorks || currentClass.id === studentSession.classItem.id;
+      }
       return Boolean(currentClassId && currentClass && (currentClass.passwordEnabled === false || unlockedClassIds.has(currentClassId)));
     }
 
     function canUploadCurrentClass() {
-      const currentClass = getCurrentClass();
-      return Boolean(hasCurrentClassAccess() && currentClass.uploadEnabled !== false);
+      const uploadClass = getUploadClass();
+      if (studentSession) {
+        return Boolean(uploadClass && uploadClass.uploadEnabled !== false);
+      }
+      return Boolean(hasCurrentClassAccess() && uploadClass && uploadClass.uploadEnabled !== false);
+    }
+
+    async function loadStudentSession() {
+      const response = await fetch('/api/student-session');
+      if (!response.ok) return;
+      const result = await response.json();
+      if (!result.student) return;
+      studentSession = result;
+      currentClassId = result.classItem.id;
+      rememberSelectedClassId(currentClassId);
+      document.body.classList.add('is-student-mode');
+      studentIdentityName.textContent = `${result.classItem.name} · ${result.student.name}`;
+      studentIdentity.classList.add('is-visible');
+      authorInput.value = result.student.name;
+      authorInput.readOnly = true;
+    }
+
+    async function logoutStudent() {
+      const response = await fetch('/api/student-logout', { method: 'POST' });
+      const result = await response.json().catch(() => ({}));
+      location.href = result.portalPath || '/';
     }
 
       function findForbiddenWordMatch(title, author) {
@@ -1376,9 +1457,9 @@
       }
 
       function updateUploadButtonState() {
-        const currentClass = getCurrentClass();
-      const uploadDisabledByClass = Boolean(currentClassId && currentClass && currentClass.uploadEnabled === false);
-      openUploadButton.disabled = !classes.length || !currentClassId || !hasCurrentClassAccess() || uploadDisabledByClass;
+      const uploadClass = getUploadClass();
+      const uploadDisabledByClass = Boolean(uploadClass && uploadClass.uploadEnabled === false);
+      openUploadButton.disabled = !classes.length || !getUploadClassId() || !canUploadCurrentClass() || uploadDisabledByClass;
       openUploadButton.title = uploadDisabledByClass ? '当前班级已禁用上传网页' : '';
     }
 
@@ -1416,12 +1497,13 @@
     }
 
     function openUpload() {
-      if (!currentClassId) {
+      const uploadClassId = getUploadClassId();
+      if (!uploadClassId) {
         showEmptyState('请先到后台创建班级，再上传网页。');
         return;
       }
 
-      if (!unlockedClassIds.has(currentClassId)) {
+      if (!studentSession && !unlockedClassIds.has(currentClassId)) {
         // 尝试从当前的文本中提取数量，或者重新加载
         loadSites();
         return;
@@ -1434,8 +1516,14 @@
 
       uploadMessage.textContent = '';
       uploadForm.reset();
-      const currentClass = getCurrentClass();
-      currentClassLabel.textContent = `当前班级：${currentClass ? currentClass.name : '未选择'}`;
+      const uploadClass = getUploadClass();
+      currentClassLabel.textContent = studentSession
+        ? `固定班级：${uploadClass ? uploadClass.name : studentSession.classItem.name} · 固定作者：${studentSession.student.name}`
+        : `当前班级：${uploadClass ? uploadClass.name : '未选择'}`;
+      if (studentSession) {
+        authorInput.value = studentSession.student.name;
+        authorInput.readOnly = true;
+      }
       openOverlay(uploadOverlay);
       titleInput.focus();
       ensureUploadRulesLoaded().catch(() => {
@@ -1959,14 +2047,17 @@
       classTabs.innerHTML = '';
       updateUploadButtonState();
 
-      const allButton = document.createElement('button');
-      allButton.className = `class-tab${currentClassId ? '' : ' is-active'}`;
-      allButton.type = 'button';
-      allButton.textContent = '全部作品';
-      allButton.addEventListener('click', () => selectClass(''));
       const primaryRow = document.createElement('div');
       primaryRow.className = 'primary-class-tab-row';
-      primaryRow.append(allButton, starredFilterButton);
+      if (!studentSession || studentSession.allWorks) {
+        const allButton = document.createElement('button');
+        allButton.className = `class-tab${currentClassId ? '' : ' is-active'}`;
+        allButton.type = 'button';
+        allButton.textContent = '全部作品';
+        allButton.addEventListener('click', () => selectClass(''));
+        primaryRow.append(allButton);
+      }
+      primaryRow.append(starredFilterButton);
       classTabs.append(primaryRow);
 
       const appendGroup = (name, matchesGroup) => {
@@ -1999,7 +2090,9 @@
     }
 
     async function loadClasses() {
-      const cacheKey = 'classes_cache_public';
+      const cacheKey = studentSession
+        ? `classes_cache_student_${studentSession.student.id}_${studentSession.allWorks ? 'all' : 'own'}`
+        : 'classes_cache_public';
       let hasCachedData = false;
       try {
         const cached = sessionStorage.getItem(cacheKey);
@@ -2093,7 +2186,7 @@
       const loadToken = ++siteLoadToken;
       
       let needsPassword = false;
-      if (currentClassId) {
+      if (!studentSession && currentClassId) {
         const currentClass = classes.find(c => c.id === currentClassId);
         if (currentClass && currentClass.passwordEnabled !== false && !unlockedClassIds.has(currentClassId)) {
           needsPassword = true;
@@ -2104,7 +2197,9 @@
         ? `/api/sites?classId=${encodeURIComponent(currentClassId)}`
         : '/api/sites';
 
-      const cacheKey = `sites_cache_${currentClassId || 'all'}`;
+      const cacheKey = studentSession
+        ? `sites_cache_student_${studentSession.student.id}_${currentClassId || 'all'}`
+        : `sites_cache_${currentClassId || 'all'}`;
       let hasCachedData = false;
 
       if (!needsPassword) {
@@ -2231,7 +2326,7 @@
         const response = await fetch('/api/upload-ai-name', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ classId: currentClassId, htmlContent })
+          body: JSON.stringify({ classId: getUploadClassId(), htmlContent })
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -2328,7 +2423,7 @@
         const formData = new FormData();
         formData.append('title', title);
         formData.append('author', author);
-        formData.append('classId', currentClassId);
+        formData.append('classId', getUploadClassId());
         formData.append('htmlContent', htmlContent);
         if (file) {
           formData.append('file', file, file.name);
@@ -2361,6 +2456,7 @@
     });
 
     openUploadButton.addEventListener('click', openUpload);
+    studentLogout.addEventListener('click', logoutStudent);
     refreshClassSitesButton.addEventListener('click', refreshCurrentClassSites);
     projectSearchInput.addEventListener('input', debounceProjectSearchRender);
     projectOrderButton.addEventListener('click', () => {
@@ -2425,6 +2521,7 @@
 
     async function boot() {
       updateProjectFilterControls();
+      await loadStudentSession();
       await loadClasses();
       await loadSites();
     }

@@ -164,6 +164,9 @@ function rowToClass(row = {}) {
     password: row.password,
     uploadEnabled: row.upload_enabled !== 0,
     passwordEnabled: row.password_enabled !== 0,
+    studentPortalEnabled: row.student_portal_enabled === 1,
+    studentPortalAllWorks: row.student_portal_all_works === 1,
+    studentPortalToken: row.student_portal_token || '',
     groupId: row.group_id || '',
     position: Math.max(0, Number(row.position) || 0),
     createdAt: row.created_at,
@@ -202,6 +205,9 @@ function normalizeClass(classItem = {}) {
     password: String(classItem.password || '').trim(),
     uploadEnabled: classItem.uploadEnabled !== false,
     passwordEnabled: classItem.passwordEnabled !== false,
+    studentPortalEnabled: classItem.studentPortalEnabled === true,
+    studentPortalAllWorks: classItem.studentPortalAllWorks === true,
+    studentPortalToken: String(classItem.studentPortalToken || '').trim(),
     groupId: String(classItem.groupId || '').trim(),
     position: Math.max(0, Number(classItem.position) || 0),
     createdAt: String(classItem.createdAt || nowIso()),
@@ -405,13 +411,24 @@ class RuntimeStore {
       return;
     }
     this.db.prepare(`
-      INSERT INTO classes (id, name, password, upload_enabled, password_enabled, group_id, created_at, updated_at, position)
-      VALUES (@id, @name, @password, @uploadEnabled, @passwordEnabled, @groupId, @createdAt, @updatedAt, @position)
+      INSERT INTO classes (
+        id, name, password, upload_enabled, password_enabled,
+        student_portal_enabled, student_portal_all_works, student_portal_token,
+        group_id, created_at, updated_at, position
+      )
+      VALUES (
+        @id, @name, @password, @uploadEnabled, @passwordEnabled,
+        @studentPortalEnabled, @studentPortalAllWorks, @studentPortalToken,
+        @groupId, @createdAt, @updatedAt, @position
+      )
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         password = excluded.password,
         upload_enabled = excluded.upload_enabled,
         password_enabled = excluded.password_enabled,
+        student_portal_enabled = excluded.student_portal_enabled,
+        student_portal_all_works = excluded.student_portal_all_works,
+        student_portal_token = excluded.student_portal_token,
         group_id = excluded.group_id,
         created_at = COALESCE(classes.created_at, excluded.created_at),
         updated_at = excluded.updated_at,
@@ -422,6 +439,9 @@ class RuntimeStore {
       password: item.password || '000000',
       uploadEnabled: item.uploadEnabled ? 1 : 0,
       passwordEnabled: item.passwordEnabled ? 1 : 0,
+      studentPortalEnabled: item.studentPortalEnabled ? 1 : 0,
+      studentPortalAllWorks: item.studentPortalAllWorks ? 1 : 0,
+      studentPortalToken: item.studentPortalToken,
       groupId: item.groupId,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,

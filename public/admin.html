@@ -520,6 +520,38 @@
       white-space: nowrap;
     }
 
+    .student-portal-settings {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .student-portal-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .student-portal-link {
+      min-width: 180px;
+      flex: 1 1 240px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .student-portal-settings .button.is-active {
+      border-color: var(--brand-dark);
+      background: #eff6ff;
+      color: var(--brand-dark);
+    }
+
     .student-list {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
@@ -1815,6 +1847,14 @@
             <button class="danger-button" id="deleteSelectedStudents" type="button" disabled>删除选中</button>
             <span id="studentCount">0 名学生</span>
           </div>
+          <div class="student-portal-settings" aria-label="专属班级页设置">
+            <span class="student-portal-label">专属班级页</span>
+            <button class="button" id="toggleStudentPortal" type="button">启用专属页</button>
+            <button class="button" id="toggleStudentPortalAllWorks" type="button">仅本班作品</button>
+            <button class="button" id="copyStudentPortalLink" type="button">复制专属链接</button>
+            <button class="button" id="resetStudentPortalLink" type="button">重置链接</button>
+            <span class="student-portal-link" id="studentPortalLink">请选择班级</span>
+          </div>
           <div id="studentList" class="student-list"></div>
         </div>
       </section>
@@ -2104,6 +2144,11 @@
     const studentCount = document.getElementById('studentCount');
     const deleteSelectedStudentsButton = document.getElementById('deleteSelectedStudents');
     const studentMessage = document.getElementById('studentMessage');
+    const toggleStudentPortal = document.getElementById('toggleStudentPortal');
+    const toggleStudentPortalAllWorks = document.getElementById('toggleStudentPortalAllWorks');
+    const copyStudentPortalLink = document.getElementById('copyStudentPortalLink');
+    const resetStudentPortalLink = document.getElementById('resetStudentPortalLink');
+    const studentPortalLink = document.getElementById('studentPortalLink');
     const dedupeSitesButton = document.getElementById('dedupeSitesButton');
     const reviewAllSiteNamesButton = document.getElementById('reviewAllSiteNamesButton');
     const auditForbiddenSitesButton = document.getElementById('auditForbiddenSitesButton');
@@ -2836,8 +2881,87 @@
         ? previousClassId
         : (classes[0]?.id || '');
       fillClassSelect(studentClassFilter, nextClassId, '请选择班级');
+      renderStudentPortalControls();
       updateStudentWorkspaceState();
       return previousClassId !== nextClassId;
+    }
+
+    function getSelectedStudentClass() {
+      return classes.find((item) => item.id === studentClassFilter.value) || null;
+    }
+
+    function getStudentPortalUrl(classItem) {
+      return classItem?.studentPortalToken
+        ? `${location.origin}/class/${encodeURIComponent(classItem.studentPortalToken)}`
+        : '';
+    }
+
+    function renderStudentPortalControls() {
+      const classItem = getSelectedStudentClass();
+      const enabled = classItem?.studentPortalEnabled === true;
+      const allWorks = classItem?.studentPortalAllWorks === true;
+      const url = getStudentPortalUrl(classItem);
+      toggleStudentPortal.disabled = !classItem;
+      toggleStudentPortalAllWorks.disabled = !classItem || !enabled;
+      copyStudentPortalLink.disabled = !classItem || !enabled || !url;
+      resetStudentPortalLink.disabled = !classItem;
+      toggleStudentPortal.textContent = enabled ? '停用专属页' : '启用专属页';
+      toggleStudentPortal.classList.toggle('is-active', enabled);
+      toggleStudentPortalAllWorks.textContent = allWorks ? '已开放全部作品' : '仅本班作品';
+      toggleStudentPortalAllWorks.classList.toggle('is-active', allWorks);
+      studentPortalLink.textContent = enabled && url ? url : (classItem ? '专属页未启用' : '请选择班级');
+      studentPortalLink.title = enabled ? url : '';
+    }
+
+    async function updateStudentPortalSettings(changes, button) {
+      const classItem = getSelectedStudentClass();
+      if (!classItem) return;
+      setButtonLoading(button, true, '保存中...');
+      const response = await fetch(`/api/admin/classes/${encodeURIComponent(classItem.id)}/student-portal`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes)
+      });
+      setButtonLoading(button, false);
+      if (!response.ok) {
+        setMessage(studentMessage, await readResponseError(response, '保存专属页设置失败'), true);
+        return;
+      }
+      const updatedClass = await response.json();
+      const index = classes.findIndex((item) => item.id === updatedClass.id);
+      if (index !== -1) classes[index] = updatedClass;
+      renderStudentPortalControls();
+      setMessage(studentMessage, '专属班级页设置已保存');
+    }
+
+    async function copyCurrentStudentPortalLink() {
+      const url = getStudentPortalUrl(getSelectedStudentClass());
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        setMessage(studentMessage, '专属班级链接已复制');
+      } catch {
+        window.prompt('复制专属班级链接', url);
+      }
+    }
+
+    async function resetCurrentStudentPortalLink() {
+      const classItem = getSelectedStudentClass();
+      if (!classItem || !confirm('确定重置专属链接吗？旧链接和学生登录状态将立即失效。')) return;
+      setButtonLoading(resetStudentPortalLink, true, '重置中...');
+      const response = await fetch(`/api/admin/classes/${encodeURIComponent(classItem.id)}/student-portal/reset-link`, {
+        method: 'POST'
+      });
+      setButtonLoading(resetStudentPortalLink, false);
+      if (!response.ok) {
+        setMessage(studentMessage, await readResponseError(response, '重置链接失败'), true);
+        return;
+      }
+      const updatedClass = await response.json();
+      const index = classes.findIndex((item) => item.id === updatedClass.id);
+      if (index !== -1) classes[index] = updatedClass;
+      renderStudentPortalControls();
+      setMessage(studentMessage, '专属链接已重置，旧链接已失效');
     }
 
     async function refreshLoadedStudentRoster() {
@@ -5590,6 +5714,7 @@
     cancelStudentImportButton.addEventListener('click', () => closeStudentImportDialog());
     studentClassFilter.addEventListener('change', () => {
       selectedStudentIds.clear();
+      renderStudentPortalControls();
       loadStudents();
     });
     studentSearchInput.addEventListener('input', () => {
@@ -5603,6 +5728,16 @@
     parseStudentImportButton.addEventListener('click', previewStudentImport);
     confirmStudentImport.addEventListener('click', importStudents);
     deleteSelectedStudentsButton.addEventListener('click', deleteSelectedStudents);
+    toggleStudentPortal.addEventListener('click', () => {
+      const classItem = getSelectedStudentClass();
+      if (classItem) updateStudentPortalSettings({ enabled: classItem.studentPortalEnabled !== true }, toggleStudentPortal);
+    });
+    toggleStudentPortalAllWorks.addEventListener('click', () => {
+      const classItem = getSelectedStudentClass();
+      if (classItem) updateStudentPortalSettings({ allWorks: classItem.studentPortalAllWorks !== true }, toggleStudentPortalAllWorks);
+    });
+    copyStudentPortalLink.addEventListener('click', copyCurrentStudentPortalLink);
+    resetStudentPortalLink.addEventListener('click', resetCurrentStudentPortalLink);
     studentImportFile.addEventListener('change', () => {
       invalidateStudentImportPreview(studentImportFile.files && studentImportFile.files[0]
         ? '文件已选择，请点击“解析名单”'

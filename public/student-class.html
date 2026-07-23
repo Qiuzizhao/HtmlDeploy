@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>班级专属页 - 项目站</title>
+  <link rel="icon" href="/favicon-site-mark.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef3f8;
+      --panel: #fff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d7dee8;
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .shell { width: min(980px, calc(100vw - 32px)); margin: 0 auto; padding: 48px 0 72px; }
+    .head { margin-bottom: 24px; text-align: center; }
+    .brand { color: var(--brand); font-size: 14px; font-weight: 800; letter-spacing: .08em; }
+    h1 { margin: 8px 0 8px; font-size: clamp(28px, 5vw, 42px); line-height: 1.2; }
+    .hint { margin: 0; color: var(--muted); font-size: 15px; }
+    .panel {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 16px 44px rgba(31, 41, 55, .08);
+    }
+    .student-bubbles {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      min-height: 120px;
+    }
+    .student-bubble {
+      min-width: 112px;
+      min-height: 52px;
+      padding: 0 22px;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1e40af;
+      font: inherit;
+      font-size: 16px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .student-bubble:hover { border-color: var(--brand); background: #dbeafe; transform: translateY(-1px); }
+    .student-bubble:focus-visible { outline: 3px solid rgba(37, 99, 235, .25); outline-offset: 2px; }
+    .student-bubble:disabled { cursor: wait; opacity: .55; transform: none; }
+    .state { width: 100%; padding: 34px 12px; color: var(--muted); text-align: center; }
+    .state.is-error { color: var(--danger); }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 20px, 980px); padding-top: 28px; }
+      .panel { padding: 14px; border-radius: 14px; }
+      .student-bubbles { gap: 9px; }
+      .student-bubble { min-width: calc(50% - 5px); min-height: 50px; padding: 0 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="head">
+      <div class="brand">项目站 · 班级专属页</div>
+      <h1 id="className">正在加载班级...</h1>
+      <p class="hint">点击自己的姓名进入项目站</p>
+    </header>
+    <section class="panel" aria-live="polite">
+      <div class="student-bubbles" id="studentBubbles">
+        <div class="state">正在加载学生名单...</div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const className = document.getElementById('className');
+    const studentBubbles = document.getElementById('studentBubbles');
+    const portalToken = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');
+
+    function showState(text, isError = false) {
+      studentBubbles.innerHTML = '';
+      const state = document.createElement('div');
+      state.className = `state${isError ? ' is-error' : ''}`;
+      state.textContent = text;
+      studentBubbles.append(state);
+    }
+
+    async function loginStudent(studentId, button) {
+      studentBubbles.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+      try {
+        const response = await fetch('/api/student-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: portalToken, studentId })
+        });
+        const result = await response.json().catch(() => ({ error: '登录失败' }));
+        if (!response.ok) {
+          throw new Error(result.error || '登录失败');
+        }
+        location.href = '/?student=1';
+      } catch (error) {
+        showState(error.message || '登录失败，请刷新后重试', true);
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
+    async function loadPortal() {
+      if (!portalToken) {
+        className.textContent = '链接无效';
+        showState('班级专属链接不完整', true);
+        return;
+      }
+      const response = await fetch(`/api/student-portal/${encodeURIComponent(portalToken)}`);
+      const result = await response.json().catch(() => ({ error: '加载失败' }));
+      if (!response.ok) {
+        className.textContent = '班级专属页不可用';
+        showState(result.error || '链接不存在或已停用', true);
+        return;
+      }
+      className.textContent = result.className;
+      document.title = `${result.className} - 班级专属页`;
+      studentBubbles.innerHTML = '';
+      if (!result.students.length) {
+        showState('教师尚未添加学生名单');
+        return;
+      }
+      result.students.forEach((student) => {
+        const button = document.createElement('button');
+        button.className = 'student-bubble';
+        button.type = 'button';
+        button.textContent = student.name;
+        button.addEventListener('click', () => loginStudent(student.id, button));
+        studentBubbles.append(button);
+      });
+    }
+
+    loadPortal().catch((error) => {
+      className.textContent = '加载失败';
+      showState(error.message || '网络错误，请稍后重试', true);
+    });
+  </script>
+</body>
+</html>

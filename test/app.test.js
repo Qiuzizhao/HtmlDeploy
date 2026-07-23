@@ -224,7 +224,7 @@ test('public index loads class buttons and uploads to the selected class', async
   assert.match(html, /fetch\('\/api\/classes'\)/);
   assert.match(html, /\/api\/classes\/\$\{encodeURIComponent\(classId\)\}\/unlock/);
   assert.match(html, /\/api\/sites\?classId=/);
-  assert.match(html, /formData\.append\('classId', currentClassId\)/);
+  assert.match(html, /formData\.append\('classId', getUploadClassId\(\)\)/);
 });
 
 test('public index keeps the selected class after refresh', async () => {
@@ -325,8 +325,9 @@ test('public index renders an all tab before class buttons', async () => {
   assert.match(html, /allButton\.addEventListener\('click', \(\) => selectClass\(''\)\)/);
   assert.match(html, /const primaryRow = document\.createElement\('div'\)/);
   assert.match(html, /primaryRow\.className = 'primary-class-tab-row'/);
-  assert.match(html, /primaryRow\.append\(allButton, starredFilterButton\)/);
-  assert.ok(html.indexOf('primaryRow.append(allButton, starredFilterButton)') < html.indexOf('classGroups.forEach'));
+  assert.match(html, /primaryRow\.append\(allButton\)/);
+  assert.match(html, /primaryRow\.append\(starredFilterButton\)/);
+  assert.ok(html.indexOf('primaryRow.append(allButton)') < html.indexOf('classGroups.forEach'));
   assert.match(html, /\.primary-class-tab-row \{[^}]*display: flex;[^}]*gap: 8px;[^}]*flex-wrap: nowrap;/);
 });
 
@@ -1318,6 +1319,30 @@ test('sqlite repositories expose runtime store operations', async () => {
   } finally {
     store.db.close();
   }
+});
+
+test('class repository persists student portal settings', async () => {
+  const dataDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'html-deploy-student-portal-class-'));
+  const store = new RuntimeStore({ dbFile: path.join(dataDir, 'app.db'), dataDir });
+
+  store.upsertClass({
+    id: 'class-a',
+    name: '六6',
+    studentPortalEnabled: true,
+    studentPortalAllWorks: true,
+    studentPortalToken: 'portal-token'
+  });
+
+  assert.deepEqual(
+    {
+      enabled: store.getClass('class-a').studentPortalEnabled,
+      allWorks: store.getClass('class-a').studentPortalAllWorks,
+      token: store.getClass('class-a').studentPortalToken
+    },
+    { enabled: true, allWorks: true, token: 'portal-token' }
+  );
+  assert.equal(store.getMeta('schema_version'), '4');
+  store.db.close();
 });
 
 test('student repository stores normalized names by class and imports atomically', async () => {
@@ -4163,6 +4188,126 @@ test('student roster APIs require admin access', async () => {
   await request(app).put('/api/admin/students/student-a').send({ name: '李四' }).expect(401);
   await request(app).delete('/api/admin/students/student-a').expect(401);
   await request(app).post('/api/admin/students/bulk-delete').send({ ids: ['student-a'] }).expect(401);
+  await request(app).patch('/api/admin/classes/class-a/student-portal').send({ enabled: true }).expect(401);
+  await request(app).post('/api/admin/classes/class-a/student-portal/reset-link').expect(401);
+});
+
+test('student portal login restricts browsing and server-locks upload identity', async () => {
+  const ids = ['class-a', 'class-b', 'student-a', 'site-b', 'site-student'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '六6' }).expect(201);
+  await admin.post('/api/classes').send({ name: '六7' }).expect(201);
+  await admin.post('/api/admin/students').send({ classId: 'class-a', name: '张三' }).expect(201);
+  const configured = await admin
+    .patch('/api/admin/classes/class-a/student-portal')
+    .send({ enabled: true, allWorks: false })
+    .expect(200);
+  assert.equal(configured.body.studentPortalEnabled, true);
+  assert.equal(configured.body.studentPortalAllWorks, false);
+  assert.match(configured.body.studentPortalToken, /^[a-f0-9]{32}$/);
+  const publicClasses = await request(app).get('/api/classes').expect(200);
+  assert.equal(publicClasses.body[0].studentPortalToken, undefined);
+
+  await request(app)
+    .post('/api/sites')
+    .field('title', '其他班作品')
+    .field('author', '李四')
+    .field('classId', 'class-b')
+    .attach('file', Buffer.from('<!doctype html><html><body>other</body></html>'), { filename: 'other.html' })
+    .expect(201);
+
+  const portal = await request(app)
+    .get(`/api/student-portal/${configured.body.studentPortalToken}`)
+    .expect(200);
+  assert.equal(portal.body.className, '六6');
+  assert.deepEqual(portal.body.students, [{ id: 'student-a', name: '张三' }]);
+
+  const student = request.agent(app);
+  await student
+    .post('/api/student-login')
+    .send({ token: configured.body.studentPortalToken, studentId: 'student-a' })
+    .expect(200);
+  const session = await student.get('/api/student-session').expect(200);
+  assert.deepEqual(
+    {
+      studentId: session.body.student.id,
+      name: session.body.student.name,
+      classId: session.body.classItem.id,
+      className: session.body.classItem.name,
+      allWorks: session.body.allWorks
+    },
+    { studentId: 'student-a', name: '张三', classId: 'class-a', className: '六6', allWorks: false }
+  );
+  const visibleClasses = await student.get('/api/classes').expect(200);
+  assert.deepEqual(visibleClasses.body.map((item) => item.id), ['class-a']);
+  await student.get('/api/sites?classId=class-b').expect(403);
+  await student.get('/site/site-b').expect(401);
+
+  const uploaded = await student
+    .post('/api/sites')
+    .field('title', '我的作品')
+    .field('author', '伪造作者')
+    .field('classId', 'class-b')
+    .attach('file', Buffer.from('<!doctype html><html><body>student</body></html>'), { filename: 'student.html' })
+    .expect(201);
+  assert.equal(uploaded.body.author, '张三');
+  assert.equal(uploaded.body.classId, 'class-a');
+
+  await admin
+    .patch('/api/admin/classes/class-a/student-portal')
+    .send({ allWorks: true })
+    .expect(200);
+  const allClasses = await student.get('/api/classes').expect(200);
+  assert.deepEqual(allClasses.body.map((item) => item.id), ['class-a', 'class-b']);
+  await student.get('/site/site-b').expect(200);
+
+  await student.post('/api/student-logout').expect(200);
+  const loggedOut = await student.get('/api/student-session').expect(200);
+  assert.equal(loggedOut.body.student, null);
+});
+
+test('student portal reset invalidates its old link and existing session', async () => {
+  const ids = ['class-a', 'student-a'];
+  const { app } = await makeTestApp({ idGenerator: () => ids.shift() });
+  const admin = request.agent(app);
+  await admin.post('/admin-login').type('form').send({ password: 'qqqyyy' }).expect(303);
+  await admin.post('/api/classes').send({ name: '六6' }).expect(201);
+  await admin.post('/api/admin/students').send({ classId: 'class-a', name: '张三' }).expect(201);
+  const configured = await admin
+    .patch('/api/admin/classes/class-a/student-portal')
+    .send({ enabled: true })
+    .expect(200);
+  const student = request.agent(app);
+  await student
+    .post('/api/student-login')
+    .send({ token: configured.body.studentPortalToken, studentId: 'student-a' })
+    .expect(200);
+
+  const reset = await admin.post('/api/admin/classes/class-a/student-portal/reset-link').expect(200);
+  assert.notEqual(reset.body.studentPortalToken, configured.body.studentPortalToken);
+  await request(app).get(`/api/student-portal/${configured.body.studentPortalToken}`).expect(404);
+  const session = await student.get('/api/student-session').expect(200);
+  assert.equal(session.body.student, null);
+});
+
+test('student class portal and identity controls are exposed in public pages', async () => {
+  const portalHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'student-class.html'), 'utf8');
+  const indexHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const adminHtml = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(portalHtml, /id="studentBubbles"/);
+  assert.match(portalHtml, /fetch\(`\/api\/student-portal\/\$\{encodeURIComponent\(portalToken\)\}`\)/);
+  assert.match(portalHtml, /fetch\('\/api\/student-login'/);
+  assert.match(indexHtml, /id="studentIdentity"/);
+  assert.match(indexHtml, /id="studentLogout"/);
+  assert.match(indexHtml, /fetch\('\/api\/student-session'/);
+  assert.match(indexHtml, /authorInput\.readOnly = true/);
+  assert.match(adminHtml, /id="toggleStudentPortal"/);
+  assert.match(adminHtml, /id="toggleStudentPortalAllWorks"/);
+  assert.match(adminHtml, /id="copyStudentPortalLink"/);
+  assert.match(adminHtml, /id="resetStudentPortalLink"/);
 });
 
 test('admin student list requires an existing class scope', async () => {

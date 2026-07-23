@@ -13,6 +13,7 @@ const DEFAULT_ADMIN_PASSWORD = 'qqqyyy';
 const ADMIN_COOKIE_NAME = 'html_deploy_admin';
 const CLASS_COOKIE_PREFIX = 'html_deploy_class_';
 const ALL_COOKIE_NAME = 'html_deploy_all';
+const STUDENT_COOKIE_NAME = 'html_deploy_student';
 const MAX_FORBIDDEN_WORDS = 100000;
 const THUMBNAIL_URL_CACHE_TTL_MS = 30000;
 const THUMBNAIL_EXTENSION = 'jpg';
@@ -589,6 +590,10 @@ function createAllToken(settings) {
     .createHash('sha256')
     .update(`html-deploy-all:${settings.allPassword || ''}`)
     .digest('hex');
+}
+
+function createStudentPortalToken() {
+  return crypto.randomBytes(16).toString('hex');
 }
 
 function parseCookies(header = '') {
@@ -1800,6 +1805,81 @@ function createApp(options = {}) {
     return isValidAdminPassword(settings.adminPassword) ? settings.adminPassword : fallbackAdminPassword;
   }
 
+  function getStudentSessionSecret() {
+    const settings = runtimeStore.getSettings({ includeForbiddenWords: false, includeForbiddenWordsCount: false });
+    return String(options.studentSessionSecret || settings.adminPassword || fallbackAdminPassword);
+  }
+
+  function createStudentSessionToken(student, classItem) {
+    const payload = Buffer.from(JSON.stringify({
+      studentId: student.id,
+      classId: classItem.id,
+      portalToken: classItem.studentPortalToken,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000
+    })).toString('base64url');
+    const signature = crypto
+      .createHmac('sha256', getStudentSessionSecret())
+      .update(payload)
+      .digest('base64url');
+    return `${payload}.${signature}`;
+  }
+
+  function readStudentSession(req) {
+    const value = parseCookies(req.headers.cookie)[STUDENT_COOKIE_NAME];
+    const [payload, signature, extra] = String(value || '').split('.');
+    if (!payload || !signature || extra) {
+      return null;
+    }
+    const expected = crypto
+      .createHmac('sha256', getStudentSessionSecret())
+      .update(payload)
+      .digest('base64url');
+    const providedBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expected);
+    if (providedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
+      return null;
+    }
+
+    let session;
+    try {
+      session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    } catch {
+      return null;
+    }
+    if (!session.expiresAt || Date.now() >= Number(session.expiresAt)) {
+      return null;
+    }
+
+    const student = runtimeStore.getStudent(session.studentId);
+    const classItem = runtimeStore.getClass(session.classId);
+    if (!student || !classItem || student.classId !== classItem.id) {
+      return null;
+    }
+    if (classItem.studentPortalEnabled !== true
+      || !classItem.studentPortalToken
+      || session.portalToken !== classItem.studentPortalToken) {
+      return null;
+    }
+    return {
+      student,
+      classItem,
+      allWorks: classItem.studentPortalAllWorks === true,
+      portalPath: `/class/${encodeURIComponent(classItem.studentPortalToken)}`
+    };
+  }
+
+  function toStudentSessionResponse(session) {
+    if (!session) {
+      return { student: null };
+    }
+    return {
+      student: { id: session.student.id, name: session.student.name },
+      classItem: { id: session.classItem.id, name: session.classItem.name },
+      allWorks: session.allWorks,
+      portalPath: session.portalPath
+    };
+  }
+
   async function hasAdminAccess(req) {
     const cookies = parseCookies(req.headers.cookie);
     return cookies[ADMIN_COOKIE_NAME] === createAdminToken(await getAdminPassword());
@@ -1857,6 +1937,11 @@ function createApp(options = {}) {
 
     if (!site.classId) {
       return true;
+    }
+
+    const studentSession = readStudentSession(req);
+    if (studentSession) {
+      return studentSession.allWorks || site.classId === studentSession.classItem.id;
     }
 
     const classItem = await readClass(classesFile, site.classId);
@@ -2361,13 +2446,73 @@ function createApp(options = {}) {
     res.sendFile(path.join(publicDir, 'index.html'));
   });
 
+  app.get('/class/:token', (req, res) => {
+    res.sendFile(path.join(publicDir, 'student-class.html'));
+  });
+
+  app.get('/api/student-portal/:token', (req, res) => {
+    const token = String(req.params.token || '').trim();
+    const classItem = runtimeStore.listClasses().find((item) => (
+      item.studentPortalEnabled === true && item.studentPortalToken === token
+    ));
+    if (!classItem) {
+      return res.status(404).json({ error: '专属班级页不存在或已停用' });
+    }
+    return res.json({
+      className: classItem.name,
+      students: runtimeStore.listStudents({ classId: classItem.id })
+        .map((student) => ({ id: student.id, name: student.name }))
+    });
+  });
+
+  app.post('/api/student-login', (req, res) => {
+    const token = String(req.body && req.body.token || '').trim();
+    const studentId = String(req.body && req.body.studentId || '').trim();
+    const classItem = runtimeStore.listClasses().find((item) => (
+      item.studentPortalEnabled === true && item.studentPortalToken === token
+    ));
+    const student = runtimeStore.getStudent(studentId);
+    if (!classItem || !student || student.classId !== classItem.id) {
+      return res.status(401).json({ error: '学生身份无效，请重新打开班级专属页' });
+    }
+    res.cookie(STUDENT_COOKIE_NAME, createStudentSessionToken(student, classItem), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    return res.json(toStudentSessionResponse({
+      student,
+      classItem,
+      allWorks: classItem.studentPortalAllWorks === true,
+      portalPath: `/class/${encodeURIComponent(classItem.studentPortalToken)}`
+    }));
+  });
+
+  app.get('/api/student-session', (req, res) => {
+    return res.json(toStudentSessionResponse(readStudentSession(req)));
+  });
+
+  app.post('/api/student-logout', (req, res) => {
+    const session = readStudentSession(req);
+    res.clearCookie(STUDENT_COOKIE_NAME, { httpOnly: true, sameSite: 'lax' });
+    return res.json({ ok: true, portalPath: session?.portalPath || '/' });
+  });
+
   app.get('/api/sites', async (req, res, next) => {
     try {
-      const { classId } = req.query;
+      let classId = typeof req.query.classId === 'string' ? req.query.classId.trim() : '';
       const sites = activeSitesOnly(await readSites(dataFile));
       const classes = await readClasses(classesFile);
       const classMap = createClassMap(classes);
       const settings = await readSettings(settingsFile);
+      const studentSession = readStudentSession(req);
+
+      if (studentSession && !studentSession.allWorks) {
+        if (classId && classId !== studentSession.classItem.id) {
+          return res.status(403).json({ error: '当前学生只能查看本班作品' });
+        }
+        classId = studentSession.classItem.id;
+      }
 
       if (classId) {
         const classItem = classes.find((item) => item.id === classId);
@@ -2375,11 +2520,13 @@ function createApp(options = {}) {
           return res.status(404).json({ error: '班级不存在' });
         }
 
-        if (!hasClassAccess(req, classItem)) {
+        const studentCanReadClass = studentSession
+          && (studentSession.allWorks || classItem.id === studentSession.classItem.id);
+        if (!studentCanReadClass && !hasClassAccess(req, classItem)) {
           const count = sites.filter((site) => site.classId === classId && site.enabled !== false).length;
           return res.status(401).json({ error: '请输入班级密码', count });
         }
-      } else if (!hasAllAccess(req, settings)) {
+      } else if (!(studentSession && studentSession.allWorks) && !hasAllAccess(req, settings)) {
         return res.status(401).json({ error: '请输入全部作品页密码', count: sites.filter((site) => site.enabled !== false).length });
       }
 
@@ -2395,7 +2542,11 @@ function createApp(options = {}) {
   app.get('/api/classes', async (req, res, next) => {
     try {
       const classes = await readClasses(classesFile);
-      res.json(classes.map(toPublicClass));
+      const studentSession = readStudentSession(req);
+      const visibleClasses = studentSession && !studentSession.allWorks
+        ? classes.filter((item) => item.id === studentSession.classItem.id)
+        : classes;
+      res.json(visibleClasses.map(toPublicClass));
     } catch (error) {
       next(error);
     }
@@ -2403,6 +2554,12 @@ function createApp(options = {}) {
 
   app.get('/api/class-groups', async (req, res, next) => {
     try {
+      const studentSession = readStudentSession(req);
+      if (studentSession && !studentSession.allWorks) {
+        const classItem = studentSession.classItem;
+        const groups = await readClassGroups(classesFile);
+        return res.json(groups.filter((group) => group.id === classItem.groupId));
+      }
       res.json(await readClassGroups(classesFile));
     } catch (error) {
       next(error);
@@ -2511,6 +2668,55 @@ function createApp(options = {}) {
       if (respondToStudentStoreError(res, error)) {
         return undefined;
       }
+      return next(error);
+    }
+  });
+
+  app.patch('/api/admin/classes/:id/student-portal', requireAdmin, async (req, res, next) => {
+    try {
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      if (body.enabled !== undefined && typeof body.enabled !== 'boolean') {
+        return res.status(400).json({ error: '专属页状态必须是布尔值' });
+      }
+      if (body.allWorks !== undefined && typeof body.allWorks !== 'boolean') {
+        return res.status(400).json({ error: '全部作品状态必须是布尔值' });
+      }
+      const classes = await readClasses(classesFile);
+      const index = classes.findIndex((item) => item.id === req.params.id);
+      if (index === -1) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+      const previous = classes[index];
+      classes[index] = {
+        ...previous,
+        studentPortalEnabled: body.enabled === undefined ? previous.studentPortalEnabled === true : body.enabled,
+        studentPortalAllWorks: body.allWorks === undefined ? previous.studentPortalAllWorks === true : body.allWorks,
+        studentPortalToken: previous.studentPortalToken
+          || ((body.enabled === true) ? createStudentPortalToken() : ''),
+        updatedAt: new Date().toISOString()
+      };
+      await writeClasses(classesFile, classes);
+      return res.json(classes[index]);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/admin/classes/:id/student-portal/reset-link', requireAdmin, async (req, res, next) => {
+    try {
+      const classes = await readClasses(classesFile);
+      const index = classes.findIndex((item) => item.id === req.params.id);
+      if (index === -1) {
+        return res.status(404).json({ error: '班级不存在' });
+      }
+      classes[index] = {
+        ...classes[index],
+        studentPortalToken: createStudentPortalToken(),
+        updatedAt: new Date().toISOString()
+      };
+      await writeClasses(classesFile, classes);
+      return res.json(classes[index]);
+    } catch (error) {
       return next(error);
     }
   });
@@ -3282,7 +3488,10 @@ function createApp(options = {}) {
 
   app.post('/api/upload-ai-name', async (req, res) => {
     try {
-      const classId = String(req.body.classId || '').trim();
+      const studentSession = readStudentSession(req);
+      const classId = studentSession
+        ? studentSession.classItem.id
+        : String(req.body.classId || '').trim();
       const htmlContent = String(req.body.htmlContent || '').trim();
       const classes = await readClasses(classesFile);
       const classItem = classes.find((item) => item.id === classId);
@@ -3290,7 +3499,7 @@ function createApp(options = {}) {
       if (!classItem) {
         return res.status(400).json({ error: '请选择有效班级' });
       }
-      if (!hasClassAccess(req, classItem)) {
+      if (!studentSession && !hasClassAccess(req, classItem)) {
         return res.status(401).json({ error: '请先输入班级访问密码' });
       }
       if (classItem.uploadEnabled === false) {
@@ -3309,11 +3518,14 @@ function createApp(options = {}) {
       const title = await nameSiteWithLlm({
         codeSnapshot: htmlContent,
         currentTitle: '',
-        author: '',
+        author: studentSession?.student.name || '',
         llmConfig
       });
       const settings = await readSettings(settingsFile, { includeForbiddenWords: true });
-      const forbiddenMatch = findForbiddenWordMatch({ title, author: '' }, settings.forbiddenWords);
+      const forbiddenMatch = findForbiddenWordMatch({
+        title,
+        author: studentSession?.student.name || ''
+      }, settings.forbiddenWords);
       if (forbiddenMatch) {
         return res.status(400).json({ error: createForbiddenWordError(forbiddenMatch) });
       }
@@ -3329,9 +3541,14 @@ function createApp(options = {}) {
 
   app.post('/api/sites', upload.single('file'), async (req, res, next) => {
       try {
+        const studentSession = readStudentSession(req);
         const title = String(req.body.title || '').trim();
-        const author = String(req.body.author || '').trim();
-        const classId = String(req.body.classId || '').trim();
+        const author = studentSession
+          ? studentSession.student.name
+          : String(req.body.author || '').trim();
+        const classId = studentSession
+          ? studentSession.classItem.id
+          : String(req.body.classId || '').trim();
       const htmlContent = String(req.body.htmlContent || '').trim();
       const file = req.file;
       const classes = await readClasses(classesFile);

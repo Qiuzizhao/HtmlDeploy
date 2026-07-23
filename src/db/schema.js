@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = '3';
+const SCHEMA_VERSION = '4';
 
 function applySchema(db) {
   db.exec(`
@@ -24,6 +24,9 @@ function applySchema(db) {
       password TEXT NOT NULL,
       upload_enabled INTEGER NOT NULL DEFAULT 1,
       password_enabled INTEGER NOT NULL DEFAULT 1,
+      student_portal_enabled INTEGER NOT NULL DEFAULT 0,
+      student_portal_all_works INTEGER NOT NULL DEFAULT 0,
+      student_portal_token TEXT NOT NULL DEFAULT '',
       group_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT,
@@ -147,6 +150,15 @@ function applySchema(db) {
   }
   if (!classColumns.includes('position')) {
     db.exec('ALTER TABLE classes ADD COLUMN position INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!classColumns.includes('student_portal_enabled')) {
+    db.exec('ALTER TABLE classes ADD COLUMN student_portal_enabled INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!classColumns.includes('student_portal_all_works')) {
+    db.exec('ALTER TABLE classes ADD COLUMN student_portal_all_works INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!classColumns.includes('student_portal_token')) {
+    db.exec("ALTER TABLE classes ADD COLUMN student_portal_token TEXT NOT NULL DEFAULT ''");
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_classes_group_id ON classes(group_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_classes_position ON classes(position)');
