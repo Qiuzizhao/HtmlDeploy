@@ -513,6 +513,45 @@ test('public admin exposes student roster management and local file import', asy
   assert.doesNotMatch(html, /https?:\/\/[^"']*xlsx/i);
 });
 
+test('public admin ignores stale student import parsing after source changes', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(html, /let studentImportGeneration = 0/);
+  assert.match(
+    html,
+    /function invalidateStudentImportPreview[\s\S]*?studentImportGeneration \+= 1[\s\S]*?pendingStudentImportNames = \[\]/
+  );
+  assert.match(
+    html,
+    /async function previewStudentImport[\s\S]*?const parseGeneration = \+\+studentImportGeneration;[\s\S]*?await parseStudentImportSource\(\);[\s\S]*?if \(parseGeneration !== studentImportGeneration\) \{\s*return;/
+  );
+  assert.match(
+    html,
+    /studentImportFile\.addEventListener\('change',[\s\S]*?invalidateStudentImportPreview\(/
+  );
+  assert.match(
+    html,
+    /studentImportText\.addEventListener\('input',[\s\S]*?invalidateStudentImportPreview\(/
+  );
+  assert.match(
+    html,
+    /studentImportFile\.value = '';[\s\S]*?studentImportText\.value = '';[\s\S]*?invalidateStudentImportPreview\(\);/
+  );
+});
+
+test('public admin reloads an opened student roster whenever class data changes', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+
+  assert.match(
+    html,
+    /const classesChanged = JSON\.stringify\(classes\) !== JSON\.stringify\(newClasses\)/
+  );
+  assert.match(
+    html,
+    /if \(classesChanged && loadedAdminViews\.has\('students'\)\) \{\s*await loadStudents\(\);\s*\}/
+  );
+});
+
 test('public admin keeps the page-size label horizontal', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 

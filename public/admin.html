@@ -2121,6 +2121,7 @@
     const selectedStudentIds = new Set();
     let pendingStudentImportNames = [];
     let pendingStudentImportValidCount = 0;
+    let studentImportGeneration = 0;
     let studentSearchDebounceTimer = null;
     let studentLoadSequence = 0;
     let classBulkOperationRunning = false;
@@ -3077,10 +3078,27 @@
       studentImportPreview.append(sample);
     }
 
+    function invalidateStudentImportPreview(message = '') {
+      studentImportGeneration += 1;
+      pendingStudentImportNames = [];
+      pendingStudentImportValidCount = 0;
+      studentImportPreview.textContent = message;
+      setButtonLoading(parseStudentImportButton, false);
+      updateStudentWorkspaceState();
+    }
+
     async function previewStudentImport() {
+      const parseGeneration = ++studentImportGeneration;
+      pendingStudentImportNames = [];
+      pendingStudentImportValidCount = 0;
+      studentImportPreview.textContent = '正在解析名单...';
+      updateStudentWorkspaceState();
       setButtonLoading(parseStudentImportButton, true, '解析中...');
       try {
         const rawNames = await parseStudentImportSource();
+        if (parseGeneration !== studentImportGeneration) {
+          return;
+        }
         const validNames = [];
         const seen = new Set();
         let internalDuplicates = 0;
@@ -3102,13 +3120,18 @@
         renderStudentImportPreview(validNames, internalDuplicates, invalid);
         setMessage(studentMessage, validNames.length ? '名单已解析，请确认后导入' : '名单中没有可导入的姓名', validNames.length === 0);
       } catch (error) {
+        if (parseGeneration !== studentImportGeneration) {
+          return;
+        }
         pendingStudentImportNames = [];
         pendingStudentImportValidCount = 0;
         studentImportPreview.textContent = '解析名单失败';
         setMessage(studentMessage, error.message || '解析名单失败', true);
       } finally {
-        setButtonLoading(parseStudentImportButton, false);
-        updateStudentWorkspaceState();
+        if (parseGeneration === studentImportGeneration) {
+          setButtonLoading(parseStudentImportButton, false);
+          updateStudentWorkspaceState();
+        }
       }
     }
 
@@ -3132,9 +3155,7 @@
         const result = await response.json();
         studentImportFile.value = '';
         studentImportText.value = '';
-        studentImportPreview.textContent = '';
-        pendingStudentImportNames = [];
-        pendingStudentImportValidCount = 0;
+        invalidateStudentImportPreview();
         await loadStudents();
         setMessage(
           studentMessage,
@@ -4166,20 +4187,21 @@
             classesResponse.json(),
             groupsResponse.json()
           ]);
-          const changed = JSON.stringify(classes) !== JSON.stringify(newClasses)
-            || JSON.stringify(classGroups) !== JSON.stringify(newClassGroups);
+          const classesChanged = JSON.stringify(classes) !== JSON.stringify(newClasses);
+          const classGroupsChanged = JSON.stringify(classGroups) !== JSON.stringify(newClassGroups);
+          const changed = classesChanged || classGroupsChanged;
           if (!hasCachedData || changed) {
             classes = newClasses;
             classGroups = newClassGroups;
             renderClassList();
             fillClassSelect(rankingClassFilter, rankingClassFilter.value, '全部班级');
-            const studentClassChanged = refreshStudentClassFilter();
+            refreshStudentClassFilter();
             updateSummary();
             setMessage(classMessage, `${classes.length} 个班级`);
             try {
               sessionStorage.setItem(cacheKey, JSON.stringify({ classes, classGroups }));
             } catch (e) {}
-            if (studentClassChanged && loadedAdminViews.has('students')) {
+            if (classesChanged && loadedAdminViews.has('students')) {
               await loadStudents();
             }
           }
@@ -5535,18 +5557,12 @@
     confirmStudentImport.addEventListener('click', importStudents);
     deleteSelectedStudentsButton.addEventListener('click', deleteSelectedStudents);
     studentImportFile.addEventListener('change', () => {
-      pendingStudentImportNames = [];
-      pendingStudentImportValidCount = 0;
-      studentImportPreview.textContent = studentImportFile.files && studentImportFile.files[0]
+      invalidateStudentImportPreview(studentImportFile.files && studentImportFile.files[0]
         ? '文件已选择，请点击“解析名单”'
-        : '';
-      updateStudentWorkspaceState();
+        : '');
     });
     studentImportText.addEventListener('input', () => {
-      pendingStudentImportNames = [];
-      pendingStudentImportValidCount = 0;
-      studentImportPreview.textContent = studentImportText.value ? '名单已更改，请重新解析' : '';
-      updateStudentWorkspaceState();
+      invalidateStudentImportPreview(studentImportText.value ? '名单已更改，请重新解析' : '');
     });
     function debounceAdminSitesLoad() {
       if (adminSearchDebounceTimer) {
