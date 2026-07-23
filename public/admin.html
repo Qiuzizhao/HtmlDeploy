@@ -2122,6 +2122,7 @@
     let pendingStudentImportNames = [];
     let pendingStudentImportValidCount = 0;
     let studentImportGeneration = 0;
+    let studentImportsInFlight = 0;
     let studentSearchDebounceTimer = null;
     let studentLoadSequence = 0;
     let classBulkOperationRunning = false;
@@ -2798,7 +2799,9 @@
       studentNameInput.disabled = !hasClass;
       addStudentForm.querySelector('button[type="submit"]').disabled = !hasClass;
       deleteSelectedStudentsButton.disabled = !hasClass || selectedStudentIds.size === 0;
-      confirmStudentImport.disabled = !hasClass || pendingStudentImportValidCount === 0;
+      confirmStudentImport.disabled = !hasClass
+        || pendingStudentImportValidCount === 0
+        || studentImportsInFlight > 0;
     }
 
     function refreshStudentClassFilter() {
@@ -2894,9 +2897,10 @@
 
     async function loadStudents(classId = studentClassFilter.value) {
       const updatesCurrentClass = classId === studentClassFilter.value;
-      const requestId = updatesCurrentClass
-        ? ++studentLoadSequence
-        : studentLoadSequence;
+      if (!updatesCurrentClass) {
+        return;
+      }
+      const requestId = ++studentLoadSequence;
       if (!classId) {
         students = [];
         selectedStudentIds.clear();
@@ -3153,6 +3157,7 @@
       }
 
       const names = [...pendingStudentImportNames];
+      studentImportsInFlight += 1;
       setButtonLoading(confirmStudentImport, true, '导入中...');
       try {
         const response = await fetch('/api/admin/students/import', {
@@ -3181,7 +3186,10 @@
         }
         setMessage(studentMessage, error.message || '导入学生失败', true);
       } finally {
-        setButtonLoading(confirmStudentImport, false);
+        studentImportsInFlight = Math.max(0, studentImportsInFlight - 1);
+        if (studentImportsInFlight === 0) {
+          setButtonLoading(confirmStudentImport, false);
+        }
         updateStudentWorkspaceState();
       }
     }

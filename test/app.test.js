@@ -36,6 +36,7 @@ function extractInlineFunctionSource(html, functionName) {
 function createStudentImportHarness(functionSource, dependencies) {
   return new Function('dependencies', `
     let studentImportGeneration = dependencies.generation;
+    let studentImportsInFlight = Number(dependencies.importsInFlight) || 0;
     let pendingStudentImportNames = [...dependencies.names];
     let pendingStudentImportValidCount = pendingStudentImportNames.length;
     const studentClassFilter = dependencies.studentClassFilter;
@@ -67,6 +68,7 @@ function createStudentImportHarness(functionSource, dependencies) {
       getState() {
         return {
           generation: studentImportGeneration,
+          importsInFlight: studentImportsInFlight,
           names: [...pendingStudentImportNames],
           validCount: pendingStudentImportValidCount
         };
@@ -729,65 +731,184 @@ test('public admin suppresses an older import error after the selected class cha
   ]);
 });
 
-test('public admin background roster reload cannot replace a newer selected class view', async () => {
+test('public admin keeps import confirmation disabled while an import is in flight', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const functionSource = extractInlineFunctionSource(html, 'updateStudentWorkspaceState');
+  const confirmStudentImport = { disabled: false };
+  const harness = new Function('dependencies', `
+    let pendingStudentImportValidCount = 1;
+    let studentImportsInFlight = 1;
+    const studentClassFilter = { value: 'class-a' };
+    const studentSearchInput = { disabled: false };
+    const studentNameInput = { disabled: false };
+    const addStudentButton = { disabled: false };
+    const addStudentForm = { querySelector: () => addStudentButton };
+    const deleteSelectedStudentsButton = { disabled: false };
+    const selectedStudentIds = new Set();
+    const confirmStudentImport = dependencies.confirmStudentImport;
+    ${functionSource}
+    return {
+      updateStudentWorkspaceState,
+      setImportsInFlight(value) {
+        studentImportsInFlight = value;
+      }
+    };
+  `)({ confirmStudentImport });
+
+  harness.updateStudentWorkspaceState();
+  assert.equal(confirmStudentImport.disabled, true);
+
+  harness.setImportsInFlight(0);
+  harness.updateStudentWorkspaceState();
+  assert.equal(confirmStudentImport.disabled, false);
+});
+
+test('public admin stale import finally cannot release another active import', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  const functionSource = extractInlineFunctionSource(html, 'importStudents');
+  const loadingCalls = [];
+  let resolveResponse;
+  const responsePromise = new Promise((resolve) => {
+    resolveResponse = resolve;
+  });
+  const confirmStudentImport = { disabled: false };
+  const harness = createStudentImportHarness(functionSource, {
+    generation: 10,
+    importsInFlight: 1,
+    names: ['旧名单'],
+    studentClassFilter: { value: 'class-a' },
+    studentImportFile: { value: 'old.xlsx' },
+    studentImportText: { value: '' },
+    confirmStudentImport,
+    fetch() {
+      return responsePromise;
+    },
+    async loadStudents() {},
+    setButtonLoading(button, loading) {
+      button.disabled = loading;
+      loadingCalls.push(loading);
+    },
+    setMessage() {
+      assert.fail('a stale completion must not show a result message');
+    },
+    studentMessage: {},
+    async readResponseError() {
+      return '导入学生失败';
+    },
+    updateStudentWorkspaceState() {},
+    onInvalidate() {
+      assert.fail('a stale completion must not clear the newer preview');
+    }
+  });
+
+  const oldImport = harness.importStudents();
+  harness.setContext({ generation: 11, classId: 'class-a', names: ['新名单'] });
+  resolveResponse({
+    ok: true,
+    async json() {
+      return { added: 1, internalDuplicates: 0, existing: 0, invalid: 0 };
+    }
+  });
+  await oldImport;
+
+  assert.equal(harness.getState().importsInFlight, 1);
+  assert.equal(confirmStudentImport.disabled, true);
+  assert.deepEqual(loadingCalls, [true]);
+});
+
+test('public admin old-class refresh stays silent after the selected class view settles', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
   const functionSource = extractInlineFunctionSource(html, 'loadStudents');
   const pendingResponses = [];
   const studentClassFilter = { value: 'class-b' };
+  const calls = {
+    loading: [],
+    messages: [],
+    renders: []
+  };
   const harness = new Function('dependencies', `
     let studentLoadSequence = 0;
     let students = [];
     const studentClassFilter = dependencies.studentClassFilter;
     const studentSearchInput = { value: '' };
-    const selectedStudentIds = new Set();
+    const selectedStudentIds = new Set(['student-b']);
     const studentCount = { textContent: '' };
-    const studentList = {};
-    const studentMessage = {};
+    const studentList = { state: 'idle' };
+    const studentMessage = { textContent: '', isError: false };
     const classes = [{ id: 'class-a' }, { id: 'class-b' }];
     const fetch = dependencies.fetch;
-    const renderStudents = dependencies.renderStudents;
-    const renderListLoading = () => {};
-    const setMessage = dependencies.setMessage;
+    function renderStudents() {
+      studentList.state = 'rendered';
+      dependencies.calls.renders.push(students.map((student) => student.id));
+    }
+    function renderListLoading(_element, message) {
+      studentList.state = 'loading';
+      dependencies.calls.loading.push(message);
+    }
+    function setMessage(element, message, isError = false, options = {}) {
+      element.textContent = message;
+      element.isError = isError;
+      dependencies.calls.messages.push({ message, isError, loading: Boolean(options.loading) });
+    }
     const readResponseError = async () => '加载学生名单失败';
     ${functionSource}
     return {
       loadStudents,
-      getStudents: () => students,
-      getCount: () => studentCount.textContent
+      getSnapshot: () => ({
+        students: students.map((student) => student.id),
+        selected: [...selectedStudentIds],
+        count: studentCount.textContent,
+        listState: studentList.state,
+        message: studentMessage.textContent,
+        messageIsError: studentMessage.isError
+      })
     };
   `)({
     studentClassFilter,
+    calls,
     fetch(url) {
       return new Promise((resolve) => {
         pendingResponses.push({ url, resolve });
       });
-    },
-    renderStudents() {},
-    setMessage() {}
+    }
   });
 
   const currentClassLoad = harness.loadStudents();
-  const completedImportClassLoad = harness.loadStudents('class-a');
-  assert.equal(pendingResponses.length, 2);
-
+  assert.equal(pendingResponses.length, 1);
   pendingResponses[0].resolve({
     ok: true,
     async json() {
       return { students: [{ id: 'student-b', classId: 'class-b', name: '二班学生' }], total: 1 };
     }
   });
-  pendingResponses[1].resolve({
-    ok: true,
-    async json() {
-      return { students: [{ id: 'student-a', classId: 'class-a', name: '一班学生' }], total: 1 };
-    }
-  });
-  await Promise.all([currentClassLoad, completedImportClassLoad]);
+  await currentClassLoad;
+
+  const settledSnapshot = harness.getSnapshot();
+  const settledCallCounts = {
+    loading: calls.loading.length,
+    messages: calls.messages.length,
+    renders: calls.renders.length
+  };
+  const requestCount = pendingResponses.length;
+  const oldClassRefresh = harness.loadStudents('class-a');
+  if (pendingResponses.length > requestCount) {
+    assert.match(pendingResponses.at(-1).url, /classId=class-a/);
+    pendingResponses.at(-1).resolve({
+      ok: true,
+      async json() {
+        return { students: [{ id: 'student-a', classId: 'class-a', name: '一班学生' }], total: 1 };
+      }
+    });
+  }
+  await oldClassRefresh;
 
   assert.match(pendingResponses[0].url, /classId=class-b/);
-  assert.match(pendingResponses[1].url, /classId=class-a/);
-  assert.deepEqual(harness.getStudents().map((student) => student.id), ['student-b']);
-  assert.equal(harness.getCount(), '1 名学生');
+  assert.deepEqual(harness.getSnapshot(), settledSnapshot);
+  assert.deepEqual({
+    loading: calls.loading.length,
+    messages: calls.messages.length,
+    renders: calls.renders.length
+  }, settledCallCounts);
 });
 
 test('public admin reloads an opened student roster whenever class data changes', async () => {
