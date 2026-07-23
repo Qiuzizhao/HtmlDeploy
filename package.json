@@ -14,7 +14,8 @@
     "compression": "^1.8.1",
     "express": "^4.19.2",
     "multer": "^2.0.2",
-    "playwright": "^1.60.0"
+    "playwright": "^1.60.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "supertest": "^7.0.0"

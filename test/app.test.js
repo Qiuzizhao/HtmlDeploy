@@ -488,6 +488,21 @@ test('public admin page exposes project CRUD controls', async () => {
   assert.match(html, /formData\.append\('htmlContent'/);
 });
 
+test('public admin exposes student roster management and local file import', async () => {
+  const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
+  assert.ok(html.indexOf('data-view-target="classes"') < html.indexOf('data-view-target="students"'));
+  assert.match(html, /data-admin-view="students"/);
+  assert.match(html, /id="studentClassFilter"/);
+  assert.match(html, /id="studentSearchInput"/);
+  assert.match(html, /id="studentImportFile"[^>]+accept="\.xlsx,\.csv/);
+  assert.match(html, /id="studentImportText"/);
+  assert.match(html, /id="studentImportPreview"/);
+  assert.match(html, /src="\/vendor\/xlsx\.full\.min\.js"/);
+  assert.match(html, /fetch\(`\/api\/admin\/students\?\$\{params\.toString\(\)\}`\)/);
+  assert.match(html, /viewName === 'students'/);
+  assert.doesNotMatch(html, /https?:\/\/[^"']*xlsx/i);
+});
+
 test('public admin keeps the page-size label horizontal', async () => {
   const html = await fsp.readFile(path.join(__dirname, '..', 'public', 'admin.html'), 'utf8');
 

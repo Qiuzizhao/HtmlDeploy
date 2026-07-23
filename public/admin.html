@@ -492,6 +492,79 @@
       white-space: nowrap;
     }
 
+    .student-toolbar {
+      display: grid;
+      grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .student-toolbar > *,
+    .student-add-form > * {
+      min-width: 0;
+    }
+
+    #studentCount {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .student-add-form {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+      padding: 20px 20px 12px;
+    }
+
+    .student-list-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0 20px 20px;
+    }
+
+    .student-list {
+      min-height: 120px;
+      padding: 20px;
+      border-top: 1px solid var(--line);
+      overflow-wrap: anywhere;
+    }
+
+    #studentImportFile,
+    #studentImportText {
+      display: block;
+      width: calc(100% - 40px);
+      margin: 20px 20px 0;
+    }
+
+    #studentImportText {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    #parseStudentImport {
+      margin: 12px 20px 0;
+    }
+
+    .student-import-preview {
+      min-height: 88px;
+      margin: 12px 20px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel-soft);
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    #confirmStudentImport {
+      margin: 0 20px 20px;
+    }
+
     .settings-form {
       display: grid;
       grid-template-columns: repeat(2, minmax(220px, 1fr));
@@ -1342,6 +1415,8 @@
 
       .all-password-form,
       .ranking-toolbar,
+      .student-toolbar,
+      .student-add-form,
       .forbidden-search-form,
       .forbidden-words-form,
       .settings-form,
@@ -1393,6 +1468,21 @@
         width: 100%;
       }
 
+      .student-list-actions,
+      .student-list-actions button {
+        width: 100%;
+      }
+
+      .student-list-actions {
+        padding: 0 20px 20px;
+      }
+
+      #parseStudentImport,
+      #confirmStudentImport {
+        width: calc(100% - 40px);
+        margin-right: 20px;
+      }
+
       .code-overlay {
         padding: 10px;
       }
@@ -1422,6 +1512,7 @@
         <button class="nav-button" type="button" data-view-target="ranking">排行榜</button>
         <button class="nav-button" type="button" data-view-target="create">新增项目</button>
         <button class="nav-button" type="button" data-view-target="classes">班级管理</button>
+        <button class="nav-button" type="button" data-view-target="students">学生名单</button>
         <button class="nav-button" type="button" data-view-target="forbidden">违禁词</button>
         <button class="nav-button" type="button" data-view-target="settings">设置</button>
       </nav>
@@ -1649,6 +1740,36 @@
         </div>
       </section>
 
+      <section data-admin-view="students" class="workspace">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">学生名单</h2>
+            <div class="message" id="studentMessage"></div>
+          </div>
+          <div class="student-toolbar">
+            <select id="studentClassFilter" aria-label="选择班级"></select>
+            <input id="studentSearchInput" type="search" maxlength="40" placeholder="搜索学生姓名">
+            <span id="studentCount">0 名学生</span>
+          </div>
+          <form id="addStudentForm" class="student-add-form">
+            <input id="studentNameInput" maxlength="40" placeholder="输入学生姓名" required>
+            <button class="primary-button" type="submit">新增学生</button>
+          </form>
+          <div class="student-list-actions">
+            <button class="danger-button" id="deleteSelectedStudents" type="button" disabled>删除选中</button>
+          </div>
+          <div id="studentList" class="student-list"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2 class="panel-title">批量导入</h2></div>
+          <input id="studentImportFile" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <textarea id="studentImportText" placeholder="也可以粘贴名单，每行一个姓名"></textarea>
+          <button class="button" id="parseStudentImport" type="button">解析名单</button>
+          <div id="studentImportPreview" class="student-import-preview"></div>
+          <button class="primary-button" id="confirmStudentImport" type="button" disabled>确认导入</button>
+        </div>
+      </section>
+
       <section data-admin-view="forbidden" class="workspace">
         <div class="panel">
           <div class="panel-head">
@@ -1821,6 +1942,7 @@
     </section>
   </div>
 
+  <script src="/vendor/xlsx.full.min.js"></script>
   <script>
     const createForm = document.getElementById('createForm');
     const createTitle = document.getElementById('createTitle');
@@ -1891,6 +2013,19 @@
     const rankingClassFilter = document.getElementById('rankingClassFilter');
     const rankingRows = document.getElementById('rankingRows');
     const rankingEmptyState = document.getElementById('rankingEmptyState');
+    const studentClassFilter = document.getElementById('studentClassFilter');
+    const studentSearchInput = document.getElementById('studentSearchInput');
+    const studentNameInput = document.getElementById('studentNameInput');
+    const addStudentForm = document.getElementById('addStudentForm');
+    const studentImportFile = document.getElementById('studentImportFile');
+    const studentImportText = document.getElementById('studentImportText');
+    const parseStudentImportButton = document.getElementById('parseStudentImport');
+    const studentImportPreview = document.getElementById('studentImportPreview');
+    const confirmStudentImport = document.getElementById('confirmStudentImport');
+    const studentList = document.getElementById('studentList');
+    const studentCount = document.getElementById('studentCount');
+    const deleteSelectedStudentsButton = document.getElementById('deleteSelectedStudents');
+    const studentMessage = document.getElementById('studentMessage');
     const dedupeSitesButton = document.getElementById('dedupeSitesButton');
     const reviewAllSiteNamesButton = document.getElementById('reviewAllSiteNamesButton');
     const auditForbiddenSitesButton = document.getElementById('auditForbiddenSitesButton');
@@ -1929,6 +2064,9 @@
     let rankingSites = [];
     let classes = [];
     let classGroups = [];
+    let students = [];
+    const selectedStudentIds = new Set();
+    let pendingStudentImportNames = [];
     let classBulkOperationRunning = false;
     let settings = {};
     let adminSitesPage = 1;
@@ -1960,6 +2098,7 @@
       ranking: '排行榜',
       create: '新增项目',
       classes: '班级管理',
+      students: '学生名单',
       forbidden: '违禁词',
       settings: '设置'
     };
@@ -2550,6 +2689,78 @@
       select.value = value;
     }
 
+    function namesFromRows(rows) {
+      if (!rows.length) return [];
+      const headerIndex = rows[0].findIndex((cell) => String(cell || '').trim() === '姓名');
+      const columnIndex = headerIndex >= 0
+        ? headerIndex
+        : Math.max(0, rows.find((row) => row.some((cell) => String(cell || '').trim()))?.findIndex((cell) => String(cell || '').trim()) || 0);
+      const startIndex = headerIndex >= 0 ? 1 : 0;
+      return rows.slice(startIndex).map((row) => String(row[columnIndex] ?? ''));
+    }
+
+    function namesFromWorkbook(workbook) {
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        return [];
+      }
+
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+        header: 1,
+        raw: false,
+        defval: ''
+      });
+      return namesFromRows(rows);
+    }
+
+    async function parseStudentImportSource() {
+      const names = [];
+      const file = studentImportFile.files && studentImportFile.files[0];
+
+      if (file) {
+        const isCsv = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv';
+        if (isCsv) {
+          const text = await file.text();
+          names.push(...namesFromWorkbook(XLSX.read(text, { type: 'string' })));
+        } else {
+          const buffer = await file.arrayBuffer();
+          names.push(...namesFromWorkbook(XLSX.read(buffer, { type: 'array' })));
+        }
+      }
+
+      if (studentImportText.value) {
+        names.push(...studentImportText.value.split(/\r?\n/));
+      }
+
+      return names;
+    }
+
+    async function loadStudents() {
+      const classId = studentClassFilter.value;
+      if (!classId) {
+        students = [];
+        selectedStudentIds.clear();
+        studentCount.textContent = '0 名学生';
+        return;
+      }
+
+      const params = new URLSearchParams({ classId });
+      const query = studentSearchInput.value.trim();
+      if (query) {
+        params.set('q', query);
+      }
+
+      const response = await fetch(`/api/admin/students?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(await readResponseError(response, '加载学生名单失败'));
+      }
+
+      const result = await response.json();
+      students = Array.isArray(result.students) ? result.students : [];
+      selectedStudentIds.clear();
+      studentCount.textContent = `${Number(result.total) || students.length} 名学生`;
+    }
+
     async function loadCurrentViewData(viewName) {
       if (!viewName || loadedAdminViews.has(viewName)) {
         return;
@@ -2565,6 +2776,15 @@
         await loadAiSettings();
       } else if (viewName === 'classes') {
         await loadClasses();
+      } else if (viewName === 'students') {
+        if (!classes.length) {
+          await loadClasses();
+        }
+        const currentClassId = classes.some((classItem) => classItem.id === studentClassFilter.value)
+          ? studentClassFilter.value
+          : (classes[0]?.id || '');
+        fillClassSelect(studentClassFilter, currentClassId, '请选择班级');
+        await loadStudents();
       }
 
       loadedAdminViews.add(viewName);
